@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [greeting, setGreeting] = useState('');
   const [currentTime, setCurrentTime] = useState('');
@@ -34,9 +34,10 @@ export default function HomeScreen() {
     { name: 'Equipment', color: ['#f7971e', '#ffd200'] },
   ];
 
+  const currentYear = new Date().getFullYear();
+  // navigation is passed as a prop
   return (
     <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.container}>
-      {/* Hamburger menu at absolute top left */}
       <View style={styles.menuBar}>
         <TouchableOpacity onPress={() => setMenuOpen(!menuOpen)} style={styles.hamburger}>
           <Ionicons name={menuOpen ? 'close' : 'menu'} size={36} color="#fff" />
@@ -54,29 +55,58 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
-      {/* Greeting card below hamburger */}
-      <View style={styles.topCard}>
-        <Text style={styles.greeting}>{greeting}</Text>
-        <Text style={styles.time}>{currentTime}</Text>
-        <Text style={styles.date}>{currentDate}</Text>
-      </View>
-      <View style={styles.categorySection}>
-        <Text style={styles.categoryTitle}>Categories</Text>
-        <View style={styles.gridList}>
-          {categories.map((cat, idx) => (
-            <TouchableOpacity key={cat.name} style={styles.categoryCard}>
-              <LinearGradient colors={cat.color} style={styles.categoryGradient}>
-                <Text style={styles.categoryText}>{cat.name}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.topCard}>
+          <Text style={styles.greeting}>{greeting}</Text>
+          <Text style={styles.time}>{currentTime}</Text>
+          <Text style={styles.date}>{currentDate}</Text>
         </View>
-      </View>
+        <View style={styles.categorySection}>
+          <Text style={styles.categoryTitle}>Categories</Text>
+          <View style={styles.gridList}>
+            {categories.map((cat, idx) => (
+              <TouchableOpacity
+                key={cat.name}
+                style={styles.categoryCard}
+                onPress={() => {
+                  if (cat.name === 'Kitchen' && navigation) {
+                    navigation.navigate('KitchenCategory');
+                  }
+                }}
+              >
+                <LinearGradient colors={cat.color} style={styles.categoryGradient}>
+                  <Text style={styles.categoryText}>{cat.name}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Bravo @ {currentYear}</Text>
+        </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  footer: {
+    marginTop: 32,
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  footerText: {
+    color: '#fff',
+    fontSize: 16,
+    opacity: 0.7,
+    letterSpacing: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
   menuBar: {
     position: 'absolute',
     top: 32,
