@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { ActivityIndicator } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,6 +13,9 @@ export default function SplashScreen({ navigation }) {
 
   return (
     <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Image source={require('../logo.png')} style={styles.logo} resizeMode="contain" />
+      </View>
       <Text style={styles.bravo}>Bravo!</Text>
       <ActivityIndicator size="large" color="#fff" style={styles.spinner} />
     </LinearGradient>
@@ -20,6 +23,23 @@ export default function SplashScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  logoContainer: {
+    alignItems: 'center',
+  
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  logo: {
+    width: 130,
+    height: 110,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+  },
   spinner: {
     marginTop: 32,
   },

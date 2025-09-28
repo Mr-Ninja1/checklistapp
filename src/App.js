@@ -5,6 +5,7 @@ import SplashScreen from './screens/SplashScreen';
 import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import KitchenCategory from './screens/KitchenCategory';
+import FOHCategoryScreen from './screens/FOHCategoryScreen';
 
 const Stack = createStackNavigator();
 
@@ -16,6 +17,7 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
+        <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
