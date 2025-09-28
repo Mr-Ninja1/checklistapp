@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Form data from Index.tsx
@@ -19,7 +19,7 @@ const formCategories = {
     ]
   },
   production: {
-    name: "Production Records",
+    name: "Prod Records",
     color: ["#ff9966", "#ff5e62"],
     forms: [
       { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor" },
@@ -133,8 +133,13 @@ export default function HomeScreen() {
     <LinearGradient colors={["#43cea2", "#185a9d"]} style={[styles.container, { flex: 1, width: '100%' }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bravo!</Text>
-        <Text style={styles.headerSubtitle}>Food Safety Inspections</Text>
+        <View style={styles.headerRow}>
+          <Image source={require('../logo.png')} style={styles.logo} resizeMode="contain" />
+          <View>
+            <Text style={styles.headerTitle}>Bravo!</Text>
+            <Text style={styles.headerSubtitle}>Food Safety Inspections</Text>
+          </View>
+        </View>
       </View>
 
       {/* Greeting Card */}
@@ -280,8 +285,20 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 16,
     marginBottom: 8,
-    alignItems: 'flex-start',
     width: '90%',
+    alignSelf: 'center',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  logo: {
+    width: 70,
+    height: 70,
+    marginRight: 12,
+    borderRadius: 12,
+    backgroundColor: '#fff',
   },
   headerTitle: {
     fontSize: 28,
@@ -363,7 +380,7 @@ const styles = StyleSheet.create({
     color: '#185a9d',
   },
   formListContent: {
-    paddingBottom: 32,
+    paddingBottom: 500, // Increased for more scroll space
     alignItems: 'center',
     width: '100%',
   },
