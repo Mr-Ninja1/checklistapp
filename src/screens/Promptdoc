@@ -1,0 +1,104 @@
+ **Food Handlers Daily Handwashing Tracking Log Sheet** from Bravo Brands Limited, extracted from your uploaded image and formatted for digital use.
+
+---
+
+## 🧾 Structured Form Details (Textual Format)
+
+### **Category**: Food Safety  
+**Form Name**: Food Handlers Daily Handwashing Tracking Log Sheet
+
+**Header Fields**:
+- Compiled By: Michael Zulu K.  
+- Approved By: Hassan Ali  
+- Date: ___________________________  
+- Location: ___________________________  
+- Shift: ☐ AM ☐ PM  
+- Verified By: ___________________________  
+- Page: 1 of 1  
+- Revision Date: N/A  
+- Doc No: BBL/FSMS/16-14  
+- Issue Date: 15/06/2023  
+- Doc Ref No: FSMS/026/23  
+
+---
+
+### **Table Fields** (Repeatable rows for each food handler)
+
+| Field Name                  | Type        | Notes |
+|----------------------------|-------------|-------|
+| S/N                        | number      | Serial number |
+| Full Name                  | text        | Required |
+| Job Title                  | text        | Required |
+| 08:00 AM                  | checkbox    | Handwashing confirmation |
+| 09:00 AM                  | checkbox    | Handwashing confirmation |
+| 10:00 AM                  | checkbox    | Handwashing confirmation |
+| 11:00 AM                  | checkbox    | Handwashing confirmation |
+| 12:00 PM                  | checkbox    | Handwashing confirmation |
+| 01:00 PM                  | checkbox    | Handwashing confirmation |
+| 02:00 PM                  | checkbox    | Handwashing confirmation |
+| 03:00 PM                  | checkbox    | Handwashing confirmation |
+| Staff Signature            | signature   | Digital signature field |
+| Supervisor Signature       | signature   | Digital signature field |
+| Complex Manager Signature  | signature   | Digital signature field |
+
+---
+
+### **Footer Note**
+> All food handlers are required to wash and sanitize their hands after every 60 minutes.
+
+---
+
+## 🧠 Prompt for VS Code Copilot
+
+Here’s your ready-to-use prompt to generate a React + TailwindCSS form component:
+
+```plaintext
+I have the following form details extracted from a scanned PDF. Generate a digital React component styled with TailwindCSS that preserves the form structure exactly.
+
+Category: Food Safety  
+Form: Food Handlers Daily Handwashing Tracking Log Sheet
+
+Header Fields:
+- Compiled By (text)
+- Approved By (text)
+- Date (date, required)
+- Location (text, required)
+- Shift (radio: AM | PM, required)
+- Verified By (text)
+- Page (static: 1 of 1)
+- Revision Date (static: N/A)
+- Doc No (static: BBL/FSMS/16-14)
+- Issue Date (static: 15/06/2023)
+- Doc Ref No (static: FSMS/026/23)
+
+Table Row Fields (repeatable for each food handler):
+- S/N (number)
+- Full Name (text, required)
+- Job Title (text, required)
+- 08:00 AM (checkbox)
+- 09:00 AM (checkbox)
+- 10:00 AM (checkbox)
+- 11:00 AM (checkbox)
+- 12:00 PM (checkbox)
+- 01:00 PM (checkbox)
+- 02:00 PM (checkbox)
+- 03:00 PM (checkbox)
+- Staff Signature (signature input)
+- Supervisor Signature (signature input)
+- Complex Manager Signature (signature input)
+
+Footer Note:
+Display: “All food handlers are required to wash and sanitize their hands after every 60 minutes.”
+
+Rules:
+1. Use semantic form elements.
+2. Keep labels and structure intact.
+3. Add basic validation.
+4. Style  (modern layout, spacing, rounded corners).
+5. Export as a reusable React component.
+6. On submit, log form data to console.
+```
+
+---
+
+Rea

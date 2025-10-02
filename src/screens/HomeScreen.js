@@ -9,26 +9,42 @@ const formCategories = {
     name: "FOH Records",
     color: ["#43cea2", "#185a9d"],
     forms: [
-      { id: 1, title: "Daily Cleaning & Sanitizing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Front Counter" },
-      { id: 2, title: "Daily Cleaning & Sanitizing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Front Counter" },
-      { id: 3, title: "Weekly Cleaning - AM", status: "pending", priority: "medium", dueTime: "Monday 6:00 AM", location: "Dining Area" },
-      { id: 4, title: "Monthly Temp Logs - Chillers", status: "overdue", priority: "critical", dueTime: "2 hours ago", location: "Display Area" },
-      { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
-      { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
-      { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" }
+      { id: 101, title: "Daily Cleaning & Sanitizing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Front Counter" },
+      { id: 102, title: "Daily Cleaning & Sanitizing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Front Counter" },
+      { id: 103, title: "Weekly Cleaning - AM", status: "pending", priority: "medium", dueTime: "Monday 6:00 AM", location: "Dining Area" },
+      { id: 104, title: "Monthly Temp Logs - Chillers", status: "overdue", priority: "critical", dueTime: "2 hours ago", location: "Display Area" },
+      { id: 105, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
+      { id: 106, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
+      { id: 107, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
+      {
+        id: 108,
+        title: "Food Contact Surface Cleaning And Sanitizing Log Sheet  FOH",
+        status: "pending",
+        priority: "high",
+        dueTime: "Per shift",
+        location: "FOH Section"
+    },
+        {
+          id: 109,
+          title: "Food Handlers Daily Handwashing Tracking Log Sheet",
+          status: "pending",
+          priority: "high",
+          dueTime: "Per shift",
+          location: "FOH Section"
+        }
     ]
   },
   production: {
     name: "Prod Records",
     color: ["#ff9966", "#ff5e62"],
     forms: [
-      { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor" },
-      { id: 9, title: "5 Why Report/Non-conformance", status: "completed", priority: "high", dueTime: "As needed", location: "Production Floor" },
-      { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab" },
-      { id: 11, title: "Daily Handwashing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Production Entry" },
-      { id: 12, title: "Daily Handwashing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Production Entry" },
-      { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
-      { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" }
+  { id: 201, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor" },
+  { id: 202, title: "5 Why Report/Non-conformance", status: "completed", priority: "high", dueTime: "As needed", location: "Production Floor" },
+  { id: 203, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab" },
+  { id: 204, title: "Daily Handwashing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Production Entry" },
+  { id: 205, title: "Daily Handwashing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Production Entry" },
+  { id: 206, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
+  { id: 207, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" }
     ]
   },
   kitchen: {
@@ -194,7 +210,23 @@ export default function HomeScreen() {
         {/* Use View for web scroll, not ScrollView */}
         <View style={[styles.formListContent, { minHeight: 0 }]}> 
           {getFilteredForms(activeCategory).map((form) => (
-            <View key={form.id} style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff' }]}> 
+            <TouchableOpacity
+              key={form.id}
+              style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff' }]}
+                onPress={() => {
+                  if (form.id === 108) {
+                    // Navigate to FOHFormScreen for the cleaning log
+                    if (typeof navigation !== 'undefined') {
+                      navigation.navigate('FOHFormScreen', { form });
+                    }
+                  } else if (form.id === 109) {
+                    // Navigate to FoodHandlersHandwashingForm for the handwashing log
+                    if (typeof navigation !== 'undefined') {
+                      navigation.navigate('FoodHandlersHandwashingForm', { form });
+                    }
+                  }
+                }}
+            >
               <View style={styles.formCardTop}>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
@@ -212,7 +244,7 @@ export default function HomeScreen() {
                 </View>
                 <Text style={[styles.dueText, { color: '#185a9d' }]}>Due: {form.dueTime}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </View>
