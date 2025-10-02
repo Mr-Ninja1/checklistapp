@@ -6,18 +6,36 @@ import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import KitchenCategory from './screens/KitchenCategory';
 import FOHCategoryScreen from './screens/FOHCategoryScreen';
+import FOHFormScreen from './screens/FOHFormScreen';
 
 const Stack = createStackNavigator();
 
+const linking = {
+  prefixes: ['http://localhost:8081'],
+  config: {
+    screens: {
+      Home: '',
+      FOHFormScreen: 'FOHFormScreen',
+      Splash: 'Splash',
+      Login: 'Login',
+      KitchenCategory: 'KitchenCategory',
+      FOHCategory: 'FOHCategory',
+        FoodHandlersHandwashingForm: 'FoodHandlersHandwashingForm',
+    },
+  },
+};
+
 export default function App() {
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Splash">
+    <NavigationContainer linking={linking}>
+      <Stack.Navigator initialRouteName="Home">
         <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./screens/FoodHandlersHandwashingForm').default} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

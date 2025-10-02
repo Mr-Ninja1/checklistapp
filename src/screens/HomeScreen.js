@@ -3,89 +3,100 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-let Animated;
-if (Platform.OS === 'web') {
-  Animated = require('react-native-web').Animated;
-} else {
-  Animated = require('react-native').Animated;
-}
+// Form data from Index.tsx
+const formCategories = {
+  foh: {
+    name: "FOH Records",
+    color: ["#43cea2", "#185a9d"],
+    forms: [
+      { id: 1, title: "Daily Cleaning & Sanitizing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Front Counter" },
+      { id: 2, title: "Daily Cleaning & Sanitizing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Front Counter" },
+      { id: 3, title: "Weekly Cleaning - AM", status: "pending", priority: "medium", dueTime: "Monday 6:00 AM", location: "Dining Area" },
+      { id: 4, title: "Monthly Temp Logs - Chillers", status: "overdue", priority: "critical", dueTime: "2 hours ago", location: "Display Area" },
+      { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
+      { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
+      { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" }
+    ]
+  },
+  production: {
+    name: "Prod Records",
+    color: ["#ff9966", "#ff5e62"],
+    forms: [
+      { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor" },
+      { id: 9, title: "5 Why Report/Non-conformance", status: "completed", priority: "high", dueTime: "As needed", location: "Production Floor" },
+      { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab" },
+      { id: 11, title: "Daily Handwashing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Production Entry" },
+      { id: 12, title: "Daily Handwashing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Production Entry" },
+      { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
+      { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" }
+    ]
+  },
+  kitchen: {
+    name: "Kitchen Records",
+    color: ["#56ccf2", "#2f80ed"],
+    forms: [
+      { id: 15, title: "Daily Cleaning & Sanitizing", status: "pending", priority: "high", dueTime: "After each shift", location: "Main Kitchen" },
+      { id: 16, title: "Weekly Cleaning Log", status: "completed", priority: "medium", dueTime: "Monday", location: "Kitchen Area" },
+      { id: 17, title: "Monthly Temp - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Monthly", location: "Kitchen Bar" },
+      { id: 18, title: "Cooking Temp Log", status: "pending", priority: "critical", dueTime: "Every cooking", location: "Cooking Station" },
+      { id: 19, title: "Cooling Temp Log", status: "overdue", priority: "critical", dueTime: "30 min ago", location: "Cooling Area" },
+      { id: 20, title: "Thawing Temp Log", status: "pending", priority: "high", dueTime: "During thawing", location: "Prep Area" },
+      { id: 21, title: "Hot Holding Temp Log", status: "completed", priority: "critical", dueTime: "Every 2 hours", location: "Service Line" },
+      { id: 22, title: "Vegetable & Fruit Washing", status: "pending", priority: "high", dueTime: "Before use", location: "Wash Station" },
+      { id: 23, title: "Shelf Life Inspection", status: "pending", priority: "medium", dueTime: "Daily", location: "Storage Area" }
+    ]
+  },
+  bakery: {
+    name: "Bakery Records", 
+    color: ["#fa709a", "#fee140"],
+    forms: [
+      { id: 24, title: "Baking, Moulding & Proofing", status: "pending", priority: "high", dueTime: "Each batch", location: "Bakery Floor" },
+      { id: 25, title: "Cooling Log", status: "completed", priority: "medium", dueTime: "After baking", location: "Cooling Racks" },
+      { id: 26, title: "Temp Records - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Bakery Chillers" },
+      { id: 27, title: "Baking Control Sheet", status: "overdue", priority: "critical", dueTime: "45 min ago", location: "Oven Station" },
+      { id: 28, title: "Mixing Control Sheet", status: "pending", priority: "high", dueTime: "Each mix", location: "Mixing Station" },
+      { id: 29, title: "Shelf Life Inspection", status: "completed", priority: "medium", dueTime: "Daily", location: "Display Case" },
+      { id: 30, title: "Net Content Log", status: "pending", priority: "low", dueTime: "Per batch", location: "Packaging Area" }
+    ]
+  },
+  boh: {
+    name: "BOH Records",
+    color: ["#f7971e", "#ffd200"],
+    forms: [
+      { id: 31, title: "Weekly Storage Room Cleaning", status: "pending", priority: "medium", dueTime: "Monday", location: "Storage Room" },
+      { id: 32, title: "Weekly Cleaning Materials Log", status: "completed", priority: "low", dueTime: "Weekly", location: "Chemical Storage" },
+      { id: 33, title: "Weekly Scullery Area Cleaning", status: "pending", priority: "medium", dueTime: "Sunday", location: "Scullery" },
+      { id: 34, title: "Weekly Welfare Facility Cleaning", status: "overdue", priority: "medium", dueTime: "2 days ago", location: "Staff Area" },
+      { id: 35, title: "Weekly Cold Room Cleaning", status: "pending", priority: "high", dueTime: "Saturday", location: "Cold Storage" },
+      { id: 36, title: "Pest Control Log", status: "completed", priority: "high", dueTime: "Monthly", location: "Entire Facility" },
+      { id: 37, title: "Monthly Temp - Walking Freezer", status: "pending", priority: "critical", dueTime: "Daily", location: "Walk-in Freezer" },
+      { id: 38, title: "Employee PPE Register", status: "completed", priority: "medium", dueTime: "Daily", location: "Entry Points" },
+      { id: 39, title: "Personal Hygiene Checklist", status: "pending", priority: "high", dueTime: "Start of shift", location: "Locker Room" },
+      { id: 40, title: "Health Status Checklist", status: "pending", priority: "critical", dueTime: "Daily", location: "HR Office" }
+    ]
+  }
+};
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'completed': return { backgroundColor: '#43cea2', color: '#fff' };
+    case 'pending': return { backgroundColor: '#ffd200', color: '#333' };
+    case 'overdue': return { backgroundColor: '#ff5e62', color: '#fff' };
+    default: return { backgroundColor: '#eee', color: '#333' };
+  }
+};
+
+const getPriorityColor = (priority) => {
+  switch (priority) {
+    case 'critical': return { borderColor: '#ff5e62', color: '#ff5e62' };
+    case 'high': return { borderColor: '#ffd200', color: '#ffd200' };
+    case 'medium': return { borderColor: '#43cea2', color: '#43cea2' };
+    case 'low': return { borderColor: '#aaa', color: '#aaa' };
+    default: return { borderColor: '#eee', color: '#333' };
+  }
+};
 
 export default function HomeScreen() {
-  // Form data from Index.tsx
-  const formCategories = {
-    foh: {
-      name: 'FOH Records',
-      color: ['#43cea2', '#185a9d'],
-      forms: [
-        { id: 1, title: 'Daily Cleaning & Sanitizing - AM', status: 'completed', priority: 'high', dueTime: '6:00 AM', location: 'Front Counter' },
-        { id: 2, title: 'Daily Cleaning & Sanitizing - PM', status: 'pending', priority: 'high', dueTime: '6:00 PM', location: 'Front Counter' },
-        { id: 3, title: 'Weekly Cleaning - AM', status: 'pending', priority: 'medium', dueTime: 'Monday 6:00 AM', location: 'Dining Area' },
-        { id: 4, title: 'Monthly Temp Logs - Chillers', status: 'overdue', priority: 'critical', dueTime: '2 hours ago', location: 'Display Area' },
-        { id: 5, title: 'Fruit Washing & Sanitizing', status: 'pending', priority: 'high', dueTime: 'Every 4 hours', location: 'Prep Station' },
-        { id: 6, title: 'Customer Survey Logs', status: 'completed', priority: 'low', dueTime: 'Daily', location: 'Reception' },
-        { id: 7, title: 'Product Release Log', status: 'pending', priority: 'medium', dueTime: 'Before service', location: 'Service Counter' },
-      ],
-    },
-    production: {
-      name: 'Prod Records',
-      color: ['#ff9966', '#ff5e62'],
-      forms: [
-        { id: 8, title: 'Certificates of Analysis', status: 'pending', priority: 'critical', dueTime: 'Daily', location: 'Production Floor' },
-        { id: 9, title: '5 Why Report/Non-conformance', status: 'completed', priority: 'high', dueTime: 'As needed', location: 'Production Floor' },
-        { id: 10, title: 'Product Release', status: 'pending', priority: 'critical', dueTime: 'Before dispatch', location: 'Quality Lab' },
-        { id: 11, title: 'Daily Handwashing - AM', status: 'completed', priority: 'high', dueTime: '6:00 AM', location: 'Production Entry' },
-        { id: 12, title: 'Daily Handwashing - PM', status: 'pending', priority: 'high', dueTime: '6:00 PM', location: 'Production Entry' },
-        { id: 13, title: 'Weekly Showering Logs', status: 'pending', priority: 'medium', dueTime: 'Weekly', location: 'Locker Room' },
-        { id: 14, title: 'Food Sample Collection', status: 'overdue', priority: 'critical', dueTime: '1 hour ago', location: 'Production Line' },
-      ],
-    },
-    kitchen: {
-      name: 'Kitchen Records',
-      color: ['#56ccf2', '#2f80ed'],
-      forms: [
-        { id: 15, title: 'Daily Cleaning & Sanitizing', status: 'pending', priority: 'high', dueTime: 'After each shift', location: 'Main Kitchen' },
-        { id: 16, title: 'Weekly Cleaning Log', status: 'completed', priority: 'medium', dueTime: 'Monday', location: 'Kitchen Area' },
-        { id: 17, title: 'Monthly Temp - Under Bar Chillers', status: 'pending', priority: 'high', dueTime: 'Monthly', location: 'Kitchen Bar' },
-        { id: 18, title: 'Cooking Temp Log', status: 'pending', priority: 'critical', dueTime: 'Every cooking', location: 'Cooking Station' },
-        { id: 19, title: 'Cooling Temp Log', status: 'overdue', priority: 'critical', dueTime: '30 min ago', location: 'Cooling Area' },
-        { id: 20, title: 'Thawing Temp Log', status: 'pending', priority: 'high', dueTime: 'During thawing', location: 'Prep Area' },
-        { id: 21, title: 'Hot Holding Temp Log', status: 'completed', priority: 'critical', dueTime: 'Every 2 hours', location: 'Service Line' },
-        { id: 22, title: 'Vegetable & Fruit Washing', status: 'pending', priority: 'high', dueTime: 'Before use', location: 'Wash Station' },
-        { id: 23, title: 'Shelf Life Inspection', status: 'pending', priority: 'medium', dueTime: 'Daily', location: 'Storage Area' },
-      ],
-    },
-    bakery: {
-      name: 'Bakery Records',
-      color: ['#fa709a', '#fee140'],
-      forms: [
-        { id: 24, title: 'Baking, Moulding & Proofing', status: 'pending', priority: 'high', dueTime: 'Each batch', location: 'Bakery Floor' },
-        { id: 25, title: 'Cooling Log', status: 'completed', priority: 'medium', dueTime: 'After baking', location: 'Cooling Racks' },
-        { id: 26, title: 'Temp Records - Under Bar Chillers', status: 'pending', priority: 'high', dueTime: 'Every 4 hours', location: 'Bakery Chillers' },
-        { id: 27, title: 'Baking Control Sheet', status: 'overdue', priority: 'critical', dueTime: '45 min ago', location: 'Oven Station' },
-        { id: 28, title: 'Mixing Control Sheet', status: 'pending', priority: 'high', dueTime: 'Each mix', location: 'Mixing Station' },
-        { id: 29, title: 'Shelf Life Inspection', status: 'completed', priority: 'medium', dueTime: 'Daily', location: 'Display Case' },
-        { id: 30, title: 'Net Content Log', status: 'pending', priority: 'low', dueTime: 'Per batch', location: 'Packaging Area' },
-      ],
-    },
-    boh: {
-      name: 'BOH Records',
-      color: ['#f7971e', '#ffd200'],
-      forms: [
-        { id: 31, title: 'Weekly Storage Room Cleaning', status: 'pending', priority: 'medium', dueTime: 'Monday', location: 'Storage Room' },
-        { id: 32, title: 'Weekly Cleaning Materials Log', status: 'completed', priority: 'low', dueTime: 'Weekly', location: 'Chemical Storage' },
-        { id: 33, title: 'Weekly Scullery Area Cleaning', status: 'pending', priority: 'medium', dueTime: 'Sunday', location: 'Scullery' },
-        { id: 34, title: 'Weekly Welfare Facility Cleaning', status: 'overdue', priority: 'medium', dueTime: '2 days ago', location: 'Staff Area' },
-        { id: 35, title: 'Weekly Cold Room Cleaning', status: 'pending', priority: 'high', dueTime: 'Saturday', location: 'Cold Storage' },
-        { id: 36, title: 'Pest Control Log', status: 'completed', priority: 'high', dueTime: 'Monthly', location: 'Entire Facility' },
-        { id: 37, title: 'Monthly Temp - Walking Freezer', status: 'pending', priority: 'critical', dueTime: 'Daily', location: 'Walk-in Freezer' },
-        { id: 38, title: 'Employee PPE Register', status: 'completed', priority: 'medium', dueTime: 'Daily', location: 'Entry Points' },
-        { id: 39, title: 'Personal Hygiene Checklist', status: 'pending', priority: 'high', dueTime: 'Start of shift', location: 'Locker Room' },
-        { id: 40, title: 'Health Status Checklist', status: 'pending', priority: 'critical', dueTime: 'Daily', location: 'HR Office' },
-      ],
-    },
-  };
-
-  // UI state
   const [activeCategory, setActiveCategory] = useState('foh');
   const [searchTerm, setSearchTerm] = useState('');
   // Date/time
@@ -262,25 +273,17 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      <ScrollView
-        style={{ flex: 1, width: '100%', alignSelf: 'stretch', marginTop: 0 }}
-        contentContainerStyle={{ alignItems: 'center', paddingBottom: 40 }}
-        showsVerticalScrollIndicator={true}
-        horizontal={false}
-      >
-     
-        {/* Form Lists */}
-        {getFilteredForms(activeCategory).map((form) => (
-          <TouchableOpacity
-            key={form.id}
-            style={{ width: '92%', backgroundColor: '#fff', borderRadius: 16, marginVertical: 8, padding: 18, borderLeftWidth: 6, borderLeftColor: getStatusColor(form.status).backgroundColor, elevation: 2 }}
-            activeOpacity={0.7}
-            onPress={() => alert(`Clicked: ${form.title}`)}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#222', marginBottom: 2 }}>{form.title}</Text>
-                <Text style={{ fontSize: 14, color: '#555', opacity: 0.8 }}>{form.location}</Text>
+      {/* Form Lists */}
+      <View style={{ flex: 1, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
+        {/* Use View for web scroll, not ScrollView */}
+        <View style={[styles.formListContent, { minHeight: 0 }]}> 
+          {getFilteredForms(activeCategory).map((form) => (
+            <View key={form.id} style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff' }]}> 
+              <View style={styles.formCardTop}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
+                  <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
+                </View>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
@@ -292,11 +295,20 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
                 </View>
               </View>
-              <Text style={{ fontSize: 12, color: '#185a9d', opacity: 0.8 }}>Due: {form.dueTime}</Text>
             </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity style={styles.fab} onPress={() => {}}>
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Bravo @ {new Date().getFullYear()}</Text>
+      </View>
+    </LinearGradient>
   );
 }
