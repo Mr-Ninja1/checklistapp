@@ -140,7 +140,7 @@ export default function HomeScreen() {
 
   // Main UI
   return (
-  <View style={{ flex: 1, backgroundColor: '#f6fdff', width: '100%' }}>
+    <View style={{ flex: 1, backgroundColor: '#f6fdff', width: '100%' }}>
       <LinearGradient
         colors={["#22c1c3", "#43cea2", "#185a9d"]}
         style={{
@@ -278,21 +278,23 @@ export default function HomeScreen() {
         {/* Use View for web scroll, not ScrollView */}
         <View style={[styles.formListContent, { minHeight: 0 }]}> 
           {getFilteredForms(activeCategory).map((form) => (
-            <View key={form.id} style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff' }]}> 
-              <View style={styles.formCardTop}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
-                  <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
+            <View key={form.id}>
+              <View style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff' }]}> 
+                <View style={styles.formCardTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
+                    <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
-                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
-                </View>
-                <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
-                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
+                  </View>
+                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -309,6 +311,66 @@ export default function HomeScreen() {
       <View style={styles.footer}>
         <Text style={styles.footerText}>Bravo @ {new Date().getFullYear()}</Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
+
+// Add missing styles object
+import { StyleSheet } from 'react-native';
+const styles = StyleSheet.create({
+  formCard: {
+    marginVertical: 8,
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 6,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  formCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  formLocation: {
+    fontSize: 14,
+    color: '#888',
+  },
+  formListContent: {
+    padding: 12,
+  },
+  fab: {
+    position: 'absolute',
+    right: 24,
+    bottom: 24,
+    backgroundColor: '#43cea2',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+  },
+  fabText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginTop: -2,
+  },
+  footer: {
+    alignItems: 'center',
+    padding: 12,
+    marginTop: 16,
+  },
+  footerText: {
+    color: '#888',
+    fontSize: 14,
+  },
+});
