@@ -1,205 +1,421 @@
+
+
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
 
-const initialHandlers = [
-  { sn: 1, fullName: '', jobTitle: '', times: Array(8).fill(false), staffSignature: '', supervisorSignature: '', managerSignature: '' }
+const TIME_SLOTS = [
+  '06:00AM', '07:00AM', '08:00AM', '09:00AM', '10:00AM',
+  '11:00AM', '12:00PM', '13:00PM', '14:00PM', '15:00PM',
 ];
-
-const timeLabels = [
-  '08:00 AM', '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM'
-];
+const NUM_ROWS = 14;
+const createInitialChecks = () =>
+  TIME_SLOTS.reduce((acc, time) => ({ ...acc, [time]: false }), {});
+const initialHandlers = Array.from({ length: NUM_ROWS }, (_, index) => ({
+  id: index + 1,
+  fullName: '',
+  jobTitle: '',
+  checks: createInitialChecks(),
+  staffSign: '',
+  supName: '',
+  supSign: '',
+}));
 
 export default function FoodHandlersHandwashingForm() {
-  const [compiledBy, setCompiledBy] = useState('Michael Zulu K.');
-  const [approvedBy, setApprovedBy] = useState('Hassan Ali');
-  const [date, setDate] = useState('');
-  const [location, setLocation] = useState('');
-  const [shift, setShift] = useState('');
-  const [verifiedBy, setVerifiedBy] = useState('');
-  const [handlers, setHandlers] = useState(initialHandlers);
+  const [logDetails, setLogDetails] = useState({
+    date: '',
+    location: '',
+    shift: 'AM',
+    verifiedBy: '',
+    complexManagerSign: '',
+  });
+  const [handlerData, setHandlerData] = useState(initialHandlers);
+
+  const toggleCheck = (id, timeSlot) => {
+    setHandlerData(prevData =>
+      prevData.map(handler => {
+        if (handler.id === id) {
+          return {
+            ...handler,
+            checks: {
+              ...handler.checks,
+              [timeSlot]: !handler.checks[timeSlot],
+            },
+          };
+        }
+        return handler;
+      })
+    );
+  };
+
+  const updateHandlerField = (id, fieldName, value) => {
+    setHandlerData(prevData =>
+      prevData.map(handler =>
+        handler.id === id ? { ...handler, [fieldName]: value } : handler
+      )
+    );
+  };
 
   const addHandler = () => {
-    setHandlers([...handlers, { sn: handlers.length + 1, fullName: '', jobTitle: '', times: Array(8).fill(false), staffSignature: '', supervisorSignature: '', managerSignature: '' }]);
+    setHandlerData(prev => ([
+      ...prev,
+      {
+        id: prev.length + 1,
+        fullName: '',
+        jobTitle: '',
+        checks: createInitialChecks(),
+        staffSign: '',
+        supName: '',
+        supSign: '',
+      },
+    ]));
   };
 
-  const updateHandler = (idx, field, value) => {
-    const updated = handlers.map((h, i) => i === idx ? { ...h, [field]: value } : h);
-    setHandlers(updated);
-  };
-
-  const updateTime = (idx, timeIdx, value) => {
-    const updated = handlers.map((h, i) => {
-      if (i === idx) {
-        const times = [...h.times];
-        times[timeIdx] = value;
-        return { ...h, times };
-      }
-      return h;
-    });
-    setHandlers(updated);
+  const removeHandler = (id) => {
+    setHandlerData(prev => prev.filter(h => h.id !== id).map((h, i) => ({ ...h, id: i + 1 })));
   };
 
   const handleSubmit = () => {
     const formData = {
-      compiledBy, approvedBy, date, location, shift, verifiedBy, handlers
+      ...logDetails,
+      handlers: handlerData,
     };
     console.log('Form Data:', formData);
     // Add your submit logic here
   };
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 32 }}>
+  // --- Header Section Component ---
+  const HeaderSection = () => (
+    <View style={styles.headerContainer}>
       <Text style={styles.title}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
-      <View style={styles.section}>
-        <Text style={styles.label}>Compiled By</Text>
-        <TextInput style={styles.input} value={compiledBy} onChangeText={setCompiledBy} />
-        <Text style={styles.label}>Approved By</Text>
-        <TextInput style={styles.input} value={approvedBy} onChangeText={setApprovedBy} />
-        <Text style={styles.label}>Date *</Text>
-        <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" />
-        <Text style={styles.label}>Location *</Text>
-        <TextInput style={styles.input} value={location} onChangeText={setLocation} />
-        <Text style={styles.label}>Shift *</Text>
-        <View style={styles.radioRow}>
-          <TouchableOpacity style={[styles.radio, shift === 'AM' && styles.radioSelected]} onPress={() => setShift('AM')}>
-            <Text style={styles.radioText}>AM</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.radio, shift === 'PM' && styles.radioSelected]} onPress={() => setShift('PM')}>
-            <Text style={styles.radioText}>PM</Text>
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.label}>Verified By</Text>
-        <TextInput style={styles.input} value={verifiedBy} onChangeText={setVerifiedBy} />
-        <View style={styles.staticRow}><Text>Page: 1 of 1</Text><Text>Revision Date: N/A</Text></View>
-        <View style={styles.staticRow}><Text>Doc No: BBL/FSMS/16-14</Text><Text>Issue Date: 15/06/2023</Text></View>
-        <View style={styles.staticRow}><Text>Doc Ref No: FSMS/026/23</Text></View>
-      </View>
-      <Text style={styles.subTitle}>Food Handlers</Text>
-      {handlers.map((handler, idx) => (
-        <View key={idx} style={styles.handlerRow}>
-          <Text style={styles.sn}>{handler.sn}</Text>
-          <TextInput style={styles.input} placeholder="Full Name" value={handler.fullName} onChangeText={v => updateHandler(idx, 'fullName', v)} />
-          <TextInput style={styles.input} placeholder="Job Title" value={handler.jobTitle} onChangeText={v => updateHandler(idx, 'jobTitle', v)} />
-          <View style={styles.timesRow}>
-            {timeLabels.map((label, tIdx) => (
-              <TouchableOpacity key={label} style={styles.checkbox} onPress={() => updateTime(idx, tIdx, !handler.times[tIdx])}>
-                <Text style={handler.times[tIdx] ? styles.checkboxChecked : styles.checkboxUnchecked}>{label}</Text>
-              </TouchableOpacity>
-            ))}
+
+      <View style={styles.detailRow}>
+        <View style={styles.detailItem}>
+          <Text style={styles.label}>Date:</Text>
+          <View style={styles.dateInputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={logDetails.date}
+              onChangeText={(text) => setLogDetails({ ...logDetails, date: text })}
+              placeholder="DD/MM/YYYY"
+            />
+            <Text style={styles.dateIcon}>📅</Text>
           </View>
-          <TextInput style={styles.input} placeholder="Staff Signature" value={handler.staffSignature} onChangeText={v => updateHandler(idx, 'staffSignature', v)} />
-          <TextInput style={styles.input} placeholder="Supervisor Signature" value={handler.supervisorSignature} onChangeText={v => updateHandler(idx, 'supervisorSignature', v)} />
-          <TextInput style={styles.input} placeholder="Complex Manager Signature" value={handler.managerSignature} onChangeText={v => updateHandler(idx, 'managerSignature', v)} />
         </View>
-      ))}
-      <TouchableOpacity style={styles.addBtn} onPress={addHandler}><Text style={styles.addBtnText}>+ Add Food Handler</Text></TouchableOpacity>
-      <Text style={styles.footerNote}>All food handlers are required to wash and sanitize their hands after every 60 minutes.</Text>
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}><Text style={styles.submitBtnText}>Submit</Text></TouchableOpacity>
-    </ScrollView>
+
+        <View style={styles.detailItem}>
+          <Text style={styles.label}>Location:</Text>
+          <TextInput
+            style={styles.input}
+            value={logDetails.location}
+            onChangeText={(text) => setLogDetails({ ...logDetails, location: text })}
+            placeholder="Enter Location"
+          />
+        </View>
+      </View>
+
+      <View style={styles.detailRow}>
+        <View style={styles.detailItem}>
+          <Text style={styles.label}>Shift:</Text>
+          <TextInput
+            style={styles.input}
+            value={logDetails.shift}
+            onChangeText={(text) => setLogDetails({ ...logDetails, shift: text })}
+          />
+        </View>
+
+        <View style={styles.detailItem}>
+          <Text style={styles.label}>Verified By:</Text>
+          <TextInput
+            style={styles.input}
+            value={logDetails.verifiedBy}
+            onChangeText={(text) => setLogDetails({ ...logDetails, verifiedBy: text })}
+            placeholder="Enter Verifier Name"
+          />
+        </View>
+      </View>
+
+      <View style={[styles.detailRow, styles.signatureSection]}>
+        <View style={styles.detailItemFull}>
+          <Text style={styles.label}>Complex Manager Sign:</Text>
+          <TextInput
+            style={styles.input}
+            value={logDetails.complexManagerSign}
+            onChangeText={(text) => setLogDetails({ ...logDetails, complexManagerSign: text })}
+            placeholder="Signature/Initials"
+          />
+        </View>
+      </View>
+    </View>
+  );
+
+  // --- Table Header Component ---
+  const TableHeader = () => (
+    <View style={styles.row}>
+      <Text style={[styles.headerCell, styles.snCell]}>S/N</Text>
+      <Text style={[styles.headerCell, styles.nameCell]}>Full Name</Text>
+      <Text style={[styles.headerCell, styles.jobCell]}>Job Title</Text>
+      <ScrollView horizontal contentContainerStyle={styles.scrollHeader} showsHorizontalScrollIndicator={false}>
+        {TIME_SLOTS.map(time => (
+          <Text key={time} style={styles.timeCell}>{time}</Text>
+        ))}
+      </ScrollView>
+      <Text style={[styles.headerCell, styles.signCell]}>Staff Sign</Text>
+      <Text style={[styles.headerCell, styles.supCell]}>Sup Name</Text>
+      <Text style={[styles.headerCell, styles.signCell]}>Sup Sign</Text>
+      <Text style={[styles.headerCell, { width: 36 }]}></Text>
+    </View>
+  );
+
+  // --- Handler Row Component ---
+  const HandlerRow = ({ handler }) => {
+    const { id, fullName, jobTitle, checks, staffSign, supName, supSign } = handler;
+    const Checkbox = ({ isChecked, onPress }) => (
+      <TouchableOpacity
+        style={[styles.checkbox, isChecked && styles.checkboxChecked]}
+        onPress={onPress}
+      >
+        {isChecked && <Text style={styles.checkMark}>✓</Text>}
+      </TouchableOpacity>
+    );
+    return (
+      <View style={styles.row}>
+        <Text style={[styles.dataCell, styles.snCell]}>{id}</Text>
+        <TextInput
+          style={[styles.inputCell, styles.nameCell]}
+          value={fullName}
+          onChangeText={(text) => updateHandlerField(id, 'fullName', text)}
+        />
+        <TextInput
+          style={[styles.inputCell, styles.jobCell]}
+          value={jobTitle}
+          onChangeText={(text) => updateHandlerField(id, 'jobTitle', text)}
+        />
+        <ScrollView horizontal contentContainerStyle={styles.scrollRow} showsHorizontalScrollIndicator={false}>
+          {TIME_SLOTS.map(time => (
+            <View key={time} style={styles.timeCheckCell}>
+              <Checkbox
+                isChecked={checks[time]}
+                onPress={() => toggleCheck(id, time)}
+              />
+            </View>
+          ))}
+        </ScrollView>
+        <TextInput
+          style={[styles.inputCell, styles.signCell]}
+          value={staffSign}
+          onChangeText={(text) => updateHandlerField(id, 'staffSign', text)}
+        />
+        <TextInput
+          style={[styles.inputCell, styles.supCell]}
+          value={supName}
+          onChangeText={(text) => updateHandlerField(id, 'supName', text)}
+        />
+        <TextInput
+          style={[styles.inputCell, styles.signCell]}
+          value={supSign}
+          onChangeText={(text) => updateHandlerField(id, 'supSign', text)}
+        />
+        <TouchableOpacity style={styles.removeBtn} onPress={() => removeHandler(id)}>
+          <Text style={styles.removeBtnText}>✕</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 500 }}>
+        <HeaderSection />
+        <View style={styles.tableContainer}>
+          <TableHeader />
+          {handlerData.map(handler => (
+            <HandlerRow key={handler.id} handler={handler} />
+          ))}
+        </View>
+        <TouchableOpacity style={styles.addBtn} onPress={addHandler}><Text style={styles.addBtnText}>+ Add Food Handler</Text></TouchableOpacity>
+        <Text style={styles.footerNote}>All food handlers are required to wash and sanitize their hands after every 60 minutes.</Text>
+        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}><Text style={styles.submitBtnText}>Submit</Text></TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#f6fdff',
-    padding: Platform.OS === 'web' ? 32 : 16,
+  },
+  container: {
+    flex: 1,
+    padding: 15,
     borderRadius: 16,
-    margin: Platform.OS === 'web' ? 32 : 0,
+    margin: 0,
   },
   title: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
     color: '#185a9d',
-    textAlign: 'center',
+    textAlign: 'left',
   },
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    elevation: 2,
+  headerContainer: {
+    marginBottom: 10,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  detailItem: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  dateInputWrapper: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  detailItemFull: {
+    flex: 1,
+  },
+  signatureSection: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    paddingBottom: 15,
+    marginBottom: 15
   },
   label: {
     fontWeight: 'bold',
-    marginTop: 8,
-    marginBottom: 2,
     color: '#185a9d',
+    marginBottom: 4,
   },
   input: {
     backgroundColor: '#f0f4f8',
     borderRadius: 8,
     padding: 8,
-    marginBottom: 6,
     fontSize: 15,
     borderWidth: 1,
     borderColor: '#43cea2',
   },
-  radioRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
-  },
-  radio: {
-    backgroundColor: '#f0f4f8',
-    borderRadius: 8,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#43cea2',
-  },
-  radioSelected: {
-    backgroundColor: '#43cea2',
-    borderColor: '#185a9d',
-  },
-  radioText: {
-    color: '#185a9d',
-    fontWeight: 'bold',
-  },
-  staticRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-  },
-  subTitle: {
+  dateIcon: {
+    position: 'absolute',
+    right: 10,
+    top: '50%',
+    marginTop: -9,
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#43cea2',
-    textAlign: 'center',
+    color: '#666',
   },
-  handlerRow: {
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: '#000',
+    borderRadius: 8,
+    overflow: 'hidden',
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    elevation: 1,
   },
-  sn: {
-    fontWeight: 'bold',
-    color: '#185a9d',
-    marginBottom: 4,
-  },
-  timesRow: {
+  row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+    alignItems: 'stretch',
+    backgroundColor: '#fff',
+  },
+  snCell: { width: 40 },
+  nameCell: { width: 160 },
+  jobCell: { width: 120 },
+  signCell: { width: 100 },
+  supCell: { width: 100 },
+  headerCell: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#000',
+    padding: 5,
+    textAlign: 'center',
+    borderRightWidth: 1,
+    borderColor: '#000',
+    backgroundColor: '#e9e9e9',
+    justifyContent: 'center',
+  },
+  dataCell: {
+    fontSize: 12,
+    padding: 5,
+    textAlign: 'center',
+    borderRightWidth: 1,
+    borderColor: '#ccc',
+  },
+  inputCell: {
+    fontSize: 12,
+    padding: 5,
+    borderRightWidth: 1,
+    borderColor: '#ccc',
+    minHeight: 35,
+    paddingTop: 8,
+  },
+  scrollHeader: {
+    flexDirection: 'row',
+    minHeight: 35,
+    alignItems: 'center',
+  },
+  scrollRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeCell: {
+    width: 70,
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    borderRightWidth: 1,
+    borderColor: '#000',
+    padding: 5,
+    backgroundColor: '#e9e9e9',
+    justifyContent: 'center',
+  },
+  timeCheckCell: {
+    width: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: 1,
+    borderColor: '#ccc',
+    minHeight: 35,
   },
   checkbox: {
-    backgroundColor: '#f0f4f8',
-    borderRadius: 6,
-    padding: 6,
-    margin: 2,
-    borderWidth: 1,
-    borderColor: '#43cea2',
+    width: 20,
+    height: 20,
+    borderWidth: 1.5,
+    borderColor: '#4a4a4a',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   checkboxChecked: {
-    color: '#43cea2',
-    fontWeight: 'bold',
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
   },
-  checkboxUnchecked: {
-    color: '#aaa',
+  checkMark: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    lineHeight: 18,
+  },
+  removeBtn: {
+    marginLeft: 6,
+    backgroundColor: '#ff5e62',
+    borderRadius: 8,
+    padding: 4,
+    alignSelf: 'center',
+  },
+  removeBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   addBtn: {
     backgroundColor: '#43cea2',
@@ -207,6 +423,7 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     marginBottom: 16,
+    marginTop: 8,
   },
   addBtnText: {
     color: '#fff',
