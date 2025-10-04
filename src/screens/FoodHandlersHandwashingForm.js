@@ -1,6 +1,11 @@
 
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import * as Device from 'expo-device';
+import { Image } from 'react-native';
+import NotificationModal from '../components/NotificationModal';
+import SaveFormButton from '../components/SaveFormButton';
 import {
   View,
   Text,
@@ -11,32 +16,75 @@ import {
   SafeAreaView,
 } from 'react-native';
 
+
 const TIME_SLOTS = [
   '06:00AM', '07:00AM', '08:00AM', '09:00AM', '10:00AM',
   '11:00AM', '12:00PM', '13:00PM', '14:00PM', '15:00PM',
 ];
 const NUM_ROWS = 14;
-const createInitialChecks = () =>
-  TIME_SLOTS.reduce((acc, time) => ({ ...acc, [time]: false }), {});
-const initialHandlers = Array.from({ length: NUM_ROWS }, (_, index) => ({
-  id: index + 1,
-  fullName: '',
-  jobTitle: '',
-  checks: createInitialChecks(),
-  staffSign: '',
-  supName: '',
-  supSign: '',
-}));
+function createInitialChecks() {
+  return TIME_SLOTS.reduce((acc, time) => ({ ...acc, [time]: false }), {});
+}
+function getInitialHandlers() {
+  return Array.from({ length: NUM_ROWS }, (_, index) => ({
+    id: index + 1,
+    fullName: '',
+    jobTitle: '',
+    checks: createInitialChecks(),
+    staffSign: '',
+    supName: '',
+    supSign: '',
+  }));
+}
 
-export default function FoodHandlersHandwashingForm() {
+export default function FoodHandlersHandwashingForm({ navigation }) {
+  useEffect(() => {
+    const setLandscape = async () => {
+      if (
+        Device.deviceType === Device.DeviceType.TABLET ||
+        Device.deviceType === Device.DeviceType.PHONE
+      ) {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      }
+    };
+    setLandscape();
+    return () => {
+      ScreenOrientation.unlockAsync();
+    };
+  }, []);
+  // Set initial date and shift based on system
+  const getCurrentDate = () => {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+  const getCurrentShift = () => {
+    const hour = new Date().getHours();
+    // 0-11 is AM, 12-23 is PM
+    return hour < 12 ? 'AM' : 'PM';
+  };
   const [logDetails, setLogDetails] = useState({
-    date: '',
+    date: getCurrentDate(),
     location: '',
-    shift: 'AM',
+    shift: getCurrentShift(),
     verifiedBy: '',
     complexManagerSign: '',
   });
-  const [handlerData, setHandlerData] = useState(initialHandlers);
+  const [showSaved, setShowSaved] = useState(false);
+  // Update date and shift automatically if system time changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLogDetails(prev => ({
+        ...prev,
+        date: getCurrentDate(),
+        shift: getCurrentShift(),
+      }));
+    }, 60000); // update every minute
+    return () => clearInterval(interval);
+  }, []);
+  const [handlerData, setHandlerData] = useState(getInitialHandlers());
 
   const toggleCheck = (id, timeSlot) => {
     setHandlerData(prevData =>
@@ -94,6 +142,24 @@ export default function FoodHandlersHandwashingForm() {
   // --- Header Section Component ---
   const HeaderSection = () => (
     <View style={styles.headerContainer}>
+      {/* Back Button */}
+      <TouchableOpacity
+        onPress={() => {
+          if (navigation && navigation.canGoBack && navigation.canGoBack()) {
+            navigation.goBack();
+          } else if (navigation && navigation.navigate) {
+            navigation.navigate('Home');
+          }
+        }}
+        style={{ marginBottom: 10, alignSelf: 'flex-start', padding: 8, borderRadius: 8, backgroundColor: '#e9e9e9' }}
+      >
+        <Text style={{ fontSize: 16, color: '#185a9d', fontWeight: 'bold' }}>← Back</Text>
+      </TouchableOpacity>
+      {/* Bravo Logo and Title */}
+      <View style={{ alignItems: 'center', marginBottom: 10 }}>
+        <Image source={require('../assets/logo.png')} style={{ width: 60, height: 60, borderRadius: 16, marginBottom: 4 }} resizeMode="contain" />
+        <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#185a9d', letterSpacing: 2 }}>Bravo</Text>
+      </View>
       <Text style={styles.title}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
 
       <View style={styles.detailRow}>
@@ -192,15 +258,25 @@ export default function FoodHandlersHandwashingForm() {
           style={[styles.inputCell, styles.nameCell]}
           value={fullName}
           onChangeText={(text) => updateHandlerField(id, 'fullName', text)}
+          autoCorrect={false}
+          autoCapitalize="words"
         />
         <TextInput
           style={[styles.inputCell, styles.jobCell]}
           value={jobTitle}
           onChangeText={(text) => updateHandlerField(id, 'jobTitle', text)}
+          autoCorrect={false}
+          autoCapitalize="words"
         />
         <ScrollView horizontal contentContainerStyle={styles.scrollRow} showsHorizontalScrollIndicator={false}>
-          {TIME_SLOTS.map(time => (
-            <View key={time} style={styles.timeCheckCell}>
+          {TIME_SLOTS.map((time, idx) => (
+            <View
+              key={time}
+              style={[
+                styles.timeCheckCell,
+                idx === TIME_SLOTS.length - 1 && { borderRightWidth: 6, borderColor: '#000' },
+              ]}
+            >
               <Checkbox
                 isChecked={checks[time]}
                 onPress={() => toggleCheck(id, time)}
@@ -212,16 +288,22 @@ export default function FoodHandlersHandwashingForm() {
           style={[styles.inputCell, styles.signCell]}
           value={staffSign}
           onChangeText={(text) => updateHandlerField(id, 'staffSign', text)}
+          autoCorrect={false}
+          autoCapitalize="characters"
         />
         <TextInput
           style={[styles.inputCell, styles.supCell]}
           value={supName}
           onChangeText={(text) => updateHandlerField(id, 'supName', text)}
+          autoCorrect={false}
+          autoCapitalize="words"
         />
         <TextInput
           style={[styles.inputCell, styles.signCell]}
           value={supSign}
           onChangeText={(text) => updateHandlerField(id, 'supSign', text)}
+          autoCorrect={false}
+          autoCapitalize="characters"
         />
         <TouchableOpacity style={styles.removeBtn} onPress={() => removeHandler(id)}>
           <Text style={styles.removeBtnText}>✕</Text>
@@ -230,19 +312,79 @@ export default function FoodHandlersHandwashingForm() {
     );
   };
 
+  // Save logic: store in localStorage (web) or AsyncStorage (native) in future
+  const handleSave = (formData) => {
+    try {
+      // For demo: save to localStorage (works in web, not native)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const history = JSON.parse(window.localStorage.getItem('formHistory') || '[]');
+        history.push({ ...formData, savedAt: new Date().toISOString() });
+        window.localStorage.setItem('formHistory', JSON.stringify(history));
+        setShowSaved(true);
+        // Clear form after save
+        setLogDetails({
+          date: getCurrentDate(),
+          location: '',
+          shift: getCurrentShift(),
+          verifiedBy: '',
+          complexManagerSign: '',
+        });
+  setHandlerData(getInitialHandlers());
+      } else {
+        setShowSaved(true);
+        setLogDetails({
+          date: getCurrentDate(),
+          location: '',
+          shift: getCurrentShift(),
+          verifiedBy: '',
+          complexManagerSign: '',
+        });
+  setHandlerData(getInitialHandlers());
+      }
+    } catch (e) {
+      setShowSaved(true);
+    }
+  };
+
+  // Function to get current form data
+  const getFormData = () => ({
+    ...logDetails,
+    handlers: handlerData,
+  });
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 500 }}>
+    <SafeAreaView style={[styles.safeArea, { flex: 1 }]}> 
+      <ScrollView
+        style={[styles.container, { flex: 1 }]}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={true}
+      >
         <HeaderSection />
-        <View style={styles.tableContainer}>
-          <TableHeader />
-          {handlerData.map(handler => (
-            <HandlerRow key={handler.id} handler={handler} />
-          ))}
-        </View>
+        <ScrollView
+          horizontal
+          contentContainerStyle={{ minWidth: 1200 }}
+          showsHorizontalScrollIndicator={true}
+          style={styles.tableContainer}
+        >
+          <View>
+            <TableHeader />
+            {handlerData.map(handler => (
+              <HandlerRow key={handler.id} handler={handler} />
+            ))}
+          </View>
+        </ScrollView>
         <TouchableOpacity style={styles.addBtn} onPress={addHandler}><Text style={styles.addBtnText}>+ Add Food Handler</Text></TouchableOpacity>
         <Text style={styles.footerNote}>All food handlers are required to wash and sanitize their hands after every 60 minutes.</Text>
-        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}><Text style={styles.submitBtnText}>Submit</Text></TouchableOpacity>
+        <SaveFormButton
+          onSave={handleSave}
+          getFormData={getFormData}
+          label="Save Form"
+        />
+        <NotificationModal
+          visible={showSaved}
+          message="Form saved!"
+          onClose={() => setShowSaved(false)}
+        />
       </ScrollView>
     </SafeAreaView>
   );

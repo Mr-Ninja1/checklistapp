@@ -28,7 +28,8 @@ const formCategories = {
       { id: 11, title: "Daily Handwashing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Production Entry" },
       { id: 12, title: "Daily Handwashing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Production Entry" },
       { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
-      { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" }
+      { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" },
+      { id: 100, title: "Food Handlers Daily Handwashing Tracking Log Sheet", status: "pending", priority: "high", dueTime: "Daily", location: "Production Floor", isHandwashingLog: true },
     ]
   },
   kitchen: {
@@ -141,6 +142,25 @@ export default function HomeScreen() {
   // Main UI
   return (
     <View style={{ flex: 1, backgroundColor: '#f6fdff', width: '100%' }}>
+      {/* Floating History Button - always visible, top right */}
+      <TouchableOpacity
+        style={[
+          styles.historyBtn,
+          {
+            // To move the button lower, increase the 'top' value. To move it up, decrease it.
+            // Example: top: isMobile ? 500 : 600, // moves it near the bottom for most screens
+            top: isMobile ? 500 : 600,
+            right: isMobile ? 18 : 32,
+            width: isMobile ? 64 : 80,
+            height: isMobile ? 64 : 80,
+            borderRadius: isMobile ? 32 : 40,
+          },
+        ]}
+        onPress={() => navigation.navigate('FormSaves')}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.historyBtnText, { fontSize: isMobile ? 36 : 44 }]}>📂</Text>
+      </TouchableOpacity>
       <LinearGradient
         colors={["#22c1c3", "#43cea2", "#185a9d"]}
         style={{
@@ -175,7 +195,7 @@ export default function HomeScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Image
-                  source={require('../logo.png')}
+                  source={require('../assets/icon.png')}
                   style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', marginRight: 12, shadowColor: '#185a9d', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 }}
                   resizeMode="contain"
                 />
@@ -206,7 +226,7 @@ export default function HomeScreen() {
             }}
           >
             <Image
-              source={require('../logo.png')}
+              source={require('../assets/icon.png')}
               style={{ width: 48, height: 48, borderRadius: 12, marginRight: 16, backgroundColor: '#fff' }}
               resizeMode="contain"
             />
@@ -279,33 +299,41 @@ export default function HomeScreen() {
         <View style={[styles.formListContent, { minHeight: 0 }]}> 
           {getFilteredForms(activeCategory).map((form) => (
             <View key={form.id}>
-              <View style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff' }]}> 
+              <TouchableOpacity
+                disabled={!form.isHandwashingLog}
+                onPress={() => {
+                  if (form.isHandwashingLog) {
+                    // Navigate to the FoodHandlersHandwashingForm screen
+                    if (typeof navigation !== 'undefined') {
+                      navigation.navigate('FoodHandlersHandwashingForm');
+                    }
+                  }
+                }}
+                style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: form.isHandwashingLog ? 1 : 1 }]}
+              >
                 <View style={styles.formCardTop}>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
                     <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
                   </View>
                 </View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
-                  </View>
-                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
+                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
+                    </View>
+                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
+                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
           ))}
         </View>
       </View>
 
-      {/* Floating Action Button */}
-      <TouchableOpacity style={styles.fab} onPress={() => {}}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      {/* Floating Action Button removed, replaced by top right button */}
 
       {/* Footer */}
       <View style={styles.footer}>
@@ -346,23 +374,27 @@ const styles = StyleSheet.create({
   formListContent: {
     padding: 12,
   },
-  fab: {
+  historyBtn: {
     position: 'absolute',
-    right: 24,
-    bottom: 24,
-    backgroundColor: '#43cea2',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    zIndex: 100,
+    backgroundColor: '#fff',
+    borderRadius: 40, // matches the larger size
+    borderWidth: 4,
+    borderColor: '#185a9d', // bold colored border
+    width: 80,
+    height: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
+    shadowColor: '#185a9d',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 12,
   },
-  fabText: {
-    color: '#fff',
-    fontSize: 32,
+  historyBtnText: {
+    fontSize: 28,
+    color: '#185a9d',
     fontWeight: 'bold',
-    marginTop: -2,
   },
   footer: {
     alignItems: 'center',

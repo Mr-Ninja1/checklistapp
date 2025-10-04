@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+
 import SplashScreen from './screens/SplashScreen';
-import LoginScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import KitchenCategory from './screens/KitchenCategory';
 import FOHCategoryScreen from './screens/FOHCategoryScreen';
 import FOHFormScreen from './screens/FOHFormScreen';
+import FormSavesScreen from './screens/FormSavesScreen';
 
 const Stack = createStackNavigator();
 
@@ -14,10 +15,10 @@ const linking = {
   prefixes: ['http://localhost:8081'],
   config: {
     screens: {
-      Home: '',
+  Home: '',
+  FormSaves: 'FormSaves',
       FOHFormScreen: 'FOHFormScreen',
       Splash: 'Splash',
-      Login: 'Login',
       KitchenCategory: 'KitchenCategory',
       FOHCategory: 'FOHCategory',
         FoodHandlersHandwashingForm: 'FoodHandlersHandwashingForm',
@@ -28,14 +29,14 @@ const linking = {
 export default function App() {
   return (
     <NavigationContainer linking={linking}>
-      <Stack.Navigator initialRouteName="Home">
+  <Stack.Navigator initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+  <Stack.Screen name="FormSaves" component={FormSavesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
         <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./screens/FoodHandlersHandwashingForm').default} options={{ headerShown: false }} />
+        <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./screens/FoodHandlersHandwashingForm').default} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

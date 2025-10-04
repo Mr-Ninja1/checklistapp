@@ -7,14 +7,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 export default function SplashScreen({ navigation }) {
   useEffect(() => {
     setTimeout(() => {
-      navigation.replace('Login');
+  navigation.replace('Home');
     }, 2000);
   }, [navigation]);
 
   return (
     <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.container}>
       <View style={styles.logoContainer}>
-        <Image source={require('../logo.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={require('../assets/icon.png')} style={styles.logo} resizeMode="contain" />
       </View>
       <Text style={styles.bravo}>Bravo!</Text>
       <ActivityIndicator size="large" color="#fff" style={styles.spinner} />

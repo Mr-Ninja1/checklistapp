@@ -28,6 +28,14 @@ A cross-platform React Native mobile app for BRAVO restaurant supervisors to man
 - Supervisor (initially; more roles can be added later)
 
 ## Next Steps
+
+## Future Feature: PDF Storage, Offline History, and Cloud Sync
+- All completed forms are saved as A4-sized PDFs, capturing the entire form (not just the visible viewport)
+- PDFs are stored locally on the device for offline access
+- A History page displays all saved PDFs, organized by session/date
+- When internet is available, unsynced PDFs are automatically uploaded to Google Drive or Dropbox
+- The app handles authentication for cloud storage and marks forms as synced
+- Users can view, print, or share any saved PDF from the history page
 - Await client confirmation on categories and forms
 - Add required fields for each form as provided
 - Implement PDF generation, print, and sync features
