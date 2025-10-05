@@ -1,6 +1,8 @@
 import warnOnce from '../utils/warnOnce';
 import React, { useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Form data from Index.tsx
@@ -98,6 +100,7 @@ const getPriorityColor = (priority) => {
 };
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
   const [activeCategory, setActiveCategory] = useState('foh');
   const [searchTerm, setSearchTerm] = useState('');
   // Date/time
@@ -195,7 +198,9 @@ export default function HomeScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Image
-                  source={require('../assets/icon.png')}
+                 
+
+                  source={require('../assets/logo.png')}
                   style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', marginRight: 12, shadowColor: '#185a9d', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 }}
                   resizeMode="contain"
                 />
@@ -226,7 +231,7 @@ export default function HomeScreen() {
             }}
           >
             <Image
-              source={require('../assets/icon.png')}
+              source={require('../assets/logo.png')}
               style={{ width: 48, height: 48, borderRadius: 12, marginRight: 16, backgroundColor: '#fff' }}
               resizeMode="contain"
             />
@@ -294,44 +299,42 @@ export default function HomeScreen() {
       </View>
 
       {/* Form Lists */}
-      <View style={{ flex: 1, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
-        {/* Use View for web scroll, not ScrollView */}
-        <View style={[styles.formListContent, { minHeight: 0 }]}> 
-          {getFilteredForms(activeCategory).map((form) => (
-            <View key={form.id}>
-              <TouchableOpacity
-                disabled={!form.isHandwashingLog}
-                onPress={() => {
-                  if (form.isHandwashingLog) {
-                    // Navigate to the FoodHandlersHandwashingForm screen
-                    if (typeof navigation !== 'undefined') {
-                      navigation.navigate('FoodHandlersHandwashingForm');
-                    }
+      <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={[styles.formListContent, { minHeight: 0 }]}> 
+        {getFilteredForms(activeCategory).map((form) => (
+          <View key={`form-card-${form.id}-${form.title}`}>
+            <TouchableOpacity
+              key={`form-touchable-${form.id}-${form.title}`}
+              disabled={!form.isHandwashingLog}
+              onPress={() => {
+                if (form.isHandwashingLog) {
+                  // Navigate to the FoodHandlersHandwashingForm screen
+                  if (typeof navigation !== 'undefined') {
+                    navigation.navigate('FoodHandlersHandwashingForm');
                   }
-                }}
-                style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: form.isHandwashingLog ? 1 : 1 }]}
-              >
-                <View style={styles.formCardTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
-                    <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
+                }
+              }}
+              style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: form.isHandwashingLog ? 1 : 1 }]}
+            >
+              <View style={styles.formCardTop}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
+                  <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
+                  </View>
+                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
                   </View>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
-                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
-                    </View>
-                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
-                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
 
       {/* Floating Action Button removed, replaced by top right button */}
 
