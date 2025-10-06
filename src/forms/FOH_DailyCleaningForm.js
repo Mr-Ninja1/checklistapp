@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
 
@@ -58,7 +59,10 @@ export default function FOH_DailyCleaningForm() {
   const resp = useResponsive();
 
   const [formData, setFormData] = useState(initialEquipmentState);
-  const [metadata, setMetadata] = useState({ date: '03/08/2025', location: '', shift: 'PM', verifiedBy: '' });
+  const now = new Date();
+  const sysDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
+  const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
 
   const handleMetadataChange = (key, value) => setMetadata(prev => ({ ...prev, [key]: value }));
 
@@ -79,13 +83,13 @@ export default function FOH_DailyCleaningForm() {
 
   // Proportions for columns (sum ~= 1)
   const PROPORTIONS = useMemo(() => ({
-    EQUIPMENT: 0.22,
-    PPM: 0.08,
+    EQUIPMENT: 0.20,
+    PPM: 0.07,
     TIME_SLOTS: 0.36,
-    STAFF_NAME: 0.08,
-    SIGNATURE: 0.08,
-    SLIP_NAME: 0.09,
-    SUP_SIGN: 0.09,
+    STAFF_NAME: 0.11, // widened
+    SIGNATURE: 0.11, // widened
+    SLIP_NAME: 0.095,
+    SUP_SIGN: 0.095,
   }), []);
 
   const COL_WIDTHS = useMemo(() => {
@@ -144,9 +148,15 @@ export default function FOH_DailyCleaningForm() {
   const needsHorizontal = TOTAL_TABLE_WIDTH > availableWidth;
 
   return (
-    <ScrollView style={[styles.container, { padding: containerPadding }]}> 
+    <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled">
+      {/* Header with logo and company name */}
+      <View style={styles.headerTop}>
+        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.companyName}>Bravo</Text>
+        <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text>
+      </View>
+
       <View style={styles.metadataContainer}>
-        <Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text>
         <View style={styles.metadataRow}>
           {Object.keys(metadata).map(key => (
             <View key={key} style={styles.metadataItem}>
@@ -158,22 +168,38 @@ export default function FOH_DailyCleaningForm() {
         <Text style={[styles.tickInstruction, { fontSize: ms(11) }]}>✓ TICK AFTER CLEANING</Text>
       </View>
 
-      <ScrollView horizontal={needsHorizontal} contentContainerStyle={{ flexDirection: 'column' }}>
-        <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
-          <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
-          <HeaderCell width={COL_WIDTHS.PPM}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SANITIZER-VEG WASH (PPM?)</Text></HeaderCell>
-          <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
-            <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}><Text style={[styles.headerText, { fontSize: ms(10) }]}>TIME INTERVAL</Text></HeaderCell>
-            <View style={{ flexDirection: 'row' }}>{TIME_SLOTS.map((time, index) => (<HeaderCell key={index} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}><Text style={{ fontSize: ms(9) }}>{time}</Text></HeaderCell>))}</View>
+      {/* Table area: allow horizontal scroll when needed (wrap in responder-enabled View so horizontal swipes register) */}
+      <View
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderTerminationRequest={() => false}
+      >
+        <ScrollView
+          horizontal={true}
+          nestedScrollEnabled={true}
+          showsHorizontalScrollIndicator={true}
+          directionalLockEnabled={true}
+          contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
+          <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
+            <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
+            <HeaderCell width={COL_WIDTHS.PPM}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SANITIZER-VEG WASH (PPM?)</Text></HeaderCell>
+            <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
+              <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}><Text style={[styles.headerText, { fontSize: ms(10) }]}>TIME INTERVAL</Text></HeaderCell>
+              <View style={{ flexDirection: 'row' }}>{TIME_SLOTS.map((time, index) => (<HeaderCell key={index} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}><Text style={{ fontSize: ms(9) }}>{time}</Text></HeaderCell>))}</View>
+            </View>
+            <HeaderCell width={COL_WIDTHS.STAFF_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF NAME</Text></HeaderCell>
+            <HeaderCell width={COL_WIDTHS.SIGNATURE}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF SIGN</Text></HeaderCell>
+            <HeaderCell width={COL_WIDTHS.SLIP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SLIP NAME</Text></HeaderCell>
+            <HeaderCell width={COL_WIDTHS.SUP_SIGN}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP SIGN</Text></HeaderCell>
           </View>
-          <HeaderCell width={COL_WIDTHS.STAFF_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF NAME</Text></HeaderCell>
-          <HeaderCell width={COL_WIDTHS.SIGNATURE}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF SIGN</Text></HeaderCell>
-          <HeaderCell width={COL_WIDTHS.SLIP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SLIP NAME</Text></HeaderCell>
-          <HeaderCell width={COL_WIDTHS.SUP_SIGN}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP SIGN</Text></HeaderCell>
-        </View>
 
-        {formData.map(renderLogRow)}
+          {formData.map(renderLogRow)}
+        </View>
       </ScrollView>
+  </View>
 
       <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All food handlers are required to clean and sanitize the equipment used every after use.</Text>
 
@@ -207,4 +233,7 @@ const styles = StyleSheet.create({
   checkboxContainer: { width: 26, height: 26, borderWidth: 1.5, borderColor: '#333', borderRadius: 4, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6' },
   checkboxText: { fontSize: 14, fontWeight: 'bold', color: '#008000' },
   instruction: { marginTop: 22, fontSize: 12, fontStyle: 'italic', padding: 6, textAlign: 'center', color: '#666' },
+  headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  logo: { width: 64, height: 48, marginRight: 8 },
+  companyName: { fontSize: 16, fontWeight: '800', color: '#185a9d', marginRight: 12 },
 });
