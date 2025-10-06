@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import useResponsive from '../utils/responsive';
 
-export function ResponsiveView({ children, style, lockLandscape = true }) {
+export function ResponsiveView({ children, style, lockLandscape = false }) {
   const resp = useResponsive();
 
   useEffect(() => {
