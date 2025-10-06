@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,400 +6,408 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
+  Platform, 
 } from 'react-native';
 
-// --- Configuration ---
-const TIME_SLOTS = [
-  '06:00AM', '07:00AM', '08:00AM', '09:00AM', '10:00AM',
-  '11:00AM', '12:00PM', '13:00PM', '14:00PM', '15:00PM',
+// --- DATA STRUCTURE ---
+const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
+const EQUIPMENT_LIST = [
+  'TABLES',
+  'CHAIRS',
+  'GRAB AND GO CHILLER',
+  'GELATO CHILLER',
+  'COFFEE MACHINE',
+  'MARY CHEF',
+  'BLENDERS',
+  'JUICE MAKER',
+  'FIRE EXTINGUISHERS',
 ];
-const NUM_ROWS = 8; // Number of initial handlers
 
-// Helper function to create initial empty checks for all time slots
-const createInitialChecks = () =>
-  TIME_SLOTS.reduce((acc, time) => ({ ...acc, [time]: false }), {});
+const initialEquipmentState = EQUIPMENT_LIST.map((name, index) => {
+  const times = TIME_SLOTS.reduce((acc, time) => {
+    acc[time] = false;
+    return acc;
+  }, {});
 
-// Initial handler data array
-const initialHandlers = Array.from({ length: NUM_ROWS }, (_, index) => ({
-  id: index + 1,
-  fullName: '',
-  jobTitle: '',
-  checks: createInitialChecks(),
-  staffSign: '',
-  supName: '',
-  supSign: '',
-}));
+  return {
+    id: index,
+    name,
+    ppm: '',
+    staffName: '',
+    staffSign: '',
+    slipName: '',
+    supSign: '',
+    times,
+  };
+});
 
-// Main App Component
-const App = () => {
-  const [logDetails, setLogDetails] = useState({
-    date: '10/02/2025',
+// --- REUSABLE COMPONENTS ---
+
+/**
+ * A custom Checkbox component simulated using core React Native components.
+ * It uses a simple '✓' character to indicate a checked state.
+ */
+const Checkbox = ({ checked, onPress }) => (
+  <TouchableOpacity
+    style={styles.checkboxContainer}
+    onPress={onPress}
+    // Added accessibility role for better user experience
+    accessibilityRole="checkbox"
+    accessibilityState={{ checked }}
+  >
+    <Text style={styles.checkboxText}>{checked ? '✓' : ''}</Text>
+  </TouchableOpacity>
+);
+
+/**
+ * Header Cell component for styling consistency.
+ */
+const HeaderCell = ({ children, width, flex = 0, style = {} }) => (
+  <View style={[styles.headerCell, { width, flex }, style]}>
+    <Text style={styles.headerText}>{children}</Text>
+  </View>
+);
+
+/**
+ * Data Cell component for styling consistency.
+ */
+const DataCell = ({ children, width, flex = 0, style = {} }) => (
+  <View style={[styles.dataCell, { width, flex }, style]}>
+    {children}
+  </View>
+);
+
+// --- MAIN APPLICATION COMPONENT ---
+
+const SanitizingLog = () => {
+  const [formData, setFormData] = useState(initialEquipmentState);
+  const [metadata, setMetadata] = useState({
+    date: '03/08/2025',
     location: '',
-    shift: 'AM',
+    shift: 'PM',
     verifiedBy: '',
-    complexManagerSign: '',
   });
 
-  const [handlerData, setHandlerData] = useState(initialHandlers);
-
-  // Function to update a checkbox status
-  const toggleCheck = (id, timeSlot) => {
-    setHandlerData(prevData =>
-      prevData.map(handler => {
-        if (handler.id === id) {
-          return {
-            ...handler,
-            checks: {
-              ...handler.checks,
-              [timeSlot]: !handler.checks[timeSlot],
-            },
-          };
-        }
-        return handler;
-      })
-    );
+  const handleMetadataChange = (key, value) => {
+    setMetadata(prev => ({ ...prev, [key]: value }));
   };
 
-  // Function to update a text input field in a handler row
-  const updateHandlerField = (id, fieldName, value) => {
-    setHandlerData(prevData =>
-      prevData.map(handler =>
-        handler.id === id ? { ...handler, [fieldName]: value } : handler
+  const handleInputChange = (id, field, value) => {
+    setFormData(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, [field]: value } : item
       )
     );
   };
 
-  // --- Header Section Component ---
-  const HeaderSection = () => (
-    <View style={styles.headerContainer}>
-      <Text style={styles.title}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
-
-      <View style={styles.detailRow}>
-        <View style={styles.detailItem}>
-          <Text style={styles.label}>Date:</Text>
-          <View style={styles.dateInputWrapper}>
-            <TextInput
-              style={styles.input}
-              value={logDetails.date}
-              onChangeText={(text) => setLogDetails({ ...logDetails, date: text })}
-              placeholder="DD/MM/YYYY"
-            />
-            {/* Display a calendar icon for aesthetics */}
-            <Text style={styles.dateIcon}>📅</Text>
-          </View>
-        </View>
-
-        <View style={styles.detailItem}>
-          <Text style={styles.label}>Location:</Text>
-          <TextInput
-            style={styles.input}
-            value={logDetails.location}
-            onChangeText={(text) => setLogDetails({ ...logDetails, location: text })}
-            placeholder="Enter Location"
-          />
-        </View>
-      </View>
-
-      <View style={styles.detailRow}>
-        <View style={styles.detailItem}>
-          <Text style={styles.label}>Shift:</Text>
-          {/* Simulated Dropdown/Picker */}
-          <TextInput
-            style={styles.input}
-            value={logDetails.shift}
-            onChangeText={(text) => setLogDetails({ ...logDetails, shift: text })}
-          />
-        </View>
-
-        <View style={styles.detailItem}>
-          <Text style={styles.label}>Verified By:</Text>
-          <TextInput
-            style={styles.input}
-            value={logDetails.verifiedBy}
-            onChangeText={(text) => setLogDetails({ ...logDetails, verifiedBy: text })}
-            placeholder="Enter Verifier Name"
-          />
-        </View>
-      </View>
-
-      <View style={[styles.detailRow, styles.signatureSection]}>
-        <View style={styles.detailItemFull}>
-          <Text style={styles.label}>Complex Manager Sign:</Text>
-          <TextInput
-            style={styles.input}
-            value={logDetails.complexManagerSign}
-            onChangeText={(text) => setLogDetails({ ...logDetails, complexManagerSign: text })}
-            placeholder="Signature/Initials"
-          />
-        </View>
-      </View>
-    </View>
-  );
-
-  // --- Table Header Component ---
-  const TableHeader = () => (
-    <View style={styles.row}>
-      <Text style={[styles.headerCell, styles.snCell]}>S/N</Text>
-      <Text style={[styles.headerCell, styles.nameCell]}>Full Name</Text>
-      <Text style={[styles.headerCell, styles.jobCell]}>Job Title</Text>
-
-      {/* HORIZONTAL SCROLL AREA for Time Slots */}
-      <ScrollView horizontal contentContainerStyle={styles.scrollHeader}>
-        {TIME_SLOTS.map(time => (
-          <Text key={time} style={styles.timeCell}>{time}</Text>
-        ))}
-      </ScrollView>
-      {/* END HORIZONTAL SCROLL AREA */}
-
-      <Text style={[styles.headerCell, styles.signCell]}>Staff Sign</Text>
-      <Text style={[styles.headerCell, styles.supCell]}>Sup Name</Text>
-      <Text style={[styles.headerCell, styles.signCell]}>Sup Sign</Text>
-    </View>
-  );
-
-  // --- Handler Row Component ---
-  const HandlerRow = ({ handler }) => {
-    const { id, fullName, jobTitle, checks, staffSign, supName, supSign } = handler;
-
-    // A custom checkbox view
-    const Checkbox = ({ isChecked, onPress }) => (
-      <TouchableOpacity
-        style={[styles.checkbox, isChecked && styles.checkboxChecked]}
-        onPress={onPress}
-      >
-        {isChecked && <Text style={styles.checkMark}>✓</Text>}
-      </TouchableOpacity>
-    );
-
-    return (
-      <View style={styles.row}>
-        <Text style={[styles.dataCell, styles.snCell]}>{id}</Text>
-
-        <TextInput
-          style={[styles.inputCell, styles.nameCell]}
-          value={fullName}
-          onChangeText={(text) => updateHandlerField(id, 'fullName', text)}
-        />
-
-        <TextInput
-          style={[styles.inputCell, styles.jobCell]}
-          value={jobTitle}
-          onChangeText={(text) => updateHandlerField(id, 'jobTitle', text)}
-        />
-
-        {/* HORIZONTAL SCROLL AREA for Checkboxes */}
-        <ScrollView horizontal contentContainerStyle={styles.scrollRow}>
-          {TIME_SLOTS.map(time => (
-            <View key={time} style={styles.timeCheckCell}>
-              <Checkbox
-                isChecked={checks[time]}
-                onPress={() => toggleCheck(id, time)}
-              />
-            </View>
-          ))}
-        </ScrollView>
-        {/* END HORIZONTAL SCROLL AREA */}
-
-        <TextInput
-          style={[styles.inputCell, styles.signCell]}
-          value={staffSign}
-          onChangeText={(text) => updateHandlerField(id, 'staffSign', text)}
-        />
-        <TextInput
-          style={[styles.inputCell, styles.supCell]}
-          value={supName}
-          onChangeText={(text) => updateHandlerField(id, 'supName', text)}
-        />
-        <TextInput
-          style={[styles.inputCell, styles.signCell]}
-          value={supSign}
-          onChangeText={(text) => updateHandlerField(id, 'supSign', text)}
-        />
-      </View>
+  const handleTimeCheck = (id, timeSlot) => {
+    setFormData(prev =>
+      prev.map(item =>
+        item.id === id
+          ? { ...item, times: { ...item.times, [timeSlot]: !item.times[timeSlot] } }
+          : item
+      )
     );
   };
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
-        <HeaderSection />
+  // Define widths based on the structure. Using slightly smaller values for better
+  // fit on small screens, as fixed widths can cause overflow.
+  const COL_WIDTHS = useMemo(() => ({
+    EQUIPMENT: 160, // Fixed width for Equipment name
+    PPM: 60, // Fixed width for PPM input
+    TIME_SLOT: 40, // Fixed width for each time slot (checkbox)
+    STAFF_NAME: 80,
+    SIGNATURE: 80,
+    SLIP_NAME: 80,
+    SUP_SIGN: 80,
+  }), []);
 
-        <View style={styles.tableContainer}>
-          <TableHeader />
-          {handlerData.map(handler => (
-            <HandlerRow key={handler.id} handler={handler} />
+  // Calculate the total width of the time slot section for alignment
+  const TIME_SLOTS_WIDTH = COL_WIDTHS.TIME_SLOT * TIME_SLOTS.length;
+
+  // Calculate the total width of the table for the outer container style
+  const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIPMENT + COL_WIDTHS.PPM + TIME_SLOTS_WIDTH + COL_WIDTHS.STAFF_NAME + COL_WIDTHS.SIGNATURE + COL_WIDTHS.SLIP_NAME + COL_WIDTHS.SUP_SIGN;
+
+
+  // The main row rendering function
+  const renderLogRow = (item) => (
+    <View key={item.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH }]}>
+      {/* Equipment Name */}
+      <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
+        <Text style={styles.dataText}>{item.name}</Text>
+      </DataCell>
+
+      {/* SANITIZER-VEG WASH (PPM?) */}
+      <DataCell width={COL_WIDTHS.PPM}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'ppm', text)}
+          value={item.ppm}
+          keyboardType="numeric"
+          placeholder="0"
+        />
+      </DataCell>
+
+      {/* TIME INTERVAL CHECKBOXES (Crucial Alignment) */}
+      <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>
+        {TIME_SLOTS.map(time => (
+          <DataCell key={time} width={COL_WIDTHS.TIME_SLOT}>
+            {/* THIS IS THE CHECKBOX FOR THE TIME SLOT */}
+            <Checkbox
+              checked={item.times[time]}
+              onPress={() => handleTimeCheck(item.id, time)}
+            />
+          </DataCell>
+        ))}
+      </View>
+
+      {/* STAFF NAME */}
+      <DataCell width={COL_WIDTHS.STAFF_NAME}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'staffName', text)}
+          value={item.staffName}
+        />
+      </DataCell>
+
+      {/* STAFF SIGN */}
+      <DataCell width={COL_WIDTHS.SIGNATURE}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'staffSign', text)}
+          value={item.staffSign}
+        />
+      </DataCell>
+
+      {/* SLIP NAME */}
+      <DataCell width={COL_WIDTHS.SLIP_NAME}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'slipName', text)}
+          value={item.slipName}
+        />
+      </DataCell>
+
+      {/* SUP SIGN */}
+      <DataCell width={COL_WIDTHS.SUP_SIGN}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'supSign', text)}
+          value={item.supSign}
+        />
+      </DataCell>
+    </View>
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Header Info */}
+      <View style={styles.metadataContainer}>
+        <Text style={styles.title}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text>
+        
+        {/* Metadata Row (Flexible layout) */}
+        <View style={styles.metadataRow}>
+          {Object.keys(metadata).map(key => (
+            <View key={key} style={styles.metadataItem}>
+              <Text style={styles.metadataLabel}>{key.charAt(0).toUpperCase() + key.slice(1)}:</Text>
+              <TextInput
+                style={styles.metadataInput}
+                value={metadata[key]}
+                onChangeText={(t) => handleMetadataChange(key, t)}
+              />
+            </View>
           ))}
         </View>
+
+        <Text style={styles.tickInstruction}>✓ TICK AFTER CLEANING</Text>
+      </View>
+
+      {/* Outer ScrollView for horizontal table scrolling */}
+      <ScrollView horizontal contentContainerStyle={{ flexDirection: 'column' }}>
+        
+        {/* Table Header */}
+        <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
+          {/* Main Columns */}
+          <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
+            EQUIPMENT
+          </HeaderCell>
+          <HeaderCell width={COL_WIDTHS.PPM}>
+            SANITIZER-VEG WASH (PPM?)
+          </HeaderCell>
+
+          {/* TIME INTERVAL HEADER */}
+          <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
+            <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}>
+              <Text style={styles.headerText}>TIME INTERVAL</Text>
+            </HeaderCell>
+            <View style={{ flexDirection: 'row' }}>
+              {TIME_SLOTS.map((time, index) => (
+                <HeaderCell key={index} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}>
+                  {time}
+                </HeaderCell>
+              ))}
+            </View>
+          </View>
+          
+          {/* Right Side Columns */}
+          <HeaderCell width={COL_WIDTHS.STAFF_NAME}>STAFF NAME</HeaderCell>
+          <HeaderCell width={COL_WIDTHS.SIGNATURE}>STAFF SIGN</HeaderCell>
+          <HeaderCell width={COL_WIDTHS.SLIP_NAME}>SLIP NAME</HeaderCell>
+          <HeaderCell width={COL_WIDTHS.SUP_SIGN}>SUP SIGN</HeaderCell>
+        </View>
+
+        {/* Table Body */}
+        {formData.map(renderLogRow)}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Footer Instruction */}
+      <Text style={styles.instruction}>
+        Instruction: All food handlers are required to clean and sanitize the equipment used every after use.
+      </Text>
+    </ScrollView>
   );
 };
 
-// --- Styling ---
+// --- STYLESHEET ---
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  // Main Container for vertical scrolling
   container: {
-    padding: 15,
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 20,
-    color: '#333',
-  },
-  // --- Header Details Styles ---
-  headerContainer: {
-    marginBottom: 10,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  detailItem: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  dateInputWrapper: { // Added wrapper for date input to position icon
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  detailItemFull: {
-    flex: 1,
-  },
-  signatureSection: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingBottom: 15,
-    marginBottom: 15
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 6,
-    padding: 8,
     fontSize: 14,
-    backgroundColor: '#fafafa',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+    paddingVertical: 5,
+    color: '#333',
   },
-  dateIcon: {
-    position: 'absolute',
-    right: 10,
-    top: '50%',
-    marginTop: -9, // Center vertically
-    fontSize: 18,
-    color: '#666',
-  },
-  // --- Table Styles ---
-  tableContainer: {
+  // Metadata Styles
+  metadataContainer: {
+    marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#000',
-    borderRadius: 8,
-    overflow: 'hidden',
+    borderColor: '#333',
+    padding: 10,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginBottom: 5,
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 15,
+    marginBottom: 8,
+  },
+  metadataLabel: {
+    fontWeight: '600',
+    fontSize: 11,
+    color: '#555',
+  },
+  metadataInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#aaa',
+    paddingHorizontal: 4,
+    minWidth: 60,
+    height: 20,
+    fontSize: 11,
+  },
+  tickInstruction: {
+    marginTop: 5,
+    fontWeight: 'bold',
+    fontSize: 12,
+    color: '#006400', // Dark Green
+  },
+  // Table Styles
+  headerRow: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#333',
+    backgroundColor: '#e0e0e0',
+    borderBottomWidth: 2,
+  },
+  headerCell: {
+    padding: 6,
+    borderRightWidth: 1,
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeHeader: {
+    padding: 3,
+    borderRightWidth: 1,
+    borderColor: '#333',
+  },
+  headerText: {
+    fontWeight: 'bold',
+    fontSize: 9,
+    textAlign: 'center',
+    color: '#333',
   },
   row: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderColor: '#ccc',
-    alignItems: 'stretch',
+    minHeight: 35,
     backgroundColor: '#fff',
   },
-  // Fixed Width Cells
-  snCell: { width: 30 },
-  nameCell: { width: 80 },
-  jobCell: { width: 80 },
-  signCell: { width: 80 },
-  supCell: { width: 70 },
-
-  // Header Cell Styling
-  headerCell: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#000',
-    padding: 5,
-    textAlign: 'center',
-    borderRightWidth: 1,
-    borderColor: '#000',
-    backgroundColor: '#e9e9e9',
-    justifyContent: 'center', // Centers text vertically via flex
-  },
-
-  // Data Cell Styling
   dataCell: {
-    fontSize: 12,
-    padding: 5,
-    textAlign: 'center',
+    padding: 2,
     borderRightWidth: 1,
-    borderColor: '#ccc',
-  },
-  inputCell: {
-    fontSize: 12,
-    padding: 5,
-    borderRightWidth: 1,
-    borderColor: '#ccc',
-    minHeight: 35,
-    paddingTop: 8, // Adjusting padding to center text vertically better
-  },
-
-  // Scrollable Time Columns Styles
-  scrollHeader: {
-    flexDirection: 'row',
-    minHeight: 35,
+    borderColor: '#eee',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  scrollRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  leftAlign: {
+    alignItems: 'flex-start',
+    paddingLeft: 8,
   },
-  timeCell: {
-    width: 50,
+  dataText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    color: '#333',
+  },
+  // Input Styles
+  textInput: {
+    width: '100%',
+    height: 30,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 4,
+    fontSize: 10,
     textAlign: 'center',
-    borderRightWidth: 1,
-    borderColor: '#000',
-    padding: 5,
-    backgroundColor: '#e9e9e9',
-    justifyContent: 'center',
-  },
-  timeCheckCell: {
-    width: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderColor: '#ccc',
-    minHeight: 35, // Ensure cell height matches other rows
-  },
-  // Checkbox Styling
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1.5,
-    borderColor: '#4a4a4a',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: '#fff',
+    borderRadius: 2,
   },
-  checkboxChecked: {
-    backgroundColor: '#10b981', // Green checkmark background
-    borderColor: '#10b981',
+  // Checkbox Styles
+  checkboxContainer: {
+    width: 18,
+    height: 18,
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0fff0', 
   },
-  checkMark: {
-    color: '#fff',
-    fontSize: 14,
+  checkboxText: {
+    fontSize: 12,
     fontWeight: 'bold',
-    lineHeight: 18,
+    color: '#008000', // Brighter checkmark
   },
+  instruction: {
+    marginTop: 20,
+    fontSize: 10,
+    fontStyle: 'italic',
+    padding: 5,
+    textAlign: 'center',
+    color: '#666',
+  }
 });
 
-export default App;
+export default SanitizingLog;

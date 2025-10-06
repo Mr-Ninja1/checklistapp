@@ -16,7 +16,8 @@ const formCategories = {
       { id: 4, title: "Monthly Temp Logs - Chillers", status: "overdue", priority: "critical", dueTime: "2 hours ago", location: "Display Area" },
       { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
       { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
-      { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" }
+      { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
+      { id: 41, title: "FOH Daily Cleaning", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' }
     ]
   },
   production: {
@@ -303,8 +304,12 @@ export default function HomeScreen() {
           <View key={`form-card-${form.id}-${form.title}`}>
             <TouchableOpacity
               key={`form-touchable-${form.id}-${form.title}`}
-              disabled={!form.isHandwashingLog}
+              disabled={!(form.route || form.isHandwashingLog)}
               onPress={() => {
+                if (form.route) {
+                  navigation.navigate(form.route);
+                  return;
+                }
                 if (form.isHandwashingLog) {
                   // Navigate to the FoodHandlersHandwashingForm screen
                   if (typeof navigation !== 'undefined') {
@@ -312,7 +317,7 @@ export default function HomeScreen() {
                   }
                 }
               }}
-              style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: form.isHandwashingLog ? 1 : 1 }]}
+              style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6 }]}
             >
               <View style={styles.formCardTop}>
                 <View style={{ flex: 1 }}>

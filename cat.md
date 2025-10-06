@@ -1,52 +1,412 @@
-That's a smart move to create a well-structured prompt/message for another AI, like Copilot, to help with the coding!
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Platform, // Import Platform for web compatibility check
+} from 'react-native';
 
-Here is a ready-to-use message/prompt that clearly explains the problem, the chosen solution, the required libraries, and emphasizes reusability.
+// --- DATA STRUCTURE ---
+const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
+const EQUIPMENT_LIST = [
+  'TABLES',
+  'CHAIRS',
+  'GRAB AND GO CHILLER',
+  'GELATO CHILLER',
+  'COFFEE MACHINE',
+  'MARY CHEF',
+  'BLENDERS',
+  'JUICE MAKER',
+  'FIRE EXTINGUISHERS',
+];
 
-## Prompt Message for an AI Assistant (e.g., Copilot)
+const initialEquipmentState = EQUIPMENT_LIST.map((name, index) => {
+  const times = TIME_SLOTS.reduce((acc, time) => {
+    acc[time] = false;
+    return acc;
+  }, {});
 
----
+  return {
+    id: index,
+    name,
+    ppm: '',
+    staffName: '',
+    staffSign: '',
+    slipName: '',
+    supSign: '',
+    times,
+  };
+});
 
-### **Subject: React Native - Generating Reusable A4 Landscape PDF from UI View**
+// --- REUSABLE COMPONENTS ---
 
-**Goal:** I need a robust, reusable React Native solution to take an audit form rendered on a tablet screen and save it as a pixel-perfect A4 Landscape PDF document for printing and archival.
+/**
+ * A custom Checkbox component simulated using core React Native components.
+ * It uses a simple '✓' character to indicate a checked state.
+ */
+const Checkbox = ({ checked, onPress }) => (
+  <TouchableOpacity
+    style={styles.checkboxContainer}
+    onPress={onPress}
+    // Added accessibility role for better user experience
+    accessibilityRole="checkbox"
+    accessibilityState={{ checked }}
+  >
+    <Text style={styles.checkboxText}>{checked ? '✓' : ''}</Text>
+  </TouchableOpacity>
+);
 
-**The Solution Architecture (The Plan):**
-The chosen method is a two-step process to ensure accurate visual reproduction and correct paper sizing:
+/**
+ * Header Cell component for styling consistency.
+ */
+const HeaderCell = ({ children, width, flex = 0, style = {} }) => (
+  <View style={[styles.headerCell, { width, flex }, style]}>
+    <Text style={styles.headerText}>{children}</Text>
+  </View>
+);
 
-1.  **Capture:** Use `react-native-view-shot` to capture the entire form component as a high-resolution Base64 image.
-2.  **Format & Embed:** Use `react-native-pdf-lib` to create a new PDF, define an **A4 Landscape** page (842 x 595 points), and embed the captured image onto that page, scaled to fit perfectly.
+/**
+ * Data Cell component for styling consistency.
+ */
+const DataCell = ({ children, width, flex = 0, style = {} }) => (
+  <View style={[styles.dataCell, { width, flex }, style]}>
+    {children}
+  </View>
+);
 
-**Required Libraries:**
-* `react-native-view-shot`
-* `react-native-pdf-lib`
+// --- MAIN APPLICATION COMPONENT ---
 
----
+const SanitizingLog = () => {
+  const [formData, setFormData] = useState(initialEquipmentState);
+  const [metadata, setMetadata] = useState({
+    date: '03/08/2025',
+    location: '',
+    shift: 'PM',
+    verifiedBy: '',
+  });
 
-### **Specific Coding Tasks & Requirements:**
+  const handleMetadataChange = (key, value) => {
+    setMetadata(prev => ({ ...prev, [key]: value }));
+  };
 
-1.  **Form Component (`AuditForm.js`):**
-    * Create a sample functional component (`AuditForm`) that contains a basic `View` with some content (like a logo, a table, and a few checkboxes, mirroring the example image).
-    * Wrap this content with the necessary `ViewShot` setup, using a `useRef` hook for capturing.
-    * Include a "Generate PDF" button that triggers the capture function. The capture should return the image as a **Base64 string**.
+  const handleInputChange = (id, field, value) => {
+    setFormData(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  };
 
-2.  **PDF Generation Utility (`PDFGenerator.js`):**
-    * Create an exported, asynchronous function (e.g., `generatePrintablePDF(imageBase64)`) that handles the `react-native-pdf-lib` logic.
-    * **Crucially**, ensure the page is set to the **A4 Landscape** media box dimensions (width: 842, height: 595).
-    * The function must embed the `imageBase64` string and scale the image to fill the entire A4 Landscape page.
-    * The final PDF should be saved to a common download or document directory on the device and its file path returned.
+  const handleTimeCheck = (id, timeSlot) => {
+    setFormData(prev =>
+      prev.map(item =>
+        item.id === id
+          ? { ...item, times: { ...item.times, [timeSlot]: !item.times[timeSlot] } }
+          : item
+      )
+    );
+  };
 
-3.  **Cross-Platform Handling:**
-    * Include basic logic for determining the correct save directory path for both **iOS** and **Android** using `react-native-pdf-lib`'s directory constants and `Platform.OS`.
+  // Define widths based on the structure. Using slightly smaller values for better
+  // fit on small screens, as fixed widths can cause overflow.
+  const COL_WIDTHS = useMemo(() => ({
+    EQUIPMENT: 160, // Fixed width for Equipment name
+    PPM: 60, // Fixed width for PPM input
+    TIME_SLOT: 40, // Fixed width for each time slot (checkbox)
+    STAFF_NAME: 80,
+    SIGNATURE: 80,
+    SLIP_NAME: 80,
+    SUP_SIGN: 80,
+  }), []);
 
----
+  // Calculate the total width of the time slot section for alignment
+  const TIME_SLOTS_WIDTH = COL_WIDTHS.TIME_SLOT * TIME_SLOTS.length;
 
-### **Emphasis on Reusability:**
+  // Calculate the total width of the table for the outer container style
+  const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIPMENT + COL_WIDTHS.PPM + TIME_SLOTS_WIDTH + COL_WIDTHS.STAFF_NAME + COL_WIDTHS.SIGNATURE + COL_WIDTHS.SLIP_NAME + COL_WIDTHS.SUP_SIGN;
 
-Please design the solution with **reusability** in mind. The `AuditForm` component and the `PDFGenerator` utility should be structured so that:
 
-* Any future form component can be quickly converted to a printable PDF by simply wrapping it in the component containing the `ViewShot` logic.
-* The `generatePrintablePDF` function is universal and can be used across any project where a high-quality A4 printout is required from a React Native UI view.
+  // The main row rendering function
+  const renderLogRow = (item) => (
+    <View key={item.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH }]}>
+      {/* Equipment Name */}
+      <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
+        <Text style={styles.dataText}>{item.name}</Text>
+      </DataCell>
 
-**Expected Output:** Provide the code for `AuditForm.js` and `PDFGenerator.js`, along with setup instructions.
+      {/* SANITIZER-VEG WASH (PPM?) */}
+      <DataCell width={COL_WIDTHS.PPM}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'ppm', text)}
+          value={item.ppm}
+          keyboardType="numeric"
+          placeholder="0"
+        />
+      </DataCell>
 
----
+      {/* TIME INTERVAL CHECKBOXES (Crucial Alignment) */}
+      <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>
+        {TIME_SLOTS.map(time => (
+          <DataCell key={time} width={COL_WIDTHS.TIME_SLOT}>
+            <Checkbox
+              checked={item.times[time]}
+              onPress={() => handleTimeCheck(item.id, time)}
+            />
+          </DataCell>
+        ))}
+      </View>
+
+      {/* STAFF NAME */}
+      <DataCell width={COL_WIDTHS.STAFF_NAME}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'staffName', text)}
+          value={item.staffName}
+        />
+      </DataCell>
+
+      {/* STAFF SIGN */}
+      <DataCell width={COL_WIDTHS.SIGNATURE}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'staffSign', text)}
+          value={item.staffSign}
+        />
+      </DataCell>
+
+      {/* SLIP NAME */}
+      <DataCell width={COL_WIDTHS.SLIP_NAME}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'slipName', text)}
+          value={item.slipName}
+        />
+      </DataCell>
+
+      {/* SUP SIGN */}
+      <DataCell width={COL_WIDTHS.SUP_SIGN}>
+        <TextInput
+          style={styles.textInput}
+          onChangeText={(text) => handleInputChange(item.id, 'supSign', text)}
+          value={item.supSign}
+        />
+      </DataCell>
+    </View>
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Header Info */}
+      <View style={styles.metadataContainer}>
+        <Text style={styles.title}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text>
+        
+        {/* Metadata Row (Flexible layout) */}
+        <View style={styles.metadataRow}>
+          {Object.keys(metadata).map(key => (
+            <View key={key} style={styles.metadataItem}>
+              <Text style={styles.metadataLabel}>{key.charAt(0).toUpperCase() + key.slice(1)}:</Text>
+              <TextInput
+                style={styles.metadataInput}
+                value={metadata[key]}
+                onChangeText={(t) => handleMetadataChange(key, t)}
+              />
+            </View>
+          ))}
+        </View>
+
+        <Text style={styles.tickInstruction}>✓ TICK AFTER CLEANING</Text>
+      </View>
+
+      {/* Outer ScrollView for horizontal table scrolling */}
+      <ScrollView horizontal contentContainerStyle={{ flexDirection: 'column' }}>
+        
+        {/* Table Header */}
+        <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
+          {/* Main Columns */}
+          <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
+            EQUIPMENT
+          </HeaderCell>
+          <HeaderCell width={COL_WIDTHS.PPM}>
+            SANITIZER-VEG WASH (PPM?)
+          </HeaderCell>
+
+          {/* TIME INTERVAL HEADER */}
+          <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
+            <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}>
+              <Text style={styles.headerText}>TIME INTERVAL</Text>
+            </HeaderCell>
+            <View style={{ flexDirection: 'row' }}>
+              {TIME_SLOTS.map((time, index) => (
+                <HeaderCell key={index} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}>
+                  {time}
+                </HeaderCell>
+              ))}
+            </View>
+          </View>
+          
+          {/* Right Side Columns */}
+          <HeaderCell width={COL_WIDTHS.STAFF_NAME}>STAFF NAME</HeaderCell>
+          <HeaderCell width={COL_WIDTHS.SIGNATURE}>STAFF SIGN</HeaderCell>
+          <HeaderCell width={COL_WIDTHS.SLIP_NAME}>SLIP NAME</HeaderCell>
+          <HeaderCell width={COL_WIDTHS.SUP_SIGN}>SUP SIGN</HeaderCell>
+        </View>
+
+        {/* Table Body */}
+        {formData.map(renderLogRow)}
+      </ScrollView>
+
+      {/* Footer Instruction */}
+      <Text style={styles.instruction}>
+        Instruction: All food handlers are required to clean and sanitize the equipment used every after use.
+      </Text>
+    </ScrollView>
+  );
+};
+
+// --- STYLESHEET ---
+const styles = StyleSheet.create({
+  // Main Container for vertical scrolling
+  container: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+    paddingVertical: 5,
+    color: '#333',
+  },
+  // Metadata Styles
+  metadataContainer: {
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#333',
+    padding: 10,
+    borderRadius: 4,
+    backgroundColor: '#fff',
+  },
+  metadataRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginBottom: 5,
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 15,
+    marginBottom: 8,
+  },
+  metadataLabel: {
+    fontWeight: '600',
+    fontSize: 11,
+    color: '#555',
+  },
+  metadataInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#aaa',
+    paddingHorizontal: 4,
+    minWidth: 60,
+    height: 20,
+    fontSize: 11,
+  },
+  tickInstruction: {
+    marginTop: 5,
+    fontWeight: 'bold',
+    fontSize: 12,
+    color: '#006400', // Dark Green
+  },
+  // Table Styles
+  headerRow: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#333',
+    backgroundColor: '#e0e0e0',
+    borderBottomWidth: 2,
+  },
+  headerCell: {
+    padding: 6,
+    borderRightWidth: 1,
+    borderColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeHeader: {
+    padding: 3,
+    borderRightWidth: 1,
+    borderColor: '#333',
+  },
+  headerText: {
+    fontWeight: 'bold',
+    fontSize: 9,
+    textAlign: 'center',
+    color: '#333',
+  },
+  row: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+    minHeight: 35,
+    backgroundColor: '#fff',
+  },
+  dataCell: {
+    padding: 2,
+    borderRightWidth: 1,
+    borderColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leftAlign: {
+    alignItems: 'flex-start',
+    paddingLeft: 8,
+  },
+  dataText: {
+    fontSize: 10,
+    color: '#333',
+  },
+  // Input Styles
+  textInput: {
+    width: '100%',
+    height: 30,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 4,
+    fontSize: 10,
+    textAlign: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 2,
+  },
+  // Checkbox Styles
+  checkboxContainer: {
+    width: 18,
+    height: 18,
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0fff0', 
+  },
+  checkboxText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#008000', // Brighter checkmark
+  },
+  instruction: {
+    marginTop: 20,
+    fontSize: 10,
+    fontStyle: 'italic',
+    padding: 5,
+    textAlign: 'center',
+    color: '#666',
+  }
+});
+
+export default SanitizingLog;

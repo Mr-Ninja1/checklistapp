@@ -24,6 +24,7 @@ const linking = {
       KitchenCategory: 'KitchenCategory',
       FOHCategory: 'FOHCategory',
         FoodHandlersHandwashingForm: 'FoodHandlersHandwashingForm',
+        FOH_DailyCleaningForm: 'FOH_DailyCleaningForm',
     },
   },
 };
@@ -41,6 +42,7 @@ export default function App() {
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./forms/FoodHandlersHandwashingForm').default} />
+    <Stack.Screen name="FOH_DailyCleaningForm" component={require('./forms/FOH_DailyCleaningForm').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>
