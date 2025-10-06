@@ -3,6 +3,8 @@ import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 
 import { Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { useEffect, useRef } from 'react';
 
 // TIME SLOTS and equipment list: match the scanned kitchen form (AM shift 06:00-16:00)
 const TIME_SLOTS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
@@ -44,6 +46,10 @@ const DataCell = ({ children, width, style = {} }) => (
 export default function Kitchen_DailyCleaningForm() {
   const resp = useResponsive();
   const [formData, setFormData] = useState(initialEquipmentState);
+  const [loadingDraft, setLoadingDraft] = React.useState(true);
+  const draftKey = 'kitchen_daily_cleaning';
+  const saveTimer = useRef(null);
+  const navigation = (typeof require('@react-navigation/native') !== 'undefined') ? require('@react-navigation/native').useNavigation() : null;
 
   const now = new Date();
   const sysDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
@@ -55,6 +61,34 @@ export default function Kitchen_DailyCleaningForm() {
 
   const handleTimeToggle = (id, time) => setFormData(prev => prev.map(r => r.id === id ? { ...r, times: { ...r.times, [time]: !r.times[time] } } : r));
   const handleInput = (id, field, value) => setFormData(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+
+  // load draft on mount
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const draft = await getDraft(draftKey);
+        if (draft && mounted) {
+          if (draft.formData) setFormData(draft.formData);
+          if (draft.metadata) setMetadata(draft.metadata);
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        if (mounted) setLoadingDraft(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // auto-save draft (debounced)
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      setDraft(draftKey, { formData, metadata });
+    }, 700);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [formData, metadata]);
 
   const { width: vw, s, ms } = resp;
   const containerPadding = s(12);
@@ -114,11 +148,28 @@ export default function Kitchen_DailyCleaningForm() {
 
   const handleSave = async () => {
     try {
+      // Submit: save to history and remove draft
       await addFormHistory({ title: 'Kitchen Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
-      alert('Saved to history');
+      await removeDraft(draftKey);
+      alert('Submitted and saved to history');
+      // navigate back home if available
+      if (navigation && navigation.navigate) navigation.navigate('Home');
     } catch (e) {
-      alert('Failed to save');
+      alert('Failed to submit');
     }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      await setDraft(draftKey, { formData, metadata });
+      alert('Draft saved');
+    } catch (e) {
+      alert('Failed to save draft');
+    }
+  };
+
+  const handleBack = () => {
+    if (navigation && navigation.navigate) navigation.navigate('Home');
   };
 
   return (
@@ -127,6 +178,11 @@ export default function Kitchen_DailyCleaningForm() {
         <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>
         <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>KITCHEN DAILY CLEANING & SANITIZING LOG SHEET</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={handleBack} style={{ marginRight: 8, padding: 8, backgroundColor: '#eee', borderRadius: 6 }}><Text>Back</Text></TouchableOpacity>
+          <TouchableOpacity onPress={handleSaveDraft} style={{ marginRight: 8, padding: 8, backgroundColor: '#f0ad4e', borderRadius: 6 }}><Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text></TouchableOpacity>
+          <TouchableOpacity onPress={handleSave} style={{ padding: 8, backgroundColor: '#185a9d', borderRadius: 6 }}><Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text></TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.metadataContainer}>
@@ -165,9 +221,14 @@ export default function Kitchen_DailyCleaningForm() {
       <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All kitchen staff must clean and sanitize the listed areas after use.</Text>
 
       <View style={{ padding: s(8), alignItems: 'center' }}>
-        <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#185a9d', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8 }}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save to History</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save Draft</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#185a9d', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Submit</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );

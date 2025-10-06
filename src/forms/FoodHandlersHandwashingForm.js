@@ -4,6 +4,9 @@ import Spinner from 'react-native-loading-spinner-overlay';
 import { addFormHistory } from '../utils/formHistory';
 import useExportFormAsPDF from '../utils/useExportFormAsPDF';
 import useResponsive from '../utils/responsive';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
 
 // Helper functions for dynamic details
 function getCurrentDate() {
@@ -38,6 +41,10 @@ export default function FoodHandlersHandwashingForm() {
     verifiedBy: '',
     complexManagerSign: '',
   });
+  const [loadingDraft, setLoadingDraft] = React.useState(true);
+  const draftKey = 'foodhandlers_handwashing';
+  const saveTimer = useRef(null);
+  const navigation = useNavigation();
 
   // Table state
   const [handlers, setHandlers] = useState(() =>
@@ -62,6 +69,25 @@ export default function FoodHandlersHandwashingForm() {
         : row
     ));
   };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const d = await getDraft(draftKey);
+      if (d && mounted) {
+        if (d.handlers) setHandlers(d.handlers);
+        if (d.logDetails) setLogDetails(d.logDetails);
+      }
+      if (mounted) setLoadingDraft(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => setDraft(draftKey, { handlers, logDetails }), 700);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [handlers, logDetails]);
 
   // responsive helpers
   const resp = useResponsive();
@@ -126,6 +152,24 @@ export default function FoodHandlersHandwashingForm() {
       Alert.alert('Error', 'Failed to save form.');
     }
   };
+
+  const handleSave = async () => {
+    try {
+      await addFormHistory({ title: 'Food Handlers Handwashing', date: logDetails.date, savedAt: Date.now(), meta: { logDetails, handlers } });
+      await removeDraft(draftKey);
+      alert('Submitted and saved to history');
+      navigation.navigate('Home');
+    } catch (e) { alert('Failed to submit'); }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      await setDraft(draftKey, { handlers, logDetails });
+      alert('Draft saved');
+    } catch (e) { alert('Failed to save draft'); }
+  };
+
+  const handleBack = () => navigation.navigate('Home');
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -250,10 +294,18 @@ export default function FoodHandlersHandwashingForm() {
           </View>
         </ScrollView>
       </ScrollView>
-      <View style={styles.saveButtonContainer}>
-        <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} activeOpacity={0.85}>
-          <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
-        </TouchableOpacity>
+      <View style={styles.saveButtonContainerInner}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: resp.s(8) }}>
+          <TouchableOpacity onPress={handleBack} style={[styles.auxButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
+            <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSaveDraft} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
+            <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Save Draft</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} activeOpacity={0.85}>
+            <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -416,5 +468,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  saveButtonContainerInner: {
+    padding: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  auxButton: {
+    backgroundColor: '#777',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+  },
+  auxButtonSaveDraft: {
+    backgroundColor: '#f0ad4e',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+  },
+  auxButtonText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });

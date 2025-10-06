@@ -3,6 +3,9 @@ import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 
 import { Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { useEffect, useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
 
 // --- DATA STRUCTURE ---
 const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
@@ -57,8 +60,11 @@ const DataCell = ({ children, width, flex = 0, style = {} }) => (
 
 export default function FOH_DailyCleaningForm() {
   const resp = useResponsive();
-
   const [formData, setFormData] = useState(initialEquipmentState);
+  const [loadingDraft, setLoadingDraft] = React.useState(true);
+  const draftKey = 'foh_daily_cleaning';
+  const saveTimer = useRef(null);
+  const navigation = useNavigation();
   const now = new Date();
   const sysDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
@@ -73,6 +79,25 @@ export default function FOH_DailyCleaningForm() {
   const handleTimeCheck = (id, timeSlot) => {
     setFormData(prev => prev.map(item => (item.id === id ? { ...item, times: { ...item.times, [timeSlot]: !item.times[timeSlot] } } : item)));
   };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const d = await getDraft(draftKey);
+      if (d && mounted) {
+        if (d.formData) setFormData(d.formData);
+        if (d.metadata) setMetadata(d.metadata);
+      }
+      if (mounted) setLoadingDraft(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => setDraft(draftKey, { formData, metadata }), 700);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [formData, metadata]);
 
   // Compute column widths dynamically to fit the available viewport (A4-friendly)
   const { width: vw, height: vh, s, ms } = resp;
@@ -139,11 +164,22 @@ export default function FOH_DailyCleaningForm() {
   const handleSave = async () => {
     try {
       await addFormHistory({ title: 'FOH Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
-      alert('Saved to history');
+      await removeDraft(draftKey);
+      alert('Submitted and saved to history');
+      navigation.navigate('Home');
     } catch (e) {
-      alert('Failed to save');
+      alert('Failed to submit');
     }
   };
+
+  const handleSaveDraft = async () => {
+    try {
+      await setDraft(draftKey, { formData, metadata });
+      alert('Draft saved');
+    } catch (e) { alert('Failed to save draft'); }
+  };
+
+  const handleBack = () => navigation.navigate('Home');
 
   const needsHorizontal = TOTAL_TABLE_WIDTH > availableWidth;
 
@@ -203,9 +239,15 @@ export default function FOH_DailyCleaningForm() {
 
       <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All food handlers are required to clean and sanitize the equipment used every after use.</Text>
 
-      <View style={{ padding: s(8), alignItems: 'center' }}>
+      <View style={{ padding: s(8), alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: s(8) }}>
+        <TouchableOpacity onPress={handleBack} style={{ backgroundColor: '#777', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: s(8) }}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: s(8) }}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save Draft</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#185a9d', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8 }}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save to History</Text>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Submit</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -236,4 +278,11 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   logo: { width: 64, height: 48, marginRight: 8 },
   companyName: { fontSize: 16, fontWeight: '800', color: '#185a9d', marginRight: 12 },
+});
+
+// add simple button styles used in new UI
+const extraButtonStyles = StyleSheet.create({
+  auxButton: { backgroundColor: '#777', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
+  auxButtonSaveDraft: { backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
+  auxButtonText: { color: '#fff', fontWeight: '700' },
 });
