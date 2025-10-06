@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, SafeAreaView, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, SafeAreaView, ScrollView, Image, Button, Alert, TouchableOpacity } from 'react-native';
+import Spinner from 'react-native-loading-spinner-overlay';
+import { addFormHistory } from '../utils/formHistory';
+import useExportFormAsPDF from '../utils/useExportFormAsPDF';
+import useResponsive from '../utils/responsive';
 
 // Helper functions for dynamic details
 function getCurrentDate() {
@@ -26,6 +30,8 @@ function createInitialChecks() {
 }
 
 export default function FoodHandlersHandwashingForm() {
+  const { ref } = useExportFormAsPDF();
+  const [exporting, setExporting] = useState(false);
   const [logDetails, setLogDetails] = useState({
     date: getCurrentDate(),
     location: '',
@@ -47,9 +53,7 @@ export default function FoodHandlersHandwashingForm() {
   );
 
   const updateHandlerField = (rowIdx, field, value) => {
-    setHandlers(prev => prev.map((row, idx) =>
-      idx === rowIdx ? { ...row, [field]: value } : row
-    ));
+    setHandlers(prev => prev.map((row, idx) => (idx === rowIdx ? { ...row, [field]: value } : row)));
   };
 
   const toggleHandlerCheck = (rowIdx, timeSlot) => {
@@ -60,30 +64,98 @@ export default function FoodHandlersHandwashingForm() {
     ));
   };
 
-  // Update date and shift periodically
+  // responsive helpers
+  const resp = useResponsive();
+  const dyn = {
+    containerPadding: resp.s(20),
+    logoSize: resp.s(48),
+    logoMargin: resp.s(12),
+    titleFont: resp.ms(20),
+    inputPadding: resp.s(8),
+    inputFont: resp.ms(14),
+    managerWidth: resp.s(120),
+    timeCellW: resp.s(55),
+    nameW: resp.s(160),
+    jobW: resp.s(120),
+    snW: resp.s(40),
+    signW: resp.s(100),
+    checkboxW: resp.s(55),
+    saveBtnPV: resp.s(12),
+    saveBtnPH: resp.s(28),
+    saveBtnRadius: resp.s(20),
+    saveBtnFont: resp.ms(16),
+  };
+
+  // Update date and shift periodically & lock orientation while mounted
   useEffect(() => {
     const interval = setInterval(() => {
-      setLogDetails(prev => ({
-        ...prev,
-        date: getCurrentDate(),
-        shift: getCurrentShift(),
-      }));
-    }, 60000); // Update every minute
+      setLogDetails(prev => ({ ...prev, date: getCurrentDate(), shift: getCurrentShift() }));
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
+  const computeTableWidth = () => {
+    const sn = 40;
+    const name = 160;
+    const job = 120;
+    const timeW = 55 * TIME_SLOTS.length;
+    const staffSign = 100;
+    const supName = 100;
+    const supSign = 100;
+    return sn + name + job + timeW + staffSign + supName + supSign;
+  };
+
+  const handleSavePDF = async () => {
+    setExporting(true);
+    try {
+      await new Promise(res => setTimeout(res, 250));
+
+      // build formData for HTML template
+      // ensure handlers have an id property for S/N when rendering/exporting
+      const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
+
+      const formData = {
+        title: 'Food Handlers Daily Handwashing Tracking Log Sheet',
+        date: logDetails.date,
+        location: logDetails.location,
+        shift: logDetails.shift,
+        verifiedBy: logDetails.verifiedBy,
+        handlers: handlersWithId,
+        timeSlots: TIME_SLOTS,
+      };
+
+      // Persist only metadata immediately — PDF generation will be done later from History (vector export)
+      try {
+        await addFormHistory({ title: formData.title, date: formData.date, shift: formData.shift, savedAt: Date.now(), meta: formData });
+        setExporting(false);
+        Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
+      } catch (e) {
+        setExporting(false);
+        console.warn('save meta failed', e);
+        Alert.alert('Error', 'Failed to save form metadata.');
+      }
+    } catch (e) {
+      setExporting(false);
+      Alert.alert('Error', 'Failed to save form.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      {/* provide responsive hook fallback when not injected via ResponsiveView */}
+      {/* screens mounted via React Navigation will receive a responsive prop if ResponsiveView injects it; otherwise use hook */}
+      
+      <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
+      <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false}>
         <View style={styles.logoRow}>
-          <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.title}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
+          <Image source={require('../assets/logo.png')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
+          <Text style={[styles.title, { fontSize: dyn.titleFont, marginBottom: resp.s(12) }]}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
         </View>
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
             <Text style={styles.label}>Date:</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
               value={logDetails.date}
               editable={false}
               placeholder="MM/DD/YYYY"
@@ -92,7 +164,7 @@ export default function FoodHandlersHandwashingForm() {
           <View style={styles.detailItem}>
             <Text style={styles.label}>Location:</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
               value={logDetails.location}
               onChangeText={text => setLogDetails(prev => ({ ...prev, location: text }))}
               placeholder="Enter Location"
@@ -103,7 +175,7 @@ export default function FoodHandlersHandwashingForm() {
           <View style={styles.detailItem}>
             <Text style={styles.label}>Shift:</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
               value={logDetails.shift}
               editable={false}
             />
@@ -111,7 +183,7 @@ export default function FoodHandlersHandwashingForm() {
           <View style={styles.detailItem}>
             <Text style={styles.label}>Verified By:</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
               value={logDetails.verifiedBy}
               onChangeText={text => setLogDetails(prev => ({ ...prev, verifiedBy: text }))}
               placeholder="Enter Verifier Name"
@@ -122,7 +194,7 @@ export default function FoodHandlersHandwashingForm() {
           <View style={styles.detailItemFull}>
             <Text style={styles.label}>Complex Manager Sign:</Text>
             <TextInput
-              style={[styles.input, styles.managerSignInput]}
+              style={[styles.input, styles.managerSignInput, { width: dyn.managerWidth, minWidth: resp.s(80), maxWidth: resp.s(160), padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
               value={logDetails.complexManagerSign}
               onChangeText={text => setLogDetails(prev => ({ ...prev, complexManagerSign: text }))}
               placeholder="Signature/Initials"
@@ -131,33 +203,33 @@ export default function FoodHandlersHandwashingForm() {
         </View>
 
         {/* Table */}
-        <ScrollView horizontal style={styles.tableScroll}>
+        <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]}>
           <View>
             {/* Table Header */}
             <View style={styles.tableHeaderRow}>
-              <Text style={[styles.headerCell, styles.snCell, { borderRightWidth: 1, borderColor: '#ccc' }]}>S/N</Text>
-              <Text style={[styles.headerCell, styles.nameCell, { borderRightWidth: 1, borderColor: '#ccc' }]}>Full Name</Text>
-              <Text style={[styles.headerCell, styles.jobCell, { borderRightWidth: 1, borderColor: '#ccc' }]}>Job Title</Text>
+              <Text style={[styles.headerCell, styles.snCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.snW, width: dyn.snW }]}>S/N</Text>
+              <Text style={[styles.headerCell, styles.nameCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.nameW, width: dyn.nameW }]}>Full Name</Text>
+              <Text style={[styles.headerCell, styles.jobCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.jobW, width: dyn.jobW }]}>Job Title</Text>
               {TIME_SLOTS.map((time) => (
-                <Text key={time} style={[styles.headerCell, styles.timeCellHeader]}>{time}</Text>
+                <Text key={time} style={[styles.headerCell, styles.timeCellHeader, { minWidth: dyn.timeCellW, width: dyn.timeCellW }]}>{time}</Text>
               ))}
-              <Text style={[styles.headerCell, styles.signCell, { borderRightWidth: 1, borderColor: '#ccc' }]}>Staff Sign</Text>
-              <Text style={[styles.headerCell, styles.supCell, { borderRightWidth: 1, borderColor: '#ccc' }]}>Sup Name</Text>
-              <Text style={[styles.headerCell, styles.signCell, { borderRightWidth: 0 }]}>Sup Sign</Text>
+              <Text style={[styles.headerCell, styles.signCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.signW, width: dyn.signW }]}>Staff Sign</Text>
+              <Text style={[styles.headerCell, styles.supCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.signW, width: dyn.signW }]}>Sup Name</Text>
+              <Text style={[styles.headerCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW }]}>Sup Sign</Text>
             </View>
             
             {/* Table Rows */}
             {handlers.map((row, rowIdx) => (
               <View key={rowIdx} style={styles.tableRow}>
-                <Text style={[styles.dataCell, styles.snCell]}>{rowIdx + 1}</Text>
+                <Text style={[styles.dataCell, styles.snCell, { minWidth: dyn.snW, width: dyn.snW }]}>{rowIdx + 1}</Text>
                 <TextInput
-                  style={[styles.inputCell, styles.nameCell]}
+                  style={[styles.inputCell, styles.nameCell, { minWidth: dyn.nameW, width: dyn.nameW, padding: resp.s(4), fontSize: resp.ms(12) }]}
                   value={row.fullName}
                   onChangeText={text => updateHandlerField(rowIdx, 'fullName', text)}
                   placeholder="Full Name"
                 />
                 <TextInput
-                  style={[styles.inputCell, styles.jobCell]}
+                  style={[styles.inputCell, styles.jobCell, { minWidth: dyn.jobW, width: dyn.jobW, padding: resp.s(4), fontSize: resp.ms(12) }]}
                   value={row.jobTitle}
                   onChangeText={text => updateHandlerField(rowIdx, 'jobTitle', text)}
                   placeholder="Job Title"
@@ -165,26 +237,26 @@ export default function FoodHandlersHandwashingForm() {
                 {TIME_SLOTS.map((time) => (
                   <Text
                     key={time}
-                    style={styles.checkboxCell}
+                    style={[styles.checkboxCell, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2), fontSize: resp.ms(16) }]}
                     onPress={() => toggleHandlerCheck(rowIdx, time)}
                   >
                     {row.checks[time] ? '☑' : '☐'}
                   </Text>
                 ))}
                 <TextInput
-                  style={[styles.inputCell, styles.signCell]}
+                  style={[styles.inputCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
                   value={row.staffSign}
                   onChangeText={text => updateHandlerField(rowIdx, 'staffSign', text)}
                   placeholder="Sign"
                 />
                 <TextInput
-                  style={[styles.inputCell, styles.supCell]}
+                  style={[styles.inputCell, styles.supCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
                   value={row.supName}
                   onChangeText={text => updateHandlerField(rowIdx, 'supName', text)}
                   placeholder="Sup Name"
                 />
                 <TextInput
-                  style={[styles.inputCell, styles.signCell, { borderRightWidth: 0 }]}
+                  style={[styles.inputCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
                   value={row.supSign}
                   onChangeText={text => updateHandlerField(rowIdx, 'supSign', text)}
                   placeholder="Sup Sign"
@@ -194,6 +266,11 @@ export default function FoodHandlersHandwashingForm() {
           </View>
         </ScrollView>
       </ScrollView>
+      <View style={styles.saveButtonContainer}>
+        <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} activeOpacity={0.85}>
+          <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -345,4 +422,31 @@ const styles = StyleSheet.create({
   jobCell: { minWidth: 120, width: 120 }, 
   signCell: { minWidth: 100, width: 100 },
   supCell: { minWidth: 100, width: 100 },
+
+  // Save Button Styles
+  saveButtonContainer: {
+    padding: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  saveButton: {
+    backgroundColor: '#185a9d',
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 28,
+    shadowColor: '#185a9d',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
 });

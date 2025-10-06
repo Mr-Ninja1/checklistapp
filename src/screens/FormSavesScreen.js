@@ -1,42 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import ViewDocumentModal from '../components/ViewDocumentModal';
+import { getFormHistory, removeFormHistory } from '../utils/formHistory';
+import { useIsFocused } from '@react-navigation/native';
 
 export default function FormSavesScreen() {
   const [savedForms, setSavedForms] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     async function loadHistory() {
-      // Native: load from forms/ directory
-      if (Platform.OS !== 'web') {
-        try {
-          const dir = FileSystem.documentDirectory + 'forms/';
-          const files = await FileSystem.readDirectoryAsync(dir);
-          // Try to load metadata for each PDF (if you have a metadata store, use it; else, just show file info)
-          const forms = files.filter(f => f.endsWith('.pdf')).map(f => ({
-            pdfPath: dir + f,
-            title: f.replace('.pdf', ''),
-            date: '',
-            shift: '',
-            location: '',
-            savedAt: '',
-            handlers: [],
-          }));
-          setSavedForms(forms.reverse());
-        } catch (e) {
-          setSavedForms([]);
-        }
-      } else {
-        // Web: load from localStorage
-        const history = JSON.parse(window.localStorage.getItem('formHistory') || '[]');
-        setSavedForms(history.reverse());
+      // Prefer centralized history store (works for web and native)
+      try {
+        setLoadingHistory(true);
+        const history = await getFormHistory();
+        setSavedForms((history || []).slice().reverse());
+        setLoadingHistory(false);
+      } catch (e) {
+        setLoadingHistory(false);
+        setSavedForms([]);
       }
     }
+    // reload whenever the screen becomes focused
     loadHistory();
-  }, []);
+  }, [isFocused]);
 
   // Group forms by date (DD/MM/YYYY)
   const groupedByDate = savedForms.reduce((acc, form) => {
@@ -62,12 +54,29 @@ export default function FormSavesScreen() {
         Alert.alert('Download failed', 'Unable to download the document.');
       }
     } else {
-      // Open PDF file
+      // Open PDF file (native)
       if (selectedForm.pdfPath) {
         try {
-          await Linking.openURL(selectedForm.pdfPath);
+          if (Platform.OS === 'android' && FileSystem.getContentUriAsync) {
+            // Convert file:// URI to content URI that external apps can open
+            const { uri } = await FileSystem.getContentUriAsync(selectedForm.pdfPath);
+            await Linking.openURL(uri);
+          } else {
+            // iOS and others can attempt to open directly
+            await Linking.openURL(selectedForm.pdfPath);
+          }
         } catch (e) {
-          Alert.alert('Open failed', 'Unable to open the PDF file.');
+          // Fallback: try share sheet so user can pick an external app
+          try {
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(selectedForm.pdfPath);
+            } else {
+              Alert.alert('Open failed', 'Unable to open the PDF file.');
+            }
+          } catch (e2) {
+            console.warn('open fallback failed', e2, e);
+            Alert.alert('Open failed', 'Unable to open the PDF file.');
+          }
         }
       }
     }
@@ -75,21 +84,19 @@ export default function FormSavesScreen() {
 
   // Delete handler
   const handleDelete = async (form, idx, date) => {
-    if (Platform.OS === 'web') {
-      // Remove from localStorage
-      const history = JSON.parse(window.localStorage.getItem('formHistory') || '[]');
-      const filtered = history.filter(f => !(f.savedAt === form.savedAt && f.pdfPath === form.pdfPath));
-      window.localStorage.setItem('formHistory', JSON.stringify(filtered));
-      setSavedForms(filtered.reverse());
-    } else {
-      // Remove PDF file
-      if (form.pdfPath) {
-        try {
-          await FileSystem.deleteAsync(form.pdfPath, { idempotent: true });
-        } catch (e) {}
+    try {
+      // Remove files if native
+      if (Platform.OS !== 'web') {
+        if (form.pdfPath) await FileSystem.deleteAsync(form.pdfPath, { idempotent: true }).catch(() => {});
+        // no png files are stored anymore; only PDFs
       }
-      // Remove from list
-      setSavedForms(prev => prev.filter((f, i) => !(f.pdfPath === form.pdfPath)));
+      // Remove from history store
+      await removeFormHistory(f => f.savedAt === form.savedAt && f.pdfPath === form.pdfPath);
+      // Reload
+      const history = await getFormHistory();
+      setSavedForms((history || []).slice().reverse());
+    } catch (e) {
+      console.warn('delete failed', e);
     }
   };
 
@@ -97,7 +104,7 @@ export default function FormSavesScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Saved Forms (History)</Text>
       {savedForms.length === 0 ? (
-        <Text style={styles.placeholder}>No saved forms yet.</Text>
+        <Text style={styles.placeholder}>{loadingHistory ? 'Loading history...' : 'No saved forms yet.'}</Text>
       ) : (
         <ScrollView style={{ width: '100%', flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingBottom: 40 }}>
           {Platform.OS === 'web'
@@ -110,7 +117,16 @@ export default function FormSavesScreen() {
                         style={styles.card}
                         activeOpacity={0.8}
                         onPress={() => {
-                          setSelectedForm(form);
+                          // Combine stored history entry and its meta (actual form data).
+                          // Use meta values to override shallow history fields (meta should be the full form payload).
+                          const merged = { ...form, ...(form.meta || {}) };
+                          // Ensure pdfPath and savedAt come from the history record (not overwritten by meta)
+                          merged.pdfPath = form.pdfPath;
+                          merged.savedAt = form.savedAt;
+                          // Remove nested meta to avoid confusion in ReadOnlyForm
+                          if (merged.meta) delete merged.meta;
+                          console.log('[FormSavesScreen] opening saved form (merged):', merged);
+                          setSelectedForm(merged);
                           setModalVisible(true);
                         }}
                       >
@@ -126,13 +142,18 @@ export default function FormSavesScreen() {
                   ))}
                 </View>
               ))
-            : savedForms.map((form, idx) => (
+                : savedForms.map((form, idx) => (
                 <View key={form.pdfPath || idx} style={styles.cardRow}>
                   <TouchableOpacity
                     style={styles.card}
                     activeOpacity={0.8}
                     onPress={() => {
-                      setSelectedForm(form);
+                      const merged = { ...form, ...(form.meta || {}) };
+                      merged.pdfPath = form.pdfPath;
+                      merged.savedAt = form.savedAt;
+                      if (merged.meta) delete merged.meta;
+                      console.log('[FormSavesScreen] opening saved form (native merged):', merged);
+                      setSelectedForm(merged);
                       setModalVisible(true);
                     }}
                   >

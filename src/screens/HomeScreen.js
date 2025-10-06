@@ -1,7 +1,6 @@
 import warnOnce from '../utils/warnOnce';
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions } from 'react-native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -347,7 +346,7 @@ export default function HomeScreen() {
 }
 
 // Add missing styles object
-import { StyleSheet } from 'react-native';
+
 const styles = StyleSheet.create({
   formCard: {
     marginVertical: 8,

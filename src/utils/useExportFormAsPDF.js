@@ -1,62 +1,59 @@
-
 import { useRef } from 'react';
-import { captureRef } from 'react-native-view-shot';
 import * as Print from 'expo-print';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
+import generateFoodHandlersHtml from './generateFoodHandlersHtml';
+import { addFormHistory } from './formHistory';
 
-// Usage: const { ref, exportAsPDF } = useExportFormAsPDF();
-// Attach ref to the form view, call exportAsPDF() to export as PDF
+// Vector-only export hook (single implementation)
 export function useExportFormAsPDF() {
-  const ref = useRef();
+  const ref = useRef(null); // kept for compatibility but not used
 
-  /**
-   * Exports the referenced form as a landscape A4 PDF and saves it to device storage.
-   * @param {string} pdfFileName - The file name for the PDF (e.g., 'form.pdf')
-   * @returns {Promise<string|null>} - The file URI if successful, or null if failed
-   */
-  const exportAsPDF = async (pdfFileName = 'form.pdf') => {
+  async function exportAsPDF({ title, date, shift, formData } = {}) {
+    if (!formData) {
+      const msg = 'exportAsPDF requires structured formData (meta). Screenshot export removed.';
+      console.warn(msg);
+      return { error: msg };
+    }
+
     try {
-      // 1. Capture the form as a PNG image
-      const uri = await captureRef(ref, {
-        format: 'png',
-        quality: 1,
-        result: 'tmpfile',
-      });
-
-      // 2. Embed the image in a landscape A4-sized HTML
-      // A4 landscape: 297mm x 210mm, 1in = 96px, 1mm = 3.78px
-      // 297mm = 1122px, 210mm = 794px
-      const html = `
-        <html>
-          <body style="margin:0;padding:0;">
-            <img src='file://${uri}' style='width:1122px;height:794px;object-fit:contain;'/>
-          </body>
-        </html>
-      `;
-
-      // 3. Generate PDF from HTML (landscape A4)
-      const { uri: pdfUri } = await Print.printToFileAsync({
-        html,
-        width: 1122,
-        height: 794,
-        base64: false,
-      });
-
-      // 4. Save PDF to app's document directory
       const dir = FileSystem.documentDirectory + 'forms/';
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
-      const fileUri = dir + pdfFileName;
-      await FileSystem.moveAsync({ from: pdfUri, to: fileUri });
+      const baseName = `Form_${new Date().toISOString().slice(0,10)}_${Date.now()}`;
 
-      // 5. Clean up temp image
-      await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      const payload = formData || {};
+      const bodyHtml = generateFoodHandlersHtml(payload);
+      const html = `<!doctype html><html><head><meta charset='utf-8'><style>@page{size:297mm 210mm;margin:8mm;}body{margin:0;padding:0;font-family: Arial, Helvetica, sans-serif;}</style></head><body>${bodyHtml}</body></html>`;
 
-      return fileUri;
+      if (Platform.OS === 'web') {
+        const { base64 } = await Print.printToFileAsync({ html, base64: true });
+        return { pdfDataUri: `data:application/pdf;base64,${base64}` };
+      } else {
+        const { uri: pdfTemp } = await Print.printToFileAsync({ html, base64: false });
+        const pdfName = `${baseName}.pdf`;
+        const pdfPath = dir + pdfName;
+        try {
+          const info = await FileSystem.getInfoAsync(pdfPath);
+          if (info.exists) await FileSystem.deleteAsync(pdfPath, { idempotent: true });
+        } catch (e) {}
+        await FileSystem.moveAsync({ from: pdfTemp, to: pdfPath });
+
+        try {
+          await addFormHistory({ pdfPath, title, date, shift, savedAt: Date.now(), meta: formData || null });
+        } catch (e) {
+          console.warn('addFormHistory failed (vector export)', e);
+        }
+
+        return { pdfPath };
+      }
     } catch (e) {
-      alert('Failed to export PDF.');
-      return null;
+      const msg = 'vector export failed: ' + (e && e.message ? e.message : String(e));
+      console.warn(msg, e);
+      return { error: msg };
     }
-  };
+  }
 
   return { ref, exportAsPDF };
 }
+
+export default useExportFormAsPDF;

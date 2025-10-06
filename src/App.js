@@ -1,8 +1,10 @@
+// No changes needed; the file is already valid JavaScript.
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import SplashScreen from './screens/SplashScreen';
+import ResponsiveView from './components/ResponsiveView';
 import HomeScreen from './screens/HomeScreen';
 import KitchenCategory from './screens/KitchenCategory';
 import FOHCategoryScreen from './screens/FOHCategoryScreen';
@@ -28,17 +30,20 @@ const linking = {
 
 export default function App() {
   return (
-    <NavigationContainer linking={linking}>
-  <Stack.Navigator initialRouteName="Splash">
-        <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
+    <ResponsiveView lockLandscape={true}>
+      <NavigationContainer linking={linking}>
+        <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+        {/* note: individual screens can accept a `responsive` prop injected by ResponsiveView when needed */}
+        <Stack.Screen name="Splash" component={(props) => <SplashScreen {...props} />} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FormSaves" component={FormSavesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
         <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./screens/FoodHandlersHandwashingForm').default} options={{ headerShown: false }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+        <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./screens/FoodHandlersHandwashingForm').default} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ResponsiveView>
   );
 }
 

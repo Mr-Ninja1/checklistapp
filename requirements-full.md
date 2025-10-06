@@ -49,3 +49,39 @@ A cross-platform React Native mobile app for BRAVO restaurant supervisors to man
 
 ---
 *This document can be pasted to restore full requirements context for future development.*
+
+## Implementation details: Screenshot → PDF (recommended approach)
+
+We adopted the "screenshot → embed → PDF" approach for reliable visual fidelity across devices. Key points and how to reuse the logic for other forms:
+
+- Output format
+	- The produced file is a PDF (.pdf) where the page contains a raster image (PNG) of the form. The PDF is A4 landscape by construction (the HTML wrapper sets `@page { size: A4 landscape; }`).
+	- The PDF can be opened by any external PDF viewer on the device (Open with ...). On native platforms we call the OS URL launcher to open the `file://` path.
+
+- Why this approach
+	- Guaranteed visual fidelity: what the user sees in the app is what gets exported (once images/assets are present in the view).
+	- Works for complex layouts and custom React Native components without reimplementing the layout in HTML/CSS.
+	- Tradeoffs: larger, rasterized PDFs (not selectable text). If search/select is required later, we can switch to vector HTML→PDF.
+
+- Reuse contract (how to use the export hook)
+	- Hook provided: `useExportFormAsPDF()` → returns `{ ref, exportAsPDF }`.
+	- Usage pattern in a form screen:
+		1. Wrap the rendered (read-only) form with the returned `ref` (e.g., `<ScrollView ref={ref} collapsable={false}>...</ScrollView>`).
+		2. Ensure any images (logo) are embedded in the form data as a base64 `logoDataUri` or are available synchronously in the UI before capture. If embedding, await asset download and base64 conversion first.
+		3. Call `exportAsPDF({ title, date, shift, formData })`. `formData` is saved into history as `meta` so the form can be re-opened in-app.
+		4. The hook returns `{ pdfPath }` (native) or `{ pdfDataUri }` (web fallback) on success.
+
+- Implementation details to keep in mind
+	- Wait for images and layout to finish before calling `exportAsPDF` (we recommend awaiting asset download then `requestAnimationFrame` twice or a short timeout) so the snapshot includes every visual element.
+	- Use `captureRef` with a high `pixelRatio` (3–4) for sharp results.
+	- The hook embeds the captured PNG as a `data:image/png;base64,...` URI inside a minimal HTML page sized to A4 landscape and calls `Print.printToFileAsync` to create the PDF.
+	- The PDF and a `history.json` entry (containing `pdfPath`, `savedAt`, `title`, and `meta`) are saved to the app document directory under `forms/`.
+
+- Reusing for multiple forms
+	- The approach is form-agnostic: any React Native component can be rendered and captured as long as it is wrapped by the `ref` and fully painted before capture.
+	- To add a new form screen:
+		- Render the read-only version of that form inside the `ref` container.
+		- Build the same `formData` shape and call `exportAsPDF({ title, date, formData })` on save.
+		- The History screen will then be able to load and re-open the saved form because we persist `meta` which contains the original `formData`.
+
+If you want, we can also add a short example snippet to the repo showing how to wire this hook for one more form type (copy/paste), and a small verification test that programmatically captures one sample form and produces a PDF to verify the end-to-end flow.

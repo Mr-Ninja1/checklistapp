@@ -1,12 +1,31 @@
 
-import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import ReadOnlyForm from './ReadOnlyForm';
-import { useExportFormAsPDF } from '../utils/useExportFormAsPDF';
+import Spinner from 'react-native-loading-spinner-overlay';
+import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
+import generateFoodHandlersHtml from '../utils/generateFoodHandlersHtml';
+import captureAndExport from '../utils/captureAndExport';
+import { Platform } from 'react-native';
+// We'll try to require react-native-view-shot at runtime so the app doesn't crash when it's not installed.
+let captureRefSafe = null;
+try {
+  // eslint-disable-next-line global-require
+  const { captureRef } = require('react-native-view-shot');
+  captureRefSafe = captureRef;
+} catch (e) {
+  // view-shot not available — we'll fallback to vector HTML generation below
+  captureRefSafe = null;
+}
 
 export default function ViewDocumentModal({ visible, form, onClose, onDownload }) {
-  const { ref: formRef, exportAsPDF } = useExportFormAsPDF();
+  // Modal shows a saved form; use onDownload to open the saved PDF rather than re-exporting
+  const formRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+
   if (!form) return null;
+
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.overlay}>
@@ -14,13 +33,32 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
           <View ref={formRef} collapsable={false}>
             <ReadOnlyForm form={form} />
           </View>
+
+          <Spinner visible={exporting} textContent={'Exporting...'} textStyle={{ color: '#fff' }} />
+
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.button} onPress={onDownload}>
-              <Text style={styles.buttonText}>Download JSON</Text>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: '#0066cc' }]}
+              onPress={async () => {
+                if (!form) return;
+                try {
+                  setExporting(true);
+                  const payload = form.meta || form;
+                  const fallbackHtml = generateFoodHandlersHtml(payload);
+                  await captureAndExport({ ref: formRef, payloadHtmlFallback: fallbackHtml, onProgress: () => {} });
+                } catch (e) {
+                  console.warn('export failed', e);
+                  Alert.alert('Export failed', 'Unable to export PDF from saved form data.');
+                } finally {
+                  setExporting(false);
+                }
+              }}
+            >
+              <Text style={styles.buttonText}>Export PDF</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={() => exportAsPDF(`form_${form.date || 'unknown'}.pdf`)}>
-              <Text style={styles.buttonText}>Download PDF</Text>
-            </TouchableOpacity>
+
+            {/* Save to folder removed — share/print from Share/Export covers user needs */}
+
             <TouchableOpacity style={[styles.button, { backgroundColor: '#888' }]} onPress={onClose}>
               <Text style={styles.buttonText}>Close</Text>
             </TouchableOpacity>
@@ -34,9 +72,9 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   modalContent: {
     backgroundColor: '#fff',
@@ -54,12 +92,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#185a9d',
     borderRadius: 8,
     paddingVertical: 10,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     marginHorizontal: 4,
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
 });

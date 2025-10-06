@@ -1,15 +1,40 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 
 export default function ReadOnlyForm({ form }) {
   if (!form) return null;
+  const titleText = form.title || 'Food Handlers Handwashing Log';
+
   return (
     <ScrollView style={styles.formContainer} contentContainerStyle={{ paddingBottom: 24 }}>
-      <Text style={styles.title}>{form.title || 'Food Handlers Handwashing Log'}</Text>
-      <Text style={styles.meta}>Date: {form.date} | Shift: {form.shift} | Location: {form.location}</Text>
-      <Text style={styles.meta}>Verified By: {form.verifiedBy}</Text>
-      <Text style={styles.meta}>Complex Manager Sign: {form.complexManagerSign}</Text>
-      <Text style={styles.meta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : ''}</Text>
+      <View style={styles.topStamp}>
+        <View style={styles.stampLeft}>
+          {form.logoDataUri ? (
+            <Image source={{ uri: form.logoDataUri }} style={styles.logoSmall} resizeMode="contain" />
+          ) : (
+            <Image source={require('../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+          )}
+          <Text style={styles.brandName}>Bravo</Text>
+        </View>
+        <View style={styles.stampRight}>
+          <Text style={styles.docSmall}>{form.docNo || ''}</Text>
+          <Text style={styles.docSmall}> {form.issueDate || form.issue || ''}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.title}>{titleText}</Text>
+      <View style={styles.headerDivider} />
+
+      <View style={styles.metaBlock}>
+        <Text style={styles.meta}>Date: {form.date} | Shift: {form.shift} | Location: {form.location}</Text>
+        <View style={styles.signatureRow}>
+          <Text style={styles.signatureLabel}>Verified By:</Text>
+          <View style={styles.signatureBox} />
+          <Text style={styles.signatureLabel}>Complex Manager Sign:</Text>
+          <View style={styles.signatureBox} />
+        </View>
+        <Text style={styles.meta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : ''}</Text>
+      </View>
       <View style={styles.tableContainer}>
         <View style={styles.rowHeader}>
           <Text style={[styles.cell, styles.snCell, styles.headerCell]}>S/N</Text>
@@ -52,13 +77,28 @@ const styles = StyleSheet.create({
     padding: 10,
     width: '100%',
   },
+  topStamp: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  stampLeft: { flexDirection: 'row', alignItems: 'center' },
+  stampRight: { alignItems: 'flex-end' },
+  logoSmall: { width: 32, height: 32, marginRight: 8 },
+  logo: {
+    width: 48,
+    height: 48,
+    marginRight: 12,
+  },
+  brandName: { fontSize: 16, fontWeight: '700', color: '#185a9d', marginLeft: 8 },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#185a9d',
     marginBottom: 8,
     textAlign: 'center',
   },
+  headerDivider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 8 },
+  metaBlock: { marginBottom: 10 },
+  signatureRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 6 },
+  signatureLabel: { fontSize: 12, marginRight: 8 },
+  signatureBox: { flex: 1, height: 28, borderBottomWidth: 1, borderColor: '#444', marginRight: 16 },
   meta: {
     fontSize: 15,
     color: '#444',
