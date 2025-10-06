@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, SafeAreaView, ScrollView, Image, Button, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, SafeAreaView, ScrollView, Image, Alert, TouchableOpacity } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import { addFormHistory } from '../utils/formHistory';
 import useExportFormAsPDF from '../utils/useExportFormAsPDF';
@@ -8,7 +8,6 @@ import useResponsive from '../utils/responsive';
 // Helper functions for dynamic details
 function getCurrentDate() {
   const now = new Date();
-  // Using MM/DD/YYYY format as seen in the first image for consistency
   const day = String(now.getDate()).padStart(2, '0');
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const year = now.getFullYear();
@@ -86,7 +85,6 @@ export default function FoodHandlersHandwashingForm() {
     saveBtnFont: resp.ms(16),
   };
 
-  // Update date and shift periodically & lock orientation while mounted
   useEffect(() => {
     const interval = setInterval(() => {
       setLogDetails(prev => ({ ...prev, date: getCurrentDate(), shift: getCurrentShift() }));
@@ -94,24 +92,10 @@ export default function FoodHandlersHandwashingForm() {
     return () => clearInterval(interval);
   }, []);
 
-  const computeTableWidth = () => {
-    const sn = 40;
-    const name = 160;
-    const job = 120;
-    const timeW = 55 * TIME_SLOTS.length;
-    const staffSign = 100;
-    const supName = 100;
-    const supSign = 100;
-    return sn + name + job + timeW + staffSign + supName + supSign;
-  };
-
   const handleSavePDF = async () => {
     setExporting(true);
     try {
       await new Promise(res => setTimeout(res, 250));
-
-      // build formData for HTML template
-      // ensure handlers have an id property for S/N when rendering/exporting
       const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
 
       const formData = {
@@ -124,7 +108,6 @@ export default function FoodHandlersHandwashingForm() {
         timeSlots: TIME_SLOTS,
       };
 
-      // Persist only metadata immediately — PDF generation will be done later from History (vector export)
       try {
         await addFormHistory({ title: formData.title, date: formData.date, shift: formData.shift, savedAt: Date.now(), meta: formData });
         setExporting(false);
@@ -142,9 +125,6 @@ export default function FoodHandlersHandwashingForm() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* provide responsive hook fallback when not injected via ResponsiveView */}
-      {/* screens mounted via React Navigation will receive a responsive prop if ResponsiveView injects it; otherwise use hook */}
-      
       <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
       <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false}>
         <View style={styles.logoRow}>
@@ -203,9 +183,8 @@ export default function FoodHandlersHandwashingForm() {
         </View>
 
         {/* Table */}
-        <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]}>
+        <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]}> 
           <View>
-            {/* Table Header */}
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.headerCell, styles.snCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.snW, width: dyn.snW }]}>S/N</Text>
               <Text style={[styles.headerCell, styles.nameCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.nameW, width: dyn.nameW }]}>Full Name</Text>
@@ -217,8 +196,7 @@ export default function FoodHandlersHandwashingForm() {
               <Text style={[styles.headerCell, styles.supCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.signW, width: dyn.signW }]}>Sup Name</Text>
               <Text style={[styles.headerCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW }]}>Sup Sign</Text>
             </View>
-            
-            {/* Table Rows */}
+
             {handlers.map((row, rowIdx) => (
               <View key={rowIdx} style={styles.tableRow}>
                 <Text style={[styles.dataCell, styles.snCell, { minWidth: dyn.snW, width: dyn.snW }]}>{rowIdx + 1}</Text>
@@ -334,8 +312,6 @@ const styles = StyleSheet.create({
     minWidth: 80,
     maxWidth: 160,
   },
-  
-  // --- Table Styles ---
   tableScroll: { 
     marginTop: 20,
     borderLeftWidth: 1, 
@@ -357,8 +333,6 @@ const styles = StyleSheet.create({
     alignItems: 'stretch', 
     minHeight: 36,
   },
-
-  // Generic Cell Styles (used as base)
   headerCell: {
     fontWeight: 'bold',
     fontSize: 11,
@@ -387,10 +361,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
     flexGrow: 0,
   },
-
-  // --- Fixed Width Column Styles ---
-
-  // Standard width for time column headers
   timeCellHeader: {
     minWidth: 55, 
     width: 55, 
@@ -399,8 +369,6 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     textAlignVertical: 'center',
   },
-
-  // Checkbox Cell
   checkboxCell: {
     fontSize: 18,
     textAlign: 'center',
@@ -413,17 +381,11 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     textAlignVertical: 'center',
   },
-
-  // Other fixed columns
   snCell: { minWidth: 40, width: 40, textAlign: 'center' },
-  // UPDATED: Full Name width increased
   nameCell: { minWidth: 160, width: 160 }, 
-  // UPDATED: Job Title width increased
   jobCell: { minWidth: 120, width: 120 }, 
   signCell: { minWidth: 100, width: 100 },
   supCell: { minWidth: 100, width: 100 },
-
-  // Save Button Styles
   saveButtonContainer: {
     padding: 18,
     backgroundColor: '#fff',

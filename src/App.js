@@ -39,8 +39,8 @@ export default function App() {
   <Stack.Screen name="FormSaves" component={FormSavesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./screens/FoodHandlersHandwashingForm').default} />
+  <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
+  <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./forms/FoodHandlersHandwashingForm').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>
