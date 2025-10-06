@@ -30,7 +30,7 @@ const linking = {
 
 export default function App() {
   return (
-    <ResponsiveView lockLandscape={true}>
+  <ResponsiveView lockLandscape={false}>
       <NavigationContainer linking={linking}>
         <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
         {/* note: individual screens can accept a `responsive` prop injected by ResponsiveView when needed */}
