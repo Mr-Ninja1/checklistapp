@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Image, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, SafeAreaView, ScrollView, Image, Alert, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import { addFormHistory } from '../utils/formHistory';
 import useExportFormAsPDF from '../utils/useExportFormAsPDF';
@@ -65,24 +65,28 @@ export default function FoodHandlersHandwashingForm() {
 
   // responsive helpers
   const resp = useResponsive();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
+  // tweak sizes for landscape to fit more columns
   const dyn = {
-    containerPadding: resp.s(20),
-    logoSize: resp.s(48),
-    logoMargin: resp.s(12),
-    titleFont: resp.ms(20),
+    containerPadding: resp.s(isLandscape ? 12 : 20),
+    logoSize: resp.s(isLandscape ? 40 : 48),
+    logoMargin: resp.s(isLandscape ? 8 : 12),
+    titleFont: resp.ms(isLandscape ? 18 : 20),
     inputPadding: resp.s(8),
-    inputFont: resp.ms(14),
-    managerWidth: resp.s(120),
-    timeCellW: resp.s(55),
-    nameW: resp.s(160),
-    jobW: resp.s(120),
-    snW: resp.s(40),
-    signW: resp.s(100),
-    checkboxW: resp.s(55),
-    saveBtnPV: resp.s(12),
-    saveBtnPH: resp.s(28),
-    saveBtnRadius: resp.s(20),
-    saveBtnFont: resp.ms(16),
+    inputFont: resp.ms(isLandscape ? 13 : 14),
+    managerWidth: resp.s(isLandscape ? 100 : 120),
+    timeCellW: resp.s(isLandscape ? 48 : 55),
+    nameW: resp.s(isLandscape ? 130 : 160),
+    jobW: resp.s(isLandscape ? 100 : 120),
+    snW: resp.s(isLandscape ? 36 : 40),
+    signW: resp.s(isLandscape ? 80 : 100),
+    checkboxW: resp.s(isLandscape ? 48 : 55),
+    saveBtnPV: resp.s(isLandscape ? 10 : 12),
+    saveBtnPH: resp.s(isLandscape ? 20 : 28),
+    saveBtnRadius: resp.s(isLandscape ? 18 : 20),
+    saveBtnFont: resp.ms(isLandscape ? 14 : 16),
   };
 
   useEffect(() => {
@@ -126,7 +130,7 @@ export default function FoodHandlersHandwashingForm() {
   return (
     <>
       <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
-      <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
+  <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         <View style={styles.logoRow}>
           <Image source={require('../assets/logo.png')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
           <Text style={[styles.title, { fontSize: dyn.titleFont, marginBottom: resp.s(12) }]}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
@@ -183,7 +187,8 @@ export default function FoodHandlersHandwashingForm() {
         </View>
 
         {/* Table */}
-  <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}> 
+  {/* horizontal table scroll - allows many time columns on both orientations */}
+  <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]} contentContainerStyle={{ flexGrow: 1 }}>
           <View>
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.headerCell, styles.snCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.snW, width: dyn.snW }]}>S/N</Text>
@@ -213,13 +218,14 @@ export default function FoodHandlersHandwashingForm() {
                   placeholder="Job Title"
                 />
                 {TIME_SLOTS.map((time) => (
-                  <Text
+                  <TouchableOpacity
                     key={time}
-                    style={[styles.checkboxCell, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2), fontSize: resp.ms(16) }]}
+                    style={[styles.checkboxTouchable, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2) }]}
                     onPress={() => toggleHandlerCheck(rowIdx, time)}
+                    activeOpacity={0.7}
                   >
-                    {row.checks[time] ? '☑' : '☐'}
-                  </Text>
+                    <Text style={[styles.checkboxCellText, { fontSize: resp.ms(16) }]}>{row.checks[time] ? '☑' : '☐'}</Text>
+                  </TouchableOpacity>
                 ))}
                 <TextInput
                   style={[styles.inputCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
@@ -369,23 +375,23 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     textAlignVertical: 'center',
   },
-  checkboxCell: {
-    fontSize: 18,
-    textAlign: 'center',
-    padding: 2,
-    color: '#185a9d',
-    minWidth: 55,
-    width: 55, 
+  checkboxTouchable: {
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRightWidth: 1,
     borderColor: '#eee',
-    flexGrow: 0,
+  },
+  checkboxCellText: {
+    fontSize: 18,
+    textAlign: 'center',
+    color: '#185a9d',
     textAlignVertical: 'center',
   },
   snCell: { minWidth: 40, width: 40, textAlign: 'center' },
-  nameCell: { minWidth: 160, width: 160 }, 
-  jobCell: { minWidth: 120, width: 120 }, 
-  signCell: { minWidth: 100, width: 100 },
-  supCell: { minWidth: 100, width: 100 },
+  nameCell: { minWidth: 120 }, 
+  jobCell: { minWidth: 90 }, 
+  signCell: { minWidth: 80 },
+  supCell: { minWidth: 80 },
   saveButtonContainer: {
     padding: 18,
     backgroundColor: '#fff',

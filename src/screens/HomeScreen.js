@@ -16,6 +16,8 @@ const formCategories = {
       { id: 4, title: "Monthly Temp Logs - Chillers", status: "overdue", priority: "critical", dueTime: "2 hours ago", location: "Display Area" },
       { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
       { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
+      { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" }
+      ,{ id: 100, title: "Food Handlers Daily Handwashing Tracking Log Sheet", status: "pending", priority: "high", dueTime: "Daily", location: "Front Counter", isHandwashingLog: true }
       { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
       { id: 41, title: "FOH Daily Cleaning", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' },
       // Added from prompt: Food Handlers Daily Showering Log
@@ -33,7 +35,7 @@ const formCategories = {
       { id: 12, title: "Daily Handwashing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Production Entry" },
       { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
       { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" },
-      { id: 100, title: "Food Handlers Daily Handwashing Tracking Log Sheet", status: "pending", priority: "high", dueTime: "Daily", location: "Production Floor", isHandwashingLog: true },
+      
     ]
   },
   kitchen: {
