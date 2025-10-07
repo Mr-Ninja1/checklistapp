@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import useExportFormAsPDF from '../utils/useExportFormAsPDF';
+import generateWeeklyChecklistHtml from '../utils/generateWeeklyChecklistHtml';
 
 // Stubs / utilities (the project already has equivalents; these mirror them)
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -59,11 +61,13 @@ const Checkbox = ({ checked, onPress }) => (
 );
 
 export default function KitchenWeeklyCleaningChecklist() {
+  const { ref, exportAsPDF } = useExportFormAsPDF();
   const navigation = useNavigation();
   const [formData, setFormData] = useState(initialCleaningState);
   const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '' });
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -109,6 +113,31 @@ export default function KitchenWeeklyCleaningChecklist() {
     try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Draft saved'); }
     catch (e) { Alert.alert('Error', 'Failed to save draft'); }
     finally { setBusy(false); }
+  };
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    setBusy(true);
+    try {
+      // prepare payload for HTML generator
+      const payload = { title: 'Kitchen Weekly Cleaning Checklist', meta: metadata, areas: formData, footerText: 'Verified records kept on file' };
+      // embed logo as dataUri if available (skip for now)
+      const html = generateWeeklyChecklistHtml(payload);
+      const exportResult = await exportAsPDF({ title: payload.title, date: new Date().toLocaleDateString(), formData: payload, });
+      if (exportResult && exportResult.pdfPath) {
+        Alert.alert('Saved', 'PDF exported and saved to history.');
+      } else if (exportResult && exportResult.pdfDataUri) {
+        Alert.alert('Saved', 'PDF prepared (web).');
+      } else {
+        Alert.alert('Error', exportResult.error || 'Export failed');
+      }
+    } catch (e) {
+      console.warn('export failed', e);
+      Alert.alert('Error', 'Export failed');
+    } finally {
+      setExporting(false);
+      setBusy(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -202,9 +231,10 @@ export default function KitchenWeeklyCleaningChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={busy}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={busy || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleExportPdf} style={[styles.button, { backgroundColor: '#185a9d' }]} disabled={busy || exporting}><Text style={styles.buttonText}>{exporting ? 'Exporting...' : 'Save as PDF'}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy || exporting}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
           </View>
         </View>
       </ScrollView>

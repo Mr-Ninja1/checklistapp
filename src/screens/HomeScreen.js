@@ -38,6 +38,7 @@ const formCategories = {
     name: "Kitchen Records",
     color: ["#56ccf2", "#2f80ed"],
     forms: [
+      { id: 43, title: "Kitchen Weekly Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Kitchen Area", route: 'Kitchen_WeeklyCleaningChecklist' },
       { id: 15, title: "Daily Cleaning & Sanitizing", status: "pending", priority: "high", dueTime: "After each shift", location: "Main Kitchen" },
   { id: 42, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen)", status: "pending", priority: "high", dueTime: "Each shift", location: "Main Kitchen", route: 'Kitchen_DailyCleaningForm' },
       { id: 16, title: "Weekly Cleaning Log", status: "completed", priority: "medium", dueTime: "Monday", location: "Kitchen Area" },
@@ -303,6 +304,25 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
+      {/* Quick access: when kitchen category is active show a prominent card/button to open the weekly checklist */}
+      {activeCategory === 'kitchen' && (
+        <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setLoadingMsg('Opening Kitchen Weekly Checklist...');
+              setLoadingCard(true);
+              setTimeout(() => {
+                navigation.navigate('Kitchen_WeeklyCleaningChecklist');
+                setTimeout(() => setLoadingCard(false), 350);
+              }, 200);
+            }}
+            style={[styles.quickCard]}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d' }}>🍳 Kitchen Weekly Cleaning Checklist</Text>
+            <Text style={{ fontSize: 12, color: '#555', marginTop: 4 }}>Open weekly checklist</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Form Lists */}
       <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={[styles.formListContent, { minHeight: 0 }]}> 
@@ -388,6 +408,18 @@ const styles = StyleSheet.create({
   },
   formListContent: {
     padding: 12,
+  },
+  quickCard: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e6eef2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   historyBtn: {
     position: 'absolute',
