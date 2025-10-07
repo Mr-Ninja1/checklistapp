@@ -1,253 +1,421 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar, User, Clock, CheckCircle } from 'lucide-react';
 
-// Time slots for the handwashing log
-const TIME_SLOTS = [
-    "06:00AM", "07:00AM", "08:00AM", "09:00AM", "10:00AM",
-    "11:00AM", "12:00PM", "13:00PM", "14:00HRS", "15:00HRS"
-];
+// --- Utility Functions ---
 
-// Initial data structure for the staff log (Updated to 14 rows)
-const initialLogData = Array.from({ length: 14 }, (_, index) => ({
-    id: index + 1,
+/**
+ * Calculates the start date of the current week (Sunday) and returns an object
+ * containing the full dates for all 7 days, the month name, and the year.
+ * @param {Date} date - The date to base the calculation on.
+ */
+const getWeekInfo = (date = new Date()) => {
+    const d = new Date(date);
+    // 0 is Sunday, 6 is Saturday
+    const day = d.getDay(); 
+    const diff = d.getDate() - day; // Date of the Sunday
+    const sunday = new Date(d.setDate(diff));
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const nextDay = new Date(sunday);
+        nextDay.setDate(sunday.getDate() + i);
+        days.push(nextDay);
+    }
+
+    // Format week start to match the paper log (e.g., 10.05)
+    const weekStart = days[0].toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
+
+    return {
+        monthName: days[0].toLocaleString('default', { month: 'long' }),
+        year: days[0].getFullYear().toString(),
+        weekStart: weekStart.replace('/', '.'),
+        days // Array of Date objects for Sun to Sat
+    };
+};
+
+/**
+ * Gets the current month and year in MM/YYYY format for Issue Date auto-fill.
+ */
+const getFormattedIssueDate = (date = new Date()) => {
+    return date.toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' });
+};
+
+// --- Initial State and Configuration ---
+
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+// Represents a single empty log entry (one row on the paper log)
+const createEmptyLogEntry = () => ({
+    id: crypto.randomUUID(),
     fullName: '',
     jobTitle: '',
-    timeChecks: TIME_SLOTS.reduce((acc, time) => ({ ...acc, [time]: false }), {}),
-    staffSign: '',
-    supName: '',
+    dailyLog: DAY_NAMES.reduce((acc, day) => {
+        // Time and Sign fields
+        acc[day.toLowerCase()] = { time: '', sign: '' };
+        return acc;
+    }, {}),
     supSign: '',
-}));
+});
 
+// --- Main Application Component (The Digital Log Form) ---
 const App = () => {
-    const [logData, setLogData] = useState(initialLogData);
-    const [date, setDate] = useState('10/06/2025');
-    const [location, setLocation] = useState('');
+    // 1. Auto-Calculated Date/Week
+    const initialWeekInfo = getWeekInfo();
+    const [weekInfo, setWeekInfo] = useState(initialWeekInfo);
+
+    // 2. Main Log Entries (Rows) - Pre-populate 10 empty rows to match the look of the blank form
+    const [logEntries, setLogEntries] = useState(Array(10).fill(null).map(() => createEmptyLogEntry()));
+
+    // 3. Document Metadata / Verification - Using auto-detected or placeholder values
     const [verifiedBy, setVerifiedBy] = useState('');
-    const [managerSign, setManagerSign] = useState('');
-    const [shift, setShift] = useState('AM');
+    const [weekStartInput, setWeekStartInput] = useState(initialWeekInfo.weekStart);
+    const [monthInput, setMonthInput] = useState(initialWeekInfo.monthName);
+    const [yearInput, setYearInput] = useState(initialWeekInfo.year);
+    
+    // Header fields requested to be editable and/or blank
+    const [compilerName, setCompilerName] = useState(''); // Starts blank
+    const [approverName, setApproverName] = useState(''); // Starts blank
+    const [versionNo, setVersionNo] = useState('');       // Starts blank
 
-    // Handle checkbox change in the grid
-    const handleCheckChange = (id, time) => {
-        setLogData(prevData =>
-            prevData.map(row =>
-                row.id === id
-                    ? { ...row, timeChecks: { ...row.timeChecks, [time]: !row.timeChecks[time] } }
-                    : row
-            )
+    // New Editable Document Control Fields
+    const [docNo, setDocNo] = useState(''); // Starts blank
+    const [issueDate, setIssueDate] = useState(getFormattedIssueDate()); // AUTO-FILLED
+    const [reviewDate, setReviewDate] = useState(''); // Starts blank
+
+    const updateLogEntry = useCallback((id, field, value) => {
+        setLogEntries(prevEntries => prevEntries.map(entry =>
+            entry.id === id ? { ...entry, [field]: value } : entry
+        ));
+    }, []);
+
+    const updateDailyLogEntry = useCallback((id, dayKey, field, value) => {
+        setLogEntries(prevEntries => prevEntries.map(entry => {
+            if (entry.id === id) {
+                const newDailyLog = {
+                    ...entry.dailyLog,
+                    [dayKey]: {
+                        ...entry.dailyLog[dayKey],
+                        [field]: value
+                    }
+                };
+                return { ...entry, dailyLog: newDailyLog };
+            }
+            return entry;
+        }));
+    }, []);
+
+    // Simulates adding a new blank line at the bottom
+    const addLogEntry = () => {
+        setLogEntries([...logEntries, createEmptyLogEntry()]);
+    };
+
+    const handleSave = () => {
+        // Find if any entry has any data before saving
+        const dataToSave = logEntries.filter(entry =>
+            entry.fullName || entry.jobTitle || entry.supSign ||
+            Object.values(entry.dailyLog).some(d => d.time || d.sign)
         );
+
+        if (dataToSave.length === 0) {
+            alert('Log is empty. Please fill in some data before submitting.');
+            return;
+        }
+
+        console.log('--- Submitting Digital Log ---');
+        console.log('Document Info:', {
+            docNo,
+            issueDate,
+            reviewDate,
+            week: weekStartInput,
+            month: monthInput,
+            year: yearInput,
+            verifiedBy,
+            compiler: compilerName,
+            approver: approverName,
+            versionNo: versionNo,
+        });
+        console.log('Log Data:', dataToSave);
+        // In a real app, this data would go to Firestore.
+        alert('Log data submitted successfully! Logged data reflects only filled entries.');
     };
 
-    // Placeholder for adding a new row
-    const handleAddRow = () => {
-        const newId = logData.length ? logData[logData.length - 1].id + 1 : 1;
-        const newRow = {
-            id: newId,
-            fullName: '',
-            jobTitle: '',
-            timeChecks: TIME_SLOTS.reduce((acc, time) => ({ ...acc, [time]: false }), {}),
-            staffSign: '',
-            supName: '',
-            supSign: '',
-        };
-        setLogData([...logData, newRow]);
-    };
+    /**
+     * Calculates the width for an input element based on its current value length.
+     * Uses 'ch' (character unit) for dynamic sizing with a minimum width.
+     * @param {string} value 
+     */
+    const getDynamicWidthStyle = (value) => ({
+        // Minimum width of 60px (approx 6 characters), then 1 character unit per character, plus 1ch for padding/caret.
+        width: `max(60px, ${value.length + 1}ch)`, 
+        // Important: allows the input to grow without being constrained by an inner w-full class.
+    });
 
-    // Style constants
-    const inputStyle = "w-full p-3 bg-white border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-150";
-    const labelStyle = "block text-sm font-medium text-gray-700 mb-1";
-    const headerCellStyle = "p-3 bg-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider border-r border-gray-300 min-w-[70px] text-center sticky left-0";
-    const dataCellStyle = "p-3 text-sm text-gray-800 border-r border-gray-200 bg-white min-w-[70px]";
+    // Style constants to match the paper log's thin lines and dense layout
+    const cellClass = "border border-gray-400 p-0.5 text-xs h-8";
+    const headerClass = "border border-gray-500 bg-gray-100 text-center font-semibold text-gray-700 text-[10px] uppercase align-middle";
 
     return (
-        <div className="min-h-screen bg-gray-100 font-sans antialiased text-gray-900">
-            {/* Header Bar */}
-            <header className="bg-white shadow-md p-4 sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-800">Daily Handwashing - PM</h1>
-                    <button className="text-blue-600 hover:text-blue-800 font-semibold transition duration-150 p-2 rounded-lg">
-                        Back
-                    </button>
-                </div>
-            </header>
-
-            {/* Main Form Card */}
-            <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-                <div className="bg-white p-6 sm:p-8 rounded-xl shadow-xl border border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-700 mb-6">Food Handlers Daily Handwashing Tracking Log Sheet</h2>
-
-                    {/* Top Tracking Fields (Date, Shift, Location, Verified By) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        {/* Left Column */}
-                        <div className="space-y-6">
-                            {/* Date Field */}
-                            <div>
-                                <label className={labelStyle}>Date:</label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        className={inputStyle + " pr-10"}
-                                    />
-                                    <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400">
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                    </span>
-                                </div>
+        <div className="min-h-screen bg-white p-4 font-sans antialiased text-gray-800">
+            {/* Added overflow-x-auto for wide table on small screens */}
+            <div className="max-w-[1200px] mx-auto overflow-x-auto shadow-xl border border-gray-400 rounded-lg">
+                <div className="min-w-[1000px] bg-white">
+                    {/* TOP HEADER SECTION - Fixed Text and Inputs */}
+                    <div className="border-b border-gray-600 p-2">
+                        <div className="flex justify-between items-start text-xs mb-1">
+                            {/* Logo Placeholder (Bravo Brands Limited) */}
+                            <div className="flex items-center">
+                                <span className="text-xl font-black text-red-600 mr-2">B</span>
+                                <span className="text-xs font-semibold">BRAVO BRANDS LIMITED</span>
                             </div>
-
-                            {/* Shift Field */}
-                            <div>
-                                <label className={labelStyle}>Shift:</label>
-                                <select
-                                    value={shift}
-                                    onChange={(e) => setShift(e.target.value)}
-                                    className={inputStyle}
-                                >
-                                    <option value="AM">AM</option>
-                                    <option value="PM">PM</option>
-                                    <option value="NIGHT">NIGHT</option>
-                                </select>
+                            
+                            {/* Editable Document Control Info */}
+                            <div className="text-right space-y-0.5">
+                                <p className="flex justify-end items-center">Doc No: 
+                                    <input 
+                                        type="text" 
+                                        className="border-b border-gray-800 text-right mx-1 text-xs font-semibold w-24 focus:outline-none bg-transparent"
+                                        value={docNo}
+                                        placeholder="BBN-SHEQ..."
+                                        onChange={(e) => setDocNo(e.target.value)}
+                                    />
+                                </p>
+                                <p className="flex justify-end items-center">Issue Date: 
+                                    <input 
+                                        type="text" 
+                                        className="border-b border-gray-800 text-right mx-1 text-xs font-semibold w-16 focus:outline-none bg-transparent"
+                                        value={issueDate}
+                                        onChange={(e) => setIssueDate(e.target.value)}
+                                    />
+                                </p>
+                                <p className="flex justify-end items-center">Review Date: 
+                                    <input 
+                                        type="text" 
+                                        className="border-b border-gray-800 text-right mx-1 text-xs font-semibold w-16 focus:outline-none bg-transparent"
+                                        value={reviewDate}
+                                        placeholder="N/A"
+                                        onChange={(e) => setReviewDate(e.target.value)}
+                                    />
+                                </p>
                             </div>
                         </div>
 
-                        {/* Right Column */}
-                        <div className="space-y-6">
-                            {/* Location Field */}
-                            <div>
-                                <label className={labelStyle}>Location:</label>
-                                <textarea
-                                    rows="2"
-                                    placeholder="Enter location or address"
-                                    value={location}
-                                    onChange={(e) => setLocation(e.target.value)}
-                                    className={inputStyle + " resize-none"}
-                                ></textarea>
-                            </div>
+                        <h2 className="text-sm font-bold my-1 border-y border-gray-400 py-1">
+                            Subject: FOOD HANDLERS DAILY SHOWERING LOG
+                        </h2>
 
-                            {/* Verified By Field */}
-                            <div>
-                                <label className={labelStyle}>Verified By:</label>
-                                <textarea
-                                    rows="2"
+                        {/* Editable Header Fields: Compiled By, Approved By, Version No. */}
+                        <div className="flex justify-between text-xs mt-1 mb-2">
+                            <p className="flex items-center">Compiled By: 
+                                <input 
+                                    type="text" 
+                                    className="border-b border-gray-800 text-center mx-1 text-xs font-semibold w-28 focus:outline-none bg-transparent"
+                                    value={compilerName}
+                                    onChange={(e) => setCompilerName(e.target.value)}
+                                />
+                            </p>
+                            <p className="flex items-center">Approved By: 
+                                <input 
+                                    type="text" 
+                                    className="border-b border-gray-800 text-center mx-1 text-xs font-semibold w-28 focus:outline-none bg-transparent"
+                                    value={approverName}
+                                    onChange={(e) => setApproverName(e.target.value)}
+                                />
+                            </p>
+                            <p className="flex items-center">Version No.: 
+                                <input 
+                                    type="text" 
+                                    className="border-b border-gray-800 text-center mx-1 text-xs font-semibold w-10 focus:outline-none bg-transparent"
+                                    value={versionNo}
+                                    onChange={(e) => setVersionNo(e.target.value)}
+                                />
+                            </p>
+                            <p>Rev no: 00</p>
+                        </div>
+
+                        {/* Week/Month/Year/Verified By Input Row - Designed to mimic paper lines */}
+                        <div className="flex items-center justify-start text-sm mt-3">
+                            <p className="mr-4">Week:
+                                <input
+                                    type="text"
+                                    className="border-b border-gray-800 text-center mx-1 text-sm font-semibold w-16 focus:outline-none"
+                                    value={weekStartInput}
+                                    onChange={(e) => setWeekStartInput(e.target.value)}
+                                />
+                            </p>
+                            <p className="mr-4">Month:
+                                <input
+                                    type="text"
+                                    className="border-b border-gray-800 text-center mx-1 text-sm font-semibold w-24 focus:outline-none"
+                                    value={monthInput}
+                                    onChange={(e) => setMonthInput(e.target.value)}
+                                />
+                            </p>
+                            <p className="mr-4">Year:
+                                <input
+                                    type="text"
+                                    className="border-b border-gray-800 text-center mx-1 text-sm font-semibold w-12 focus:outline-none"
+                                    value={yearInput}
+                                    onChange={(e) => setYearInput(e.target.value)}
+                                />
+                            </p>
+                            <p>Verified By:
+                                <input
+                                    type="text"
+                                    className="border-b border-gray-800 text-center mx-1 text-sm font-semibold w-32 focus:outline-none"
                                     value={verifiedBy}
                                     onChange={(e) => setVerifiedBy(e.target.value)}
-                                    className={inputStyle + " resize-none"}
-                                ></textarea>
-                            </div>
+                                />
+                            </p>
                         </div>
                     </div>
 
-                    {/* Complex Manager Sign */}
-                    <div className="mb-8">
-                        <label className={labelStyle}>Complex Manager Sign:</label>
-                        <textarea
-                            rows="2"
-                            placeholder="Manager name / signature"
-                            value={managerSign}
-                            onChange={(e) => setManagerSign(e.target.value)}
-                            className={inputStyle + " resize-none"}
-                        ></textarea>
-                    </div>
+                    {/* MAIN LOG TABLE */}
+                    <table className="w-full border-collapse">
+                        <thead>
+                            {/* Header Row 1: Full Name, Job Title, Day Names, Sup Sign */}
+                            <tr>
+                                {/* Removed fixed width for dynamic content */}
+                                <th rowSpan="2" className={`${headerClass} w-auto min-w-[150px]`}>Full Name</th>
+                                <th rowSpan="2" className={`${headerClass} w-auto min-w-[100px]`}>Job Title</th>
 
-                    {/* Handwashing Tracking Grid */}
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4">Tracking Log</h3>
-                    
-                    {/* The Grid Container - Responsive and Scrollable */}
-                    <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-inner">
-                        <div className="inline-block min-w-full">
-                            {/* Grid Header */}
-                            <div className="bg-gray-50 border-b border-gray-300 text-center flex">
-                                <div className={headerCellStyle + " w-12 flex-shrink-0"}>S/N</div>
-                                <div className={headerCellStyle + " min-w-[150px] flex-shrink-0"}>Full Name</div>
-                                <div className={headerCellStyle + " min-w-[150px] flex-shrink-0"}>Job Title</div>
-                                
-                                {/* Time Slot Headers (Scrollable part) */}
-                                <div className="flex flex-grow items-center">
-                                    {TIME_SLOTS.map(time => (
-                                        <div key={time} className={headerCellStyle + " w-20 flex-shrink-0"}>{time}</div>
-                                    ))}
-                                </div>
+                                {DAY_NAMES.map((day, i) => (
+                                    <th
+                                        key={day}
+                                        colSpan="2"
+                                        // Keep fixed width for daily log column integrity
+                                        className={`${headerClass} w-[9%]`} 
+                                    >
+                                        {day} <span className="font-normal">({weekInfo.days[i].getDate()})</span>
+                                    </th>
+                                ))}
 
-                                <div className={headerCellStyle + " min-w-[120px] flex-shrink-0"}>Staff Sign</div>
-                                <div className={headerCellStyle + " min-w-[120px] flex-shrink-0"}>Sup Name</div>
-                                <div className={headerCellStyle + " min-w-[120px] border-r-0 flex-shrink-0"}>Sup Sign</div>
-                            </div>
+                                {/* Keep fixed width for Sup Sign column integrity */}
+                                <th rowSpan="2" className={`${headerClass} w-[9%]`}>Sup Sign</th>
+                            </tr>
 
-                            {/* Grid Body Rows */}
-                            {logData.map((row, index) => (
-                                <div key={row.id} className={`flex border-b border-gray-200 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition duration-150`}>
-                                    {/* Fixed/Identifying Columns */}
-                                    <div className={dataCellStyle + " w-12 flex-shrink-0 font-medium text-center"}>
-                                        {row.id}
-                                    </div>
-                                    <div className={dataCellStyle + " min-w-[150px] flex-shrink-0"}>
-                                        <input type="text" className="w-full bg-transparent focus:outline-none" placeholder="Enter name" />
-                                    </div>
-                                    <div className={dataCellStyle + " min-w-[150px] flex-shrink-0"}>
-                                        <input type="text" className="w-full bg-transparent focus:outline-none" placeholder="Enter title" />
-                                    </div>
+                            {/* Header Row 2: Time & Sign for each day */}
+                            <tr>
+                                {DAY_NAMES.map((day) => (
+                                    <React.Fragment key={`${day}-sub`}>
+                                        <th className={`${headerClass} w-[4.5%]`}>Shower Time</th>
+                                        <th className={`${headerClass} w-[4.5%]`}>Sign</th>
+                                    </React.Fragment>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {/* DATA ROWS */}
+                            {logEntries.map((entry) => (
+                                <tr key={entry.id} className="hover:bg-indigo-50 transition-colors">
+                                    {/* Full Name (Dynamic width) */}
+                                    <td className={cellClass}>
+                                        <input
+                                            type="text"
+                                            value={entry.fullName}
+                                            onChange={(e) => updateLogEntry(entry.id, 'fullName', e.target.value)}
+                                            className="h-full border-none p-1 text-xs focus:ring-0 focus:outline-none bg-transparent"
+                                            style={getDynamicWidthStyle(entry.fullName)}
+                                        />
+                                    </td>
+                                    {/* Job Title (Dynamic width) */}
+                                    <td className={cellClass}>
+                                        <input
+                                            type="text"
+                                            value={entry.jobTitle}
+                                            onChange={(e) => updateLogEntry(entry.id, 'jobTitle', e.target.value)}
+                                            className="h-full border-none p-1 text-xs focus:ring-0 focus:outline-none bg-transparent"
+                                            style={getDynamicWidthStyle(entry.jobTitle)}
+                                        />
+                                    </td>
 
-                                    {/* Checkbox Columns (Scrollable part) */}
-                                    <div className="flex flex-grow items-center">
-                                        {TIME_SLOTS.map(time => (
-                                            <div key={time} className={dataCellStyle + " w-20 flex-shrink-0 flex items-center justify-center"}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={row.timeChecks[time]}
-                                                    onChange={() => handleCheckChange(row.id, time)}
-                                                    className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* Signature/Name Columns */}
-                                    <div className={dataCellStyle + " min-w-[120px] flex-shrink-0"}>
-                                        <input type="text" className="w-full bg-transparent focus:outline-none" placeholder="Signature" />
-                                    </div>
-                                    <div className={dataCellStyle + " min-w-[120px] flex-shrink-0"}>
-                                        <input type="text" className="w-full bg-transparent focus:outline-none" placeholder="Supervisor Name" />
-                                    </div>
-                                    <div className={dataCellStyle + " min-w-[120px] border-r-0 flex-shrink-0"}>
-                                        <input type="text" className="w-full bg-transparent focus:outline-none" placeholder="Signature" />
-                                    </div>
-                                </div>
+                                    {/* Daily Log Entries (Sun-Sat) */}
+                                    {DAY_NAMES.map((day) => {
+                                        const key = day.toLowerCase();
+                                        return (
+                                            <React.Fragment key={`${entry.id}-${key}`}>
+                                                {/* Time */}
+                                                <td className={cellClass}>
+                                                    <input
+                                                        type="time"
+                                                        value={entry.dailyLog[key].time}
+                                                        onChange={(e) => updateDailyLogEntry(entry.id, key, 'time', e.target.value)}
+                                                        className="h-full w-full border-none text-xs text-center focus:ring-0 focus:outline-none bg-transparent"
+                                                    />
+                                                </td>
+                                                {/* Sign (Dynamic width) */}
+                                                <td className={cellClass}>
+                                                    <input
+                                                        type="text"
+                                                        value={entry.dailyLog[key].sign}
+                                                        onChange={(e) => updateDailyLogEntry(entry.id, key, 'sign', e.target.value)}
+                                                        className="h-full border-none text-xs text-center focus:ring-0 focus:outline-none bg-transparent"
+                                                        style={getDynamicWidthStyle(entry.dailyLog[key].sign)}
+                                                    />
+                                                </td>
+                                            </React.Fragment>
+                                        );
+                                    })}
+
+                                    {/* Sup Sign (Dynamic width) */}
+                                    <td className={cellClass}>
+                                        <input
+                                            type="text"
+                                            value={entry.supSign}
+                                            onChange={(e) => updateLogEntry(entry.id, 'supSign', e.target.value)}
+                                            className="h-full border-none text-xs text-center focus:ring-0 focus:outline-none bg-transparent"
+                                            style={getDynamicWidthStyle(entry.supSign)}
+                                        />
+                                    </td>
+                                </tr>
                             ))}
-                        </div>
-                    </div>
+                        </tbody>
+                    </table>
 
-                    {/* Action Buttons and Instructions (New Section) */}
-                    <div className="mt-8 pt-6 border-t border-gray-200">
-                        {/* Buttons Row */}
-                        <div className="flex gap-4 mb-4">
+                    {/* Instruction Footer and Buttons */}
+                    <div className="flex justify-between items-center p-2 border-t border-gray-400">
+                        <div className="text-[10px] italic text-gray-700 max-w-[70%]">
+                            Instruction. All food handlers who handle food directly are required to take a shower before starting work.
+                        </div>
+                        <div className="flex gap-2">
                             <button
-                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md"
-                                onClick={handleAddRow}
+                                onClick={addLogEntry}
+                                className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
                             >
-                                Add Row
+                                + Add Line
                             </button>
                             <button
-                                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md"
-                                onClick={() => console.log('Save clicked')}
+                                onClick={handleSave}
+                                className="px-3 py-1 text-xs bg-indigo-600 text-white rounded-md shadow-md hover:bg-indigo-700 transition"
                             >
-                                Save
-                            </button>
-                            <button
-                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md"
-                                onClick={() => console.log('Submit clicked')}
-                            >
-                                Submit
+                                Submit Log
                             </button>
                         </div>
-
-                        {/* Instruction Text */}
-                        <p className="text-sm text-gray-600 border-l-4 border-yellow-500 pl-3 py-1 bg-yellow-50 rounded-r-lg">
-                            Instruction: All food handlers are required to wash and sanitize their hands every after $60$mins.
-                        </p>
                     </div>
                 </div>
-            </main>
+            </div>
+
+            {/* Placeholder for modal/alert logic - replacing alert() */}
+            <div id="app-message-box" className="fixed bottom-4 right-4 z-50"></div>
         </div>
     );
+};
+
+// Global function to replace alert() with a custom message box
+const alert = (message) => {
+    const box = document.getElementById('app-message-box');
+    const msgElement = document.createElement('div');
+    msgElement.className = 'bg-indigo-600 text-white p-3 rounded-lg shadow-2xl mb-2 flex items-center transform transition-all duration-300 ease-out translate-y-0 opacity-100';
+    msgElement.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        <span>${message}</span>
+    `;
+    box.appendChild(msgElement);
+    setTimeout(() => {
+        msgElement.classList.add('translate-y-full', 'opacity-0');
+        msgElement.addEventListener('transitionend', () => msgElement.remove());
+    }, 3000);
 };
 
 export default App;

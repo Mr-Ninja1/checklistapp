@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, SafeAreaView, ScrollView, Image, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Image, Alert, TouchableOpacity } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import { addFormHistory } from '../utils/formHistory';
 import useExportFormAsPDF from '../utils/useExportFormAsPDF';
@@ -124,9 +124,9 @@ export default function FoodHandlersHandwashingForm() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <>
       <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
-      <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false}>
+      <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
         <View style={styles.logoRow}>
           <Image source={require('../assets/logo.png')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
           <Text style={[styles.title, { fontSize: dyn.titleFont, marginBottom: resp.s(12) }]}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
@@ -183,7 +183,7 @@ export default function FoodHandlersHandwashingForm() {
         </View>
 
         {/* Table */}
-        <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]}> 
+  <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}> 
           <View>
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.headerCell, styles.snCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.snW, width: dyn.snW }]}>S/N</Text>
@@ -243,13 +243,13 @@ export default function FoodHandlersHandwashingForm() {
             ))}
           </View>
         </ScrollView>
-      </ScrollView>
-      <View style={styles.saveButtonContainer}>
+  </ScrollView>
+  <View style={styles.saveButtonContainer}>
         <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} activeOpacity={0.85}>
           <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </>
   );
 }
 

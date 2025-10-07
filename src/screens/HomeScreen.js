@@ -17,7 +17,9 @@ const formCategories = {
       { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
       { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
       { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
-      { id: 41, title: "FOH Daily Cleaning", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' }
+      { id: 41, title: "FOH Daily Cleaning", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' },
+      // Added from prompt: Food Handlers Daily Showering Log
+      { id: 101, title: "Food Handlers Daily Showering Log", status: "pending", priority: "high", dueTime: "Daily", location: "FOH Locker Room", route: 'FoodHandlersDailyShoweringForm' }
     ]
   },
   production: {
