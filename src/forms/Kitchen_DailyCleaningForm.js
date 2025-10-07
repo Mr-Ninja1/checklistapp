@@ -5,6 +5,7 @@ import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { useEffect, useRef } from 'react';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 // TIME SLOTS and equipment list: match the scanned kitchen form (AM shift 06:00-16:00)
 const TIME_SLOTS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
@@ -46,6 +47,7 @@ const DataCell = ({ children, width, style = {} }) => (
 export default function Kitchen_DailyCleaningForm() {
   const resp = useResponsive();
   const [formData, setFormData] = useState(initialEquipmentState);
+  const [busy, setBusy] = useState(false);
   const [loadingDraft, setLoadingDraft] = React.useState(true);
   const draftKey = 'kitchen_daily_cleaning';
   const saveTimer = useRef(null);
@@ -147,33 +149,42 @@ export default function Kitchen_DailyCleaningForm() {
   );
 
   const handleSave = async () => {
+    setBusy(true);
     try {
-      // Submit: save to history and remove draft
       await addFormHistory({ title: 'Kitchen Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
       await removeDraft(draftKey);
       alert('Submitted and saved to history');
-      // navigate back home if available
       if (navigation && navigation.navigate) navigation.navigate('Home');
     } catch (e) {
       alert('Failed to submit');
+    } finally {
+      setBusy(false);
     }
   };
 
   const handleSaveDraft = async () => {
+    setBusy(true);
     try {
       await setDraft(draftKey, { formData, metadata });
       alert('Draft saved');
     } catch (e) {
       alert('Failed to save draft');
+    } finally {
+      setBusy(false);
     }
   };
 
   const handleBack = () => {
-    if (navigation && navigation.navigate) navigation.navigate('Home');
+    setBusy(true);
+    setTimeout(() => {
+      if (navigation && navigation.navigate) navigation.navigate('Home');
+      setBusy(false);
+    }, 180);
   };
 
   return (
     <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} alwaysBounceVertical>
+      <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerTop}>
         <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>

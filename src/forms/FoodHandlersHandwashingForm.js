@@ -7,6 +7,7 @@ import useResponsive from '../utils/responsive';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 // Helper functions for dynamic details
 function getCurrentDate() {
@@ -124,6 +125,7 @@ export default function FoodHandlersHandwashingForm() {
 
   const handleSavePDF = async () => {
     setExporting(true);
+    setBusy(true);
     try {
       await new Promise(res => setTimeout(res, 250));
       const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
@@ -139,9 +141,9 @@ export default function FoodHandlersHandwashingForm() {
       };
 
       try {
-        await addFormHistory({ title: formData.title, date: formData.date, shift: formData.shift, savedAt: Date.now(), meta: formData });
-        setExporting(false);
-        Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
+  await addFormHistory({ title: formData.title, date: formData.date, shift: formData.shift, savedAt: Date.now(), meta: formData });
+  setExporting(false);
+  Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
       } catch (e) {
         setExporting(false);
         console.warn('save meta failed', e);
@@ -154,25 +156,31 @@ export default function FoodHandlersHandwashingForm() {
   };
 
   const handleSave = async () => {
+    setBusy(true);
     try {
       await addFormHistory({ title: 'Food Handlers Handwashing', date: logDetails.date, savedAt: Date.now(), meta: { logDetails, handlers } });
       await removeDraft(draftKey);
       alert('Submitted and saved to history');
       navigation.navigate('Home');
     } catch (e) { alert('Failed to submit'); }
+    finally { setBusy(false); }
   };
 
   const handleSaveDraft = async () => {
+    setBusy(true);
     try {
       await setDraft(draftKey, { handlers, logDetails });
       alert('Draft saved');
     } catch (e) { alert('Failed to save draft'); }
+    finally { setBusy(false); }
   };
 
   const handleBack = () => navigation.navigate('Home');
+  const [busy, setBusy] = useState(false);
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <LoadingOverlay visible={busy || exporting} message={busy ? 'Working...' : 'Saving PDF...'} />
       <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
   <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         <View style={styles.logoRow}>

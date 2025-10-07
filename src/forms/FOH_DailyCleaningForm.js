@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { useEffect, useRef } from 'react';
+// ...existing code... (react hooks consolidated above)
 import { useNavigation } from '@react-navigation/native';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 // --- DATA STRUCTURE ---
 const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
@@ -162,29 +163,33 @@ export default function FOH_DailyCleaningForm() {
   );
 
   const handleSave = async () => {
+    setBusy(true);
     try {
       await addFormHistory({ title: 'FOH Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
       await removeDraft(draftKey);
       alert('Submitted and saved to history');
       navigation.navigate('Home');
-    } catch (e) {
-      alert('Failed to submit');
-    }
+    } catch (e) { alert('Failed to submit'); }
+    finally { setBusy(false); }
   };
 
   const handleSaveDraft = async () => {
+    setBusy(true);
     try {
       await setDraft(draftKey, { formData, metadata });
       alert('Draft saved');
     } catch (e) { alert('Failed to save draft'); }
+    finally { setBusy(false); }
   };
 
   const handleBack = () => navigation.navigate('Home');
+  const [busy, setBusy] = useState(false);
 
   const needsHorizontal = TOTAL_TABLE_WIDTH > availableWidth;
 
   return (
     <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled">
+      <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       {/* Header with logo and company name */}
       <View style={styles.headerTop}>
         <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 // Form data from Index.tsx
 const formCategories = {
@@ -103,6 +104,8 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [activeCategory, setActiveCategory] = useState('foh');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loadingCard, setLoadingCard] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('Please wait');
   // Date/time
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -145,6 +148,7 @@ export default function HomeScreen() {
   // Main UI
   return (
     <View style={{ flex: 1, backgroundColor: '#f6fdff', width: '100%' }}>
+      <LoadingOverlay visible={loadingCard} message={loadingMsg} />
       {/* Floating History Button - always visible, top right */}
       <TouchableOpacity
         style={[
@@ -306,16 +310,18 @@ export default function HomeScreen() {
               key={`form-touchable-${form.id}-${form.title}`}
               disabled={!(form.route || form.isHandwashingLog)}
               onPress={() => {
-                if (form.route) {
-                  navigation.navigate(form.route);
-                  return;
-                }
-                if (form.isHandwashingLog) {
-                  // Navigate to the FoodHandlersHandwashingForm screen
-                  if (typeof navigation !== 'undefined') {
+                // show spinner and navigate
+                setLoadingMsg(`Opening ${form.title}...`);
+                setLoadingCard(true);
+                setTimeout(() => {
+                  if (form.route) {
+                    navigation.navigate(form.route);
+                  } else if (form.isHandwashingLog) {
                     navigation.navigate('FoodHandlersHandwashingForm');
                   }
-                }
+                  // hide after short delay to let navigation settle
+                  setTimeout(() => setLoadingCard(false), 350);
+                }, 250);
               }}
               style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6 }]}
             >
