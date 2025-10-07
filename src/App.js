@@ -5,6 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 import SplashScreen from './screens/SplashScreen';
 import ResponsiveView from './components/ResponsiveView';
+import FormScreenWrapper from './components/FormScreenWrapper';
 import HomeScreen from './screens/HomeScreen';
 import KitchenCategory from './screens/KitchenCategory';
 import FOHCategoryScreen from './screens/FOHCategoryScreen';
@@ -42,7 +43,13 @@ export default function App() {
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
-  <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./forms/FoodHandlersHandwashingForm').default} />
+    <Stack.Screen name="FoodHandlersHandwashingForm">
+      {props => (
+        <FormScreenWrapper>
+          {React.createElement(require('./forms/FoodHandlersHandwashingForm').default, props)}
+        </FormScreenWrapper>
+      )}
+    </Stack.Screen>
     <Stack.Screen name="FOH_DailyCleaningForm" component={require('./forms/FOH_DailyCleaningForm').default} />
     <Stack.Screen name="Kitchen_DailyCleaningForm" component={require('./forms/Kitchen_DailyCleaningForm').default} />
     <Stack.Screen name="Kitchen_WeeklyCleaningChecklist" component={require('./forms/Kitchen_WeeklyCleaningChecklist').default} />

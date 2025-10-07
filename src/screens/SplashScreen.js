@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, ImageBackground, StatusBar } from 'react-native';
 import { ActivityIndicator } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
-import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SplashScreen({ navigation }) {
   useEffect(() => {
@@ -12,13 +11,14 @@ export default function SplashScreen({ navigation }) {
   }, [navigation]);
 
   return (
-    <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.container}>
-      <View style={styles.logoContainer}>
+    <ImageBackground source={require('../assets/image.png')} style={styles.container} imageStyle={{ resizeMode: 'cover' }}>
+      <StatusBar hidden />
+      <View style={styles.overlay}>
         <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.bravo}>Bravo!</Text>
+        <ActivityIndicator size="large" color="#fff" style={styles.spinner} />
       </View>
-      <Text style={styles.bravo}>Bravo!</Text>
-      <ActivityIndicator size="large" color="#fff" style={styles.spinner} />
-    </LinearGradient>
+    </ImageBackground>
   );
 }
 
@@ -30,15 +30,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logo: {
-    width: 130,
-    height: 110,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 92,
+    height: 92,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 10,
   },
   spinner: {
     marginTop: 32,
@@ -57,6 +57,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  overlay: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    paddingTop: 28,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 32,

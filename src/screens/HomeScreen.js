@@ -17,8 +17,11 @@ const formCategories = {
       { id: 4, title: "Monthly Temp Logs - Chillers", status: "overdue", priority: "critical", dueTime: "2 hours ago", location: "Display Area" },
       { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
       { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
-      { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
-      { id: 41, title: "FOH Daily Cleaning", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' }
+  { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
+  { id: 100, title: "Food Handlers Daily Handwashing Tracking Log Sheet", status: "pending", priority: "high", dueTime: "Daily", location: "Front Counter", isHandwashingLog: true },
+  { id: 41, title: "FOH Daily Cleaning", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' },
+  // Added from prompt: Food Handlers Daily Showering Log
+  { id: 101, title: "Food Handlers Daily Showering Log", status: "pending", priority: "high", dueTime: "Daily", location: "FOH Locker Room", route: 'FoodHandlersDailyShoweringForm' },
     ]
   },
   production: {
@@ -157,9 +160,8 @@ export default function HomeScreen() {
         style={[
           styles.historyBtn,
           {
-            // To move the button lower, increase the 'top' value. To move it up, decrease it.
-            // Example: top: isMobile ? 500 : 600, // moves it near the bottom for most screens
-            top: isMobile ? 500 : 600,
+            // Anchor to the bottom/right to avoid large 'top' values which can introduce reflow on web
+            bottom: isMobile ? 18 : 24,
             right: isMobile ? 18 : 32,
             width: isMobile ? 64 : 80,
             height: isMobile ? 64 : 80,
@@ -423,20 +425,21 @@ const styles = StyleSheet.create({
   },
   historyBtn: {
     position: 'absolute',
-    zIndex: 100,
+    zIndex: 1000,
     backgroundColor: '#fff',
-    borderRadius: 40, // matches the larger size
+    borderRadius: 40,
     borderWidth: 4,
-    borderColor: '#185a9d', // bold colored border
-    width: 80,
-    height: 80,
+    borderColor: '#185a9d',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#185a9d',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+    // default fallback size; overridden by inline styles per breakpoint
+    minWidth: 64,
+    minHeight: 64,
   },
   historyBtnText: {
     fontSize: 28,
