@@ -135,7 +135,7 @@ export default function Bakery_SanitizingLog() {
               <View style={{ flexDirection: 'row', width: COL_WIDTHS.TIME * TIME_SLOTS.length }}>{TIME_SLOTS.map(t => (
                 <View key={t} style={[styles.cell, { width: COL_WIDTHS.TIME }]}>
                   <TouchableOpacity onPress={()=>handleToggle(row.id,t)} style={styles.boxTouchable} accessible accessibilityRole="checkbox" accessibilityState={{ checked: !!row.times[t] }} activeOpacity={0.7}>
-                    <View style={[styles.box, row.times[t] ? { backgroundColor: '#1f8f1f' } : null]}> {row.times[t] ? <Text style={{color:'#fff'}}>✓</Text> : null} </View>
+                    <View style={[styles.box, row.times[t] ? { backgroundColor: '#1f8f1f' } : null]}>{row.times[t] ? <Text style={{color:'#fff'}}>✓</Text> : null}</View>
                   </TouchableOpacity>
                 </View>
               ))}</View>
@@ -169,13 +169,13 @@ const styles = StyleSheet.create({
   metaInput: { borderBottomWidth: 1, borderBottomColor: '#ccc', paddingVertical: 2, minWidth: 80 },
   tick: { marginTop: 6, color: '#006400', fontWeight: '700' },
   tableHeader: { flexDirection: 'row', borderBottomWidth: 2, borderColor: '#777', backgroundColor: '#eee', alignItems: 'center', paddingVertical: 6 },
-  hCell: { padding: 6, borderRightWidth: 1, borderColor: '#ddd', justifyContent: 'center', alignItems: 'center' },
+  hCell: { padding: 6, borderRightWidth: 1, borderColor: '#4B5563', justifyContent: 'center', alignItems: 'center' },
   hText: { fontWeight: '800', fontSize: 12 },
   hTextSmall: { fontWeight: '700', fontSize: 11 },
-  row: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#e6e6e6', alignItems: 'center', backgroundColor: '#fff' },
-  cell: { padding: 6, borderRightWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' },
+  row: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#4B5563', alignItems: 'center', backgroundColor: '#fff' },
+  cell: { padding: 6, borderRightWidth: 1, borderColor: '#4B5563', justifyContent: 'center', alignItems: 'center' },
   cellText: { textAlign: 'left', paddingLeft: 6, fontSize: 12, color: '#333' },
-  smallInput: { minWidth: 40, borderBottomWidth: 1, borderColor: '#ddd', paddingVertical: 2, textAlign: 'center' },
-  box: { width: 28, height: 28, borderWidth: 1.5, borderColor: '#333', borderRadius: 4, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6' },
+  smallInput: { minWidth: 40, borderBottomWidth: 1, borderColor: '#4B5563', paddingVertical: 2, textAlign: 'center' },
+  box: { width: 28, height: 28, borderWidth: 1.5, borderColor: '#4B5563', borderRadius: 4, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6' },
   footer: { marginTop: 12, padding: 10, textAlign: 'center', color: '#666', fontStyle: 'italic' },
 });
