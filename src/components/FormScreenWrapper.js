@@ -13,7 +13,8 @@ export default function FormScreenWrapper({ children, landscapeThreshold = 600 }
     (async () => {
       try {
         // If device is narrow (phone in portrait), lock the form to landscape so wide tables fit
-        if (width < landscapeThreshold) {
+        if (width < landscapeThreshold && typeof document === 'undefined') {
+          // document is available on web; use simple guard to avoid calling ScreenOrientation on web
           await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
           didLock = true;
         }

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { SafeAreaView, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView, StyleSheet, ScrollView, Platform } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import useResponsive from '../utils/responsive';
 
@@ -7,7 +7,8 @@ export function ResponsiveView({ children, style, lockLandscape = false }) {
   const resp = useResponsive();
 
   useEffect(() => {
-    // Respect lockLandscape when explicitly requested, but default is false so app follows device orientation.
+    // Respect lockLandscape when explicitly requested, but skip on web (ScreenOrientation not supported there).
+    if (Platform.OS === 'web') return;
     let didLock = false;
     (async () => {
       try {
@@ -36,7 +37,16 @@ export function ResponsiveView({ children, style, lockLandscape = false }) {
     ? React.cloneElement(React.Children.only(children), { responsive: resp })
     : children;
 
-  // Wrap entire app in SafeAreaView and a ScrollView so any screen can scroll when content exceeds viewport.
+  // On web avoid a global ScrollView (prevents double scrollbars and reflow glitches).
+  if (Platform.OS === 'web') {
+    return (
+      <SafeAreaView style={[styles.safeArea, style]}>
+        {content}
+      </SafeAreaView>
+    );
+  }
+
+  // Wrap entire app in SafeAreaView and a ScrollView on native platforms so any screen can scroll when content exceeds viewport.
   return (
     <SafeAreaView style={[styles.safeArea, style]}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
