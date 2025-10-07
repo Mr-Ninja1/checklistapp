@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { addFormHistory } from '../utils/formHistory';
@@ -30,7 +30,10 @@ export default function Bakery_SanitizingLog() {
   const resp = useResponsive();
   const { width: vw, s, ms } = resp;
   const [formData, setFormData] = useState(makeInitial());
-  const [metadata, setMetadata] = useState({ date: '', location: '', shift: 'AM', verifiedBy: '' });
+  const now = new Date();
+  const sysDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
+  const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
   const [busy, setBusy] = useState(false);
   const [loadingDraft, setLoadingDraft] = useState(true);
   const draftKey = 'bakery_sanitizing_log';
@@ -91,7 +94,11 @@ export default function Bakery_SanitizingLog() {
     <ScrollView style={[styles.container, { padding: s(12) }]} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerRow}>
-        <Text style={[styles.title, { fontSize: ms(16) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET - BAKERY</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.companyName}>Bravo</Text>
+        </View>
+        <Text style={[styles.title, { fontSize: ms(16), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET - BAKERY</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity onPress={handleBack} style={styles.ghostBtn}><Text>Back</Text></TouchableOpacity>
           <TouchableOpacity onPress={handleSaveDraft} style={styles.warnBtn}><Text style={{ color: '#fff' }}>Save Draft</Text></TouchableOpacity>
@@ -125,7 +132,13 @@ export default function Bakery_SanitizingLog() {
             <View key={row.id} style={[styles.row, { minWidth: 900 }]}>
               <View style={[styles.cell, { width: COL_WIDTHS.EQUIP }]}><Text style={styles.cellText}>{row.name}</Text></View>
               <View style={[styles.cell, { width: COL_WIDTHS.PPM }]}><TextInput value={row.ppm} onChangeText={(t)=>handleInput(row.id,'ppm',t)} style={styles.smallInput} keyboardType="numeric" /></View>
-              <View style={{ flexDirection: 'row', width: COL_WIDTHS.TIME * TIME_SLOTS.length }}>{TIME_SLOTS.map(t => (<View key={t} style={[styles.cell, { width: COL_WIDTHS.TIME }]}><TouchableOpacity onPress={()=>handleToggle(row.id,t)} style={styles.box}>{row.times[t] ? <Text style={{color:'#fff'}}>✓</Text> : null}</TouchableOpacity></View>))}</View>
+              <View style={{ flexDirection: 'row', width: COL_WIDTHS.TIME * TIME_SLOTS.length }}>{TIME_SLOTS.map(t => (
+                <View key={t} style={[styles.cell, { width: COL_WIDTHS.TIME }]}>
+                  <TouchableOpacity onPress={()=>handleToggle(row.id,t)} style={styles.boxTouchable} accessible accessibilityRole="checkbox" accessibilityState={{ checked: !!row.times[t] }} activeOpacity={0.7}>
+                    <View style={[styles.box, row.times[t] ? { backgroundColor: '#1f8f1f' } : null]}> {row.times[t] ? <Text style={{color:'#fff'}}>✓</Text> : null} </View>
+                  </TouchableOpacity>
+                </View>
+              ))}</View>
               <View style={[styles.cell, { width: COL_WIDTHS.STAFF }]}><TextInput value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} style={styles.smallInput} /></View>
               <View style={[styles.cell, { width: COL_WIDTHS.SIGN }]}><TextInput value={row.staffSign} onChangeText={(t)=>handleInput(row.id,'staffSign',t)} style={styles.smallInput} /></View>
               <View style={[styles.cell, { width: COL_WIDTHS.SUP }]}><TextInput value={row.supName} onChangeText={(t)=>handleInput(row.id,'supName',t)} style={styles.smallInput} /></View>
@@ -147,6 +160,9 @@ const styles = StyleSheet.create({
   ghostBtn: { padding: 8, backgroundColor: '#eee', borderRadius: 6, marginRight: 8 },
   warnBtn: { padding: 8, backgroundColor: '#f0ad4e', borderRadius: 6, marginRight: 8 },
   primaryBtn: { padding: 8, backgroundColor: '#185a9d', borderRadius: 6 },
+  logo: { width: 48, height: 36, marginRight: 8 },
+  companyName: { fontSize: 16, fontWeight: '800', color: '#185a9d', marginRight: 12 },
+  boxTouchable: { padding: 6 },
   metadataContainer: { padding: 10, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', marginBottom: 8 },
   metaItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   metaLabel: { fontWeight: '700', marginRight: 6, color: '#333' },

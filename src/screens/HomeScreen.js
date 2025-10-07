@@ -55,6 +55,7 @@ const formCategories = {
     color: ["#fa709a", "#fee140"],
     forms: [
       { id: 24, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery", status: "pending", priority: "high", dueTime: "Each shift", location: "Bakery Floor", route: 'Bakery_SanitizingLog' },
+      { id: 31, title: "Bakery Area Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Bakery Floor", route: 'Bakery_CleaningChecklist' },
       { id: 24, title: "Baking, Moulding & Proofing", status: "pending", priority: "high", dueTime: "Each batch", location: "Bakery Floor" },
       { id: 25, title: "Cooling Log", status: "completed", priority: "medium", dueTime: "After baking", location: "Cooling Racks" },
       { id: 26, title: "Temp Records - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Bakery Chillers" },

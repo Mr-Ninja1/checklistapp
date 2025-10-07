@@ -198,15 +198,36 @@ export default function FOH_DailyCleaningForm() {
       </View>
 
       <View style={styles.metadataContainer}>
-        <View style={styles.metadataRow}>
-          {Object.keys(metadata).map(key => (
-            <View key={key} style={styles.metadataItem}>
-              <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>{key.charAt(0).toUpperCase() + key.slice(1)}:</Text>
-              <TextInput style={[styles.metadataInput, { minWidth: s(80), height: s(28), fontSize: ms(10) }]} value={metadata[key]} onChangeText={(t) => handleMetadataChange(key, t)} />
-            </View>
-          ))}
+        {/* First row: Date | Location | Shift */}
+        <View style={styles.metaRowInline}>
+          <View style={styles.metaColDate}>
+            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Date:</Text>
+            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.date} onChangeText={(t) => handleMetadataChange('date', t)} />
+          </View>
+          <View style={styles.metaColLocation}>
+            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Location:</Text>
+            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.location} onChangeText={(t) => handleMetadataChange('location', t)} />
+          </View>
+          <View style={styles.metaColShift}>
+            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Shift:</Text>
+            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11), textAlign: 'center' }]} value={metadata.shift} onChangeText={(t) => handleMetadataChange('shift', t)} />
+          </View>
         </View>
-        <Text style={[styles.tickInstruction, { fontSize: ms(11) }]}>✓ TICK AFTER CLEANING</Text>
+
+        {/* Second row: Verified By and complex manager sign */}
+        <View style={styles.metaRowInlineSecond}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Verified By:</Text>
+            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.verifiedBy} onChangeText={(t) => handleMetadataChange('verifiedBy', t)} />
+          </View>
+        </View>
+
+        <View style={{ marginTop: 8 }}>
+          <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>COMPLEX MANAGER SIGN:</Text>
+          <TextInput style={[styles.complexManagerInput]} value={metadata.managerSign || ''} onChangeText={(t) => handleMetadataChange('managerSign', t)} />
+        </View>
+
+        <View style={styles.tickBadge}><Text style={{ color: '#085f1a', fontWeight: '700' }}>✓ TICK AFTER CLEANING</Text></View>
       </View>
 
       {/* Table area: allow horizontal scroll when needed (wrap in responder-enabled View so horizontal swipes register) */}
@@ -263,6 +284,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 10, backgroundColor: '#f9f9f9' },
   title: { fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 12, paddingVertical: 6, color: '#333' },
   metadataContainer: { marginBottom: 15, borderWidth: 1, borderColor: '#333', padding: 12, borderRadius: 6, backgroundColor: '#fff' },
+  metaRowInline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  metaColDate: { flexDirection: 'column', width: 160, marginRight: 8 },
+  metaColLocation: { flex: 1, marginRight: 8 },
+  metaColShift: { width: 80 },
+  metadataInputInline: { borderBottomWidth: 1, borderBottomColor: '#aaa', paddingVertical: 4, paddingHorizontal: 6 },
+  metaRowInlineSecond: { flexDirection: 'row', marginTop: 6 },
+  complexManagerInput: { borderWidth: 1, borderColor: '#ddd', height: 36, paddingHorizontal: 8, marginTop: 6, borderRadius: 4 },
+  tickBadge: { marginTop: 8, backgroundColor: '#e6ffea', padding: 6, borderRadius: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#c9f2d0' },
   metadataRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginBottom: 6 },
   metadataItem: { flexDirection: 'row', alignItems: 'center', marginRight: 18, marginBottom: 10 },
   metadataLabel: { fontWeight: '700', fontSize: 12, color: '#555' },
@@ -277,7 +306,7 @@ const styles = StyleSheet.create({
   leftAlign: { alignItems: 'flex-start', paddingLeft: 12 },
   dataText: { fontSize: 12, color: '#333' },
   textInput: { width: '100%', height: 36, borderWidth: 1, borderColor: '#ddd', paddingHorizontal: 6, fontSize: 12, textAlign: 'center', backgroundColor: '#fff', borderRadius: 4 },
-  checkboxContainer: { width: 26, height: 26, borderWidth: 1.5, borderColor: '#333', borderRadius: 4, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6' },
+  checkboxContainer: { width: 26, height: 26, borderWidth: 1.5, borderColor: '#333', borderRadius: 4, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6', padding: 6 },
   checkboxText: { fontSize: 14, fontWeight: 'bold', color: '#008000' },
   instruction: { marginTop: 22, fontSize: 12, fontStyle: 'italic', padding: 6, textAlign: 'center', color: '#666' },
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
