@@ -1,0 +1,64 @@
+name: Scheduled branch sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *' # daily at 02:00 UTC (adjust as needed)
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      SOURCE_BRANCH: main
+      TARGET_BRANCH: backup-before-keep-ours-20251006160143
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch branches
+        run: git fetch --all
+
+      - name: Checkout target branch
+        run: git checkout ${{ env.TARGET_BRANCH }}
+
+      - name: Try merge source → target
+        id: try-merge
+        run: |
+          set -e
+          git fetch origin ${{ env.SOURCE_BRANCH }}
+          echo "Merging origin/${{ env.SOURCE_BRANCH }} into ${{ env.TARGET_BRANCH }}"
+          if git merge --no-ff --no-edit origin/${{ env.SOURCE_BRANCH }}; then
+            echo "Merge successful"
+            git push origin HEAD:${{ env.TARGET_BRANCH }}
+            echo "pushed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Merge conflicts detected"
+            git merge --abort || true
+            echo "pushed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create issue on conflict
+        if: steps.try-merge.outputs.pushed == 'false'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const title = `Branch sync conflict: ${process.env.SOURCE_BRANCH} → ${process.env.TARGET_BRANCH}`
+            const body = `Automated sync attempted to merge **${process.env.SOURCE_BRANCH}** into **${process.env.TARGET_BRANCH}** but conflicts were detected.\n\nPlease resolve the conflicts manually.\n\nIf you want this automated sync fixed, you can run the workflow ` +
+              `manually or adjust protection rules.`
+            const { data: issues } = await github.rest.issues.listForRepo({ owner: context.repo.owner, repo: context.repo.repo, state: 'open' })
+            const exists = issues.find(i => i.title === title)
+            if (exists) {
+              core.info('An issue already exists for this conflict.');
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['sync', 'conflict'] })
+            }

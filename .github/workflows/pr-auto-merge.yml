@@ -1,0 +1,17 @@
+name: PR Auto-merge on label
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, review_requested, review_removed, synchronize, reopened]
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-merge labeled PRs
+        uses: pascalgn/automerge-action@v0.16.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: squash
+          # only auto-merge if PR has label 'automerge' (case-insensitive)
+          label: automerge

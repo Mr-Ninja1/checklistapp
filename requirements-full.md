@@ -85,3 +85,38 @@ We adopted the "screenshot → embed → PDF" approach for reliable visual fidel
 		- The History screen will then be able to load and re-open the saved form because we persist `meta` which contains the original `formData`.
 
 If you want, we can also add a short example snippet to the repo showing how to wire this hook for one more form type (copy/paste), and a small verification test that programmatically captures one sample form and produces a PDF to verify the end-to-end flow.
+
+## Development snapshot (savepoint)
+
+Paste this section into the file to quickly restore the current session context. It captures recent changes, files added, and recommended next steps.
+
+- Date: 2025-10-06
+- Branch: backup-before-keep-ours-20251006160143
+
+- Recent files added/modified (high level):
+  - `src/components/LoadingOverlay.js` — new reusable modal spinner overlay for modern loading feedback.
+  
+  - `src/forms/FOH_DailyCleaningForm.js` — FOH form updated with draft load/auto-save, Save Draft, Submit (addFormHistory + remove draft), Back button; responsive columns.
+  - `src/forms/FoodHandlersHandwashingForm.js` — Handwashing form updated with draft load/auto-save, Save Draft, Save as PDF, Submit, Back; responsive layout with many time columns.
+  - `src/utils/formDrafts.js` — abstraction for draft persistence (getDraft/setDraft/removeDraft) using localStorage or native files.
+  - `src/screens/HomeScreen.js` — consolidated Production handwashing into one card and wired card taps to show a loading overlay while navigating.
+
+- Key behaviors implemented:
+  - Per-form draft lifecycle: auto-save (debounced), explicit Save Draft, load draft on open, remove draft on submit.
+  - Submit saves form metadata and form data via `addFormHistory` and integrates with the existing export/PDF hooks where applicable.
+  - LoadingOverlay used across Home and forms to present a modern spinner during navigation and async operations.
+  - Forms are responsive and tuned for A4 landscape printing (column proportions, min widths).
+
+- Current pending items / recommended next steps:
+  1. Run Metro and do a full Android bundle + smoke test. (I can run this for you and report the logs.)
+  2. Manual UX tests on a physical device or emulator to verify horizontal + vertical scrolling behavior; consider PanResponder fallback if nested horizontal/vertical scrolls are unreliable on some devices.
+  3. Replace blocking alert() calls with toasts for a smoother UX.
+  4. Optionally add a draft indicator badge on Home cards to show saved drafts.
+
+- Quick local verification commands:
+  - Start Metro (from project src):
+    npm start
+  - Open app on emulator/device and exercise:
+    Home → Production → "Food Handlers Daily Handwashing" → edit fields → wait ~1s (autosave) → close → re-open to verify draft restored.
+  5.add OTA for updating 
+This snapshot is intentionally concise; paste it into this file to let the assistant re-load the current project state quickly in future sessions.

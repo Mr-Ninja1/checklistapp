@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 // Form data from Index.tsx
 const formCategories = {
@@ -30,8 +31,7 @@ const formCategories = {
       { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor" },
       { id: 9, title: "5 Why Report/Non-conformance", status: "completed", priority: "high", dueTime: "As needed", location: "Production Floor" },
       { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab" },
-      { id: 11, title: "Daily Handwashing - AM", status: "completed", priority: "high", dueTime: "6:00 AM", location: "Production Entry" },
-      { id: 12, title: "Daily Handwashing - PM", status: "pending", priority: "high", dueTime: "6:00 PM", location: "Production Entry" },
+  { id: 11, title: "Food Handlers Daily Handwashing", status: "pending", priority: "high", dueTime: "6:00 AM", location: "Production Entry", isHandwashingLog: true, route: 'FoodHandlersHandwashingForm' },
       { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
       { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" },
       
@@ -41,7 +41,9 @@ const formCategories = {
     name: "Kitchen Records",
     color: ["#56ccf2", "#2f80ed"],
     forms: [
+      { id: 43, title: "Kitchen Weekly Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Kitchen Area", route: 'Kitchen_WeeklyCleaningChecklist' },
       { id: 15, title: "Daily Cleaning & Sanitizing", status: "pending", priority: "high", dueTime: "After each shift", location: "Main Kitchen" },
+  { id: 42, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen)", status: "pending", priority: "high", dueTime: "Each shift", location: "Main Kitchen", route: 'Kitchen_DailyCleaningForm' },
       { id: 16, title: "Weekly Cleaning Log", status: "completed", priority: "medium", dueTime: "Monday", location: "Kitchen Area" },
       { id: 17, title: "Monthly Temp - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Monthly", location: "Kitchen Bar" },
       { id: 18, title: "Cooking Temp Log", status: "pending", priority: "critical", dueTime: "Every cooking", location: "Cooking Station" },
@@ -56,6 +58,8 @@ const formCategories = {
     name: "Bakery Records", 
     color: ["#fa709a", "#fee140"],
     forms: [
+      { id: 24, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery", status: "pending", priority: "high", dueTime: "Each shift", location: "Bakery Floor", route: 'Bakery_SanitizingLog' },
+      { id: 31, title: "Bakery Area Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Bakery Floor", route: 'Bakery_CleaningChecklist' },
       { id: 24, title: "Baking, Moulding & Proofing", status: "pending", priority: "high", dueTime: "Each batch", location: "Bakery Floor" },
       { id: 25, title: "Cooling Log", status: "completed", priority: "medium", dueTime: "After baking", location: "Cooling Racks" },
       { id: 26, title: "Temp Records - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Bakery Chillers" },
@@ -106,6 +110,8 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const [activeCategory, setActiveCategory] = useState('foh');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loadingCard, setLoadingCard] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState('Please wait');
   // Date/time
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -148,6 +154,7 @@ export default function HomeScreen() {
   // Main UI
   return (
     <View style={{ flex: 1, backgroundColor: '#f6fdff', width: '100%' }}>
+      <LoadingOverlay visible={loadingCard} message={loadingMsg} />
       {/* Floating History Button - always visible, top right */}
       <TouchableOpacity
         style={[
@@ -299,6 +306,25 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
+      {/* Quick access: when kitchen category is active show a prominent card/button to open the weekly checklist */}
+      {activeCategory === 'kitchen' && (
+        <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setLoadingMsg('Opening Kitchen Weekly Checklist...');
+              setLoadingCard(true);
+              setTimeout(() => {
+                navigation.navigate('Kitchen_WeeklyCleaningChecklist');
+                setTimeout(() => setLoadingCard(false), 350);
+              }, 200);
+            }}
+            style={[styles.quickCard]}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d' }}>🍳 Kitchen Weekly Cleaning Checklist</Text>
+            <Text style={{ fontSize: 12, color: '#555', marginTop: 4 }}>Open weekly checklist</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Form Lists */}
       <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={[styles.formListContent, { minHeight: 0 }]}> 
@@ -308,16 +334,18 @@ export default function HomeScreen() {
               key={`form-touchable-${form.id}-${form.title}`}
               disabled={!(form.route || form.isHandwashingLog)}
               onPress={() => {
-                if (form.route) {
-                  navigation.navigate(form.route);
-                  return;
-                }
-                if (form.isHandwashingLog) {
-                  // Navigate to the FoodHandlersHandwashingForm screen
-                  if (typeof navigation !== 'undefined') {
+                // show spinner and navigate
+                setLoadingMsg(`Opening ${form.title}...`);
+                setLoadingCard(true);
+                setTimeout(() => {
+                  if (form.route) {
+                    navigation.navigate(form.route);
+                  } else if (form.isHandwashingLog) {
                     navigation.navigate('FoodHandlersHandwashingForm');
                   }
-                }
+                  // hide after short delay to let navigation settle
+                  setTimeout(() => setLoadingCard(false), 350);
+                }, 250);
               }}
               style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6 }]}
             >
@@ -382,6 +410,18 @@ const styles = StyleSheet.create({
   },
   formListContent: {
     padding: 12,
+  },
+  quickCard: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e6eef2',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   historyBtn: {
     position: 'absolute',

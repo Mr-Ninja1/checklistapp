@@ -4,6 +4,10 @@ import Spinner from 'react-native-loading-spinner-overlay';
 import { addFormHistory } from '../utils/formHistory';
 import useExportFormAsPDF from '../utils/useExportFormAsPDF';
 import useResponsive from '../utils/responsive';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 // Helper functions for dynamic details
 function getCurrentDate() {
@@ -38,6 +42,10 @@ export default function FoodHandlersHandwashingForm() {
     verifiedBy: '',
     complexManagerSign: '',
   });
+  const [loadingDraft, setLoadingDraft] = React.useState(true);
+  const draftKey = 'foodhandlers_handwashing';
+  const saveTimer = useRef(null);
+  const navigation = useNavigation();
 
   // Table state
   const [handlers, setHandlers] = useState(() =>
@@ -62,6 +70,25 @@ export default function FoodHandlersHandwashingForm() {
         : row
     ));
   };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const d = await getDraft(draftKey);
+      if (d && mounted) {
+        if (d.handlers) setHandlers(d.handlers);
+        if (d.logDetails) setLogDetails(d.logDetails);
+      }
+      if (mounted) setLoadingDraft(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => setDraft(draftKey, { handlers, logDetails }), 700);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [handlers, logDetails]);
 
   // responsive helpers
   const resp = useResponsive();
@@ -98,6 +125,7 @@ export default function FoodHandlersHandwashingForm() {
 
   const handleSavePDF = async () => {
     setExporting(true);
+    setBusy(true);
     try {
       await new Promise(res => setTimeout(res, 250));
       const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
@@ -113,9 +141,9 @@ export default function FoodHandlersHandwashingForm() {
       };
 
       try {
-        await addFormHistory({ title: formData.title, date: formData.date, shift: formData.shift, savedAt: Date.now(), meta: formData });
-        setExporting(false);
-        Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
+  await addFormHistory({ title: formData.title, date: formData.date, shift: formData.shift, savedAt: Date.now(), meta: formData });
+  setExporting(false);
+  Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
       } catch (e) {
         setExporting(false);
         console.warn('save meta failed', e);
@@ -127,8 +155,32 @@ export default function FoodHandlersHandwashingForm() {
     }
   };
 
+  const handleSave = async () => {
+    setBusy(true);
+    try {
+      await addFormHistory({ title: 'Food Handlers Handwashing', date: logDetails.date, savedAt: Date.now(), meta: { logDetails, handlers } });
+      await removeDraft(draftKey);
+      alert('Submitted and saved to history');
+      navigation.navigate('Home');
+    } catch (e) { alert('Failed to submit'); }
+    finally { setBusy(false); }
+  };
+
+  const handleSaveDraft = async () => {
+    setBusy(true);
+    try {
+      await setDraft(draftKey, { handlers, logDetails });
+      alert('Draft saved');
+    } catch (e) { alert('Failed to save draft'); }
+    finally { setBusy(false); }
+  };
+
+  const handleBack = () => navigation.navigate('Home');
+  const [busy, setBusy] = useState(false);
+
   return (
-    <>
+    <SafeAreaView style={styles.safeArea}>
+      <LoadingOverlay visible={busy || exporting} message={busy ? 'Working...' : 'Saving PDF...'} />
       <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
   <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         <View style={styles.logoRow}>
@@ -249,11 +301,19 @@ export default function FoodHandlersHandwashingForm() {
             ))}
           </View>
         </ScrollView>
-  </ScrollView>
-  <View style={styles.saveButtonContainer}>
-        <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} activeOpacity={0.85}>
-          <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
-        </TouchableOpacity>
+      </ScrollView>
+      <View style={styles.saveButtonContainerInner}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: resp.s(8) }}>
+          <TouchableOpacity onPress={handleBack} style={[styles.auxButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
+            <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Back</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSaveDraft} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
+            <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Save Draft</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} activeOpacity={0.85}>
+            <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </>
   );
@@ -321,21 +381,21 @@ const styles = StyleSheet.create({
   tableScroll: { 
     marginTop: 20,
     borderLeftWidth: 1, 
-    borderColor: '#ccc',
+    borderColor: '#4B5563',
   },
   tableHeaderRow: {
     flexDirection: 'row',
     backgroundColor: '#e9e9e9',
     borderTopWidth: 1,
     borderBottomWidth: 1, 
-    borderColor: '#ccc',
+    borderColor: '#4B5563',
     alignItems: 'stretch', 
     minHeight: 36,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#4B5563',
     alignItems: 'stretch', 
     minHeight: 36,
   },
@@ -353,7 +413,7 @@ const styles = StyleSheet.create({
     padding: 4,
     textAlign: 'center',
     borderRightWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#4B5563',
     minWidth: 60,
     flexGrow: 0,
     textAlignVertical: 'center',
@@ -362,7 +422,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     padding: 4,
     borderRightWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#4B5563',
     minWidth: 90,
     backgroundColor: '#f9f9f9',
     flexGrow: 0,
@@ -371,7 +431,7 @@ const styles = StyleSheet.create({
     minWidth: 55, 
     width: 55, 
     borderRightWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#4B5563',
     flexGrow: 0,
     textAlignVertical: 'center',
   },
@@ -379,7 +439,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#4B5563',
   },
   checkboxCellText: {
     fontSize: 18,
@@ -397,7 +457,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     alignItems: 'center',
     borderTopWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#4B5563',
   },
   saveButton: {
     backgroundColor: '#185a9d',
@@ -416,5 +476,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  saveButtonContainerInner: {
+    padding: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderColor: '#4B5563',
+  },
+  auxButton: {
+    backgroundColor: '#777',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+  },
+  auxButtonSaveDraft: {
+    backgroundColor: '#f0ad4e',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+  },
+  auxButtonText: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });
