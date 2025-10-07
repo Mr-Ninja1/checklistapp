@@ -45,6 +45,7 @@ export default function App() {
   <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./forms/FoodHandlersHandwashingForm').default} />
     <Stack.Screen name="FOH_DailyCleaningForm" component={require('./forms/FOH_DailyCleaningForm').default} />
     <Stack.Screen name="Kitchen_DailyCleaningForm" component={require('./forms/Kitchen_DailyCleaningForm').default} />
+  <Stack.Screen name="Bakery_SanitizingLog" component={require('./forms/Bakery_SanitizingLog').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>

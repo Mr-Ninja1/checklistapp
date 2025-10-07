@@ -16,8 +16,9 @@ const EQUIPMENT_LIST = [
   'MEAT & PASTRY FREEZER',
   'GAS GRILL',
   'VEG SINK',
-  // combine FLAT TOP and FISH AND MEAT SINK into one row as requested
-  'FLAT TOP\nFISH AND MEAT SINK',
+  // FLAT TOP and FISH AND MEAT SINK are separate rows
+  'FLAT TOP',
+  'FISH AND MEAT SINK',
   'PRECOOKED FOOD UNDERBAR-CHILLERS',
 ];
 
