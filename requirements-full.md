@@ -120,3 +120,15 @@ Paste this section into the file to quickly restore the current session context.
     Home → Production → "Food Handlers Daily Handwashing" → edit fields → wait ~1s (autosave) → close → re-open to verify draft restored.
   5.add OTA for updating 
 This snapshot is intentionally concise; paste it into this file to let the assistant re-load the current project state quickly in future sessions.
+
+## Future task: Branded export and print fidelity for FOH / Cold Room forms
+
+- Goal: ensure FOH and Cold Room forms print/export with the company logo, name, and precise A4 layout identical to the on-screen form.
+- Work items:
+	- Add a branded header (logo + company name) to the HTML generator used for PDF exports (or ensure logo base64 is embedded before capture).
+	- Create specialized ReadOnly renderers for FOH and Cold Room forms when pixel-perfect print output is required.
+	- Verify image embedding and capture timing to avoid missing assets in exported PDFs (wait for images to load, then capture).
+	- Add an automated verification (small E2E test) that renders one sample FOH and Cold Room form and produces a PDF to confirm visual fidelity.
+	- Decide whether to use raster (screenshot→PDF) or vector (HTML→PDF) export for selectable/searchable text; implement later if required.
+
+Add this task to the implementation backlog and schedule after all forms are implemented and stabilized.
