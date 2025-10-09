@@ -29,6 +29,7 @@ const linking = {
   DryStorageArea_CleaningChecklist: 'DryStorageArea_CleaningChecklist',
   CertificateOfAnalysis: 'CertificateOfAnalysis',
   WalkInFreezerLog: 'WalkInFreezerLog',
+  WalkInChillerLog: 'WalkInChillerLog',
       Splash: 'Splash',
       KitchenCategory: 'KitchenCategory',
       FOHCategory: 'FOHCategory',
@@ -65,6 +66,7 @@ export default function App() {
   <Stack.Screen name="DryStorageArea_CleaningChecklist" component={require('./forms/DryStorageArea_CleaningChecklist').default} />
   <Stack.Screen name="CertificateOfAnalysis" component={require('./forms/CertificateOfAnalysis').default} />
   <Stack.Screen name="WalkInFreezerLog" component={require('./forms/WalkInFreezerLog').default} />
+  <Stack.Screen name="WalkInChillerLog" component={require('./forms/WalkInChillerLog').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>
