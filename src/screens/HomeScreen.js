@@ -46,6 +46,7 @@ const formCategories = {
       { id: 17, title: "Monthly Temp - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Monthly", location: "Kitchen Bar" },
       { id: 18, title: "Cooking Temp Log", status: "pending", priority: "critical", dueTime: "Every cooking", location: "Cooking Station" },
       { id: 19, title: "Cooling Temp Log", status: "overdue", priority: "critical", dueTime: "30 min ago", location: "Cooling Area" },
+  { id: 19, title: "Cooling Temp Log", status: "overdue", priority: "critical", dueTime: "30 min ago", location: "Cooling Area", route: 'CoolingTemperatureLog' },
       { id: 20, title: "Thawing Temp Log", status: "pending", priority: "high", dueTime: "During thawing", location: "Prep Area" },
       { id: 21, title: "Hot Holding Temp Log", status: "completed", priority: "critical", dueTime: "Every 2 hours", location: "Service Line" },
       { id: 22, title: "Vegetable & Fruit Washing", status: "pending", priority: "high", dueTime: "Before use", location: "Wash Station" },
