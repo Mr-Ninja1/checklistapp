@@ -10,6 +10,7 @@ import KitchenCategory from './screens/KitchenCategory';
 import FOHCategoryScreen from './screens/FOHCategoryScreen';
 import FOHFormScreen from './screens/FOHFormScreen';
 import FormSavesScreen from './screens/FormSavesScreen';
+import FOH_FrontOfHouseCleaningChecklist from './forms/FOH_FrontOfHouseCleaningChecklist';
 
 const Stack = createStackNavigator();
 
@@ -23,6 +24,7 @@ const linking = {
       FOH_FrontOfHouseCleaningChecklist: 'FOH_FrontOfHouseCleaningChecklist',
       WelfareFacilities_CleaningChecklist: 'WelfareFacilities_CleaningChecklist',
   ColdRoom_FreezerRoomCleaningChecklist: 'ColdRoom_FreezerRoomCleaningChecklist',
+  SculleryArea_CleaningChecklist: 'SculleryArea_CleaningChecklist',
       Splash: 'Splash',
       KitchenCategory: 'KitchenCategory',
       FOHCategory: 'FOHCategory',
@@ -45,7 +47,7 @@ export default function App() {
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />
-  <Stack.Screen name="FOH_FrontOfHouseCleaningChecklist" component={require('./forms/FOH_FrontOfHouseCleaningChecklist').default} />
+  <Stack.Screen name="FOH_FrontOfHouseCleaningChecklist" component={FOH_FrontOfHouseCleaningChecklist} />
   <Stack.Screen name="ColdRoom_FreezerRoomCleaningChecklist" component={require('./forms/ColdRoom_FreezerRoomCleaningChecklist').default} />
   <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./forms/FoodHandlersHandwashingForm').default} />
     <Stack.Screen name="FOH_DailyCleaningForm" component={require('./forms/FOH_DailyCleaningForm').default} />
@@ -54,6 +56,7 @@ export default function App() {
   <Stack.Screen name="Bakery_SanitizingLog" component={require('./forms/Bakery_SanitizingLog').default} />
   <Stack.Screen name="Bakery_CleaningChecklist" component={require('./forms/Bakery_CleaningChecklist').default} />
   <Stack.Screen name="WelfareFacilities_CleaningChecklist" component={require('./forms/WelfareFacilities_CleaningChecklist').default} />
+  <Stack.Screen name="SculleryArea_CleaningChecklist" component={require('./forms/SculleryArea_CleaningChecklist').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>
