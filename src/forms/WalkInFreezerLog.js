@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
@@ -78,7 +78,8 @@ const Slot = React.memo(({ value, onChange }) => (
 export default function WalkInFreezerLog() {
   const { formData, setFormData, metadata, setMetadata, busy, setBusy } = useFormState(initialLogState, initialMetadata);
 
-  const COL_WIDTHS = useMemo(() => ({ DATE: 56, RECORD_SLOT_WIDTH: 210, ACTION: 220, SIGNATURE: 140 }), []);
+  // Increased widths to better fit A4 landscape when printing/previewing
+  const COL_WIDTHS = useMemo(() => ({ DATE: 80, RECORD_SLOT_WIDTH: 300, ACTION: 360, SIGNATURE: 200 }), []);
   const TABLE_MIN_WIDTH = COL_WIDTHS.DATE + (TIME_SLOTS.length * COL_WIDTHS.RECORD_SLOT_WIDTH) + COL_WIDTHS.ACTION + COL_WIDTHS.SIGNATURE;
 
   const handleRecordChange = useCallback((day, slotName, field, value) => {
@@ -132,11 +133,19 @@ export default function WalkInFreezerLog() {
       <ScrollView contentContainerStyle={styles.scrollContent} horizontal={false}>
         <View style={styles.card}>
           <View style={styles.header}>
-            <Text style={styles.subject}>WALK-IN FREEZER TEMPERATURE LOG SHEET</Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaText}>Doc No: {metadata.docNo}</Text>
-              <Text style={styles.metaText}>Issue Date: {metadata.issueDate}</Text>
+            <View style={styles.brandRow}>
+              <Image source={require('../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.brandName}>Bravo! Food Safety Inspections</Text>
+                <Text style={styles.brandSub}>Bravo Brands Central</Text>
+              </View>
+              <View style={styles.metaBox}>
+                <Text style={styles.metaText}>Doc No: {metadata.docNo}</Text>
+                <Text style={styles.metaText}>Issue Date: {metadata.issueDate}</Text>
+              </View>
             </View>
+
+            <Text style={styles.subject}>WALK-IN FREEZER TEMPERATURE LOG SHEET</Text>
             <View style={styles.metaRowSmall}>
               <TextInput value={metadata.month} onChangeText={t => handleMetadataChange('month', t)} placeholder="Month" style={styles.metaInput} />
               <TextInput value={metadata.year} onChangeText={t => handleMetadataChange('year', t)} placeholder="Year" style={styles.metaInput} />
@@ -184,6 +193,11 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1 },
   header: { marginBottom: 8 },
   subject: { fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  brandLogo: { width: 56, height: 56, marginRight: 12, borderRadius: 8, backgroundColor: '#fff' },
+  brandName: { fontSize: 16, fontWeight: '800', color: '#185a9d' },
+  brandSub: { fontSize: 12, color: '#43cea2' },
+  metaBox: { alignItems: 'flex-end' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   metaRowSmall: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   metaText: { fontSize: 12, color: '#374151' },
@@ -200,9 +214,9 @@ const styles = StyleSheet.create({
   cellText: { fontSize: 12 },
   recordSlot: { borderRightWidth: 1, borderRightColor: '#E5E7EB', padding: 4 },
   slotRow: { flexDirection: 'row', alignItems: 'center' },
-  slotInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 6, marginHorizontal: 4, borderRadius: 4, textAlign: 'center' },
-  actionInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 8, borderRadius: 6 },
-  signatureInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 8, borderRadius: 6, textAlign: 'center' },
+  slotInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, marginHorizontal: 6, borderRadius: 4, textAlign: 'center', fontSize: 14 },
+  actionInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, fontSize: 14 },
+  signatureInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, textAlign: 'center', fontSize: 14 },
   footerSign: { marginTop: 12 },
   signInput: { borderBottomWidth: 1, borderBottomColor: '#9CA3AF', paddingVertical: 6, marginBottom: 8 },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
