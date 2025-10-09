@@ -218,7 +218,7 @@ export default function HomeScreen() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <Text style={{ fontSize: 15, color: '#22c1c3', fontWeight: 'bold', marginRight: 6 }}>📍</Text>
-                <Text style={{ fontSize: 14, color: '#22c1c3', fontWeight: 'bold', marginRight: 8 }}>Lusaka, Zambia</Text>
+                <Text style={{ fontSize: 14, color: '#22c1c3', fontWeight: 'bold', marginRight: 8 }}>Ndola, Zambia</Text>
                 <Text style={{ fontSize: 13, color: '#185a9d', fontWeight: '500' }}>Bravo Brands Central</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
@@ -249,7 +249,7 @@ export default function HomeScreen() {
             <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 12, minWidth: 220, alignItems: 'flex-start', elevation: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                 <Text style={{ fontSize: 16, color: '#22c1c3', fontWeight: 'bold', marginRight: 6 }}>📍</Text>
-                <Text style={{ fontSize: 15, color: '#22c1c3', fontWeight: 'bold' }}>Lusaka, Zambia</Text>
+                <Text style={{ fontSize: 15, color: '#22c1c3', fontWeight: 'bold' }}>Ndola, Zambia</Text>
               </View>
               <Text style={{ fontSize: 13, color: '#185a9d', marginBottom: 2 }}>Bravo Brands Central</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
