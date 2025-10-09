@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 // --- Mock utility functions (adapted for web environment) ---
+// Note: In a real app, these would be linked to Firestore/API calls.
 const getDraft = async () => null;
 const setDraft = async (key, data) => console.log('Draft saved:', key, data);
 const removeDraft = async () => console.log('Draft removed');
@@ -10,37 +11,53 @@ const addFormHistory = async (data) => console.log('Form submitted:', data);
 const showAlert = (title, message) => alert(`${title}: ${message}`);
 // ----------------------------------------------------
 
-const DRAFT_KEY = 'cleaning_equipment_checklist_draft';
+const DRAFT_KEY = 'dry_storage_checklist_draft';
 
 // Standardized day list
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // Checklist items defined from the uploaded image
-const CLEANING_EQUIPMENT_LIST = [
-  { name: 'Mops', frequency: 'After each use', isItem: true },
-  { name: 'Mop buckets & squeezing devices', frequency: 'After each use', isItem: true },
-  { name: 'Cloths', frequency: 'After each use', isItem: true },
-  { name: 'Brooms/ Brushes', frequency: 'After each use', isItem: true },
-  { name: 'Squeezers', frequency: 'After each use', isItem: true },
-  { name: 'Spray bottles/Containers', frequency: 'After each use', isItem: true },
+// Items with a frequency string are simple; items with a frequency number require that many checks per week.
+const DRY_STORAGE_LIST = [
+  { name: 'Door', frequency: '2', isItem: true }, // Numerical frequency (2 times per week)
+  { name: 'Door handle', frequency: 'Daily', isItem: true },
+  { name: 'Shelves', frequency: '3', isItem: true }, // Numerical frequency (3 times per week)
+  { name: 'Hard to reach floors & skirting', frequency: '3', isItem: true }, // Numerical frequency (3 times per week)
+  { name: 'Walls', frequency: '2', isItem: true }, // Numerical frequency (2 times per week)
+  { name: 'Ceiling', frequency: '1', isItem: true }, // Numerical frequency (1 time per week)
+  { name: 'Lights', frequency: '1', isItem: true }, // Numerical frequency (1 time per week)
+  { name: 'Floor', frequency: 'Daily', isItem: true },
+  { name: 'Food containers', frequency: 'After use', isItem: true },
 ];
 
-const initialCleaningState = CLEANING_EQUIPMENT_LIST.filter(i => i.isItem).map((item, index) => {
-  const dailyChecks = WEEK_DAYS.reduce((acc, day) => {
+const initialCleaningState = DRY_STORAGE_LIST.filter(i => i.isItem).map((item, index) => {
+  // Determine how many slots/checks are needed for this item across the week.
+  const slotsNeeded = isNaN(parseInt(item.frequency)) ? WEEK_DAYS.length : parseInt(item.frequency);
+  
+  // We'll use 7 slots for all items for consistent UI, but logic can track usage if needed.
+  const checks = WEEK_DAYS.reduce((acc, day) => {
     acc[day] = { checked: false, cleanedBy: '' };
     return acc;
   }, {});
-  return { id: index, name: item.name, frequency: item.frequency, checks: dailyChecks };
+  
+  return { 
+    id: index, 
+    name: item.name, 
+    frequencyText: item.frequency + (isNaN(parseInt(item.frequency)) ? '' : ' (Per Week)'), // Display original text + (Per Week) if numeric
+    frequencyValue: item.frequency,
+    checks: checks, // Uses the 7-day structure
+    slotsNeeded: slotsNeeded // Metadata about how many checks are required
+  };
 });
 
-// Initial metadata for the Cleaning Equipment Checklist
+// Initial metadata for the Dry Storage Checklist
 const initialMetadata = { 
-    location: 'CLEANING EQUIPMENT', // Updated location header based on image
+    location: 'WAREHOUSE AREA', 
     week: '', 
     month: '', 
     year: '', 
-    docNo: 'BBN-SHEQ-P-15-R-11q', // Updated Doc No.
-    issueDate: '03/08/2025', 
+    docNo: 'BBN-SHEQ-P-16-R-11f', // Updated Doc No.
+    issueDate: '03/03/2025', 
     revisionDate: 'N/A', 
     compiledBy: 'Michael Zulu C.', 
     approvedBy: 'Hassani Ali', 
@@ -94,7 +111,7 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
 });
 
 
-export default function EquipmentCleaningChecklist() {
+export default function DryStorageChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
   const [metadata, setMetadata] = useState(initialMetadata);
   const [busy, setBusy] = useState(false);
@@ -148,7 +165,7 @@ export default function EquipmentCleaningChecklist() {
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Cleaning Equipment Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
+      await addFormHistory({ title: 'Dry Storage Area Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
       await removeDraft(DRAFT_KEY);
       showAlert('Success', 'Checklist submitted');
       // Reset form fields
@@ -173,7 +190,7 @@ export default function EquipmentCleaningChecklist() {
 
   // Define widths (using pixels for predictable table layout)
   const COL_WIDTHS = useMemo(() => ({ 
-      AREA: 260, // Renamed to AREA to match the template structure, used for Equipment Name
+      AREA: 260, 
       FREQUENCY: 150, 
       DAY_GROUP_WIDTH: 140, 
       CHECK: 40, 
@@ -183,12 +200,10 @@ export default function EquipmentCleaningChecklist() {
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
 
   const renderRow = rowItem => {
-    if (!rowItem.isItem) return null;
-
     // Find the current state data for this item (for ID/checks)
     const stateItem = formData.find(i => i.name === rowItem.name);
     // Use fallback if somehow state is not initialized
-    const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
+    const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequencyText: rowItem.frequencyText, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
     const canInteract = !!stateItem; // Only interact if the item exists in the state array
 
     // Base row classes
@@ -198,14 +213,14 @@ export default function EquipmentCleaningChecklist() {
 
     return (
       <div key={item.id} className={rowClass}>
-        {/* Equipment Name */}
+        {/* Area to be cleaned */}
         <div className={`${cellClass} justify-start font-medium`} style={{ width: COL_WIDTHS.AREA }}>
           <p>{item.name}</p>
         </div>
         
         {/* Frequency */}
         <div className={`${cellClass}`} style={{ width: COL_WIDTHS.FREQUENCY }}>
-          <p>{item.frequency}</p>
+          <p>{item.frequencyText || item.frequencyValue}</p>
         </div>
         
         {/* Day Check/Cleaned By Columns */}
@@ -277,7 +292,7 @@ export default function EquipmentCleaningChecklist() {
 
             {/* Subject Row */}
             <div className="py-2 border-b border-gray-800 bg-gray-50">
-                <p className="text-sm font-extrabold text-gray-800 text-center uppercase">Subject: CLEANING EQUIPMENT CLEANING CHECKLIST</p>
+                <p className="text-sm font-extrabold text-gray-800 text-center uppercase">Subject: DRY STORAGE AREA CLEANING CHECKLIST</p>
             </div>
 
             {/* Signature Row */}
@@ -290,7 +305,7 @@ export default function EquipmentCleaningChecklist() {
 
             {/* Location/Date Input Row */}
             <div className="flex border-b border-gray-800 bg-gray-100">
-                {renderMetaInput('LOCATION', 'location', 'CLEANING EQUIPMENT', 'flex-2')}
+                {renderMetaInput('LOCATION', 'location', 'WAREHOUSE AREA', 'flex-2')}
                 {renderMetaInput('WEEK', 'week', 'Week #', 'flex-1')}
                 {renderMetaInput('MONTH', 'month', 'Month', 'flex-1')}
                 <div className="flex flex-row items-center py-1 px-2 flex-1">
@@ -311,12 +326,14 @@ export default function EquipmentCleaningChecklist() {
             <div style={{ width: TABLE_WIDTH }}>
               {/* Table Header Row */}
               <div className="flex flex-row bg-gray-200 border-b-2 border-gray-800 font-bold text-gray-800 text-center min-h-[40px] items-stretch">
-                {/* Equipment and Frequency Headers */}
+                {/* Area and Frequency Headers */}
                 <div className="flex justify-center items-center border-r border-gray-800 text-xs p-1" style={{ width: COL_WIDTHS.AREA }}>
-                  Equipment
+                  Area to be cleaned
                 </div>
-                <div className="flex justify-center items-center border-r border-gray-800 text-xs p-1" style={{ width: COL_WIDTHS.FREQUENCY }}>
-                  Frequency
+                {/* Frequency Header adapted to show (Per Week) */}
+                <div className="flex flex-col justify-center items-center border-r border-gray-800 text-xs p-1" style={{ width: COL_WIDTHS.FREQUENCY }}>
+                  <p>Frequency</p>
+                  <p className='font-normal text-[10px]'>(Per Week)</p>
                 </div>
                 
                 {/* Day Columns */}
@@ -335,7 +352,7 @@ export default function EquipmentCleaningChecklist() {
               </div>
               
               {/* Render Checklist Items */}
-              {CLEANING_EQUIPMENT_LIST.map(renderRow)}
+              {initialCleaningState.map(renderRow)}
             </div>
           </div>
 
