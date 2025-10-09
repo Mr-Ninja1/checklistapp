@@ -110,29 +110,22 @@ export default function WelfareFacilitiesChecklist() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [formData, metadata]);
 
-  const handleCellChange = useCallback((id, day, type, value) => {
-    setFormData(prev => {
-      const newFormData = prev.map(item => {
-        if (item.id === id) {
-          const newChecks = { ...item.checks };
-          if (type === 'checked') {
-            newChecks[day] = { ...newChecks[day], checked: !newChecks[day].checked };
-            if (!newChecks[day].checked) {
-              newChecks[day].cleanedBy = '';
-            }
-          } else if (type === 'cleanedBy') {
-            newChecks[day] = { ...newChecks[day], cleanedBy: value };
-            if (value.trim() !== '') {
-              newChecks[day].checked = true;
-            }
-          }
-          return { ...item, checks: newChecks };
+  const handleCellChange = (id, day, type, value) => {
+    setFormData(prev => prev.map(item => {
+      if (item.id === id) {
+        const newChecks = { ...item.checks };
+        if (type === 'checked') {
+          newChecks[day].checked = !newChecks[day].checked;
+          if (!newChecks[day].checked) newChecks[day].cleanedBy = '';
+        } else if (type === 'cleanedBy') {
+          newChecks[day].cleanedBy = value;
+          if (value.trim() !== '') newChecks[day].checked = true;
         }
-        return item;
-      });
-      return newFormData;
-    });
-  }, []);
+        return { ...item, checks: newChecks };
+      }
+      return item;
+    }));
+  };
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
