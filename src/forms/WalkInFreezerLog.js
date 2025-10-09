@@ -148,7 +148,10 @@ export default function WalkInFreezerLog() {
             <Text style={styles.subject}>WALK-IN FREEZER TEMPERATURE LOG SHEET</Text>
             <View style={styles.metaRowSmall}>
               <TextInput value={metadata.month} onChangeText={t => handleMetadataChange('month', t)} placeholder="Month" style={styles.metaInput} />
-              <TextInput value={metadata.year} onChangeText={t => handleMetadataChange('year', t)} placeholder="Year" style={styles.metaInput} />
+              {/* Year is automatically populated and not editable */}
+              <View style={{ flex: 1, minWidth: 80, marginRight: 8 }}>
+                <Text style={styles.metaStatic}>{metadata.year}</Text>
+              </View>
               <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} placeholder="Location" style={styles.metaInput} />
             </View>
             <Text style={styles.instruction}>Instruction: The temperature of the Walk-in Freezer should be less than -12° C</Text>
@@ -202,6 +205,7 @@ const styles = StyleSheet.create({
   metaRowSmall: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   metaText: { fontSize: 12, color: '#374151' },
   metaInput: { borderBottomWidth: 1, borderBottomColor: '#9CA3AF', paddingVertical: 4, marginRight: 8, minWidth: 80, flex: 1 },
+  metaStatic: { fontSize: 14, color: '#374151', paddingVertical: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 6, textAlign: 'center' },
   instruction: { color: '#b91c1c', fontWeight: '700', textAlign: 'center', marginBottom: 8 },
   tableScroll: { borderWidth: 1, borderColor: '#1F2937', borderRadius: 6 },
   headerRow: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderBottomWidth: 1, borderBottomColor: '#1F2937' },
