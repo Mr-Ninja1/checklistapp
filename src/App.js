@@ -30,6 +30,8 @@ const linking = {
   CertificateOfAnalysis: 'CertificateOfAnalysis',
   WalkInFreezerLog: 'WalkInFreezerLog',
   WalkInChillerLog: 'WalkInChillerLog',
+  BakingControlSheet: 'BakingControlSheet',
+  MixingControlSheet: 'MixingControlSheet',
       Splash: 'Splash',
       KitchenCategory: 'KitchenCategory',
       FOHCategory: 'FOHCategory',
@@ -67,6 +69,8 @@ export default function App() {
   <Stack.Screen name="CertificateOfAnalysis" component={require('./forms/CertificateOfAnalysis').default} />
   <Stack.Screen name="WalkInFreezerLog" component={require('./forms/WalkInFreezerLog').default} />
   <Stack.Screen name="WalkInChillerLog" component={require('./forms/WalkInChillerLog').default} />
+  <Stack.Screen name="BakingControlSheet" component={require('./forms/BakingControlSheet').default} />
+  <Stack.Screen name="MixingControlSheet" component={require('./forms/MixingControlSheet').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>
