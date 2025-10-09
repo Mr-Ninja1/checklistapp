@@ -80,7 +80,7 @@ const formCategories = {
     { id: 45, title: "Welfare Facilities Cleaning Checklist", status: "pending", priority: "medium", dueTime: "Weekly", location: "Staff Area", route: 'WelfareFacilities_CleaningChecklist' },
       { id: 46, title: "Cleaning Equipment Checklist", status: "pending", priority: "medium", dueTime: "Weekly", location: "Cleaning Equipment", route: 'CleaningEquipment_CleaningChecklist' },
       { id: 36, title: "Pest Control Log", status: "completed", priority: "high", dueTime: "Monthly", location: "Entire Facility" },
-      { id: 37, title: "Monthly Temp - Walking Freezer", status: "pending", priority: "critical", dueTime: "Daily", location: "Walk-in Freezer" },
+  { id: 37, title: "Monthly Temp - Walking Freezer", status: "pending", priority: "critical", dueTime: "Daily", location: "Walk-in Freezer", route: 'WalkInFreezerLog' },
       { id: 38, title: "Employee PPE Register", status: "completed", priority: "medium", dueTime: "Daily", location: "Entry Points" },
       { id: 39, title: "Personal Hygiene Checklist", status: "pending", priority: "high", dueTime: "Start of shift", location: "Locker Room" },
       { id: 40, title: "Health Status Checklist", status: "pending", priority: "critical", dueTime: "Daily", location: "HR Office" }
