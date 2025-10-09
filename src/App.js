@@ -27,6 +27,7 @@ const linking = {
   SculleryArea_CleaningChecklist: 'SculleryArea_CleaningChecklist',
   CleaningEquipment_CleaningChecklist: 'CleaningEquipment_CleaningChecklist',
   DryStorageArea_CleaningChecklist: 'DryStorageArea_CleaningChecklist',
+  CertificateOfAnalysis: 'CertificateOfAnalysis',
       Splash: 'Splash',
       KitchenCategory: 'KitchenCategory',
       FOHCategory: 'FOHCategory',
@@ -61,6 +62,7 @@ export default function App() {
   <Stack.Screen name="SculleryArea_CleaningChecklist" component={require('./forms/SculleryArea_CleaningChecklist').default} />
   <Stack.Screen name="CleaningEquipment_CleaningChecklist" component={require('./forms/CleaningEquipment_CleaningChecklist').default} />
   <Stack.Screen name="DryStorageArea_CleaningChecklist" component={require('./forms/DryStorageArea_CleaningChecklist').default} />
+  <Stack.Screen name="CertificateOfAnalysis" component={require('./forms/CertificateOfAnalysis').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>
