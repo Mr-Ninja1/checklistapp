@@ -1,54 +1,33 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Image,
-} from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 
-const DRAFT_KEY = 'welfare_facilities_cleaning_checklist_draft';
+const DRAFT_KEY = 'cleaning_equipment_checklist_draft';
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
-// Use structure matching cat.md: headers (isHeader) and items (isItem)
-const WELFARE_EQUIPMENT_LIST = [
-  // Toilet section
-  { area: 'Toilet', name: 'Toilet', frequency: '', isHeader: true },
-  { area: 'Toilet', name: 'Pan', frequency: 'Daily', isItem: true },
-  { area: 'Toilet', name: 'Cistern', frequency: 'Daily', isItem: true },
-  { area: 'Toilet', name: 'General Floor', frequency: 'Daily', isItem: true },
-  { area: 'Toilet', name: 'Walls', frequency: 'As required', isItem: true },
-
-  // Shower Room section
-  { area: 'Shower Room', name: 'Shower Room', frequency: '', isHeader: true },
-  { area: 'Shower Room', name: 'Shower', frequency: 'After each use', isItem: true },
-  { area: 'Shower Room', name: 'Walls', frequency: 'As required', isItem: true },
-  { area: 'Shower Room', name: 'General Floor', frequency: 'Daily', isItem: true },
-
-  // Change Room section
-  { area: 'Change Room', name: 'Change Room', frequency: '', isHeader: true },
-  { area: 'Change Room', name: 'Lockers', frequency: 'Daily', isItem: true },
-  { area: 'Change Room', name: 'General Floor', frequency: 'Daily', isItem: true },
-  { area: 'Change Room', name: 'Walls', frequency: 'As required', isItem: true },
-  { area: 'Change Room', name: 'Hard to reach areas', frequency: '3 times a week', isItem: true },
-  { area: 'Change Room', name: 'Lights (clean if visibly dirty)', frequency: 'Once a week', isItem: true },
+const CLEANING_EQUIPMENT_LIST = [
+  { name: 'Mops', frequency: 'After each use', isItem: true },
+  { name: 'Mop buckets & squeezing devices', frequency: 'After each use', isItem: true },
+  { name: 'Cloths', frequency: 'After each use', isItem: true },
+  { name: 'Brooms/ Brushes', frequency: 'After each use', isItem: true },
+  { name: 'Squeezers', frequency: 'After each use', isItem: true },
+  { name: 'Spray bottles/Containers', frequency: 'After each use', isItem: true },
 ];
 
-const initialCleaningState = WELFARE_EQUIPMENT_LIST.filter(i => i.isItem).map((item, index) => {
-  const dailyChecks = WEEK_DAYS.reduce((acc, day) => {
-    acc[day] = { checked: false, cleanedBy: '' };
-    return acc;
-  }, {});
-  return { id: index, area: item.area, name: item.name, frequency: item.frequency, checks: dailyChecks };
+const initialCleaningState = CLEANING_EQUIPMENT_LIST.filter(i => i.isItem).map((item, index) => {
+  const dailyChecks = WEEK_DAYS.reduce((acc, day) => { acc[day] = { checked: false, cleanedBy: '' }; return acc; }, {});
+  return { id: index, name: item.name, frequency: item.frequency, checks: dailyChecks };
 });
+
+const initialMetadata = {
+  location: 'CLEANING EQUIPMENT',
+  week: '', month: '', year: '',
+  docNo: 'BBN-SHEQ-P-15-R-11q', issueDate: '', revisionDate: 'N/A',
+  compiledBy: 'Michael Zulu C.', approvedBy: 'Hassani Ali', versionNo: '01', revNo: '00', hseqManager: ''
+};
 
 const Checkbox = ({ checked, onPress }) => (
   <TouchableOpacity onPress={onPress} style={[styles.checkbox, checked ? styles.checkboxChecked : styles.checkboxUnchecked]}>
@@ -56,11 +35,20 @@ const Checkbox = ({ checked, onPress }) => (
   </TouchableOpacity>
 );
 
+const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canInteract }) => (
+  <View key={day} style={[styles.dayGroupCell, { width: colWidths.DAY_GROUP_WIDTH }]}>
+    <View style={[styles.cell, styles.centerContent, { width: colWidths.CHECK, borderRightWidth: 0, paddingHorizontal: 0 }]}>
+      <Checkbox checked={item.checks[day].checked} onPress={() => canInteract && handleCellChange(item.id, day, 'checked')} />
+    </View>
+    <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
+      <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} />
+    </View>
+  </View>
+));
 
-
-export default function WelfareFacilitiesChecklist() {
+export default function CleaningEquipmentChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '' });
+  const [metadata, setMetadata] = useState(initialMetadata);
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
 
@@ -71,10 +59,7 @@ export default function WelfareFacilitiesChecklist() {
         if (d.formData) setFormData(d.formData);
         if (d.metadata) setMetadata(d.metadata);
       } else {
-        const today = new Date();
-        const month = today.toLocaleString('default', { month: 'long' });
-        const year = today.getFullYear();
-        setMetadata(prev => ({ ...prev, month, year, issueDate: today.toLocaleDateString() }));
+        setMetadata(prev => ({ ...prev, issueDate: new Date().toLocaleDateString() }));
       }
     })();
   }, []);
@@ -85,33 +70,33 @@ export default function WelfareFacilitiesChecklist() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [formData, metadata]);
 
-  const handleCellChange = (id, day, type, value) => {
+  const handleCellChange = useCallback((id, day, type, value) => {
     setFormData(prev => prev.map(item => {
       if (item.id === id) {
         const newChecks = { ...item.checks };
         if (type === 'checked') {
-          newChecks[day].checked = !newChecks[day].checked;
+          newChecks[day] = { ...newChecks[day], checked: !newChecks[day].checked };
           if (!newChecks[day].checked) newChecks[day].cleanedBy = '';
         } else if (type === 'cleanedBy') {
-          newChecks[day].cleanedBy = value;
+          newChecks[day] = { ...newChecks[day], cleanedBy: value };
           if (value.trim() !== '') newChecks[day].checked = true;
         }
         return { ...item, checks: newChecks };
       }
       return item;
     }));
-  };
+  }, []);
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Welfare Facilities Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
+      await addFormHistory({ title: 'Cleaning Equipment Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
       await removeDraft(DRAFT_KEY);
       Alert.alert('Success', 'Checklist submitted');
       setFormData(initialCleaningState);
-      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '' });
+      setMetadata(prev => ({ ...prev, week: '', month: '', year: '', hseqManager: '' }));
     } catch (e) { Alert.alert('Error', 'Submission failed'); }
     finally { setBusy(false); }
   };
@@ -123,35 +108,13 @@ export default function WelfareFacilitiesChecklist() {
     finally { setBusy(false); }
   };
 
-  // Widen day group and cleaned-by widths to accommodate names when printing on A4 landscape
-  const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 160, CHECK: 48, CLEANED_BY: 110 }), []);
+  const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 }), []);
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
 
   const renderRow = rowItem => {
-    // If this is an area header, render a special header row that displays the area name and empty cells
-    if (rowItem.isHeader) {
-      return (
-        <View key={`header-${rowItem.area}`} style={[styles.row, styles.sectionHeaderRow]}>
-          <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-            <Text style={styles.sectionHeaderText}>{rowItem.area}</Text>
-          </View>
-          <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }]} />
-          {WEEK_DAYS.map(day => (
-            <View key={`${rowItem.area}-h-${day}`} style={[styles.dayGroupCell, { width: COL_WIDTHS.DAY_GROUP_WIDTH }]}>
-              <View style={[styles.cell, { width: COL_WIDTHS.CHECK }]} />
-              <View style={[styles.cell, { flex: 1 }]} />
-            </View>
-          ))}
-        </View>
-      );
-    }
-
-    // Item row — prefer live state entry, but fall back to the template data so UI always shows labels
-    const stateItem = formData.find(i => i.name === rowItem.name && i.area === rowItem.area);
-    const item = stateItem || { id: `fallback-${rowItem.area}-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
-
-    // Determine if interaction is allowed (i.e., if it's a real item in the state)
-    const canInteract = !!stateItem; 
+    const stateItem = formData.find(i => i.name === rowItem.name);
+    const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
+    const canInteract = !!stateItem;
 
     return (
       <View key={item.id} style={styles.row}>
@@ -161,17 +124,8 @@ export default function WelfareFacilitiesChecklist() {
         <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
           <Text style={styles.equipmentText}>{item.frequency}</Text>
         </View>
-        
-        {/* Use the new CleaningCell component */}
         {WEEK_DAYS.map(day => (
-            <CleaningCell
-                key={`${item.id}-${day}`} // Use a highly unique key
-                item={item}
-                day={day}
-                colWidths={COL_WIDTHS}
-                handleCellChange={handleCellChange}
-                canInteract={canInteract}
-            />
+          <CleaningCell key={`${item.id}-${day}`} item={item} day={day} colWidths={COL_WIDTHS} handleCellChange={handleCellChange} canInteract={canInteract} />
         ))}
       </View>
     );
@@ -190,10 +144,10 @@ export default function WelfareFacilitiesChecklist() {
               </View>
             </View>
             <View style={styles.headerMeta}>
-              <Text style={styles.docText}>Doc No: BBN-SHEQ-P-XX | Issue Date: {metadata.issueDate || 'N/A'}</Text>
+              <Text style={styles.docText}>Doc No: {metadata.docNo} | Issue Date: {metadata.issueDate || 'N/A'}</Text>
               <Text style={styles.docText}>Page 1 of 1</Text>
             </View>
-            <Text style={styles.mainTitle}>WELFARE FACILITIES CLEANING CHECKLIST</Text>
+            <Text style={styles.mainTitle}>CLEANING EQUIPMENT CHECKLIST</Text>
             <View style={styles.areaMetaRow}>
               <View style={[styles.metaField, { flex: 2 }]}>
                 <Text style={styles.metaLabel}>LOCATION:</Text>
@@ -212,7 +166,7 @@ export default function WelfareFacilitiesChecklist() {
                 <TextInput value={metadata.year} style={[styles.metaInput, styles.uneditable]} editable={false} />
               </View>
             </View>
-            <Text style={styles.areaTitle}>WELFARE FACILITIES</Text>
+            <Text style={styles.areaTitle}>CLEANING EQUIPMENT</Text>
           </View>
 
           <View style={styles.verificationRow}>
@@ -226,10 +180,10 @@ export default function WelfareFacilitiesChecklist() {
             <View style={{ width: TABLE_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
-                  <Text style={styles.headerText}>Area to be cleaned</Text>
+                  <Text style={styles.headerText}>Equipment</Text>
                 </View>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.FREQUENCY, height: 40 }]}>
-                  <Text style={styles.headerText}>Frequency (Per Week)</Text>
+                  <Text style={styles.headerText}>Frequency</Text>
                 </View>
                 {WEEK_DAYS.map(day => (
                   <View key={day} style={[styles.dayHeaderGroup, { width: COL_WIDTHS.DAY_GROUP_WIDTH }]}>
@@ -242,8 +196,7 @@ export default function WelfareFacilitiesChecklist() {
                   </View>
                 ))}
               </View>
-              {/* Render headers and items in the order described by the template list */}
-              {WELFARE_EQUIPMENT_LIST.map(renderRow)}
+              {CLEANING_EQUIPMENT_LIST.map(renderRow)}
             </View>
           </ScrollView>
 
@@ -299,5 +252,4 @@ const styles = StyleSheet.create({
   draftButton: { backgroundColor: '#FBBF24' },
   submitButton: { backgroundColor: '#4F46E5' },
   buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
-  sectionHeaderText: { fontSize: 13, fontWeight: '800', color: '#111827' },
 });

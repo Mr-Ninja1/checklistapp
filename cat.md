@@ -1,610 +1,391 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    ScrollView,
-    TouchableOpacity,
-    StyleSheet,
-    ActivityIndicator,
-    Alert,
-} from 'react-native';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
-// --- STUBBED ASYNC STORAGE AND API UTILITIES ---
-// NOTE: These are stubs. In a real RN app, replace them with actual AsyncStorage/API calls.
-const DRAFT_KEY = 'kitchen_area_cleaning_checklist_draft';
+// --- Mock utility functions (adapted for web environment) ---
+const getDraft = async () => null;
+const setDraft = async (key, data) => console.log('Draft saved:', key, data);
+const removeDraft = async () => console.log('Draft removed');
+const addFormHistory = async (data) => console.log('Form submitted:', data);
 
-const getDraft = async (key) => new Promise(resolve => setTimeout(() => resolve(null), 10));
-const setDraft = async (key, data) => new Promise(resolve => setTimeout(resolve, 10));
-const removeDraft = async (key) => new Promise(resolve => setTimeout(resolve, 10));
-const addFormHistory = async (data) => {
-    console.log("Form submitted to API:", data);
-    return new Promise(resolve => setTimeout(resolve, 300));
-};
+// Use standard window alert for notifications
+const showAlert = (title, message) => alert(`${title}: ${message}`);
+// ----------------------------------------------------
 
-// --- DATA STRUCTURE: WEEKLY CHECKLIST ---
+const DRAFT_KEY = 'cleaning_equipment_checklist_draft';
 
-const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
+// Standardized day list
+const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Data extracted from the image for the Kitchen Area Cleaning Checklist
-const EQUIPMENT_LIST = [
-    { name: 'Extractor hood - general', frequency: '1' },
-    { name: 'Extractor hood - filters & grease traps', frequency: '1' },
-    { name: 'Pizza Oven', frequency: 'After each use' },
-    { name: 'Flat top Griddle', frequency: 'After each use' },
-    { name: 'Grill', frequency: 'After each use' },
-    { name: 'Stove', frequency: 'After each use' },
-    { name: 'Food Hot Pass', frequency: 'After each use' },
-    { name: 'Deep fryer', frequency: 'After each use' },
-    { name: 'Toaster', frequency: 'After each use' },
-    { name: 'Vegetable Wash Sink', frequency: 'After each use' },
-    { name: 'Vegetable Prep Table', frequency: 'After each use' },
-    { name: 'Meat Prep Table', frequency: 'After each use' },
-    { name: 'Racks x2', frequency: 'Daily' },
-    { name: 'Hard to reach floor areas', frequency: '3' },
-    { name: 'General floor areas (after each shift)', frequency: 'After each use' },
-    { name: 'Walls', frequency: '2' },
-    { name: 'Ceilings (clean if visibly dirty)', frequency: '1' },
-    { name: 'Lights (clean if visibly dirty)', frequency: '1' },
-    { name: 'Drains x2', frequency: 'Every day' },
-    { name: 'Production-Deep Freezer', frequency: '3' },
-    { name: 'Under-bar Chillers', frequency: 'After each use' },
-    { name: 'Kitchen Waste Bin', frequency: 'At the end of each shift' },
-    { name: 'Salamander', frequency: 'After each use' },
-    { name: 'Microwave', frequency: 'After each use' },
-    { name: 'Mary Chef', frequency: 'After each use' },
-    { name: 'Automatic dish washing machine', frequency: 'After each use' },
+// Checklist items defined from the uploaded image
+const CLEANING_EQUIPMENT_LIST = [
+  { name: 'Mops', frequency: 'After each use', isItem: true },
+  { name: 'Mop buckets & squeezing devices', frequency: 'After each use', isItem: true },
+  { name: 'Cloths', frequency: 'After each use', isItem: true },
+  { name: 'Brooms/ Brushes', frequency: 'After each use', isItem: true },
+  { name: 'Squeezers', frequency: 'After each use', isItem: true },
+  { name: 'Spray bottles/Containers', frequency: 'After each use', isItem: true },
 ];
 
-const initialCleaningState = EQUIPMENT_LIST.map((item, index) => {
-    const dailyChecks = WEEK_DAYS.reduce((acc, day) => {
-        // Each day needs a checkbox (checked) and a signature/name (cleanedBy)
-        acc[day] = { checked: false, cleanedBy: '' };
-        return acc;
-    }, {});
-    return { id: index, name: item.name, frequency: item.frequency, checks: dailyChecks };
+const initialCleaningState = CLEANING_EQUIPMENT_LIST.filter(i => i.isItem).map((item, index) => {
+  const dailyChecks = WEEK_DAYS.reduce((acc, day) => {
+    acc[day] = { checked: false, cleanedBy: '' };
+    return acc;
+  }, {});
+  return { id: index, name: item.name, frequency: item.frequency, checks: dailyChecks };
 });
 
-// --- CUSTOM COMPONENTS ---
+// Initial metadata for the Cleaning Equipment Checklist
+const initialMetadata = { 
+    location: 'CLEANING EQUIPMENT', // Updated location header based on image
+    week: '', 
+    month: '', 
+    year: '', 
+    docNo: 'BBN-SHEQ-P-15-R-11q', // Updated Doc No.
+    issueDate: '03/08/2025', 
+    revisionDate: 'N/A', 
+    compiledBy: 'Michael Zulu C.', 
+    approvedBy: 'Hassani Ali', 
+    versionNo: '01', 
+    revNo: '00', 
+    hseqManager: '' 
+};
 
-const Checkbox = ({ checked, onPress }) => (
-    <TouchableOpacity
-        onPress={onPress}
-        style={[
-            styles.checkbox,
-            checked ? styles.checkboxChecked : styles.checkboxUnchecked,
-        ]}
-    >
-        {checked && <Text style={styles.checkboxTick}>✓</Text>}
-    </TouchableOpacity>
+const Checkbox = ({ checked, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center transition-colors 
+      ${checked ? 'border-green-500 bg-green-500' : 'border-gray-500 bg-white'}`}
+    aria-checked={checked}
+    type="button"
+  >
+    {checked && <span className="text-white text-xs font-bold leading-none">✓</span>}
+  </button>
 );
 
-// --- MAIN COMPONENT ---
+/**
+ * Memoized component for stability, handles individual Checkbox and Cleaned By inputs.
+ */
+const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canInteract }) => {
+    // Tailwind classes used for layout and borders
+    const dayGroupClass = `flex flex-row border-r border-gray-400 min-h-[30px]`;
+    
+    return (
+        <div key={day} className={dayGroupClass} style={{ width: colWidths.DAY_GROUP_WIDTH }}>
+            {/* Checkbox */}
+            <div className={`flex items-center justify-center p-1 border-r-0`} style={{ width: colWidths.CHECK }}>
+                <Checkbox 
+                    checked={item.checks[day].checked} 
+                    onClick={() => canInteract && handleCellChange(item.id, day, 'checked')} 
+                />
+            </div>
+            {/* Input for Cleaned By */}
+            <div className={`flex-1 flex items-center justify-center border-l border-gray-400 px-1`}>
+                <input 
+                    type="text"
+                    value={item.checks[day].cleanedBy} 
+                    onChange={e => canInteract && handleCellChange(item.id, day, 'cleanedBy', e.target.value)} 
+                    placeholder="Name" 
+                    className="w-full text-center text-xs p-1 h-7 focus:outline-none bg-transparent"
+                    maxLength={12} 
+                    disabled={!canInteract}
+                />
+            </div>
+        </div>
+    );
+});
 
-export default function KitchenSurfaceLogSheet() {
-    const [formData, setFormData] = useState(initialCleaningState);
-    const [metadata, setMetadata] = useState({ 
-        location: '', 
+
+export default function EquipmentCleaningChecklist() {
+  const [formData, setFormData] = useState(initialCleaningState);
+  const [metadata, setMetadata] = useState(initialMetadata);
+  const [busy, setBusy] = useState(false);
+  const saveTimer = useRef(null);
+
+  // Load Draft
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const d = await getDraft(DRAFT_KEY);
+        if (d && mounted) {
+          if (d.formData) setFormData(d.formData);
+          if (d.metadata) setMetadata(d.metadata);
+        }
+      } catch (e) { console.warn('load draft failed', e); }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Auto-Save Draft
+  useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    // Debounce state save
+    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [formData, metadata]);
+
+  // Handle cell data change (Checkbox or Input)
+  const handleCellChange = useCallback((id, day, type, value) => {
+    setFormData(prev => prev.map(item => {
+      if (item.id === id) {
+        const newChecks = { ...item.checks };
+        if (type === 'checked') {
+          newChecks[day].checked = !newChecks[day].checked;
+          // If unchecking, clear name
+          if (!newChecks[day].checked) newChecks[day].cleanedBy = '';
+        } else if (type === 'cleanedBy') {
+          newChecks[day].cleanedBy = value;
+          // If entering name, check the box
+          if (value.trim() !== '') newChecks[day].checked = true;
+        }
+        return { ...item, checks: newChecks };
+      }
+      return item;
+    }));
+  }, []);
+
+  const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
+
+  const handleSubmit = async () => {
+    setBusy(true);
+    try {
+      await addFormHistory({ title: 'Cleaning Equipment Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
+      await removeDraft(DRAFT_KEY);
+      showAlert('Success', 'Checklist submitted');
+      // Reset form fields
+      setFormData(initialCleaningState);
+      setMetadata(prev => ({ 
+        ...prev, 
         week: '', 
         month: '', 
         year: '', 
-        hseqManager: '', 
-        complexManager: '' 
-    });
-    const [busy, setBusy] = useState(false);
-    const saveTimer = useRef(null);
+        hseqManager: '' 
+      }));
+    } catch (e) { showAlert('Error', 'Submission failed'); }
+    finally { setBusy(false); }
+  };
 
-    // Load Draft Effect (Stub)
-    useEffect(() => {
-        let mounted = true;
-        (async () => {
-            try {
-                const d = await getDraft(DRAFT_KEY);
-                if (d && mounted) {
-                    if (d.formData) setFormData(d.formData);
-                    if (d.metadata) setMetadata(d.metadata);
-                }
-            } catch (e) {
-                console.error("Failed to load draft:", e);
-            }
-        })();
-        return () => { mounted = false; };
-    }, []);
+  const handleSaveDraft = async () => {
+    setBusy(true);
+    try { await setDraft(DRAFT_KEY, { formData, metadata }); showAlert('Success', 'Draft saved'); }
+    catch (e) { showAlert('Error', 'Failed to save draft'); }
+    finally { setBusy(false); }
+  };
 
-    // Auto-Save Draft Effect (Stub)
-    useEffect(() => {
-        if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => {
-            setDraft(DRAFT_KEY, { formData, metadata });
-            console.log('Auto-draft saved.');
-        }, 700);
-        return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-    }, [formData, metadata]);
+  // Define widths (using pixels for predictable table layout)
+  const COL_WIDTHS = useMemo(() => ({ 
+      AREA: 260, // Renamed to AREA to match the template structure, used for Equipment Name
+      FREQUENCY: 150, 
+      DAY_GROUP_WIDTH: 140, 
+      CHECK: 40, 
+  }), []);
+  
+  // Calculate total table width for horizontal scrolling
+  const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
 
-    // Handler: Toggle Checkbox or update "Cleaned By"
-    const handleCellChange = (id, day, type, value) => {
-        setFormData(prev => prev.map(item => {
-            if (item.id === id) {
-                const newChecks = { ...item.checks };
-                if (type === 'checked') {
-                    newChecks[day].checked = !newChecks[day].checked;
-                } else if (type === 'cleanedBy') {
-                    newChecks[day].cleanedBy = value;
-                }
-                return { ...item, checks: newChecks };
-            }
-            return item;
-        }));
-    };
+  const renderRow = rowItem => {
+    if (!rowItem.isItem) return null;
 
-    // Handler: Metadata
-    const handleMetadataChange = (key, value) => setMetadata(prev => ({ ...prev, [key]: value }));
-    
-    const handleSubmit = async () => {
-        setBusy(true);
-        try {
-            await addFormHistory({
-                title: 'Kitchen Area Cleaning Checklist',
-                date: new Date().toLocaleDateString(),
-                savedAt: Date.now(),
-                meta: { metadata, formData }
-            });
-            await removeDraft(DRAFT_KEY);
-            Alert.alert('Success', 'Checklist Submitted successfully!');
-            // Reset form after submission
-            setFormData(initialCleaningState);
-            setMetadata({ 
-                location: '', 
-                week: '', 
-                month: '', 
-                year: '', 
-                hseqManager: '', 
-                complexManager: '' 
-            });
-        } catch (e) {
-            Alert.alert('Error', 'Submission failed.');
-        } finally {
-            setBusy(false);
-        }
-    };
+    // Find the current state data for this item (for ID/checks)
+    const stateItem = formData.find(i => i.name === rowItem.name);
+    // Use fallback if somehow state is not initialized
+    const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
+    const canInteract = !!stateItem; // Only interact if the item exists in the state array
 
-    const handleSaveDraft = async () => {
-        setBusy(true);
-        try {
-            await setDraft(DRAFT_KEY, { formData, metadata });
-            Alert.alert('Success', 'Draft saved manually.');
-        } catch (e) {
-            Alert.alert('Error', 'Failed to save draft.');
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    // --- LAYOUT CONSTANTS (Fixed widths for A4 landscape table structure) ---
-
-    const COL_WIDTHS = useMemo(() => ({
-        // Area to be cleaned column
-        AREA: 300, 
-        // Frequency column
-        FREQUENCY: 150,
-        // Day column group (Check + Cleaned By)
-        DAY_GROUP_WIDTH: 150,
-        // Checkbox column
-        CHECK: 60,
-        // Cleaned By column
-        CLEANED_BY: 90, 
-    }), []);
-
-    // Total width calculation: 300 + 150 + (7 days * 150) = 450 + 1050 = 1500
-    const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + 
-                        (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
-
-
-    const renderRow = (item) => (
-        <View key={item.id} style={styles.row}>
-            {/* Area to be cleaned */}
-            <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-                <Text style={styles.equipmentText}>{item.name}</Text>
-            </View>
-
-            {/* Frequency */}
-            <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
-                <Text style={styles.equipmentText}>{item.frequency}</Text>
-            </View>
-
-            {/* Daily Checks and Cleaned By */}
-            {WEEK_DAYS.map(day => (
-                <View key={day} style={[styles.dayGroupCell, { width: COL_WIDTHS.DAY_GROUP_WIDTH }]}>
-                    {/* Checkbox */}
-                    <View style={[styles.cell, styles.centerContent, { width: COL_WIDTHS.CHECK, borderRightWidth: 0, paddingHorizontal: 0 }]}>
-                        <Checkbox
-                            checked={item.checks[day].checked}
-                            onPress={() => handleCellChange(item.id, day, 'checked')}
-                        />
-                    </View>
-                    {/* Cleaned By Input */}
-                    <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-                        <TextInput 
-                            style={styles.cellInput} 
-                            maxLength={5}
-                            value={item.checks[day].cleanedBy}
-                            onChangeText={(text) => handleCellChange(item.id, day, 'cleanedBy', text)}
-                            placeholder="Name"
-                        />
-                    </View>
-                </View>
-            ))}
-        </View>
-    );
+    // Base row classes
+    const rowClass = "flex flex-row border-b border-gray-300 bg-white min-h-[30px] items-stretch";
+    // Base cell classes
+    const cellClass = "flex justify-center items-center border-r border-gray-400 p-1 text-xs text-gray-800 min-h-[30px]";
 
     return (
-        <View style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.card}>
-                    {/* Top Header Section */}
-                    <View style={styles.header}>
-                        <View style={styles.headerMeta}>
-                            <Text style={styles.docText}>Doc No: BBN-SHEQ-P-16-R-11c | Issue Date: 03/08/2025 | Revision Date: N/A</Text>
-                            <Text style={styles.docText}>Page 1 of 1</Text>
-                        </View>
-                        
-                        <Text style={styles.mainTitle}>KITCHEN AREA CLEANING CHECKLIST</Text>
-                        
-                        <View style={styles.areaMetaRow}>
-                            <View style={[styles.metaField, { flex: 2 }]}>
-                                <Text style={styles.metaLabel}>LOCATION:</Text>
-                                <TextInput
-                                    value={metadata.location}
-                                    onChangeText={(text) => handleMetadataChange('location', text)}
-                                    style={styles.metaInput}
-                                />
-                            </View>
-                            <View style={styles.metaField}>
-                                <Text style={styles.metaLabel}>WEEK:</Text>
-                                <TextInput
-                                    value={metadata.week}
-                                    onChangeText={(text) => handleMetadataChange('week', text)}
-                                    style={styles.metaInput}
-                                    placeholder="Week No."
-                                />
-                            </View>
-                             <View style={styles.metaField}>
-                                <Text style={styles.metaLabel}>MONTH:</Text>
-                                <TextInput
-                                    value={metadata.month}
-                                    onChangeText={(text) => handleMetadataChange('month', text)}
-                                    style={styles.metaInput}
-                                />
-                            </View>
-                             <View style={styles.metaField}>
-                                <Text style={styles.metaLabel}>YEAR:</Text>
-                                <TextInput
-                                    value={metadata.year}
-                                    onChangeText={(text) => handleMetadataChange('year', text)}
-                                    style={styles.metaInput}
-                                    placeholder="YYYY"
-                                />
-                            </View>
-                        </View>
-                        <Text style={styles.areaTitle}>KITCHEN AREA</Text>
-                    </View>
-
-                    {/* Verification Row */}
-                    <View style={styles.verificationRow}>
-                        <View style={[styles.verificationCell, { flex: 1 }]}>
-                            <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-                            <TextInput 
-                                value={metadata.hseqManager}
-                                onChangeText={(text) => handleMetadataChange('hseqManager', text)}
-                                style={styles.verificationInput}
-                            />
-                        </View>
-                        <View style={[styles.verificationCell, { flex: 1 }]}>
-                            <Text style={styles.verificationLabel}>Complex Manager:</Text>
-                            <TextInput 
-                                value={metadata.complexManager}
-                                onChangeText={(text) => handleMetadataChange('complexManager', text)}
-                                style={styles.verificationInput}
-                            />
-                        </View>
-                    </View>
-
-                    {/* Table Container - Horizontal Scroll */}
-                    <ScrollView horizontal style={styles.tableScroll}>
-                        {/* We set the width here to force the scroll and allow for landscape printing feel */}
-                        <View style={{ width: TABLE_WIDTH }}>
-                            {/* Table Header Row */}
-                            <View style={styles.headerRow}>
-                                {/* Area & Frequency Header */}
-                                <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
-                                    <Text style={styles.headerText}>Area to be cleaned</Text>
-                                </View>
-                                <View style={[styles.headerCell, { width: COL_WIDTHS.FREQUENCY, height: 40 }]}>
-                                    <Text style={styles.headerText}>Frequency (Per Week)</Text>
-                                </View>
-
-                                {/* Day Headers */}
-                                {WEEK_DAYS.map(day => (
-                                    <View key={day} style={[styles.dayHeaderGroup, { width: COL_WIDTHS.DAY_GROUP_WIDTH }]}>
-                                        <View style={[styles.headerCell, { width: COL_WIDTHS.CHECK, height: 40, borderBottomWidth: 0, borderRightWidth: 0 }]}>
-                                            <Text style={styles.headerText}>{day}</Text>
-                                        </View>
-                                        <View style={[styles.headerCell, { width: COL_WIDTHS.CLEANED_BY, height: 40, borderLeftWidth: 1, borderLeftColor: '#1F2937', borderBottomWidth: 0 }]}>
-                                            <Text style={styles.headerText}>Cleaned BY</Text>
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-
-                            {/* Table Body */}
-                            {formData.map(renderRow)}
-                        </View>
-                    </ScrollView>
-                    
-                    {/* Action Buttons */}
-                    <View style={styles.buttonContainer}>
-                        <TouchableOpacity
-                            onPress={handleSaveDraft}
-                            style={[styles.button, styles.draftButton]}
-                            disabled={busy}
-                        >
-                            {busy ? (
-                                <ActivityIndicator color="#FFFFFF" />
-                            ) : (
-                                <Text style={styles.buttonText}>Save Draft</Text>
-                            )}
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={handleSubmit}
-                            style={[styles.button, styles.submitButton]}
-                            disabled={busy}
-                        >
-                            {busy ? (
-                                <ActivityIndicator color="#FFFFFF" />
-                            ) : (
-                                <Text style={styles.buttonText}>Submit Checklist</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </ScrollView>
-        </View>
+      <div key={item.id} className={rowClass}>
+        {/* Equipment Name */}
+        <div className={`${cellClass} justify-start font-medium`} style={{ width: COL_WIDTHS.AREA }}>
+          <p>{item.name}</p>
+        </div>
+        
+        {/* Frequency */}
+        <div className={`${cellClass}`} style={{ width: COL_WIDTHS.FREQUENCY }}>
+          <p>{item.frequency}</p>
+        </div>
+        
+        {/* Day Check/Cleaned By Columns */}
+        {WEEK_DAYS.map(day => (
+            <CleaningCell
+                key={`${item.id}-${day}`}
+                item={item}
+                day={day}
+                colWidths={COL_WIDTHS}
+                handleCellChange={handleCellChange}
+                canInteract={canInteract}
+            />
+        ))}
+      </div>
     );
+  };
+
+  // Helper function to render a single metadata label/value cell (Non-Editable)
+  const renderMetaCell = (label, value, extraClass = '') => (
+    <div className={`flex flex-row py-1 px-1 items-center ${extraClass}`}>
+      <p className="text-[9px] font-semibold text-gray-800 mr-1 flex-shrink-0 whitespace-nowrap">{label}:</p>
+      <p className="text-[9px] text-gray-700 flex-1 min-w-[30px] truncate">{value}</p>
+    </div>
+  );
+
+  // Helper function for editable metadata (Input)
+  const renderMetaInput = (label, key, placeholder = '', flexClass = 'flex-1') => (
+    <div className={`flex flex-row items-center py-1 px-2 border-r border-gray-700 last:border-r-0 ${flexClass}`}>
+      <p className="text-xs font-semibold text-gray-800 mr-1 flex-shrink-0 whitespace-nowrap">{label}</p>
+      <input 
+        type="text"
+        value={metadata[key]} 
+        onChange={e => handleMetadataChange(key, e.target.value)} 
+        className="flex-1 border-b border-gray-500 text-sm p-0.5 h-6 focus:outline-none bg-transparent" 
+        placeholder={placeholder}
+      />
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-full w-full bg-gray-100 font-[Inter] overflow-y-auto">
+      <div className="p-2 sm:p-4 min-h-full">
+        <div className="bg-white rounded-lg p-4 mb-5 border border-gray-800 shadow-xl max-w-6xl mx-auto">
+          
+          {/* HEADER SECTION */}
+          <div className="border border-gray-800 mb-4 rounded-md overflow-hidden">
+            
+            {/* Logo and Document Info Row (Top Right) */}
+            <div className="flex justify-between items-stretch border-b border-gray-800">
+              <div className="flex items-center flex-3 py-1 px-2">
+                {/* Logo Placeholder */}
+                <div className="w-10 h-10 mr-2 bg-gray-300 rounded-md border border-gray-500 flex items-center justify-center text-xs font-bold text-gray-600 flex-shrink-0">
+                    LOGO
+                </div>
+                <div className="flex-1 justify-center">
+                    <p className="text-xs font-bold text-gray-800">Bravo! Food Safety Management System</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-col flex-2 border-l border-gray-800 divide-y divide-gray-300">
+                {renderMetaCell('Doc No', metadata.docNo)}
+                {renderMetaCell('Issue Date', metadata.issueDate)}
+                {renderMetaCell('Revision Date', metadata.revisionDate)}
+              </div>
+              <div className="flex flex-col justify-center items-center flex-1 border-l border-gray-800">
+                <p className="text-[10px] text-center font-bold text-gray-800">Page 1 of 1</p>
+              </div>
+            </div>
+
+            {/* Subject Row */}
+            <div className="py-2 border-b border-gray-800 bg-gray-50">
+                <p className="text-sm font-extrabold text-gray-800 text-center uppercase">Subject: CLEANING EQUIPMENT CLEANING CHECKLIST</p>
+            </div>
+
+            {/* Signature Row */}
+            <div className="flex divide-x divide-gray-800 border-b border-gray-800 min-h-[30px]">
+                {renderMetaCell('Compiled By', metadata.compiledBy, 'flex-2')}
+                {renderMetaCell('Approved By', metadata.approvedBy, 'flex-2')}
+                {renderMetaCell('Version No', metadata.versionNo, 'flex-1')}
+                {renderMetaCell('Rev no', metadata.revNo, 'flex-1 border-r-0')}
+            </div>
+
+            {/* Location/Date Input Row */}
+            <div className="flex border-b border-gray-800 bg-gray-100">
+                {renderMetaInput('LOCATION', 'location', 'CLEANING EQUIPMENT', 'flex-2')}
+                {renderMetaInput('WEEK', 'week', 'Week #', 'flex-1')}
+                {renderMetaInput('MONTH', 'month', 'Month', 'flex-1')}
+                <div className="flex flex-row items-center py-1 px-2 flex-1">
+                    <p className="text-xs font-semibold text-gray-800 mr-1 flex-shrink-0 whitespace-nowrap">YEAR:</p>
+                    <input 
+                        type="text"
+                        value={metadata.year} 
+                        onChange={e => handleMetadataChange('year', e.target.value)} 
+                        className="flex-1 border-b border-gray-500 text-sm p-0.5 h-6 focus:outline-none bg-transparent" 
+                        placeholder="YYYY"
+                    />
+                </div>
+            </div>
+          </div>
+
+          {/* TABLE SECTION */}
+          <div className="overflow-x-auto rounded-md border border-gray-800">
+            <div style={{ width: TABLE_WIDTH }}>
+              {/* Table Header Row */}
+              <div className="flex flex-row bg-gray-200 border-b-2 border-gray-800 font-bold text-gray-800 text-center min-h-[40px] items-stretch">
+                {/* Equipment and Frequency Headers */}
+                <div className="flex justify-center items-center border-r border-gray-800 text-xs p-1" style={{ width: COL_WIDTHS.AREA }}>
+                  Equipment
+                </div>
+                <div className="flex justify-center items-center border-r border-gray-800 text-xs p-1" style={{ width: COL_WIDTHS.FREQUENCY }}>
+                  Frequency
+                </div>
+                
+                {/* Day Columns */}
+                {WEEK_DAYS.map(day => (
+                  <div key={day} className="flex flex-row border-r border-gray-800" style={{ width: COL_WIDTHS.DAY_GROUP_WIDTH }}>
+                    {/* Day Name (Check) */}
+                    <div className="flex justify-center items-center bg-gray-300 text-[10px] p-1 border-b border-gray-800" style={{ width: COL_WIDTHS.CHECK }}>
+                      {day}
+                    </div>
+                    {/* Cleaned By Header */}
+                    <div className="flex justify-center items-center text-xs p-1 border-l border-gray-800 border-b border-gray-800 flex-1">
+                      Cleaned BY
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Render Checklist Items */}
+              {CLEANING_EQUIPMENT_LIST.map(renderRow)}
+            </div>
+          </div>
+
+          {/* VERIFICATION FOOTER */}
+          <div className="py-4 mt-4 border-t border-gray-800">
+            <div className="p-2 border border-gray-400 bg-gray-50 rounded-md">
+              <p className="text-sm font-bold text-gray-800 mb-2">Verified by:</p>
+              
+              <div className="flex flex-col sm:flex-row items-start sm:items-center">
+                <p className="text-sm font-medium text-gray-700 sm:mr-4 mb-2 sm:mb-0 whitespace-nowrap">HSEQ Manager:</p>
+                <div className="flex-1 min-w-[200px] sm:min-w-0">
+                    <input 
+                        type="text"
+                        value={metadata.hseqManager} 
+                        onChange={e => handleMetadataChange('hseqManager', e.target.value)} 
+                        className="w-full border-b border-gray-500 text-base p-1 focus:outline-none bg-transparent" 
+                        placeholder="........................................."
+                    />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end pt-4 space-x-3">
+            <button 
+                onClick={handleSaveDraft} 
+                className="w-32 py-2 px-4 rounded-lg bg-yellow-500 text-white font-semibold shadow-md hover:bg-yellow-600 transition disabled:opacity-50 flex items-center justify-center" 
+                disabled={busy}
+            >
+                {busy ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                ) : (
+                    'Save Draft'
+                )}
+            </button>
+            <button 
+                onClick={handleSubmit} 
+                className="w-32 py-2 px-4 rounded-lg bg-indigo-600 text-white font-semibold shadow-md hover:bg-indigo-700 transition disabled:opacity-50 flex items-center justify-center" 
+                disabled={busy}
+            >
+                {busy ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                ) : (
+                    'Submit Checklist'
+                )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
-
-// --- STYLESHEET ---
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F3F4F6', // Light gray background
-    },
-    scrollContent: {
-        padding: 8,
-    },
-    card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 5,
-        marginBottom: 20,
-        borderColor: '#1F2937',
-        borderWidth: 1,
-    },
-    // Header Styles
-    header: {
-        borderBottomColor: '#1F2937',
-        borderBottomWidth: 1,
-        paddingBottom: 10,
-        marginBottom: 10,
-    },
-    headerMeta: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    docText: {
-        fontSize: 10,
-        color: '#6B7280',
-    },
-    areaTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#374151',
-        textAlign: 'center',
-        marginTop: 10,
-        borderTopWidth: 1,
-        borderTopColor: '#1F2937',
-        paddingTop: 8,
-    },
-    mainTitle: {
-        fontSize: 20,
-        fontWeight: '800', // extra-bold
-        color: '#1F2937',
-        textAlign: 'center',
-        marginBottom: 10,
-    },
-    areaMetaRow: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        marginTop: 15,
-        borderWidth: 1,
-        borderColor: '#1F2937',
-    },
-    metaField: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-        minWidth: 100,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRightWidth: 1,
-        borderRightColor: '#1F2937',
-    },
-    metaLabel: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#4B5563',
-        marginRight: 4,
-    },
-    metaInput: {
-        flex: 1,
-        borderBottomColor: '#9CA3AF',
-        borderBottomWidth: 1,
-        fontSize: 12,
-        paddingVertical: 2,
-    },
-    // Verification Row Styles
-    verificationRow: {
-        flexDirection: 'row',
-        borderWidth: 1,
-        borderColor: '#1F2937',
-        marginBottom: 10,
-        backgroundColor: '#E5E7EB', // Light gray
-    },
-    verificationCell: {
-        padding: 8,
-        borderRightWidth: 1,
-        borderRightColor: '#1F2937',
-    },
-    verificationLabel: {
-        fontSize: 12,
-        fontWeight: '600',
-        marginBottom: 4,
-        color: '#1F2937',
-    },
-    verificationInput: {
-        borderBottomColor: '#9CA3AF',
-        borderBottomWidth: 1,
-        fontSize: 14,
-        paddingVertical: 2,
-    },
-    // Table Styles
-    tableScroll: {
-        borderRadius: 4,
-        borderWidth: 1,
-        borderColor: '#1F2937', // Very dark gray
-    },
-    headerRow: {
-        flexDirection: 'row',
-        backgroundColor: '#6B7280', // Gray-500
-        minHeight: 40,
-        borderBottomWidth: 2,
-        borderBottomColor: '#1F2937',
-    },
-    headerCell: {
-        padding: 5,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRightWidth: 1,
-        borderRightColor: '#1F2937',
-    },
-    headerText: {
-        fontSize: 11,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-        textAlign: 'center',
-    },
-    dayHeaderGroup: {
-        flexDirection: 'row',
-        borderRightWidth: 1,
-        borderRightColor: '#1F2937',
-    },
-    // Row Styles
-    row: {
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#4B5563',
-        minHeight: 40,
-    },
-    dayGroupCell: {
-        flexDirection: 'row',
-        borderRightWidth: 1,
-        borderRightColor: '#4B5563',
-    },
-    cell: {
-        paddingHorizontal: 4,
-        paddingVertical: 6,
-        justifyContent: 'center',
-        borderRightWidth: 1,
-        borderRightColor: '#4B5563',
-        minHeight: 40,
-    },
-    leftContent: {
-        alignItems: 'flex-start',
-    },
-    centerContent: {
-        alignItems: 'center',
-    },
-    equipmentText: {
-        fontSize: 12,
-        color: '#1F2937',
-    },
-    cellInput: {
-        width: '100%',
-        textAlign: 'center',
-        fontSize: 12,
-        height: 30,
-        padding: 0,
-    },
-    // Checkbox Styles
-    checkbox: {
-        width: 22,
-        height: 22,
-        borderRadius: 4,
-        borderWidth: 2,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    checkboxChecked: {
-        borderColor: '#10B981', // Green-500
-        backgroundColor: '#10B981',
-    },
-    checkboxUnchecked: {
-        borderColor: '#4B5563', // Gray-600
-        backgroundColor: '#FFFFFF',
-    },
-    checkboxTick: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: 'bold',
-        lineHeight: 20, // Adjust line height for center alignment
-    },
-    // Button Styles
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginTop: 24,
-        paddingHorizontal: 8,
-    },
-    button: {
-        width: 150,
-        marginLeft: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    draftButton: {
-        backgroundColor: '#FBBF24', // Yellow-500
-    },
-    submitButton: {
-        backgroundColor: '#4F46E5', // Indigo-600
-    },
-    buttonText: {
-        color: '#FFFFFF',
-        fontWeight: '600',
-        fontSize: 16,
-    },
-});
