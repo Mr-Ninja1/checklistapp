@@ -23,9 +23,6 @@ const initialFormData = {
   date: '',
   result: 'PASSED',
   comment: '',
-  docNo: 'BBN-SHEQ-P-F-8.9a',
-  version: '01',
-  revisionNo: '00',
   issueDate: '',
   compiledBy: 'Michael C. Zulu',
 };
@@ -99,9 +96,6 @@ export default function CertificateOfAnalysis() {
               <Text style={styles.title}>CERTIFICATE OF ANALYSIS</Text>
             </View>
             <View style={styles.metaBox}>
-              <Text style={styles.metaText}>Doc No: {formData.docNo}</Text>
-              <Text style={styles.metaText}>Version: {formData.version}</Text>
-              <Text style={styles.metaText}>Revision: {formData.revisionNo}</Text>
               <Text style={styles.metaText}>Issue date: {formData.issueDate}</Text>
             </View>
           </View>

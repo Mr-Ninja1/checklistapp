@@ -26,12 +26,18 @@ const formCategories = {
     name: "Prod Records",
     color: ["#ff9966", "#ff5e62"],
     forms: [
-      { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor", route: 'CertificateOfAnalysis' },
+        { id: 110, title: "Beverage & Water Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'BeverageReceivingForm' },
+    { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor", route: 'CertificateOfAnalysis' },
+    { id: 111, title: "Packaging Materials Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'PackagingMaterialsReceivingForm' },
+      { id: 82, title: "Pest Inspection Form", status: "pending", priority: "medium", dueTime: "Weekly", location: "Facilities", route: 'PastInspectionForm' },
+  { id: 83, title: "Customer Satisfaction Questionnaire", status: "pending", priority: "low", dueTime: "As needed", location: "Reception", route: 'CustomerSatisfactionQuestionnaire' },
+      { id: 81, title: "Process & Quality Out of Control Report", status: "pending", priority: "critical", dueTime: "As needed", location: "Quality", route: 'ProcessQualityOutOfControlReport' },
       { id: 9, title: "5 Why Report/Non-conformance", status: "completed", priority: "high", dueTime: "As needed", location: "Production Floor" },
-      { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab" },
+  { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab", route: 'ProductReleaseForm' },
   { id: 11, title: "Food Handlers Daily Handwashing", status: "pending", priority: "high", dueTime: "6:00 AM", location: "Production Entry", isHandwashingLog: true, route: 'FoodHandlersHandwashingForm' },
       { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
       { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" },
+    { id: 50, title: "Fruit, Vegetable & Egg Washing Log", status: "pending", priority: "high", dueTime: "Before use", location: "Wash Station", route: 'FruitWashingLog' },
       
     ]
   },
@@ -44,10 +50,12 @@ const formCategories = {
   { id: 42, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen)", status: "pending", priority: "high", dueTime: "Each shift", location: "Main Kitchen", route: 'Kitchen_DailyCleaningForm' },
       { id: 16, title: "Weekly Cleaning Log", status: "completed", priority: "medium", dueTime: "Monday", location: "Kitchen Area" },
       { id: 17, title: "Monthly Temp - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Monthly", location: "Kitchen Bar" },
-      { id: 18, title: "Cooking Temp Log", status: "pending", priority: "critical", dueTime: "Every cooking", location: "Cooking Station" },
+    { id: 70, title: "Underbar Chiller Temperature Log", status: "pending", priority: "high", dueTime: "Monthly", location: "Underbar Chiller", route: 'UnderbarChillerTemperatureLog' },
+  { id: 18, title: "Cooking Temp Log", status: "pending", priority: "critical", dueTime: "Every cooking", location: "Cooking Station", route: 'CookingTemperatureLog' },
       { id: 19, title: "Cooling Temp Log", status: "overdue", priority: "critical", dueTime: "30 min ago", location: "Cooling Area" },
       { id: 20, title: "Thawing Temp Log", status: "pending", priority: "high", dueTime: "During thawing", location: "Prep Area" },
-      { id: 21, title: "Hot Holding Temp Log", status: "completed", priority: "critical", dueTime: "Every 2 hours", location: "Service Line" },
+  { id: 99, title: "Thawing Temperature Log", status: "pending", priority: "high", dueTime: "During thawing", location: "Prep Area", route: 'ThawingTemperatureLog' },
+  { id: 21, title: "Hot Holding Temp Log", status: "completed", priority: "critical", dueTime: "Every 2 hours", location: "Service Line", route: 'HotHoldingTemperatureLog' },
       { id: 22, title: "Vegetable & Fruit Washing", status: "pending", priority: "high", dueTime: "Before use", location: "Wash Station" },
       { id: 23, title: "Shelf Life Inspection", status: "pending", priority: "medium", dueTime: "Daily", location: "Storage Area" }
     ]
@@ -63,6 +71,7 @@ const formCategories = {
       { id: 26, title: "Temp Records - Under Bar Chillers", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Bakery Chillers" },
       { id: 27, title: "Baking Control Sheet", status: "overdue", priority: "critical", dueTime: "45 min ago", location: "Oven Station", route: 'BakingControlSheet' },
     { id: 28, title: "Mixing Control Sheet", status: "pending", priority: "high", dueTime: "Each mix", location: "Mixing Station", route: 'MixingControlSheet' },
+    { id: 48, title: "PRODUCTS NET CONTENT CHECKLIST", status: "pending", priority: "medium", dueTime: "Daily", location: "Bakery", route: 'ProductsNetContentChecklist' },
       { id: 29, title: "Shelf Life Inspection", status: "completed", priority: "medium", dueTime: "Daily", location: "Display Case" },
       { id: 30, title: "Net Content Log", status: "pending", priority: "low", dueTime: "Per batch", location: "Packaging Area" }
     ]
@@ -71,20 +80,24 @@ const formCategories = {
     name: "BOH Records",
     color: ["#f7971e", "#ffd200"],
     forms: [
+          { id: 100, title: "Personal Protective Equipment", status: "pending", priority: "high", dueTime: "As needed", location: "BOH", route: 'PPEIssuanceForm' },
+      { id: 101, title: "Personal Hygiene Checklist", status: "pending", priority: "high", dueTime: "Daily", location: "BOH", route: 'PersonalHygieneChecklist' },
+      { id: 102, title: "Health Status Checklist", status: "pending", priority: "critical", dueTime: "Daily", location: "BOH", route: 'BravoHealthStatusCheck' },
       { id: 31, title: "Dry Storage Area Cleaning", status: "pending", priority: "medium", dueTime: "Monday", location: "Storage Room", route: 'DryStorageArea_CleaningChecklist' },
       { id: 32, title: "Weekly Cleaning Materials Log", status: "completed", priority: "low", dueTime: "Weekly", location: "Chemical Storage" },
       { id: 33, title: "Weekly Scullery Area Cleaning", status: "pending", priority: "medium", dueTime: "Sunday", location: "Scullery", route: 'SculleryArea_CleaningChecklist' },
       { id: 34, title: "Weekly Welfare Facility Cleaning", status: "overdue", priority: "medium", dueTime: "2 days ago", location: "Staff Area" },
       { id: 35, title: "Weekly Cold Room Cleaning", status: "pending", priority: "high", dueTime: "Saturday", location: "Cold Storage" },
-  { id: 44, title: "Cold Room & Freezer Room Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Cold Storage", route: 'ColdRoom_FreezerRoomCleaningChecklist' },
-  { id: 47, title: "WALK-IN CHILLER TEMPERATURE CHECKLIST", status: "pending", priority: "high", dueTime: "Monthly", location: "Walk-in Chiller", route: 'WalkInChillerLog' },
-    { id: 45, title: "Welfare Facilities Cleaning Checklist", status: "pending", priority: "medium", dueTime: "Weekly", location: "Staff Area", route: 'WelfareFacilities_CleaningChecklist' },
+      { id: 44, title: "Cold Room & Freezer Room Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Cold Storage", route: 'ColdRoom_FreezerRoomCleaningChecklist' },
+      { id: 47, title: "WALK-IN CHILLER TEMPERATURE CHECKLIST", status: "pending", priority: "high", dueTime: "Monthly", location: "Walk-in Chiller", route: 'WalkInChillerLog' },
+      { id: 45, title: "Welfare Facilities Cleaning Checklist", status: "pending", priority: "medium", dueTime: "Weekly", location: "Staff Area", route: 'WelfareFacilities_CleaningChecklist' },
       { id: 46, title: "Cleaning Equipment Checklist", status: "pending", priority: "medium", dueTime: "Weekly", location: "Cleaning Equipment", route: 'CleaningEquipment_CleaningChecklist' },
       { id: 36, title: "Pest Control Log", status: "completed", priority: "high", dueTime: "Monthly", location: "Entire Facility" },
-  { id: 37, title: "WALK-IN FREEZER TEMPERATURE CHECKLIST", status: "pending", priority: "critical", dueTime: "Daily", location: "Walk-in Freezer", route: 'WalkInFreezerLog' },
-      { id: 38, title: "Employee PPE Register", status: "completed", priority: "medium", dueTime: "Daily", location: "Entry Points" },
+      { id: 37, title: "WALK-IN FREEZER TEMPERATURE CHECKLIST", status: "pending", priority: "critical", dueTime: "Daily", location: "Walk-in Freezer", route: 'WalkInFreezerLog' },
+  
       { id: 39, title: "Personal Hygiene Checklist", status: "pending", priority: "high", dueTime: "Start of shift", location: "Locker Room" },
-      { id: 40, title: "Health Status Checklist", status: "pending", priority: "critical", dueTime: "Daily", location: "HR Office" }
+      { id: 40, title: "Health Status Checklist", status: "pending", priority: "critical", dueTime: "Daily", location: "HR Office" },
+      { id: 41, title: "BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST", status: "pending", priority: "medium", dueTime: "Daily", location: "Storage Area", route: 'BOH_ShelfLifeInspectionChecklist' },
     ]
   }
 };
@@ -282,6 +295,7 @@ export default function HomeScreen() {
       </LinearGradient>
 
 
+
       {/* Category Tabs - now static, directly below header */}
       <View style={{
         flexDirection: 'row',
@@ -309,25 +323,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      {/* Quick access: when kitchen category is active show a prominent card/button to open the weekly checklist */}
-      {activeCategory === 'kitchen' && (
-        <View style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
-          <TouchableOpacity
-            onPress={() => {
-              setLoadingMsg('Opening Kitchen Weekly Checklist...');
-              setLoadingCard(true);
-              setTimeout(() => {
-                navigation.navigate('Kitchen_WeeklyCleaningChecklist');
-                setTimeout(() => setLoadingCard(false), 350);
-              }, 200);
-            }}
-            style={[styles.quickCard]}
-          >
-            <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d' }}>🍳 Kitchen Weekly Cleaning Checklist</Text>
-            <Text style={{ fontSize: 12, color: '#555', marginTop: 4 }}>Open weekly checklist</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Removed kitchen quick access featured cards per request */}
 
       {/* Form Lists */}
       <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={[styles.formListContent, { minHeight: 0 }]}> 

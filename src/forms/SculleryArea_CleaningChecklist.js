@@ -63,7 +63,7 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
 
 export default function SculleryAreaChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState({ location: 'SCULLERY', week: '', month: '', year: '', docNo: 'BBN-SHEQ-P-R-11e', issueDate: '', revisionDate: 'N/A', compiledBy: '', approvedBy: '', versionNo: '01', revNo: '00', hseqManager: '' });
+  const [metadata, setMetadata] = useState({ location: 'SCULLERY', week: '', month: '', year: '', issueDate: '', compiledBy: '', approvedBy: '', hseqManager: '' });
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
 
@@ -163,7 +163,7 @@ export default function SculleryAreaChecklist() {
               </View>
             </View>
             <View style={styles.headerMeta}>
-              <Text style={styles.docText}>Doc No: {metadata.docNo} | Issue Date: {metadata.issueDate || 'N/A'}</Text>
+              <Text style={styles.docText}>Issue Date: {metadata.issueDate || 'N/A'}</Text>
               <Text style={styles.docText}>Page 1 of 1</Text>
             </View>
             <Text style={styles.mainTitle}>SCULLERY AREA CLEANING CHECKLIST</Text>

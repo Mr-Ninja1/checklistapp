@@ -2,7 +2,6 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-
 import SplashScreen from './screens/SplashScreen';
 import ResponsiveView from './components/ResponsiveView';
 import HomeScreen from './screens/HomeScreen';
@@ -11,6 +10,20 @@ import FOHCategoryScreen from './screens/FOHCategoryScreen';
 import FOHFormScreen from './screens/FOHFormScreen';
 import FormSavesScreen from './screens/FormSavesScreen';
 import FOH_FrontOfHouseCleaningChecklist from './forms/FOH_FrontOfHouseCleaningChecklist';
+import BOH_ShelfLifeInspectionChecklist from './forms/BOH_ShelfLifeInspectionChecklist';
+import ProductsNetContentChecklist from './forms/ProductsNetContentChecklist';
+import FruitWashingLog from './forms/FruitWashingLog';
+import CookingTemperatureLog from './forms/CookingTemperatureLog';
+import ThawingTemperatureLog from './forms/ThawingTemperatureLog';
+import HotHoldingTemperatureLog from './forms/HotHoldingTemperatureLog';
+import UnderbarChillerTemperatureLog from './forms/UnderbarChillerTemperatureLog';
+import CustomerSatisfactionQuestionnaire from './forms/CustomerSatisfactionQuestionnaire';
+import PPEIssuanceForm from './forms/PPEIssuanceForm';
+import PersonalHygieneChecklist from './forms/PersonalHygieneChecklist';
+import BravoHealthStatusCheck from './forms/BravoHealthStatusCheck';
+import ProductReleaseForm from './forms/ProductReleaseForm';
+import BeverageReceivingForm from './forms/BeverageReceivingForm';
+import PackagingMaterialsReceivingForm from './forms/PackagingMaterialsReceivingForm';
 
 const Stack = createStackNavigator();
 
@@ -19,6 +32,7 @@ const linking = {
   config: {
     screens: {
   Home: '',
+  CustomerSatisfactionQuestionnaire: 'customer-satisfaction-questionnaire',
   FormSaves: 'FormSaves',
       FOHFormScreen: 'FOHFormScreen',
       FOH_FrontOfHouseCleaningChecklist: 'FOH_FrontOfHouseCleaningChecklist',
@@ -32,6 +46,12 @@ const linking = {
   WalkInChillerLog: 'WalkInChillerLog',
   BakingControlSheet: 'BakingControlSheet',
   MixingControlSheet: 'MixingControlSheet',
+      BOH_ShelfLifeInspectionChecklist: 'boh-shelf-life-inspection',
+  FruitWashingLog: 'fruit-washing-log',
+  CookingTemperatureLog: 'cooking-temperature-log',
+  ThawingTemperatureLog: 'thawing-temperature-log',
+  HotHoldingTemperatureLog: 'hot-holding-temperature-log',
+  UnderbarChillerTemperatureLog: 'underbar-chiller-temperature-log',
       Splash: 'Splash',
       KitchenCategory: 'KitchenCategory',
       FOHCategory: 'FOHCategory',
@@ -71,6 +91,22 @@ export default function App() {
   <Stack.Screen name="WalkInChillerLog" component={require('./forms/WalkInChillerLog').default} />
   <Stack.Screen name="BakingControlSheet" component={require('./forms/BakingControlSheet').default} />
   <Stack.Screen name="MixingControlSheet" component={require('./forms/MixingControlSheet').default} />
+  <Stack.Screen name="BOH_ShelfLifeInspectionChecklist" component={require('./forms/BOH_ShelfLifeInspectionChecklist').default} />
+  <Stack.Screen name="ProductsNetContentChecklist" component={ProductsNetContentChecklist} />
+  <Stack.Screen name="FruitWashingLog" component={FruitWashingLog} />
+  <Stack.Screen name="CookingTemperatureLog" component={CookingTemperatureLog} />
+  <Stack.Screen name="ThawingTemperatureLog" component={ThawingTemperatureLog} />
+  <Stack.Screen name="HotHoldingTemperatureLog" component={HotHoldingTemperatureLog} />
+  <Stack.Screen name="UnderbarChillerTemperatureLog" component={UnderbarChillerTemperatureLog} />
+  <Stack.Screen name="CustomerSatisfactionQuestionnaire" component={CustomerSatisfactionQuestionnaire} />
+  <Stack.Screen name="PPEIssuanceForm" component={PPEIssuanceForm} />
+  <Stack.Screen name="PersonalHygieneChecklist" component={PersonalHygieneChecklist} />
+  <Stack.Screen name="BravoHealthStatusCheck" component={BravoHealthStatusCheck} />
+  <Stack.Screen name="ProductReleaseForm" component={ProductReleaseForm} />
+  <Stack.Screen name="BeverageReceivingForm" component={BeverageReceivingForm} />
+  <Stack.Screen name="PackagingMaterialsReceivingForm" component={PackagingMaterialsReceivingForm} />
+  <Stack.Screen name="ProcessQualityOutOfControlReport" component={require('./forms/Process_Quality_OutOfControlReport').default} />
+  <Stack.Screen name="PastInspectionForm" component={require('./forms/PastInspectionForm').default} />
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>

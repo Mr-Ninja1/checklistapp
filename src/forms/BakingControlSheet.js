@@ -20,14 +20,10 @@ const initialEntry = {
 const initialLogState = Array.from({ length: 15 }, () => ({ ...initialEntry }));
 
 const initialMetadata = {
-  docNo: 'BBN-SHEQ-BKP-F-02-01b',
   // issueDate will be set to system date when no draft exists
   issueDate: '',
-  revisionDate: 'N/A',
   compiledBy: 'Michael Zulu C.',
   approvedBy: 'Hassani Ali',
-  versionNo: '01',
-  revNo: '00',
 };
 
 export default function BakingControlSheet({ navigation }) {
@@ -127,20 +123,18 @@ export default function BakingControlSheet({ navigation }) {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerBox}>
-          <View style={styles.headerTop}>
-            <View style={styles.logoWrap}>
-              <Image source={require('../assets/logo.png')} style={styles.logo} />
-              <View>
-                <Text style={styles.brand}>Bravo Brands Limited</Text>
-                <Text style={styles.sub}>Food Safety Management System</Text>
+              <View style={styles.headerTop}>
+                <View style={styles.logoWrap}>
+                  <Image source={require('../assets/logo.png')} style={styles.logo} />
+                  <View>
+                    <Text style={styles.brand}>Bravo Brands Limited</Text>
+                    <Text style={styles.sub}>Food Safety Management System</Text>
+                  </View>
+                </View>
+                <View style={styles.metaCol}>
+                  <Text style={styles.metaLabel}>Issue Date: {metadata.issueDate}</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.metaCol}>
-              <Text style={styles.metaLabel}>Doc No: {metadata.docNo}</Text>
-              <Text style={styles.metaLabel}>Issue Date: {metadata.issueDate}</Text>
-              <Text style={styles.metaLabel}>Revision Date: {metadata.revisionDate}</Text>
-            </View>
-          </View>
           <View style={styles.subjectRow}><Text style={styles.subjectText}>Subject: BAKING CONTROL SHEET</Text></View>
           <View style={styles.signRow}>
             <Text style={styles.metaSmall}>Compiled By: {metadata.compiledBy}</Text>
@@ -168,9 +162,9 @@ export default function BakingControlSheet({ navigation }) {
           <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
             <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
-            <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
+                <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
+              </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
