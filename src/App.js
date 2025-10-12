@@ -24,6 +24,20 @@ import BravoHealthStatusCheck from './forms/BravoHealthStatusCheck';
 import ProductReleaseForm from './forms/ProductReleaseForm';
 import BeverageReceivingForm from './forms/BeverageReceivingForm';
 import PackagingMaterialsReceivingForm from './forms/PackagingMaterialsReceivingForm';
+import VegetablesFruitsReceivingForm from './forms/VegetablesFruitsReceivingForm';
+import ChilledFrozenReceivingForm from './forms/ChilledFrozenReceivingForm';
+import DryGoodsReceivingForm from './forms/DryGoodsReceivingForm';
+import ChemicalsReceivingForm from './forms/ChemicalsReceivingForm';
+import EggsReceivingForm from './forms/EggsReceivingForm';
+import DisplayChillerShelfLifeInspectionChecklist from './forms/DisplayChillerShelfLifeInspectionChecklist';
+import TrainingAttendanceRegister from './forms/TrainingAttendanceRegister';
+import PreShiftMeetingAttendanceRegister from './forms/PreShiftMeetingAttendanceRegister';
+import ToolboxTalkRegister from './forms/ToolboxTalkRegister';
+import BinLinersChangingLog from './forms/BinLinersChangingLog';
+import VisitorsLogBook from './forms/VisitorsLogBook';
+import ProductRejectionForm from './forms/ProductRejectionForm';
+import FoodSamplesCollectionLog from './forms/FoodSamplesCollectionLog';
+import FoodHandlersDailyShoweringForm from './forms/FoodHandlersDailyShoweringForm';
 
 const Stack = createStackNavigator();
 
@@ -68,7 +82,7 @@ export default function App() {
       <NavigationContainer linking={linking}>
         <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
         {/* note: individual screens can accept a `responsive` prop injected by ResponsiveView when needed */}
-        <Stack.Screen name="Splash" component={(props) => <SplashScreen {...props} />} />
+  <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FormSaves" component={FormSavesScreen} options={{ headerShown: false }} />
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
@@ -106,6 +120,20 @@ export default function App() {
   <Stack.Screen name="ProductReleaseForm" component={ProductReleaseForm} />
   <Stack.Screen name="BeverageReceivingForm" component={BeverageReceivingForm} />
   <Stack.Screen name="PackagingMaterialsReceivingForm" component={PackagingMaterialsReceivingForm} />
+  <Stack.Screen name="VegetablesFruitsReceivingForm" component={VegetablesFruitsReceivingForm} />
+  <Stack.Screen name="ChilledFrozenReceivingForm" component={ChilledFrozenReceivingForm} />
+  <Stack.Screen name="DryGoodsReceivingForm" component={DryGoodsReceivingForm} />
+  <Stack.Screen name="ChemicalsReceivingForm" component={ChemicalsReceivingForm} />
+  <Stack.Screen name="EggsReceivingForm" component={EggsReceivingForm} />
+  <Stack.Screen name="DisplayChillerShelfLifeInspectionChecklist" component={DisplayChillerShelfLifeInspectionChecklist} />
+  <Stack.Screen name="TrainingAttendanceRegister" component={TrainingAttendanceRegister} />
+  <Stack.Screen name="PreShiftMeetingAttendanceRegister" component={PreShiftMeetingAttendanceRegister} />
+  <Stack.Screen name="ToolboxTalkRegister" component={ToolboxTalkRegister} />
+  <Stack.Screen name="BinLinersChangingLog" component={BinLinersChangingLog} />
+  <Stack.Screen name="VisitorsLogBook" component={VisitorsLogBook} />
+  <Stack.Screen name="ProductRejectionForm" component={ProductRejectionForm} />
+  <Stack.Screen name="FoodSamplesCollectionLog" component={FoodSamplesCollectionLog} />
+  <Stack.Screen name="FoodHandlersDailyShoweringForm" component={FoodHandlersDailyShoweringForm} />
   <Stack.Screen name="ProcessQualityOutOfControlReport" component={require('./forms/Process_Quality_OutOfControlReport').default} />
   <Stack.Screen name="PastInspectionForm" component={require('./forms/PastInspectionForm').default} />
         </Stack.Navigator>

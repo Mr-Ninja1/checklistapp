@@ -18,6 +18,7 @@ const formCategories = {
       { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
       { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
       { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
+  { id: 117, title: "Display Chiller Shelf-Life Inspection", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller", route: 'DisplayChillerShelfLifeInspectionChecklist' },
       { id: 41, title: "FOH Daily Cleaning & Sanitizing Log Sheet", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' }
     , { id: 43, title: "Front of House Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Front of House", route: 'FOH_FrontOfHouseCleaningChecklist' }
     ]
@@ -26,18 +27,28 @@ const formCategories = {
     name: "Prod Records",
     color: ["#ff9966", "#ff5e62"],
     forms: [
+  { id: 125, title: "Pre Shift Meeting Attendance Register", status: "pending", priority: "medium", dueTime: "As needed", location: "Training Room", route: 'PreShiftMeetingAttendanceRegister' },
+          { id: 127, title: "Product Rejection Form", status: "pending", priority: "critical", dueTime: "As needed", location: "Quality", route: 'ProductRejectionForm' },
+          { id: 126, title: "Bin Liners Changing Log", status: "pending", priority: "medium", dueTime: "Daily", location: "Production Floor", route: 'BinLinersChangingLog' },
         { id: 110, title: "Beverage & Water Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'BeverageReceivingForm' },
+    { id: 114, title: "Dry Goods Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'DryGoodsReceivingForm' },
+    { id: 113, title: "Chilled & Frozen Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'ChilledFrozenReceivingForm' },
+    { id: 115, title: "Chemicals Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'ChemicalsReceivingForm' },
+  { id: 116, title: "Eggs Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'EggsReceivingForm' },
     { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor", route: 'CertificateOfAnalysis' },
     { id: 111, title: "Packaging Materials Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'PackagingMaterialsReceivingForm' },
+    { id: 112, title: "Vegetables & Fruits Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'VegetablesFruitsReceivingForm' },
+    { id: 119, title: "Toolbox Talk Attendance", status: "pending", priority: "medium", dueTime: "As needed", location: "Training Room", route: 'ToolboxTalkRegister' },
       { id: 82, title: "Pest Inspection Form", status: "pending", priority: "medium", dueTime: "Weekly", location: "Facilities", route: 'PastInspectionForm' },
   { id: 83, title: "Customer Satisfaction Questionnaire", status: "pending", priority: "low", dueTime: "As needed", location: "Reception", route: 'CustomerSatisfactionQuestionnaire' },
       { id: 81, title: "Process & Quality Out of Control Report", status: "pending", priority: "critical", dueTime: "As needed", location: "Quality", route: 'ProcessQualityOutOfControlReport' },
       { id: 9, title: "5 Why Report/Non-conformance", status: "completed", priority: "high", dueTime: "As needed", location: "Production Floor" },
   { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab", route: 'ProductReleaseForm' },
   { id: 11, title: "Food Handlers Daily Handwashing", status: "pending", priority: "high", dueTime: "6:00 AM", location: "Production Entry", isHandwashingLog: true, route: 'FoodHandlersHandwashingForm' },
-      { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
-      { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" },
+  { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room", route: 'FoodHandlersDailyShoweringForm' },
+  { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line", route: 'FoodSamplesCollectionLog' },
     { id: 50, title: "Fruit, Vegetable & Egg Washing Log", status: "pending", priority: "high", dueTime: "Before use", location: "Wash Station", route: 'FruitWashingLog' },
+  { id: 118, title: "Training Attendance Register", status: "pending", priority: "medium", dueTime: "As needed", location: "Training Room", route: 'TrainingAttendanceRegister' },
       
     ]
   },
@@ -82,6 +93,7 @@ const formCategories = {
     color: ["#f7971e", "#ffd200"],
     forms: [
           { id: 100, title: "Personal Protective Equipment", status: "pending", priority: "high", dueTime: "As needed", location: "BOH", route: 'PPEIssuanceForm' },
+  { id: 200, title: "Visitors Log Book", status: "pending", priority: "medium", dueTime: "Per shift", location: "Reception", route: 'VisitorsLogBook' },
       { id: 101, title: "Personal Hygiene Checklist", status: "pending", priority: "high", dueTime: "Daily", location: "BOH", route: 'PersonalHygieneChecklist' },
       { id: 102, title: "Health Status Checklist", status: "pending", priority: "critical", dueTime: "Daily", location: "BOH", route: 'BravoHealthStatusCheck' },
       { id: 31, title: "Dry Storage Area Cleaning", status: "pending", priority: "medium", dueTime: "Monday", location: "Storage Room", route: 'DryStorageArea_CleaningChecklist' },
@@ -328,10 +340,10 @@ export default function HomeScreen() {
 
       {/* Form Lists */}
       <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={[styles.formListContent, { minHeight: 0 }]}> 
-        {getFilteredForms(activeCategory).map((form) => (
-          <View key={`form-card-${form.id}-${form.title}`}>
+        {getFilteredForms(activeCategory).map((form, idx) => (
+          <View key={`form-card-${form.id}-${idx}-${form.title}` }>
             <TouchableOpacity
-              key={`form-touchable-${form.id}-${form.title}`}
+              key={`form-touchable-${form.id}-${idx}-${form.title}`}
               disabled={!(form.route || form.isHandwashingLog)}
               onPress={() => {
                 // show spinner and navigate

@@ -110,7 +110,7 @@ const PPEIssuanceForm = () => {
                             <Image source={require('../assets/logo.png')} style={styles.logoImageLeft} />
                             <Text style={styles.logoText}>Bravo</Text>
                             <View style={styles.titleBlock}>
-                                <Text style={styles.documentTitle}>[BRAVO BRANDS LIMITED]</Text>
+                                <Text style={styles.documentTitle}>BRAVO BRANDS LIMITED</Text>
                                 <Text style={styles.documentTitleSub}>Food Safety Management System</Text>
                             </View>
                         </View>
