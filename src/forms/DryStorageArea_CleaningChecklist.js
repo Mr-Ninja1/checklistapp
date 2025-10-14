@@ -28,7 +28,7 @@ const initialCleaningState = DRY_STORAGE_LIST.filter(i => i.isItem).map((item, i
 
 const initialMetadata = {
   location: 'WAREHOUSE AREA', week: '', month: '', year: '',
-  docNo: 'BBN-SHEQ-P-16-R-11f', issueDate: '', revisionDate: 'N/A', compiledBy: 'Michael Zulu C.', approvedBy: 'Hassani Ali', versionNo: '01', revNo: '00', hseqManager: ''
+  issueDate: '', compiledBy: 'Michael Zulu C.', approvedBy: 'Hassani Ali', hseqManager: ''
 };
 
 const Checkbox = ({ checked, onPress }) => (
@@ -146,7 +146,7 @@ export default function DryStorageChecklist() {
               </View>
             </View>
             <View style={styles.headerMeta}>
-              <Text style={styles.docText}>Doc No: {metadata.docNo} | Issue Date: {metadata.issueDate || 'N/A'}</Text>
+              <Text style={styles.docText}>Issue Date: {metadata.issueDate || 'N/A'}</Text>
               <Text style={styles.docText}>Page 1 of 1</Text>
             </View>
             <Text style={styles.mainTitle}>DRY STORAGE AREA CLEANING CHECKLIST</Text>

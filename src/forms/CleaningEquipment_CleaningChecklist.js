@@ -25,8 +25,8 @@ const initialCleaningState = CLEANING_EQUIPMENT_LIST.filter(i => i.isItem).map((
 const initialMetadata = {
   location: 'CLEANING EQUIPMENT',
   week: '', month: '', year: '',
-  docNo: 'BBN-SHEQ-P-15-R-11q', issueDate: '', revisionDate: 'N/A',
-  compiledBy: 'Michael Zulu C.', approvedBy: 'Hassani Ali', versionNo: '01', revNo: '00', hseqManager: ''
+  issueDate: '',
+  compiledBy: 'Michael Zulu C.', approvedBy: 'Hassani Ali', hseqManager: ''
 };
 
 const Checkbox = ({ checked, onPress }) => (
@@ -144,7 +144,7 @@ export default function CleaningEquipmentChecklist() {
               </View>
             </View>
             <View style={styles.headerMeta}>
-              <Text style={styles.docText}>Doc No: {metadata.docNo} | Issue Date: {metadata.issueDate || 'N/A'}</Text>
+              <Text style={styles.docText}>Issue Date: {metadata.issueDate || 'N/A'}</Text>
               <Text style={styles.docText}>Page 1 of 1</Text>
             </View>
             <Text style={styles.mainTitle}>CLEANING EQUIPMENT CHECKLIST</Text>

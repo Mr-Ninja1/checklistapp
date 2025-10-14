@@ -18,13 +18,9 @@ const initialLogState = Array.from({ length: TOTAL_DAYS }, (_, index) => ({
 }));
 
 const initialMetadata = {
-  docNo: 'BBN-SHEQ-KN-SOP-6.8.10g',
   issueDate: '',
-  revisionDate: 'N/A',
   compiledBy: 'Michael Zulu C.',
   approvedBy: 'Hassani Ali',
-  versionNo: '01',
-  revNo: '00',
   month: '',
   year: '',
   location: '',
@@ -140,7 +136,6 @@ export default function WalkInChillerLog() {
                 <Text style={styles.brandSub}>Bravo Brands Central</Text>
               </View>
               <View style={styles.metaBox}>
-                <Text style={styles.metaText}>Doc No: {metadata.docNo}</Text>
                 <Text style={styles.metaText}>Issue Date: {metadata.issueDate}</Text>
               </View>
             </View>

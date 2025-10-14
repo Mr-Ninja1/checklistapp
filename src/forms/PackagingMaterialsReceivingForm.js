@@ -1,149 +1,78 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput } from 'react-native';
+import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-// --- Helper Data for the Receiving Log ---
 const createInitialProductData = (count) => Array.from({ length: count }, (_, i) => ({
     id: `${i + 1}`,
     nameOfProduct: '',
     supplier: '',
-    clean: '', // Checkbox field (✓ / X)
-    temp: '', // Temperature Input field (°C)
-    tempOfBeverage: '',
+    clean: '',
+    temp: '',
     stateOfProduct: '',
     expiryDate: '',
     remarks: '',
 }));
 
-// --- Main Form Component (BEVERAGE AND WATER RECEIVING CHECKLIST) ---
-const BeverageReceivingForm = () => {
-    // Initializing with data for the product log
-    const [receivingData, setReceivingData] = useState(createInitialProductData(10)); 
+const PackagingMaterialsReceivingForm = () => {
+    const [receivingData, setReceivingData] = useState(createInitialProductData(10));
 
-    // Compute document details for the header
-    const issueDate = useMemo(() => '06/08/2025', []); // Hardcoding from image
-    const docRef = useMemo(() => 'BBN-SHEQ-P-F-9.4', []); // Hardcoding from image
-    const versionNo = useMemo(() => '01', []); 
-    const revNo = useMemo(() => '00', []); 
+    const today = new Date();
+    const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
+    const defaultIssueDate = `${pad(today.getDate())}/${pad(today.getMonth() + 1)}/${today.getFullYear()}`;
+    const [issueDate, setIssueDate] = useState(defaultIssueDate);
+    const docRef = useMemo(() => 'BBN-SHEQ-P-F-9.5', []);
+    const versionNo = useMemo(() => '01', []);
+    const revNo = useMemo(() => '00', []);
 
-    // Helper to update the receiving data fields
     const updateReceivingField = (id, field, value) => {
-        setReceivingData(prevData => prevData.map(item => {
-            if (item.id === id) {
-                return {
-                    ...item,
-                    [field]: value,
-                };
-            }
-            return item;
-        }));
+        setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
     };
 
-    // --- RENDER FUNCTIONS ---
-
-    // Renders one row of the receiving log table
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.nameCol]}
-                value={item.nameOfProduct}
-                onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)}
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.supplierCol]}
-                value={item.supplier}
-                onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)}
-            />
-            {/* Delivery Vehicle Checks - Clean (Checkbox) */}
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.cleanCol]}
-                value={item.clean}
-                onChangeText={(t) => updateReceivingField(item.id, 'clean', t)}
-                placeholder="✓ / X"
-            />
-            {/* Delivery Vehicle Checks - Temp (Input) */}
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.tempCol]}
-                value={item.temp}
-                onChangeText={(t) => updateReceivingField(item.id, 'temp', t)}
-                keyboardType="numeric"
-                placeholder="°C"
-            />
-            {/* Product Checks */}
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]}
-                value={item.tempOfBeverage}
-                onChangeText={(t) => updateReceivingField(item.id, 'tempOfBeverage', t)}
-                keyboardType="numeric"
-                placeholder="°C"
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}
-                value={item.stateOfProduct}
-                onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)}
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}
-                value={item.expiryDate}
-                onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)}
-                placeholder="D/M/Y"
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.remarksCol]}
-                value={item.remarks}
-                onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)}
-            />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.nameOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)} />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.cleanCol]} value={item.clean} onChangeText={(t) => updateReceivingField(item.id, 'clean', t)} placeholder="✓ / X" />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
         </View>
     );
 
-    // --- FULL COMPONENT LAYOUT ---
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.scrollViewContent}>
                 <View style={styles.container}>
-                    {/* --- 1. DOCUMENT HEADER --- */}
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
-                            {/* Placeholder for Bravo Logo */}
-                            <Text style={styles.logoText}>Bravo</Text> 
-                            <View style={styles.systemDetails}>
-                                <Text style={styles.systemText}>[BRAVO BRANDS LIMITED]</Text>
-                                <Text style={styles.systemText}>Food Safety Management System</Text>
-                            </View>
-                        </View>
-                        
-                        <View style={styles.docDetails}>
-                            <View style={styles.detailRowItem}>
-                                <Text style={styles.detailLabel}>Doc No:</Text>
-                                <Text style={styles.detailValue}>{docRef}</Text>
-                            </View>
-                            <View style={styles.detailRowItem}>
-                                <Text style={styles.detailLabel}>Issue Date:</Text>
-                                <Text style={styles.detailValue}>{issueDate}</Text>
-                            </View>
-                            <View style={styles.detailRowItem}>
-                                <Text style={styles.detailLabel}>Revision Date:</Text>
-                                <Text style={styles.detailValue}>N/A</Text>
+                            <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                            <View style={styles.systemDetailsWrap}>
+                                <Text style={styles.logoText}>Bravo</Text>
+                                <View style={styles.systemDetails}>
+                                    <Text style={styles.systemText}>[BRAVO BRANDS LIMITED]</Text>
+                                    <Text style={styles.systemText}>Food Safety Management System</Text>
+                                </View>
                             </View>
                         </View>
 
-                        <View style={styles.docDetails}>
+                        <View style={styles.docDetailsRight}>
                             <View style={styles.detailRowItem}>
-                                <Text style={styles.detailLabel}>Page 1 of 1</Text>
+                                <Text style={styles.detailLabel}>Issue Date:</Text>
+                                <TextInput style={styles.detailValueInput} value={issueDate} onChangeText={setIssueDate} />
                             </View>
                             <View style={styles.detailRowItem}>
-                                <Text style={styles.detailLabel}>Rev no:</Text>
-                                <Text style={styles.detailValue}>{revNo}</Text>
+                                <Text style={styles.detailLabel}>Page:</Text>
+                                <Text style={styles.detailValue}>1 of 1</Text>
                             </View>
                         </View>
                     </View>
 
-                    {/* --- HEADER DETAILS (Subject, Compiled, Approved, Version) --- */}
                     <View style={styles.subjectRow}>
                         <View style={styles.subjectItem}>
                             <Text style={styles.subjectLabel}>Subject:</Text>
-                            <Text style={styles.subjectValue}>Beverage and Water Receiving Checklist</Text>
+                            <Text style={styles.subjectValue}>Packaging Materials Receiving Checklist</Text>
                         </View>
                         <View style={styles.versionDetails}>
                             <Text style={styles.versionText}>Version No: {versionNo}</Text>
@@ -152,7 +81,7 @@ const BeverageReceivingForm = () => {
                     <View style={styles.subDetailRow}>
                         <View style={styles.subDetailItem}>
                             <Text style={styles.subDetailLabel}>Compiled By:</Text>
-                            <Text style={styles.subDetailValue}>Patrnan</Text>
+                            <Text style={styles.subDetailValue}>QA Team</Text>
                         </View>
                         <View style={styles.subDetailItem}>
                             <Text style={styles.subDetailLabel}>Approved By:</Text>
@@ -160,17 +89,13 @@ const BeverageReceivingForm = () => {
                         </View>
                     </View>
 
-                    {/* --- 2. SPECIFICATION --- */}
                     <View style={styles.specificationSection}>
                         <Text style={styles.specLabel}>Specification:</Text>
                         <Text style={styles.specText}>
-                            Beverages and water shall be at **Room temperature ($20-25$ degrees celsius)**; 
-                            packaging shall be **intact**; **no signs of pests**, cars shall be **intact**, seals shall 
-                            **not be broken** and **label shall be legible and correct**.
+                            Packaging materials shall be clean, dry, intact with no tears or damage; labels/printing shall be correct and match the order; seals shall be intact and no contamination observed.
                         </Text>
                     </View>
 
-                    {/* --- 3. DELIVERY DETAILS --- */}
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
@@ -196,15 +121,11 @@ const BeverageReceivingForm = () => {
                         </View>
                     </View>
 
-                    {/* --- 4. RECEIVING LOG TABLE --- */}
                     <View style={dailyStyles.tableContainer}>
-                        {/* --- Table Header --- */}
                         <View style={dailyStyles.tableHeader}>
-                            {/* Static Columns */}
                             <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Name of Product</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
 
-                            {/* Delivery Vehicle Group */}
                             <View style={dailyStyles.groupHeaderCol}>
                                 <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
                                 <View style={dailyStyles.subHeaderRow}>
@@ -213,11 +134,9 @@ const BeverageReceivingForm = () => {
                                 </View>
                             </View>
 
-                            {/* Product Group */}
                             <View style={[dailyStyles.groupHeaderCol, dailyStyles.lastGroupHeaderCol]}>
                                 <Text style={dailyStyles.groupHeaderTitle}>Product</Text>
                                 <View style={dailyStyles.subHeaderRow}>
-                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempOfBeverageCol]}>Temp of{"\n"}Beverage</Text>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.stateOfProductCol]}>State of{"\n"}Product</Text>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
@@ -225,28 +144,20 @@ const BeverageReceivingForm = () => {
                             </View>
                         </View>
 
-                        {/* --- Table Rows --- */}
-                        <FlatList
-                            data={receivingData}
-                            renderItem={renderReceivingLogItem}
-                            keyExtractor={item => item.id}
-                            scrollEnabled={false} 
-                        />
-                    </View>
-                    
-                    {/* --- 5. VERIFICATION FOOTER --- */}
-                    <View style={styles.verificationFooter}>
-                        <Text style={styles.verificationText}>VERIFIED BY</Text>
-                        <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
+                        <FlatList data={receivingData} renderItem={renderReceivingLogItem} keyExtractor={item => item.id} scrollEnabled={false} />
                     </View>
 
+                    <View style={styles.verificationFooter}>
+                        <Text style={styles.verificationText}>VERIFIED BY</Text>
+                        <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
     );
 };
 
-// --- GENERAL STYLES ---
+// --- GENERAL STYLES (copied from BeverageReceivingForm for consistency) ---
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
@@ -259,7 +170,9 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-        minWidth: 950, // Ensure enough horizontal space for the table
+        // A4 landscape at ~96 DPI is about 1123px wide - use this minimum so it fills an A4 page in browser
+        minWidth: 1123,
+        paddingHorizontal: 8,
     },
 
     // --- 1. DOCUMENT HEADER STYLES (Reused from previous form) ---
@@ -279,19 +192,20 @@ const styles = StyleSheet.create({
         paddingRight: 5,
         flex: 1.5,
     },
+    logoImage: { width: 48, height: 48, marginRight: 10 },
     logoText: {
         fontWeight: 'bold',
-        fontSize: 18,
+        fontSize: 28,
         color: '#007A33', 
-        marginRight: 5,
+        marginRight: 10,
     },
     systemDetails: {
         justifyContent: 'center',
     },
     systemText: {
-        fontSize: 8,
+        fontSize: 12,
         fontWeight: 'bold',
-        lineHeight: 10,
+        lineHeight: 14,
     },
     docDetails: {
         flex: 1,
@@ -305,10 +219,10 @@ const styles = StyleSheet.create({
     },
     detailLabel: {
         fontWeight: 'bold',
-        fontSize: 8,
+        fontSize: 12,
     },
     detailValue: {
-        fontSize: 8,
+        fontSize: 12,
     },
 
     // --- Subject and Version Details ---
@@ -328,11 +242,11 @@ const styles = StyleSheet.create({
     },
     subjectLabel: {
         fontWeight: 'bold',
-        fontSize: 10,
+        fontSize: 14,
     },
     subjectValue: {
-        fontSize: 10,
-        marginLeft: 5,
+        fontSize: 16,
+        marginLeft: 8,
     },
     versionDetails: {
         flex: 1,
@@ -377,12 +291,13 @@ const styles = StyleSheet.create({
     },
     specLabel: {
         fontWeight: 'bold',
-        fontSize: 10,
-        marginBottom: 2,
+        fontSize: 14,
+        marginBottom: 6,
     },
     specText: {
-        fontSize: 10,
-        lineHeight: 14,
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 8,
     },
     
     // --- 3. DELIVERY DETAILS STYLES ---
@@ -400,16 +315,16 @@ const styles = StyleSheet.create({
     },
     deliveryLabel: {
         fontWeight: 'bold',
-        fontSize: 9,
-        marginRight: 5,
+        fontSize: 12,
+        marginRight: 8,
         flexShrink: 0,
     },
     deliveryInput: {
         borderBottomWidth: 1,
         borderBottomColor: '#000',
         flex: 1,
-        fontSize: 10,
-        paddingVertical: 1,
+        fontSize: 12,
+        paddingVertical: 4,
         marginRight: 15,
     },
     
@@ -419,11 +334,11 @@ const styles = StyleSheet.create({
     },
     verificationText: {
         fontWeight: 'bold',
-        fontSize: 9,
-        marginBottom: 5,
+        fontSize: 12,
+        marginBottom: 8,
     },
     verificationSignature: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 'bold',
     },
 });
@@ -442,16 +357,16 @@ const dailyStyles = StyleSheet.create({
     },
     headerCell: {
         fontWeight: 'bold',
-        fontSize: 9,
-        padding: 5,
+        fontSize: 12,
+        padding: 8,
         textAlign: 'center',
         borderRightWidth: 1,
         borderRightColor: '#000',
-        minHeight: 50,
+        minHeight: 60,
         textAlignVertical: 'center',
     },
     spanTwoRows: {
-        minHeight: 75, // Adjust height to match the grouped column height
+        minHeight: 90, // Adjust height to match the grouped column height
     },
     
     // Grouped Headers (Delivery Vehicle and Product)
@@ -464,12 +379,12 @@ const dailyStyles = StyleSheet.create({
     },
     groupHeaderTitle: {
         fontWeight: 'bold',
-        fontSize: 10,
-        padding: 3,
+        fontSize: 14,
+        padding: 6,
         textAlign: 'center',
         borderBottomWidth: 1,
         borderBottomColor: '#000',
-        height: 30, // Top row height
+        height: 36, // Top row height
         textAlignVertical: 'center',
     },
     subHeaderRow: {
@@ -479,8 +394,8 @@ const dailyStyles = StyleSheet.create({
     subHeaderCell: {
         // Shared styles for sub-cells
         fontWeight: 'bold',
-        fontSize: 8,
-        padding: 2,
+        fontSize: 12,
+        padding: 4,
         textAlign: 'center',
         borderRightWidth: 1,
         borderRightColor: '#000',
@@ -490,32 +405,32 @@ const dailyStyles = StyleSheet.create({
         borderRightWidth: 0,
     },
 
-    // Column widths and specific header styles
-    nameCol: { width: 140 }, 
-    supplierCol: { width: 100 }, 
+    // Column widths and specific header styles (widened for A4 landscape)
+    nameCol: { width: 260 }, 
+    supplierCol: { width: 180 }, 
     
     // Delivery Vehicle Sub-Columns
-    cleanCol: { width: 60, borderRightWidth: 1, borderRightColor: '#000' }, 
-    tempCol: { width: 60, borderRightWidth: 1, borderRightColor: '#000' }, 
+    cleanCol: { width: 90, borderRightWidth: 1, borderRightColor: '#000' }, 
+    tempCol: { width: 90, borderRightWidth: 1, borderRightColor: '#000' }, 
 
     // Product Sub-Columns
-    tempOfBeverageCol: { width: 80 }, 
-    stateOfProductCol: { width: 90 }, 
-    expiryDateCol: { width: 80 }, 
-    remarksCol: { width: 120, borderRightWidth: 0 },
+    tempOfBeverageCol: { width: 120 }, 
+    stateOfProductCol: { width: 140 }, 
+    expiryDateCol: { width: 120 }, 
+    remarksCol: { width: 300, borderRightWidth: 0 },
 
     // --- Table Rows ---
     tableRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
         borderBottomColor: '#000',
-        minHeight: 35,
+        minHeight: 48,
         alignItems: 'stretch',
     },
     dataCell: {
-        fontSize: 10,
-        paddingHorizontal: 5,
-        paddingVertical: 2,
+        fontSize: 12,
+        paddingHorizontal: 8,
+        paddingVertical: 6,
         borderRightWidth: 1,
         borderRightColor: '#000',
         textAlign: 'center',
@@ -523,4 +438,4 @@ const dailyStyles = StyleSheet.create({
     },
 });
 
-export default BeverageReceivingForm;
+export default PackagingMaterialsReceivingForm;
