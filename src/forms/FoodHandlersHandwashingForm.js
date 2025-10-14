@@ -263,8 +263,11 @@ export default function FoodHandlersHandwashingForm() {
   <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         <View style={styles.logoRow}>
           <Image source={require('../assets/logo.png')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
-          <Text style={[styles.title, { fontSize: dyn.titleFont, marginBottom: resp.s(12) }]}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>
+          <View style={{ flexDirection: 'column', flex: 1 }}>
+            <Text style={[styles.companyNameSmall]}>Bravo</Text>
+          </View>
         </View>
+        <View style={styles.titleRow}><Text style={[styles.title, { fontSize: dyn.titleFont } ]}>Food Handlers Daily Handwashing Tracking Log Sheet</Text></View>
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
             <Text style={styles.label}>Date:</Text>
@@ -444,6 +447,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  titleRow: { alignItems: 'center', marginBottom: 12 },
   logo: {
     width: 48,
     height: 48,

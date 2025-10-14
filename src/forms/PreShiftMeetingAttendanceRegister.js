@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function PreShiftMeetingRegister() {
+  const draftKey = 'pre_shift_meeting_attendance';
   // Mock image asset placeholder since local assets aren't available in this environment
   // Use app logo from assets
   const logo = () => (
@@ -10,6 +17,89 @@ export default function PreShiftMeetingRegister() {
 
   // 20 total rows: 10 left, 10 right
   const rows = Array.from({ length: 20 }, (_, i) => i + 1);
+
+  // Load draft on mount
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const d = await getDraft(draftKey);
+        if (d && mounted) {
+          if (d.agenda) setAgenda(d.agenda);
+          if (d.presenter) setPresenter(d.presenter);
+          if (d.dateVal) setDateVal(d.dateVal);
+          if (d.issues) setIssues(d.issues);
+          if (d.cells) setCells(d.cells);
+        }
+      } catch (e) {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Auto-save draft on change
+  React.useEffect(() => {
+    const t = setTimeout(() => setDraft(draftKey, { agenda, presenter, dateVal, issues, cells }), 700);
+    return () => clearTimeout(t);
+  }, [agenda, presenter, dateVal, issues, cells]);
+
+  // Save canonical payload
+  const handleSubmit = async () => {
+    try {
+      // Try to embed logo as base64
+      let logoDataUri = null;
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.png'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+          if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+        }
+      } catch (e) { logoDataUri = null; }
+
+      const payload = {
+        formType: 'PreShiftMeetingAttendance',
+        templateVersion: 'v1.0',
+        title: 'PRE-SHIFT MEETING ATTENDANCE REGISTER',
+        metadata: {},
+        agenda,
+        presenter,
+        dateVal,
+        issues,
+        table: cells,
+        layoutHints: {},
+        assets: logoDataUri ? { logoDataUri } : undefined,
+        savedAt: Date.now(),
+      };
+      const formId = `PreShiftMeetingAttendance_${Date.now()}`;
+      await formStorage.saveForm(formId, payload);
+      try { await addFormHistory({ title: payload.title, date: payload.dateVal, savedAt: payload.savedAt, meta: { formId } }); } catch (e) {}
+      try { await removeDraft(draftKey); } catch (e) {}
+      setAgenda(''); setPresenter(''); setDateVal(() => {
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const year = today.getFullYear();
+        return `${day}/${month}/${year}`;
+      });
+      setIssues(['', '', '', '']);
+      setCells(() => {
+        const state = { left: {}, right: {} };
+        for (let i = 1; i <= 10; i++) state.left[i] = { name: '', job: '', sign: '' };
+        for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' };
+        return state;
+      });
+      Alert.alert('Saved', 'Form saved to history');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save form');
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      await setDraft(draftKey, { agenda, presenter, dateVal, issues, cells });
+      Alert.alert('Draft saved');
+    } catch (e) { Alert.alert('Error', 'Failed to save draft'); }
+  };
   const [agenda, setAgenda] = useState(''); // Updated from Subject
   const [presenter, setPresenter] = useState('');
   const [dateVal, setDateVal] = useState(() => {
@@ -176,6 +266,16 @@ export default function PreShiftMeetingRegister() {
         </View>
         {/* End of table */}
 
+        {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
+        <View style={{ height: 18 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
+          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

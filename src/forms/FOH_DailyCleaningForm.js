@@ -3,10 +3,14 @@ import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 
 import { Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
+import formStorage from '../utils/formStorage';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 // ...existing code... (react hooks consolidated above)
 import { useNavigation } from '@react-navigation/native';
 import LoadingOverlay from '../components/LoadingOverlay';
+import FormActionBar from '../components/FormActionBar';
 
 // --- DATA STRUCTURE ---
 const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
@@ -34,7 +38,7 @@ const initialEquipmentState = EQUIPMENT_LIST.map((name, index) => {
     ppm: '',
     staffName: '',
     staffSign: '',
-    slipName: '',
+    SUPName: '',
     supSign: '',
     times,
   };
@@ -114,7 +118,7 @@ export default function FOH_DailyCleaningForm() {
     TIME_SLOTS: 0.36,
     STAFF_NAME: 0.11, // widened
     SIGNATURE: 0.11, // widened
-    SLIP_NAME: 0.095,
+    SUP_NAME: 0.095,
     SUP_SIGN: 0.095,
   }), []);
 
@@ -125,7 +129,7 @@ export default function FOH_DailyCleaningForm() {
     const perTime = Math.max(28, Math.floor(timeSlotsTotal / TIME_SLOTS.length));
     const staff = Math.max(60, Math.round(targetTableWidth * PROPORTIONS.STAFF_NAME));
     const sign = Math.max(60, Math.round(targetTableWidth * PROPORTIONS.SIGNATURE));
-    const slip = Math.max(60, Math.round(targetTableWidth * PROPORTIONS.SLIP_NAME));
+    const SUP = Math.max(60, Math.round(targetTableWidth * PROPORTIONS.SUP_NAME));
     const sup = Math.max(60, Math.round(targetTableWidth * PROPORTIONS.SUP_SIGN));
 
     return {
@@ -134,13 +138,13 @@ export default function FOH_DailyCleaningForm() {
       TIME_SLOT: perTime,
       STAFF_NAME: staff,
       SIGNATURE: sign,
-      SLIP_NAME: slip,
+      SUP_NAME: SUP,
       SUP_SIGN: sup,
     };
   }, [targetTableWidth, PROPORTIONS]);
 
   const TIME_SLOTS_WIDTH = COL_WIDTHS.TIME_SLOT * TIME_SLOTS.length;
-  const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIPMENT + COL_WIDTHS.PPM + TIME_SLOTS_WIDTH + COL_WIDTHS.STAFF_NAME + COL_WIDTHS.SIGNATURE + COL_WIDTHS.SLIP_NAME + COL_WIDTHS.SUP_SIGN;
+  const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIPMENT + COL_WIDTHS.PPM + TIME_SLOTS_WIDTH + COL_WIDTHS.STAFF_NAME + COL_WIDTHS.SIGNATURE + COL_WIDTHS.SUP_NAME + COL_WIDTHS.SUP_SIGN;
 
   const renderLogRow = (item) => (
     <View key={item.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(44) }]}> 
@@ -157,7 +161,7 @@ export default function FOH_DailyCleaningForm() {
       </View>
       <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffName', text)} value={item.staffName} /></DataCell>
       <DataCell width={COL_WIDTHS.SIGNATURE}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffSign', text)} value={item.staffSign} /></DataCell>
-      <DataCell width={COL_WIDTHS.SLIP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'slipName', text)} value={item.slipName} /></DataCell>
+      <DataCell width={COL_WIDTHS.SUP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'SUPName', text)} value={item.SUPName} /></DataCell>
       <DataCell width={COL_WIDTHS.SUP_SIGN}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'supSign', text)} value={item.supSign} /></DataCell>
     </View>
   );
@@ -165,8 +169,52 @@ export default function FOH_DailyCleaningForm() {
   const handleSave = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'FOH Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(draftKey);
+      // Build canonical payload
+      // try to embed logo as base64 for perfect saved rendering (best-effort)
+      let logoDataUri = null;
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.png'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          try {
+            const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+            if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+          } catch (e) { /* ignore */ }
+        }
+      } catch (e) { /* ignore */ }
+
+      const payload = {
+        formType: 'FOH_DailyCleaning',
+        templateVersion: 'v1.0',
+        title: 'FOH Daily Cleaning',
+        date: metadata.date,
+        metadata,
+        timeSlots: TIME_SLOTS,
+        formData,
+        layoutHints: COL_WIDTHS,
+        _tableWidth: TOTAL_TABLE_WIDTH,
+        assets: logoDataUri ? { logoDataUri } : undefined,
+        savedAt: Date.now(),
+      };
+
+      const formId = `FOH_DailyCleaning_${Date.now()}`;
+      try {
+        await formStorage.saveForm(formId, payload);
+        // ensure history entry points to formId (some environments may fail to register inside formStorage)
+        try {
+          await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId, filePath: null } });
+        } catch (e) {}
+      } catch (e) {
+        // fallback to older history if storage fails
+        await addFormHistory({ title: 'FOH Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
+      }
+
+      try { await removeDraft(draftKey); } catch (e) {}
+
+      // reset form to empty/default state
+      setFormData(initialEquipmentState.map(i => ({ ...i, times: Object.keys(i.times).reduce((acc,k)=>({ ...acc, [k]: false }), {}) })));
+      setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+
       alert('Submitted and saved to history');
       navigation.navigate('Home');
     } catch (e) { alert('Failed to submit'); }
@@ -188,14 +236,16 @@ export default function FOH_DailyCleaningForm() {
   const needsHorizontal = TOTAL_TABLE_WIDTH > availableWidth;
 
   return (
-    <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled">
+    <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 140 }}>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
-      {/* Header with logo and company name */}
+      {/* Header: logo + company name at top-left, title centered below */}
       <View style={styles.headerTop}>
         <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>
-        <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text>
       </View>
+      <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text></View>
+
+      <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} />
 
       <View style={styles.metadataContainer}>
         {/* First row: Date | Location | Shift */}
@@ -254,7 +304,7 @@ export default function FOH_DailyCleaningForm() {
             </View>
             <HeaderCell width={COL_WIDTHS.STAFF_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF NAME</Text></HeaderCell>
             <HeaderCell width={COL_WIDTHS.SIGNATURE}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF SIGN</Text></HeaderCell>
-            <HeaderCell width={COL_WIDTHS.SLIP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SLIP NAME</Text></HeaderCell>
+            <HeaderCell width={COL_WIDTHS.SUP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP NAME</Text></HeaderCell>
             <HeaderCell width={COL_WIDTHS.SUP_SIGN}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP SIGN</Text></HeaderCell>
           </View>
 
@@ -265,17 +315,7 @@ export default function FOH_DailyCleaningForm() {
 
       <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All food handlers are required to clean and sanitize the equipment used every after use.</Text>
 
-      <View style={{ padding: s(8), alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: s(8) }}>
-        <TouchableOpacity onPress={handleBack} style={{ backgroundColor: '#777', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: s(8) }}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Back</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: s(8) }}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save Draft</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#185a9d', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8 }}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Submit</Text>
-        </TouchableOpacity>
-      </View>
+      <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} />
     </ScrollView>
   );
 }
@@ -306,8 +346,9 @@ const styles = StyleSheet.create({
   leftAlign: { alignItems: 'flex-start', paddingLeft: 12 },
   dataText: { fontSize: 12, color: '#333' },
   textInput: { width: '100%', height: 36, borderWidth: 1, borderColor: '#4B5563', paddingHorizontal: 6, fontSize: 12, textAlign: 'center', backgroundColor: '#fff', borderRadius: 4 },
-  checkboxContainer: { width: 26, height: 26, borderWidth: 1.5, borderColor: '#333', borderRadius: 4, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6', padding: 6 },
-  checkboxText: { fontSize: 14, fontWeight: 'bold', color: '#008000' },
+  checkboxContainer: { width: 36, height: 36, borderWidth: 1.5, borderColor: '#333', borderRadius: 6, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6', padding: 2 },
+  checkboxText: { fontSize: 20, fontWeight: '700', color: '#008000', lineHeight: 20 },
+
   instruction: { marginTop: 22, fontSize: 12, fontStyle: 'italic', padding: 6, textAlign: 'center', color: '#666' },
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   logo: { width: 64, height: 48, marginRight: 8 },
@@ -319,4 +360,10 @@ const extraButtonStyles = StyleSheet.create({
   auxButton: { backgroundColor: '#777', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
   auxButtonSaveDraft: { backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
   auxButtonText: { color: '#fff', fontWeight: '700' },
+});
+
+// inject top button styles into main styles for consistency
+Object.assign(styles, {
+  topButtonRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 12 },
+  submitButton: { backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
 });

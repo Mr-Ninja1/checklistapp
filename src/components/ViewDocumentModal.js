@@ -34,10 +34,14 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
-          <ScrollView style={{ maxHeight: '92%' }} contentContainerStyle={{ paddingBottom: 12 }}>
+          {/* Vertical scroll for modal content; enable nested scrolling so inner horizontal scrolls work */}
+          <ScrollView style={{ maxHeight: '92%' }} contentContainerStyle={{ paddingBottom: 12 }} nestedScrollEnabled={true}>
             <View ref={formRef} collapsable={false}>
-              {/* Render saved form via SavedFormRenderer (new unified renderer) */}
-              <SavedFormRenderer savedPayload={form} />
+              {/* Allow horizontal scrolling inside the modal for wide tables */}
+              <ScrollView horizontal={true} nestedScrollEnabled={true} contentContainerStyle={{ flexGrow: 1 }}>
+                {/* Render saved form via SavedFormRenderer (new unified renderer) */}
+                <SavedFormRenderer savedPayload={form} />
+              </ScrollView>
             </View>
           </ScrollView>
 

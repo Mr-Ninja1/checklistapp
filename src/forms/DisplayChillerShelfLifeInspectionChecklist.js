@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, FlatList, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
 // items sourced from cat.md
 const checklistItems = [
@@ -25,13 +29,61 @@ const createRowsFromItems = (items) => items.map((it, i) => ({
 }));
 
 export default function DisplayChillerShelfLifeInspectionChecklist() {
-  const [rows, setRows] = useState(createRowsFromItems(checklistItems));
+  const draftKey = 'display_chiller_shelf_life';
+  const [rows, setRows] = useState(() => createRowsFromItems(checklistItems));
   const today = new Date();
   const defaultDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
   const [issueDate, setIssueDate] = useState(defaultDate);
 
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const d = await getDraft(draftKey);
+        if (d && mounted) {
+          if (d.rows) setRows(d.rows);
+          if (d.issueDate) setIssueDate(d.issueDate);
+        }
+      } catch (e) {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setDraft(draftKey, { rows, issueDate }), 700);
+    return () => clearTimeout(t);
+  }, [rows, issueDate]);
+
   const updateField = (id, field, value) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const rowsWithId = rows.map((r, i) => ({ id: r.id || `${i+1}`, ...r }));
+      const payload = {
+        formType: 'DisplayChillerShelfLifeInspection',
+        templateVersion: 'v1.0',
+        title: 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST',
+        frequency: 'DAILY',
+        date: issueDate,
+        formData: rowsWithId,
+        layoutHints: { itemCol: 420, dateCol: 100, timeCol: 100, usedByCol: 120, staffCol: 220, qtyCol: 80, signCol: 80 },
+        _tableWidth: 420 + 100 + 100 + 120 + 220 + 80 + 80,
+        savedAt: Date.now(),
+      };
+
+      const formId = `DisplayChillerShelfLifeInspection_${Date.now()}`;
+      await formStorage.saveForm(formId, payload);
+      try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } }); } catch (e) {}
+      try { await removeDraft(draftKey); } catch (e) {}
+      Alert.alert('Saved', 'Form saved to history');
+      setRows(createRowsFromItems(checklistItems));
+      setIssueDate(defaultDate);
+    } catch (e) {
+      console.warn('Save failed', e);
+      Alert.alert('Error', 'Failed to save form');
+    }
   };
 
   const renderRow = ({ item }) => (
@@ -51,9 +103,14 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
       <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 160 }}>
         <View style={styles.header}>
           <Image source={require('../assets/logo.png')} style={styles.logo} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST</Text>
-            <Text style={styles.frequency}>FREQUENCY: DAILY</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <View style={{ marginRight: 12 }}>
+              <Text style={styles.companyName}>Bravo</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST</Text>
+              <Text style={styles.frequency}>FREQUENCY: DAILY</Text>
+            </View>
           </View>
         </View>
 
@@ -73,6 +130,17 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
 
         <View style={{ height: 30 }} />
         <Text style={{ fontSize: 12, color: '#333' }}>DATE: ______________________    VERIFIED BY: ______________________    BARISTA SIGN: ______________________</Text>
+
+        {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
+        <View style={{ height: 18 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
+          <TouchableOpacity onPress={async () => { await setDraft(draftKey, { rows, issueDate }); alert('Draft saved'); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit Checklist</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

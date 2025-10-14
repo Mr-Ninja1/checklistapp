@@ -33,7 +33,13 @@ export default function FoodHandlersPresentational({ payload }) {
         ) : (
           <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
         )}
-        <Text style={styles.title}>{title}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <Text style={styles.companyNameLarge}>Bravo</Text>
+        </View>
+      </View>
+
+      <View style={styles.titleRow}>
+        <Text style={styles.formTitle}>{title}</Text>
       </View>
 
       <View style={styles.detailRow}>
@@ -98,8 +104,9 @@ const styles = StyleSheet.create({
   container: { backgroundColor: '#fff' },
   logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   logo: { width: 48, height: 48, marginRight: 12, borderRadius: 8, backgroundColor: '#fff' },
-  logoPlaceholder: { width: 48, height: 48, marginRight: 12, borderRadius: 8, backgroundColor: '#f0f0f0' },
-  title: { fontSize: 18, fontWeight: '700', color: '#185a9d', flex: 1 },
+  titleRow: { alignItems: 'center', marginBottom: 8 },
+  formTitle: { fontSize: 16, fontWeight: '800', color: '#1f2937' },
+  companyNameSmall: { fontSize: 14, fontWeight: '800', color: '#185a9d' },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   detailItem: { flex: 1, paddingRight: 8 },
   label: { fontWeight: '700', color: '#185a9d', marginBottom: 4 },

@@ -133,6 +133,105 @@ This snapshot is intentionally concise; paste it into this file to let the assis
 
 Add this task to the implementation backlog and schedule after all forms are implemented and stabilized.
 
+## Developer guide: Form saving and perfect saved-form reproduction
+
+This section documents the exact contract, payload shape, and step-by-step checklist to implement saving so that a saved form can be re-opened and rendered exactly as it appeared when the user submitted it. Paste this into your mental checklist when converting any form.
+
+- Goal
+	- When a user fills a form and clicks Submit (Save), capture a canonical payload that contains all metadata, layout hints, assets (logo), and formData so the Saved Forms screen can re-render the form pixel-faithfully.
+	- Saved payloads must be deterministic and portable between mobile and desktop so exported PDFs or desktop previews match the original on-screen layout.
+
+- Contract (short)
+	- Inputs (from editable form): metadata (date, location, shift, verifiedBy, managerSign, other header fields), formData (rows/fields), timeSlots (array), assets (logo module or dataURI), layout hints (column widths), optional render hints (fontScale, _tableWidth). 
+	- Output: call formStorage.saveForm(formId, payload) where payload conforms to the canonical payload schema below.
+	- Error modes: If asset embedding fails, still save payload without assets but mark `assets: undefined` so renderer can use fallback logo. If persistent storage fails (rare), fallback to addFormHistory with `meta` and warn the user.
+
+- Canonical payload schema (recommended keys)
+
+	{
+		formType: string,            // e.g. 'FOH_DailyCleaning'
+		templateVersion: string,     // e.g. 'v1.0'
+		title: string,               // human title
+		date: string,                // user-facing date
+		metadata: { ... },           // full metadata object (all header fields)
+		timeSlots: [...],            // array of time column headings (if applicable)
+		formData: [...],             // canonical rows / entries (primitive values only)
+		layoutHints: { KEY: number },// per-column widths in pixels e.g. { EQUIPMENT: 120, PPM: 60, TIME_SLOT: 48, ... }
+		_tableWidth: number,         // total table width in pixels (sum of columns)
+		assets?: { logoDataUri: string }, // optional base64 data URI for logo to guarantee identical rendering
+		templateNotes?: string,      // optional notes for future schema changes
+		savedAt: number              // timestamp
+	}
+
+- Saving steps for an editable form (detailed)
+	1. Compute layout hints and total table width using the same algorithm the editable form uses for responsive columns (store the per-column pixel widths as `layoutHints` and `_tableWidth`).
+	2. Attempt to embed the logo synchronously into the payload: use the app Asset helper to locate `../assets/logo.png`, download it (Asset.fromModule(...).downloadAsync()), then read it as base64 (FileSystem.readAsStringAsync) and set `assets.logoDataUri = 'data:image/png;base64,...'`. If this fails, proceed without assets.
+	3. Build `payload` following the canonical schema above. Include `formData` in a simplified, serializable form (strings, numbers, booleans). Avoid embedding functions or class instances.
+	4. Generate a stable `formId` (e.g. `${formType}_${Date.now()}`) and call `await formStorage.saveForm(formId, payload)`. `formStorage.saveForm` should write `forms/<formId>/payload.json` and register a history entry.
+	5. After successful save, call `addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } })` if `formStorage.saveForm` does not already register history in your environment. This ensures the FormSaves screen can find the file.
+	6. Remove any draft for this form (removeDraft(draftKey)) and reset the editable form state if UX requires.
+
+- Presentational renderer contract (what saved renderers must support)
+	- Each presentational (read-only) renderer must accept a single prop: `payload` (the canonical payload above).
+	- It must read `payload.layoutHints` and use those widths to size columns. Fallback to conservative defaults when keys are missing.
+	- It must render header metadata (Date, Location, Shift, Verified By, Manager Sign) using `payload.metadata` or other top-level keys (`payload.date`) in a tolerant manner.
+	- It must prefer `payload.assets.logoDataUri` for logo rendering; if missing, use a local `require('../../assets/logo.png')` fallback.
+	- The renderer should be resilient to legacy saves: prefer modern keys but check common legacy variants (e.g., `SUPName` vs `slipName`).
+
+- Migration / Legacy support
+	- Many older history entries may only contain `meta` and `formData` but not a canonical payload file. Create a migration utility (one-off script) that:
+		- Reads `getFormHistory()` and identifies entries without `meta.formId` or without `forms/<formId>/payload.json`.
+		- For each legacy entry, construct a canonical payload by mapping `meta` -> `metadata`, `meta.formData` -> `formData`, infer `timeSlots` from available keys if possible, compute `layoutHints` using the form's responsive column logic, and call `formStorage.saveForm(newFormId, payload)`.
+		- Update the history entry to include `meta.formId` and any new `pdfPath` if created.
+
+- Export / PDF notes
+	- Desktop (vector preferred): implement a small form-specific HTML generator that accepts a canonical payload and renders a pixel-perfect HTML+CSS A4 page. Use Print.printToFileAsync to create a vector PDF. This yields best printing fidelity (text selectable).
+	- Mobile (screenshot→PDF): to preserve fidelity across complex RN components, continue using captureRef with a high pixelRatio and embed the PNG into an A4 HTML wrapper. Ensure images/logo are embedded as base64 before capture.
+	- Timing: always wait for images to load, then run two requestAnimationFrame cycles (or a short timeout) before capture to ensure layout is stable.
+
+- QA checklist (pre-merge)
+	- Save+Load roundtrip: programmatically save a sample payload and immediately load it in the Saved Forms modal; assert `payload.formData` equality and visually validate.
+	- Metadata fidelity: validate Date, Shift, Verified By, Manager Sign appear in saved renderer.
+	- Layout fidelity: saved renderer uses `layoutHints` to size columns so the layout matches the editable UI in both desktop and mobile widths.
+	- Asset embedding: if a logo was embedded, ensure `payload.assets.logoDataUri` is present and the renderer displays the logo.
+	- Export smoke: produce a PDF from a saved payload and visually check header/logo, table borders and full-width capture.
+
+- Example snippet (save flow)
+
+```javascript
+// inside a form screen
+const payload = {
+	formType: 'MyForm',
+	templateVersion: 'v1',
+	title: 'My Form Title',
+	date: metadata.date,
+	metadata,
+	timeSlots,
+	formData,
+	layoutHints: COL_WIDTHS,
+	_tableWidth: TOTAL_TABLE_WIDTH,
+	assets: logoDataUri ? { logoDataUri } : undefined,
+	savedAt: Date.now(),
+};
+const formId = `${payload.formType}_${Date.now()}`;
+await formStorage.saveForm(formId, payload);
+await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } });
+```
+
+- Tests to add
+	- Unit: serializer roundtrip test that serializes `payload` to JSON file and `formStorage.loadForm(formId)` returns same object.
+	- Integration: E2E test that fills a form, saves it, opens Saved Forms modal, and asserts key DOM/text elements exist (date, shift, at least one ticked cell).
+	- Export test: automated run that captures a sample view and verifies the generated PDF file exists and has non-zero size.
+
+- Checklist for converting a new form
+	1. Create a presentational (read-only) renderer using the editable form layout; accept `payload` prop.
+ 2. Extract layoutHints calculation from the editable form and reuse it when building `payload` on save.
+ 3. Update the Save/Submit handler to build the canonical payload and call `formStorage.saveForm` + `addFormHistory` + `removeDraft`.
+ 4. Add the new presentational renderer to `SavedFormRenderer` so the Saved Forms modal dispatches to it.
+ 5. Run the QA checklist above.
+
+If you keep this guide in `requirements-full.md` you'll always have the exact steps available when converting more forms or debugging saved-form fidelity. Follow the contract and the saved forms will render identically across mobile and desktop.
+
 
 creating form saving logic
 so check for the saving part lets discuss,
