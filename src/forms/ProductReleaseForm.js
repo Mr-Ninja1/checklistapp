@@ -87,7 +87,7 @@ const ProductReleaseForm = () => {
                             <View>
                                 <Text style={styles.logoText}>Bravo</Text>
                                 <View style={styles.systemDetails}>
-                                    <Text style={styles.systemText}>[BRAVO BRANDS LIMITED]</Text>
+                                    <Text style={styles.systemText}>BRAVO BRANDS LIMITED</Text>
                                     <Text style={styles.systemText}>Food Safety Management System</Text>
                                 </View>
                             </View>

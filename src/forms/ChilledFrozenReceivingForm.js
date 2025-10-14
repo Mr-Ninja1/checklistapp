@@ -8,113 +8,57 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
     id: `${i + 1}`,
     nameOfProduct: '',
     supplier: '',
-    clean: false, // Checkbox boolean: false = unchecked
-    temp: '', // Temperature Input field (°C)
-    tempOfBeverage: '',
+    clean: false,
+    temp: '',
+    tempOfChldFrznProduct: '',
     stateOfProduct: '',
     expiryDate: '',
     remarks: '',
 }));
 
-// --- Main Form Component (BEVERAGE AND WATER RECEIVING CHECKLIST) ---
-const BeverageReceivingForm = () => {
-    // Initializing with data for the product log
+const ChilledFrozenReceivingForm = () => {
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
 
-    // Compute document details for the header
     const today = new Date();
     const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
     const defaultIssueDate = `${pad(today.getDate())}/${pad(today.getMonth() + 1)}/${today.getFullYear()}`;
     const [issueDate, setIssueDate] = useState(defaultIssueDate);
-    const docRef = useMemo(() => 'BBN-SHEQ-P-F-9.4', []);
+    const docRef = useMemo(() => 'BBN-SHEQ-P-F-9.7', []);
     const versionNo = useMemo(() => '01', []);
     const revNo = useMemo(() => '00', []);
 
-    // Helper to update the receiving data fields
     const updateReceivingField = (id, field, value) => {
-        setReceivingData(prevData => prevData.map(item => {
-            if (item.id === id) {
-                return {
-                    ...item,
-                    [field]: value,
-                };
-            }
-            return item;
-        }));
+        setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
     };
 
-    // Toggle the boolean clean field (checkbox)
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
     };
 
-    // Renders one row of the receiving log table
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.nameCol]}
-                value={item.nameOfProduct}
-                onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)}
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.supplierCol]}
-                value={item.supplier}
-                onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)}
-            />
-            {/* Delivery Vehicle Checks - Clean (Checkbox) */}
-            <TouchableOpacity
-                style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}
-                onPress={() => toggleClean(item.id)}
-                activeOpacity={0.7}
-            >
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.nameOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)} />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
+            <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
                 <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
             </TouchableOpacity>
-            {/* Delivery Vehicle Checks - Temp (Input) */}
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.tempCol]}
-                value={item.temp}
-                onChangeText={(t) => updateReceivingField(item.id, 'temp', t)}
-                keyboardType="numeric"
-                placeholder="°C"
-            />
-            {/* Product Checks */}
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]}
-                value={item.tempOfBeverage}
-                onChangeText={(t) => updateReceivingField(item.id, 'tempOfBeverage', t)}
-                keyboardType="numeric"
-                placeholder="°C"
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}
-                value={item.stateOfProduct}
-                onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)}
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}
-                value={item.expiryDate}
-                onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)}
-                placeholder="D/M/Y"
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.remarksCol]}
-                value={item.remarks}
-                onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)}
-            />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]} value={item.tempOfChldFrznProduct} onChangeText={(t) => updateReceivingField(item.id, 'tempOfChldFrznProduct', t)} keyboardType="numeric" placeholder="°C" />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
+            <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
         </View>
     );
 
-    // --- FULL COMPONENT LAYOUT ---
     return (
         <SafeAreaView style={styles.safeArea}>
-                    <ScrollView
-                        style={{ flex: 1 }}
-                        contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]}
-                        keyboardShouldPersistTaps="handled"
-                        nestedScrollEnabled={true}
-                    >
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled={true}
+            >
                 <View style={styles.container}>
-                    {/* --- 1. DOCUMENT HEADER --- */}
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
                             <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
@@ -139,11 +83,10 @@ const BeverageReceivingForm = () => {
                         </View>
                     </View>
 
-                    {/* --- HEADER DETAILS (Subject, Compiled, Approved, Version) --- */}
                     <View style={styles.subjectRow}>
                         <View style={styles.subjectItem}>
                             <Text style={styles.subjectLabel}>Subject:</Text>
-                            <Text style={styles.subjectValue}>Beverage and Water Receiving Checklist</Text>
+                            <Text style={styles.subjectValue}>Chilled & Frozen Goods Receiving Checklist</Text>
                         </View>
                         <View style={styles.versionDetails}>
                             <Text style={styles.versionText}>Version No: {versionNo}</Text>
@@ -152,7 +95,7 @@ const BeverageReceivingForm = () => {
                     <View style={styles.subDetailRow}>
                         <View style={styles.subDetailItem}>
                             <Text style={styles.subDetailLabel}>Compiled By:</Text>
-                            <Text style={styles.subDetailValue}>Patrnan</Text>
+                            <Text style={styles.subDetailValue}>Michael</Text>
                         </View>
                         <View style={styles.subDetailItem}>
                             <Text style={styles.subDetailLabel}>Approved By:</Text>
@@ -160,17 +103,13 @@ const BeverageReceivingForm = () => {
                         </View>
                     </View>
 
-                    {/* --- 2. SPECIFICATION --- */}
                     <View style={styles.specificationSection}>
                         <Text style={styles.specLabel}>Specification:</Text>
                         <Text style={styles.specText}>
-                            Beverages and water shall be at **Room temperature ($20-25$ degrees celsius)**; 
-                            packaging shall be **intact**; **no signs of pests**, cars shall be **intact**, seals shall 
-                            **not be broken** and **label shall be legible and correct**.
+                            Chilled products shall be at 4°C or below and frozen products at -18°C or below; packaging shall be intact; no signs of pests; no signs of thawing; cans shall be intact; seals shall not be broken.
                         </Text>
                     </View>
 
-                    {/* --- 3. DELIVERY DETAILS --- */}
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
@@ -196,16 +135,12 @@ const BeverageReceivingForm = () => {
                         </View>
                     </View>
 
-                    {/* --- 4. RECEIVING LOG TABLE --- */}
                     <View style={dailyStyles.tableContainer}>
-                        {/* --- Table Header --- */}
                         <View style={dailyStyles.tableHeader}>
-                            {/* Static Columns */}
                             <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Name of Product</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
 
-                            {/* Delivery Vehicle Group */}
-                            <View style={dailyStyles.groupHeaderCol}>
+                            <View style={dailyStyles.deliveryGroupHeaderCol}>
                                 <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
                                 <View style={dailyStyles.subHeaderRow}>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.cleanCol]}>Clean</Text>
@@ -213,11 +148,10 @@ const BeverageReceivingForm = () => {
                                 </View>
                             </View>
 
-                            {/* Product Group */}
-                            <View style={[dailyStyles.groupHeaderCol, dailyStyles.lastGroupHeaderCol]}>
+                            <View style={dailyStyles.productGroupHeaderCol}>
                                 <Text style={dailyStyles.groupHeaderTitle}>Product</Text>
                                 <View style={dailyStyles.subHeaderRow}>
-                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempOfBeverageCol]}>Temp of{"\n"}Beverage</Text>
+                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempOfBeverageCol]}>Temp of Chld/Frzn{"\n"}Product</Text>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.stateOfProductCol]}>State of{"\n"}Product</Text>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
@@ -230,7 +164,7 @@ const BeverageReceivingForm = () => {
                             data={receivingData}
                             renderItem={renderReceivingLogItem}
                             keyExtractor={item => item.id}
-                            scrollEnabled={false} 
+                            scrollEnabled={false}
                         />
                     </View>
                     
@@ -253,18 +187,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
     },
     scrollViewContent: {
-        // Ensure the content can scroll horizontally if the table is wide
         padding: 10,
     },
     container: {
         flex: 1,
         backgroundColor: '#fff',
-        // A4 landscape at ~96 DPI is about 1123px wide - use this minimum so it fills an A4 page in browser
         minWidth: 1123,
         paddingHorizontal: 8,
     },
-
-    // --- 1. DOCUMENT HEADER STYLES (Reused from previous form) ---
     docHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -313,8 +243,6 @@ const styles = StyleSheet.create({
     detailValue: {
         fontSize: 12,
     },
-
-    // --- Subject and Version Details ---
     subjectRow: {
         flexDirection: 'row',
         borderWidth: 1,
@@ -370,8 +298,6 @@ const styles = StyleSheet.create({
         borderBottomColor: '#000',
         flex: 1,
     },
-
-    // --- 2. SPECIFICATION STYLES ---
     specificationSection: {
         marginBottom: 10,
         padding: 5,
@@ -388,8 +314,6 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         marginBottom: 8,
     },
-    
-    // --- 3. DELIVERY DETAILS STYLES ---
     deliveryDetails: {
         marginBottom: 10,
         padding: 5,
@@ -416,8 +340,6 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         marginRight: 15,
     },
-    
-    // --- 5. VERIFICATION FOOTER STYLES ---
     verificationFooter: {
         marginTop: 10,
     },
@@ -455,15 +377,23 @@ const dailyStyles = StyleSheet.create({
         textAlignVertical: 'center',
     },
     spanTwoRows: {
-        minHeight: 90, // Adjust height to match the grouped column height
+        minHeight: 90,
     },
-    
-    // Grouped Headers (Delivery Vehicle and Product)
     groupHeaderCol: {
         borderRightWidth: 1, 
         borderRightColor: '#000',
     },
     lastGroupHeaderCol: {
+        borderRightWidth: 0,
+    },
+    // Explicit group widths to line up the group-title underline with sub-columns
+    deliveryGroupHeaderCol: {
+        width: 180, // cleanCol (90) + tempCol (90)
+        borderRightWidth: 1,
+        borderRightColor: '#000',
+    },
+    productGroupHeaderCol: {
+        width: 680, // tempOfBeverageCol(120) + stateOfProductCol(140) + expiryDateCol(120) + remarksCol(300)
         borderRightWidth: 0,
     },
     groupHeaderTitle: {
@@ -473,15 +403,14 @@ const dailyStyles = StyleSheet.create({
         textAlign: 'center',
         borderBottomWidth: 1,
         borderBottomColor: '#000',
-        height: 36, // Top row height
+        height: 36,
         textAlignVertical: 'center',
     },
     subHeaderRow: {
         flexDirection: 'row',
-        height: 45, // Bottom row height
+        height: 45,
     },
     subHeaderCell: {
-        // Shared styles for sub-cells
         fontWeight: 'bold',
         fontSize: 12,
         padding: 4,
@@ -493,22 +422,14 @@ const dailyStyles = StyleSheet.create({
     lastSubHeaderCell: {
         borderRightWidth: 0,
     },
-
-    // Column widths and specific header styles (widened for A4 landscape)
     nameCol: { width: 260 }, 
     supplierCol: { width: 180 }, 
-    
-    // Delivery Vehicle Sub-Columns
     cleanCol: { width: 90, borderRightWidth: 1, borderRightColor: '#000' }, 
     tempCol: { width: 90, borderRightWidth: 1, borderRightColor: '#000' }, 
-
-    // Product Sub-Columns
     tempOfBeverageCol: { width: 120 }, 
     stateOfProductCol: { width: 140 }, 
     expiryDateCol: { width: 120 }, 
     remarksCol: { width: 300, borderRightWidth: 0 },
-
-    // --- Table Rows ---
     tableRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
@@ -535,4 +456,4 @@ const dailyStyles = StyleSheet.create({
     },
 });
 
-export default BeverageReceivingForm;
+export default ChilledFrozenReceivingForm;

@@ -18,26 +18,57 @@ const formCategories = {
       { id: 5, title: "Fruit Washing & Sanitizing", status: "pending", priority: "high", dueTime: "Every 4 hours", location: "Prep Station" },
       { id: 6, title: "Customer Survey Logs", status: "completed", priority: "low", dueTime: "Daily", location: "Reception" },
       { id: 7, title: "Product Release Log", status: "pending", priority: "medium", dueTime: "Before service", location: "Service Counter" },
+<<<<<<< HEAD
       { id: 41, title: "FOH Daily Cleaning & Sanitizing Log Sheet", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' },
       { id: 43, title: "Front of House Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Front of House", route: 'FOH_FrontOfHouseCleaningChecklist' }
+=======
+  { id: 117, title: "Display Chiller Shelf-Life Inspection", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller", route: 'DisplayChillerShelfLifeInspectionChecklist' },
+      { id: 41, title: "FOH Daily Cleaning & Sanitizing Log Sheet", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm' }
+    , { id: 43, title: "Front of House Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Front of House", route: 'FOH_FrontOfHouseCleaningChecklist' }
+>>>>>>> 41ae985375fb5cab5925f6cc686aaf0dec9fd5f8
     ]
   },
   production: {
     name: "Prod Records",
     color: ["#ff9966", "#ff5e62"],
     forms: [
+<<<<<<< HEAD
       { id: 110, title: "Beverage & Water Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'BeverageReceivingForm' },
       { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor", route: 'CertificateOfAnalysis' },
       { id: 111, title: "Packaging Materials Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'PackagingMaterialsReceivingForm' },
+=======
+  { id: 125, title: "Pre Shift Meeting Attendance Register", status: "pending", priority: "medium", dueTime: "As needed", location: "Training Room", route: 'PreShiftMeetingAttendanceRegister' },
+          { id: 127, title: "Product Rejection Form", status: "pending", priority: "critical", dueTime: "As needed", location: "Quality", route: 'ProductRejectionForm' },
+          { id: 126, title: "Bin Liners Changing Log", status: "pending", priority: "medium", dueTime: "Daily", location: "Production Floor", route: 'BinLinersChangingLog' },
+        { id: 110, title: "Beverage & Water Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'BeverageReceivingForm' },
+    { id: 114, title: "Dry Goods Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'DryGoodsReceivingForm' },
+    { id: 113, title: "Chilled & Frozen Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'ChilledFrozenReceivingForm' },
+    { id: 115, title: "Chemicals Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'ChemicalsReceivingForm' },
+  { id: 116, title: "Eggs Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'EggsReceivingForm' },
+    { id: 8, title: "Certificates of Analysis", status: "pending", priority: "critical", dueTime: "Daily", location: "Production Floor", route: 'CertificateOfAnalysis' },
+    { id: 111, title: "Packaging Materials Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'PackagingMaterialsReceivingForm' },
+    { id: 112, title: "Vegetables & Fruits Receiving", status: "pending", priority: "high", dueTime: "On delivery", location: "Receiving", route: 'VegetablesFruitsReceivingForm' },
+    { id: 119, title: "Toolbox Talk Attendance", status: "pending", priority: "medium", dueTime: "As needed", location: "Training Room", route: 'ToolboxTalkRegister' },
+>>>>>>> 41ae985375fb5cab5925f6cc686aaf0dec9fd5f8
       { id: 82, title: "Pest Inspection Form", status: "pending", priority: "medium", dueTime: "Weekly", location: "Facilities", route: 'PastInspectionForm' },
       { id: 83, title: "Customer Satisfaction Questionnaire", status: "pending", priority: "low", dueTime: "As needed", location: "Reception", route: 'CustomerSatisfactionQuestionnaire' },
       { id: 81, title: "Process & Quality Out of Control Report", status: "pending", priority: "critical", dueTime: "As needed", location: "Quality", route: 'ProcessQualityOutOfControlReport' },
       { id: 9, title: "5 Why Report/Non-conformance", status: "completed", priority: "high", dueTime: "As needed", location: "Production Floor" },
+<<<<<<< HEAD
       { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab", route: 'ProductReleaseForm' },
       { id: 11, title: "Food Handlers Daily Handwashing", status: "pending", priority: "high", dueTime: "6:00 AM", location: "Production Entry", isHandwashingLog: true, route: 'FoodHandlersHandwashingForm' },
       { id: 13, title: "Weekly Showering Logs", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room" },
       { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line" },
       { id: 50, title: "Fruit, Vegetable & Egg Washing Log", status: "pending", priority: "high", dueTime: "Before use", location: "Wash Station", route: 'FruitWashingLog' }
+=======
+  { id: 10, title: "Product Release", status: "pending", priority: "critical", dueTime: "Before dispatch", location: "Quality Lab", route: 'ProductReleaseForm' },
+  { id: 11, title: "Food Handlers Daily Handwashing", status: "pending", priority: "high", dueTime: "6:00 AM", location: "Production Entry", isHandwashingLog: true, route: 'FoodHandlersHandwashingForm' },
+  { id: 13, title: "Food Handlers Daily Showering Log", status: "pending", priority: "medium", dueTime: "Weekly", location: "Locker Room", route: 'FoodHandlersDailyShoweringForm' },
+  { id: 14, title: "Food Sample Collection", status: "overdue", priority: "critical", dueTime: "1 hour ago", location: "Production Line", route: 'FoodSamplesCollectionLog' },
+    { id: 50, title: "Fruit, Vegetable & Egg Washing Log", status: "pending", priority: "high", dueTime: "Before use", location: "Wash Station", route: 'FruitWashingLog' },
+  { id: 118, title: "Training Attendance Register", status: "pending", priority: "medium", dueTime: "As needed", location: "Training Room", route: 'TrainingAttendanceRegister' },
+      
+>>>>>>> 41ae985375fb5cab5925f6cc686aaf0dec9fd5f8
     ]
   },
   kitchen: {
@@ -79,7 +110,12 @@ const formCategories = {
     name: "BOH Records",
     color: ["#f7971e", "#ffd200"],
     forms: [
+<<<<<<< HEAD
       { id: 100, title: "Personal Protective Equipment", status: "pending", priority: "high", dueTime: "As needed", location: "BOH", route: 'PPEIssuanceForm' },
+=======
+          { id: 100, title: "Personal Protective Equipment", status: "pending", priority: "high", dueTime: "As needed", location: "BOH", route: 'PPEIssuanceForm' },
+  { id: 200, title: "Visitors Log Book", status: "pending", priority: "medium", dueTime: "Per shift", location: "Reception", route: 'VisitorsLogBook' },
+>>>>>>> 41ae985375fb5cab5925f6cc686aaf0dec9fd5f8
       { id: 101, title: "Personal Hygiene Checklist", status: "pending", priority: "high", dueTime: "Daily", location: "BOH", route: 'PersonalHygieneChecklist' },
       { id: 102, title: "Health Status Checklist", status: "pending", priority: "critical", dueTime: "Daily", location: "BOH", route: 'BravoHealthStatusCheck' },
       { id: 31, title: "Dry Storage Area Cleaning", status: "pending", priority: "medium", dueTime: "Monday", location: "Storage Room", route: 'DryStorageArea_CleaningChecklist' },
@@ -112,12 +148,22 @@ export default function HomeScreen() {
   const dateString = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const yearString = now.getFullYear();
 
+<<<<<<< HEAD
+=======
+  // Filter forms by category and search; exclude cards that don't link to a form
+>>>>>>> 41ae985375fb5cab5925f6cc686aaf0dec9fd5f8
   function getFilteredForms(category) {
-    const forms = formCategories[category].forms;
+    const forms = formCategories[category].forms
+      .filter(f => f.route || f.isHandwashingLog); // only show cards that navigate somewhere
     if (!searchTerm) return forms;
     return forms.filter(f =>
+<<<<<<< HEAD
       (f.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (f.location || '').toLowerCase().includes(searchTerm.toLowerCase())
+=======
+      f.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (f.location && f.location.toLowerCase().includes(searchTerm.toLowerCase()))
+>>>>>>> 41ae985375fb5cab5925f6cc686aaf0dec9fd5f8
     );
   }
 
@@ -258,11 +304,97 @@ export default function HomeScreen() {
             paddingLeft: isMobile ? 12 : 24,
             paddingBottom: isMobile ? 8 : 16,
             marginTop: isMobile ? 4 : 8,
+<<<<<<< HEAD
           }}>
             <Text style={{ fontSize: isMobile ? 15 : 20, color: '#fff', marginRight: 8 }}>🕒</Text>
             <Text style={{ fontSize: isMobile ? 16 : 22, fontWeight: 'bold', color: '#fff', marginRight: 16 }}>{timeString}</Text>
             <Text style={{ fontSize: isMobile ? 13 : 18, color: '#fff', marginRight: 8 }}>📅</Text>
             <Text style={{ fontSize: isMobile ? 13 : 16, color: '#fff', fontWeight: 'bold' }}>{dateString}, {yearString}</Text>
+=======
+          }}
+        >
+          <Text style={{ fontSize: isMobile ? 15 : 20, color: '#fff', marginRight: 8 }}>🕒</Text>
+          <Text style={{ fontSize: isMobile ? 16 : 22, fontWeight: 'bold', color: '#fff', marginRight: 16 }}>{timeString}</Text>
+          <Text style={{ fontSize: isMobile ? 13 : 18, color: '#fff', marginRight: 8 }}>📅</Text>
+          <Text style={{ fontSize: isMobile ? 13 : 16, color: '#fff', fontWeight: 'bold' }}>{dateString}, {yearString}</Text>
+        </View>
+      </LinearGradient>
+
+
+
+      {/* Category Tabs - now static, directly below header */}
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        backgroundColor: '#f6fdff',
+        borderRadius: 16,
+        padding: 4,
+        marginBottom: 0, // Remove space below category tab
+        marginTop: 0,    // Remove space above category tab
+        alignSelf: 'stretch',
+        position: 'relative',
+        zIndex: 2,
+      }}>
+        {Object.entries(formCategories).map(([key, category], idx) => (
+          <TouchableOpacity
+            key={key}
+            style={{ flex: 1, alignItems: 'center', paddingVertical: 16, borderRadius: 12, backgroundColor: activeCategory === key ? '#43cea2' : 'transparent' }}
+            onPress={() => setActiveCategory(key)}
+          >
+            <Text style={{ fontSize: 18, color: activeCategory === key ? '#fff' : '#185a9d', fontWeight: 'bold' }}>
+              {idx === 0 ? '🍽️' : idx === 1 ? '🏭' : idx === 2 ? '🍳' : idx === 3 ? '🍞' : '🏢'} {category.name.split(' ')[0]}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {/* Removed kitchen quick access featured cards per request */}
+
+      {/* Form Lists */}
+      <ScrollView
+        style={{ flex: 1, width: '100%' }}
+        contentContainerStyle={[styles.formListContent, { flexGrow: 1, paddingBottom: 120 }]}
+      >
+        {getFilteredForms(activeCategory).map((form, idx) => (
+          <View key={`form-card-${form.id}-${idx}-${form.title}` }>
+            <TouchableOpacity
+              key={`form-touchable-${form.id}-${idx}-${form.title}`}
+              disabled={!(form.route || form.isHandwashingLog)}
+              onPress={() => {
+                // show spinner and navigate
+                setLoadingMsg(`Opening ${form.title}...`);
+                setLoadingCard(true);
+                setTimeout(() => {
+                  if (form.route) {
+                    navigation.navigate(form.route);
+                  } else if (form.isHandwashingLog) {
+                    navigation.navigate('FoodHandlersHandwashingForm');
+                  }
+                  // hide after short delay to let navigation settle
+                  setTimeout(() => setLoadingCard(false), 350);
+                }, 250);
+              }}
+              style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6 }]}
+            >
+              <View style={styles.formCardTop}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
+                  <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
+                  </View>
+                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
+                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+>>>>>>> 41ae985375fb5cab5925f6cc686aaf0dec9fd5f8
           </View>
         </LinearGradient>
 

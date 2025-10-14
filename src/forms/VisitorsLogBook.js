@@ -1,0 +1,567 @@
+import React, { useState } from 'react';
+import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput } from 'react-native';
+
+// Utility component for a table cell
+const Cell = ({ children, style, multiLine = false }) => (
+  <View style={[styles.cell, style, multiLine && styles.multiLineCell]}>
+    {typeof children === 'string' ? <Text style={styles.cellText}>{children}</Text> : children}
+  </View>
+);
+
+// Utility component for a text input cell
+const InputCell = ({ value, onChangeText, style, placeholder = '' }) => (
+  <View style={[styles.cell, style]}>
+    <TextInput
+      style={styles.cellInput}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor="#aaa"
+    />
+  </View>
+);
+
+export default function VisitorsLogBook() {
+  // 5 rows for the visitor log as per the original component's initial state
+  const initialVisitorLog = Array.from({ length: 5 }, () => ({ name: '', address: '', contact: '', purpose: '', timeIn: '', timeOut: '', authority: '' }));
+  const [visitorEntries, setVisitorEntries] = useState(initialVisitorLog);
+  const [site, setSite] = useState('');
+  const [section, setSection] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
+  const [siteManager, setSiteManager] = useState('');
+  const [verifiedManager, setVerifiedManager] = useState('');
+  const [managerPerShift, setManagerPerShift] = useState(''); // New state for the note at the end
+
+  // State for the answers to the A & B questions (Yes/No or Checkbox/X)
+  const initialHealthAnswers = {
+    unwell: '',
+    medicine: '',
+    bannedSubstances: '',
+    symptoms: '',
+    contactWithDisease: '',
+    // Host checks (C) are typically visual or a checkmark
+    cutsCovered: '',
+    jewellery: '',
+    hairnet: '',
+    safetyShoes: '',
+    neatlyDressed: '',
+  };
+  const [healthAnswers, setHealthAnswers] = useState(initialHealthAnswers);
+
+  const updateVisitorEntry = (index, field, value) => {
+    setVisitorEntries(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+  };
+
+  const updateHealthAnswer = (field, value) => {
+    setHealthAnswers(prev => ({ ...prev, [field]: value }));
+  };
+
+  const docRef = "BBN-SHEQ-R 23a";
+  const issueDate = "06.08.2025"; // Hardcoded as per image
+
+  // --- Layout Helper Components ---
+
+  const Header = () => (
+    <View style={styles.headerContainer}>
+      <Cell style={styles.headerTitleCell} multiLine>
+        <Text style={styles.boldText}>FOOD PRODUCTION AND SERVICE VISITORS</Text>
+      </Cell>
+      <View style={styles.headerRefDateBlock}>
+        <Cell style={styles.refCell}>
+          <Text style={styles.boldText}>Doc. Ref: </Text>
+          <Text>{docRef}</Text>
+        </Cell>
+        <Cell style={styles.issueDateCell}>
+          <Text style={styles.boldText}>Issue Date: </Text>
+          <Text>{issueDate}</Text>
+        </Cell>
+      </View>
+    </View>
+  );
+
+  const SiteDateBlock = () => (
+    <>
+      {/* Row 1: SITE, SECTION/DEPARTMENT */}
+      <View style={styles.row}>
+        <Cell style={styles.siteMonthHeader}><Text style={styles.boldText}>SITE</Text></Cell>
+        <Cell style={styles.sectionYearHeader}><Text style={styles.boldText}>SECTION/DEPARTMENT</Text></Cell>
+      </View>
+      {/* Row 2: Input values */}
+      <View style={styles.row}>
+        <InputCell style={styles.siteMonthInput} value={site} onChangeText={setSite} />
+        <InputCell style={styles.sectionYearInput} value={section} onChangeText={setSection} />
+      </View>
+      {/* Row 3: MONTH, YEAR */}
+      <View style={styles.row}>
+        <Cell style={styles.siteMonthHeader}><Text style={styles.boldText}>MONTH</Text></Cell>
+        <Cell style={styles.sectionYearHeader}><Text style={styles.boldText}>YEAR</Text></Cell>
+      </View>
+      {/* Row 4: Input values */}
+      <View style={styles.row}>
+        <InputCell style={styles.siteMonthInput} value={month} onChangeText={setMonth} />
+        <InputCell style={styles.sectionYearInput} value={year} onChangeText={setYear} />
+      </View>
+    </>
+  );
+
+  const ManagerSignatureBlock = () => (
+    <>
+      <View style={styles.row}>
+        <Cell style={styles.sigManagerHeader}><Text style={styles.boldText}>SITE MANAGER NAME & SIGNATURE</Text></Cell>
+        <Cell style={styles.sigVerifiedHeader}><Text style={styles.boldText}>VERIFIED BY HSEQ MANAGER</Text></Cell>
+      </View>
+      <View style={styles.row}>
+        <InputCell style={styles.sigManagerInput} value={siteManager} onChangeText={setSiteManager} />
+        <InputCell style={styles.sigVerifiedInput} value={verifiedManager} onChangeText={setVerifiedManager} />
+      </View>
+    </>
+  );
+
+  const HealthCheckBlock = () => (
+    <>
+      {/* A & B Questions */}
+      <View style={styles.healthQuestionGroup}>
+        <HealthQuestion
+          question="Ask if visitor is unwell or if the visitor has been unwell at home?"
+          answerValue={healthAnswers.unwell}
+          onAnswerChange={v => updateHealthAnswer('unwell', v)}
+        />
+        <HealthQuestion
+          question="Ask if visitor is taking/has taken any medicine - Medicine refers to ALL medications e.g. Company doctor prescriptions, local medicines from herbalists, any self-treatment etc."
+          answerValue={healthAnswers.medicine}
+          onAnswerChange={v => updateHealthAnswer('medicine', v)}
+        />
+        <HealthQuestion
+          question="Ask if visitor has taken any banned substances e.g. marijuana, hashish etc"
+          answerValue={healthAnswers.bannedSubstances}
+          onAnswerChange={v => updateHealthAnswer('bannedSubstances', v)}
+        />
+        <HealthQuestion
+          question="Ask if visitor has any symptoms or suffering from?"
+          isParent
+        />
+        <HealthSubQuestion
+          question="Infection of the ears, nose, throat, eyes, teeth or chest"
+        />
+        <HealthSubQuestion question="Flu - like infections" />
+        <HealthSubQuestion question="Skin infections" />
+        <HealthSubQuestion question="Vomiting" />
+        <HealthSubQuestion question="Diarrhoea" />
+        <HealthSubQuestion question="Jaundice" />
+        <HealthQuestion
+          question="Ask the visitor if he has been in contact to their knowledge with any person with the following"
+          isParent
+          answerValue={healthAnswers.contactWithDisease}
+          onAnswerChange={v => updateHealthAnswer('contactWithDisease', v)}
+        />
+        <HealthSubQuestion question="Typhoid" />
+        <HealthSubQuestion question="Paratyphoid" />
+        <HealthSubQuestion question="Dysentery" />
+        <HealthSubQuestion question="Hepatitis" />
+        <HealthSubQuestion question="Any other infectious disease" />
+      </View>
+
+      {/* C Checks */}
+      <View style={styles.healthCheckGroup}>
+        <Cell style={styles.hostCheckInstructionCell} multiLine>
+          <Text style={styles.boldText}>The host must ensure to check the following for each visitor?</Text>
+        </Cell>
+        <HostCheck
+          check="All cuts, pimples and boils are covered with a waterproof dressing"
+          answerValue={healthAnswers.cutsCovered}
+          onAnswerChange={v => updateHealthAnswer('cutsCovered', v)}
+        />
+        <HostCheck
+          check="Jewellery is in line with company policy"
+          answerValue={healthAnswers.jewellery}
+          onAnswerChange={v => updateHealthAnswer('jewellery', v)}
+        />
+        <HostCheck
+          check="Chefs have a hat or hair net"
+          answerValue={healthAnswers.hairnet}
+          onAnswerChange={v => updateHealthAnswer('hairnet', v)}
+        />
+        <HostCheck
+          check="The visitor is wearing their safety shoes"
+          answerValue={healthAnswers.safetyShoes}
+          onAnswerChange={v => updateHealthAnswer('safetyShoes', v)}
+        />
+        <HostCheck
+          check="The visitor is newly dressed"
+          answerValue={healthAnswers.neatlyDressed}
+          onAnswerChange={v => updateHealthAnswer('neatlyDressed', v)}
+        />
+      </View>
+    </>
+  );
+
+  const HealthQuestion = ({ question, isParent = false, answerValue, onAnswerChange }) => (
+    <View style={styles.row}>
+      <Cell style={[styles.healthQCell, isParent && styles.healthQParentCell]} multiLine>
+        {question}
+      </Cell>
+      <InputCell
+        style={[styles.healthACell, isParent && styles.healthAParentCell]}
+        value={answerValue}
+        onChangeText={onAnswerChange}
+        placeholder={isParent ? 'A/B' : 'Yes/No'}
+      />
+    </View>
+  );
+
+  const HealthSubQuestion = ({ question }) => (
+    <View style={styles.row}>
+      <Cell style={styles.healthQSubCell} multiLine>
+        {question}
+      </Cell>
+      <Cell style={styles.healthASubCell}></Cell>
+    </View>
+  );
+
+  const HostCheck = ({ check, answerValue, onAnswerChange }) => (
+    <View style={styles.row}>
+      <Cell style={styles.hostCheckCell} multiLine>
+        {check}
+      </Cell>
+      <InputCell
+        style={styles.hostAnswerCell}
+        value={answerValue}
+        onChangeText={onAnswerChange}
+        placeholder="Y/N"
+      />
+    </View>
+  );
+
+  const InstructionAndNoteBlock = () => (
+    <>
+      <Cell style={styles.instructionCell} multiLine>
+        <Text style={styles.instructionText}>
+          If any visitor answers to A & B positively then they must be referred to the <Text style={styles.boldText}>Complex Manager</Text>
+        </Text>
+      </Cell>
+      <Cell style={styles.instructionCell} multiLine>
+        <Text style={styles.instructionText}>
+          If any visitor does not comply with company policy (Section C), this must be rectified before they are allowed into the Food Production Area
+        </Text>
+      </Cell>
+      <Cell style={styles.noteCell} multiLine>
+        <Text style={styles.noteText}>
+          <Text style={styles.boldText}>Note -</Text> The supervisor and the manager will be liable for the health of visitors and subordinates once they sign
+        </Text>
+      </Cell>
+      <Cell style={styles.managerNoteCell} multiLine>
+        <Text style={styles.noteText}>
+          The form must be completed for each shift by the <Text style={styles.boldText}>Manager</Text>
+        </Text>
+      </Cell>
+    </>
+  );
+
+  const VisitorsTable = () => (
+    <View style={styles.tableContainer}>
+      {/* Table Header */}
+      <View style={styles.tableHeaderRow}>
+        <Cell style={styles.colName}><Text style={styles.colHeaderText}>NAME OF VISITOR</Text></Cell>
+        <Cell style={styles.colAddress}><Text style={styles.colHeaderText}>ADDRESS</Text></Cell>
+        <Cell style={styles.colContact}><Text style={styles.colHeaderText}>CONTACT NO.</Text></Cell>
+        <Cell style={styles.colPurpose}><Text style={styles.colHeaderText}>PURPOSE OF VISIT</Text></Cell>
+        <Cell style={styles.colTime}><Text style={styles.colHeaderText}>TIME IN</Text></Cell>
+        <Cell style={styles.colTime}><Text style={styles.colHeaderText}>TIME OUT</Text></Cell>
+        <Cell style={styles.colAuth}><Text style={styles.colHeaderText}>AUTHORISE BY</Text></Cell>
+      </View>
+
+      {/* Table Rows */}
+      {visitorEntries.map((entry, idx) => (
+        <View key={idx} style={styles.tableRow}>
+          <InputCell style={styles.colName} value={entry.name} onChangeText={t => updateVisitorEntry(idx, 'name', t)} />
+          <InputCell style={styles.colAddress} value={entry.address} onChangeText={t => updateVisitorEntry(idx, 'address', t)} />
+          <InputCell style={styles.colContact} value={entry.contact} onChangeText={t => updateVisitorEntry(idx, 'contact', t)} />
+          <InputCell style={styles.colPurpose} value={entry.purpose} onChangeText={t => updateVisitorEntry(idx, 'purpose', t)} />
+          <InputCell style={styles.colTime} value={entry.timeIn} onChangeText={t => updateVisitorEntry(idx, 'timeIn', t)} />
+          <InputCell style={styles.colTime} value={entry.timeOut} onChangeText={t => updateVisitorEntry(idx, 'timeOut', t)} />
+          <InputCell style={styles.colAuth} value={entry.authority} onChangeText={t => updateVisitorEntry(idx, 'authority', t)} />
+        </View>
+      ))}
+    </View>
+  );
+
+  // --- Main Render ---
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.mainScrollContent}>
+        <View style={styles.bravoTitle}><Text style={styles.bravoTitleText}>BRAVO BRANDS VISITORS LOG BOOK</Text></View>
+        <Header />
+        <SiteDateBlock />
+        <ManagerSignatureBlock />
+        <HealthCheckBlock />
+        <InstructionAndNoteBlock />
+        <VisitorsTable />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const commonBorder = {
+  borderWidth: 1,
+  borderColor: '#000',
+};
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#fff' },
+  mainScrollContent: { padding: 8, paddingBottom: 100 },
+  row: { flexDirection: 'row' },
+  boldText: { fontWeight: '700' },
+
+  // --- Header and Title ---
+  bravoTitle: {
+    ...commonBorder,
+    borderBottomWidth: 0,
+    padding: 4,
+    backgroundColor: '#eee',
+  },
+  bravoTitleText: {
+    fontSize: 14,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+  },
+  headerTitleCell: {
+    ...commonBorder,
+    flex: 1,
+    paddingVertical: 8,
+    backgroundColor: '#eee',
+    borderRightWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerRefDateBlock: {
+    width: 200,
+  },
+  refCell: {
+    ...commonBorder,
+    height: 25,
+    borderBottomWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  issueDateCell: {
+    ...commonBorder,
+    height: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+
+  // --- Site/Date Block ---
+  siteMonthHeader: {
+    ...commonBorder,
+    flex: 0.5,
+    borderRightWidth: 0,
+    backgroundColor: '#eee',
+    height: 20,
+    justifyContent: 'center',
+  },
+  sectionYearHeader: {
+    ...commonBorder,
+    flex: 0.5,
+    backgroundColor: '#eee',
+    height: 20,
+    justifyContent: 'center',
+  },
+  siteMonthInput: {
+    ...commonBorder,
+    flex: 0.5,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+    minHeight: 30,
+  },
+  sectionYearInput: {
+    ...commonBorder,
+    flex: 0.5,
+    borderTopWidth: 0,
+    minHeight: 30,
+  },
+
+  // --- Manager Signatures ---
+  sigManagerHeader: {
+    ...commonBorder,
+    flex: 0.5,
+    borderRightWidth: 0,
+    backgroundColor: '#eee',
+    height: 25,
+    justifyContent: 'center',
+  },
+  sigVerifiedHeader: {
+    ...commonBorder,
+    flex: 0.5,
+    backgroundColor: '#eee',
+    height: 25,
+    justifyContent: 'center',
+  },
+  sigManagerInput: {
+    ...commonBorder,
+    flex: 0.5,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+    minHeight: 40,
+  },
+  sigVerifiedInput: {
+    ...commonBorder,
+    flex: 0.5,
+    borderTopWidth: 0,
+    minHeight: 40,
+  },
+
+  // --- Health Checks ---
+  healthQuestionGroup: {
+    marginTop: 8,
+  },
+  healthCheckGroup: {
+    marginTop: 0,
+  },
+  healthQCell: {
+    ...commonBorder,
+    flex: 0.8,
+    borderRightWidth: 0,
+    paddingLeft: 4,
+    minHeight: 25,
+    borderTopWidth: 0,
+    justifyContent: 'center',
+  },
+  healthQParentCell: {
+    backgroundColor: '#eee',
+  },
+  healthACell: {
+    ...commonBorder,
+    flex: 0.2,
+    borderTopWidth: 0,
+    minHeight: 25,
+  },
+  healthAParentCell: {
+    backgroundColor: '#eee',
+  },
+  healthQSubCell: {
+    ...commonBorder,
+    flex: 0.8,
+    borderRightWidth: 0,
+    paddingLeft: 20, // Indent for sub-questions
+    minHeight: 20,
+    borderTopWidth: 0,
+    justifyContent: 'center',
+  },
+  healthASubCell: {
+    ...commonBorder,
+    flex: 0.2,
+    minHeight: 20,
+    borderTopWidth: 0,
+  },
+  hostCheckInstructionCell: {
+    ...commonBorder,
+    backgroundColor: '#eee',
+    minHeight: 25,
+    justifyContent: 'center',
+  },
+  hostCheckCell: {
+    ...commonBorder,
+    flex: 0.8,
+    borderRightWidth: 0,
+    paddingLeft: 4,
+    minHeight: 25,
+    borderTopWidth: 0,
+    justifyContent: 'center',
+  },
+  hostAnswerCell: {
+    ...commonBorder,
+    flex: 0.2,
+    minHeight: 25,
+    borderTopWidth: 0,
+  },
+
+  // --- Instructions and Notes ---
+  instructionCell: {
+    ...commonBorder,
+    borderTopWidth: 0,
+    backgroundColor: '#ffe8e8', // Light background for emphasis
+    minHeight: 25,
+    justifyContent: 'center',
+  },
+  instructionText: {
+    fontSize: 10,
+    paddingHorizontal: 4,
+  },
+  noteCell: {
+    ...commonBorder,
+    borderTopWidth: 0,
+    minHeight: 35,
+    justifyContent: 'center',
+  },
+  noteText: {
+    fontSize: 11,
+    paddingHorizontal: 4,
+  },
+  managerNoteCell: {
+    ...commonBorder,
+    borderTopWidth: 0,
+    minHeight: 25,
+    justifyContent: 'center',
+    marginBottom: 8, // Space before the final table
+  },
+
+  // --- Table Styles (Visitors) ---
+  tableContainer: {
+    ...commonBorder,
+    width: '100%',
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#eee',
+    minHeight: 35,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderColor: '#000',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    minHeight: 35,
+    borderBottomWidth: 1,
+    borderColor: '#000',
+  },
+  colHeaderText: {
+    fontWeight: '700',
+    fontSize: 9,
+    textAlign: 'center',
+  },
+
+  // Column Flex Ratios
+  colName: { flex: 0.20, borderRightWidth: 1, borderRightColor: '#000' },
+  colAddress: { flex: 0.25, borderRightWidth: 1, borderRightColor: '#000' },
+  colContact: { flex: 0.12, borderRightWidth: 1, borderRightColor: '#000' },
+  colPurpose: { flex: 0.18, borderRightWidth: 1, borderRightColor: '#000' },
+  colTime: { flex: 0.08, borderRightWidth: 1, borderRightColor: '#000' },
+  colAuth: { flex: 0.17 }, // Last column has no right border
+
+  // Generic Cell Styles
+  cell: {
+    paddingHorizontal: 2,
+    justifyContent: 'center',
+  },
+  cellText: {
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  cellInput: {
+    flex: 1,
+    paddingHorizontal: 4,
+    fontSize: 10,
+    height: '100%',
+    textAlign: 'center',
+  },
+  multiLineCell: {
+    paddingVertical: 4,
+  }
+});

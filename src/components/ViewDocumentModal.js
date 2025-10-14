@@ -1,7 +1,7 @@
 
-import React, { useState, useRef } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import ReadOnlyForm from './ReadOnlyForm';
+import React, { useState, useRef, useEffect } from 'react';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import SavedFormRenderer from './SavedFormRenderer';
 import Spinner from 'react-native-loading-spinner-overlay';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
@@ -24,15 +24,26 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
   const formRef = useRef(null);
   const [exporting, setExporting] = useState(false);
 
+  useEffect(() => {
+    // no debug logging in production view
+  }, [form, visible]);
+
   if (!form) return null;
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
-          <View ref={formRef} collapsable={false}>
-            <ReadOnlyForm form={form} />
-          </View>
+          {/* Vertical scroll for modal content; enable nested scrolling so inner horizontal scrolls work */}
+          <ScrollView style={{ maxHeight: '92%' }} contentContainerStyle={{ paddingBottom: 12 }} nestedScrollEnabled={true}>
+            <View ref={formRef} collapsable={false}>
+              {/* Allow horizontal scrolling inside the modal for wide tables */}
+              <ScrollView horizontal={true} nestedScrollEnabled={true} contentContainerStyle={{ flexGrow: 1 }}>
+                {/* Render saved form via SavedFormRenderer (new unified renderer) */}
+                <SavedFormRenderer savedPayload={form} />
+              </ScrollView>
+            </View>
+          </ScrollView>
 
           <Spinner visible={exporting} textContent={'Exporting...'} textStyle={{ color: '#fff' }} />
 

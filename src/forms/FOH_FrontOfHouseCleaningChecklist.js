@@ -13,6 +13,9 @@ import {
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import formStorage from '../utils/formStorage';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const DRAFT_KEY = 'front_of_house_cleaning_checklist_draft';
 
@@ -114,12 +117,42 @@ export default function FrontOfHouseChecklist() {
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({
+      // attempt to embed logo as base64
+      let logoDataUri = null;
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.png'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+          if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+        }
+      } catch (e) {
+        // ignore embedding failures
+      }
+
+      const payload = {
+        formType: 'FOH_FrontOfHouseCleaning',
+        templateVersion: 'v1.0',
         title: 'Front of House Cleaning Checklist',
         date: new Date().toLocaleDateString(),
+        metadata,
+        weekDays: WEEK_DAYS,
+        formData,
+        layoutHints: COL_WIDTHS,
+        _tableWidth: TABLE_WIDTH,
+        assets: logoDataUri ? { logoDataUri } : undefined,
         savedAt: Date.now(),
-        meta: { metadata, formData }
-      });
+      };
+
+      const formId = `FOH_FrontOfHouseCleaning_${Date.now()}`;
+      try {
+        await formStorage.saveForm(formId, payload);
+        await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } });
+      } catch (e) {
+        // fallback
+        await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), meta: { metadata, formData } });
+      }
+
       await removeDraft(DRAFT_KEY);
       Alert.alert('Success', 'Checklist Submitted successfully!');
       setFormData(initialCleaningState);
@@ -200,7 +233,7 @@ export default function FrontOfHouseChecklist() {
               <Text style={styles.docText}>Doc No: BBN-SHEQ-P-16-R-11d | Issue Date: 19/05/2020 | Revision Date: N/A</Text>
               <Text style={styles.docText}>Page 1 of 1</Text>
             </View>
-            <Text style={styles.mainTitle}>FRONT OF HOUSE CLEANING CHECKLIST</Text>
+            <View style={styles.titleRow}><Text style={styles.mainTitle}>FRONT OF HOUSE CLEANING CHECKLIST</Text></View>
             <View style={styles.areaMetaRow}>
               <View style={[styles.metaField, { flex: 2 }]}>
                 <Text style={styles.metaLabel}>LOCATION:</Text>
@@ -301,6 +334,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   mainTitle: { fontSize: 20, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 10 },
+  titleRow: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
   areaMetaRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 15, borderWidth: 1, borderColor: '#1F2937' },
   metaField: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 100, paddingVertical: 4, paddingHorizontal: 8, borderRightWidth: 1, borderRightColor: '#1F2937' },
   metaLabel: { fontSize: 11, fontWeight: '600', color: '#4B5563', marginRight: 4 },

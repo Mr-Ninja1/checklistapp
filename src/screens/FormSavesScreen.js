@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, P
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import ViewDocumentModal from '../components/ViewDocumentModal';
+import formStorage from '../utils/formStorage';
 import { getFormHistory, removeFormHistory } from '../utils/formHistory';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -107,7 +108,7 @@ export default function FormSavesScreen() {
         <Text style={styles.placeholder}>{loadingHistory ? 'Loading history...' : 'No saved forms yet.'}</Text>
       ) : (
         <ScrollView style={{ width: '100%', flex: 1, paddingHorizontal: 24 }} contentContainerStyle={{ paddingBottom: 40 }}>
-          {Platform.OS === 'web'
+      {Platform.OS === 'web'
             ? Object.keys(groupedByDate).map(date => (
                 <View key={date} style={{ marginBottom: 24 }}>
                   <Text style={styles.dateHeading}>{date}</Text>
@@ -116,19 +117,46 @@ export default function FormSavesScreen() {
                       <TouchableOpacity
                         style={styles.card}
                         activeOpacity={0.8}
-                        onPress={() => {
-                          // Combine stored history entry and its meta (actual form data).
-                          // Use meta values to override shallow history fields (meta should be the full form payload).
-                          const merged = { ...form, ...(form.meta || {}) };
-                          // Ensure pdfPath and savedAt come from the history record (not overwritten by meta)
-                          merged.pdfPath = form.pdfPath;
-                          merged.savedAt = form.savedAt;
-                          // Remove nested meta to avoid confusion in ReadOnlyForm
-                          if (merged.meta) delete merged.meta;
-                          console.log('[FormSavesScreen] opening saved form (merged):', merged);
-                          setSelectedForm(merged);
-                          setModalVisible(true);
-                        }}
+                        onPress={async () => {
+                            try {
+                              // Attempt multiple strategies to obtain the canonical saved payload
+                              let payload = null;
+                              const meta = form.meta || {};
+
+                              // 1) If meta.formId present, load stored payload
+                              if (meta.formId) {
+                                try {
+                                  const loaded = await formStorage.loadForm(meta.formId);
+                                  if (loaded && loaded.payload) payload = loaded.payload;
+                                } catch (e) {
+                                  console.warn('FormSavesScreen: loadForm failed for formId', meta.formId, e);
+                                }
+                              }
+
+                              // 2) If not found, check meta.formData or meta.payload shape
+                              if (!payload) {
+                                if (meta.formData && Object.keys(meta.formData).length) payload = meta.formData;
+                                else if (meta.payload && Object.keys(meta.payload).length) payload = meta.payload;
+                                else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) payload = meta;
+                              }
+
+                              // 3) If still not found, fall back to history entry fields
+                              if (!payload) payload = form;
+
+                              // Ensure savedAt/pdfPath remain available for the modal
+                              payload.pdfPath = form.pdfPath;
+                              payload.savedAt = form.savedAt;
+                              if (payload.meta) delete payload.meta;
+
+                              // opened saved form
+
+                              setSelectedForm(payload);
+                              setModalVisible(true);
+                            } catch (e) {
+                              console.warn('failed loading saved payload', e);
+                              Alert.alert('Open failed', 'Unable to load saved form payload.');
+                            }
+                          }}
                       >
                         <Text style={styles.cardTitle}>{form.title || 'Food Handlers Handwashing Log'}</Text>
                         <Text style={styles.cardMeta}>Shift: {form.shift} | Location: {form.location}</Text>
@@ -147,15 +175,35 @@ export default function FormSavesScreen() {
                   <TouchableOpacity
                     style={styles.card}
                     activeOpacity={0.8}
-                    onPress={() => {
-                      const merged = { ...form, ...(form.meta || {}) };
-                      merged.pdfPath = form.pdfPath;
-                      merged.savedAt = form.savedAt;
-                      if (merged.meta) delete merged.meta;
-                      console.log('[FormSavesScreen] opening saved form (native merged):', merged);
-                      setSelectedForm(merged);
-                      setModalVisible(true);
-                    }}
+                    onPress={async () => {
+                        try {
+                          let payload = null;
+                          const meta = form.meta || {};
+                          if (meta.formId) {
+                            try {
+                              const loaded = await formStorage.loadForm(meta.formId);
+                              if (loaded && loaded.payload) payload = loaded.payload;
+                            } catch (e) { console.warn('FormSavesScreen: loadForm failed for formId', meta.formId, e); }
+                          }
+                          if (!payload) {
+                            if (meta.formData && Object.keys(meta.formData).length) payload = meta.formData;
+                            else if (meta.payload && Object.keys(meta.payload).length) payload = meta.payload;
+                            else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) payload = meta;
+                          }
+                          if (!payload) payload = form;
+                          payload.pdfPath = form.pdfPath;
+                          payload.savedAt = form.savedAt;
+                          if (payload.meta) delete payload.meta;
+
+                              // opened saved form
+
+                          setSelectedForm(payload);
+                          setModalVisible(true);
+                        } catch (e) {
+                          console.warn('failed loading saved payload', e);
+                          Alert.alert('Open failed', 'Unable to load saved form payload.');
+                        }
+                      }}
                   >
                     <Text style={styles.cardTitle}>{form.title || form.pdfPath?.split('/').pop() || 'Saved PDF'}</Text>
                     <Text style={styles.cardMeta}>PDF: {form.pdfPath?.split('/').pop()}</Text>
