@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function BinLinersChangingLog() {
+  const DRAFT_KEY = 'bin_liners_changing_log';
   // Initial 7 rows
   const initialLog = Array.from({ length: 7 }, () => ({
     date: '',
@@ -31,6 +38,73 @@ export default function BinLinersChangingLog() {
   const logo = () => (
     <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
   );
+
+  // Load draft on mount
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const d = await getDraft(DRAFT_KEY);
+        if (d && mounted) {
+          if (d.logEntries) setLogEntries(d.logEntries);
+          if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
+          if (d.hseqManager) setHseqManager(d.hseqManager);
+        }
+      } catch (e) {}
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Auto-save draft on change
+  React.useEffect(() => {
+    const t = setTimeout(() => setDraft(DRAFT_KEY, { logEntries, verifiedBy, hseqManager }), 700);
+    return () => clearTimeout(t);
+  }, [logEntries, verifiedBy, hseqManager]);
+
+  const handleSaveDraft = async () => {
+    try {
+      await setDraft(DRAFT_KEY, { logEntries, verifiedBy, hseqManager });
+      Alert.alert('Draft saved');
+    } catch (e) { Alert.alert('Error', 'Failed to save draft'); }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      // try to embed logo as base64
+      let logoDataUri = null;
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.png'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+          if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+        }
+      } catch (e) { logoDataUri = null; }
+
+      const payload = {
+        formType: 'BinLinersChangingLog',
+        templateVersion: 'v1.0',
+        title: 'BIN LINERS CHANGING LOG',
+        date: issueDate,
+        metadata: { },
+        logEntries,
+        layoutHints: { DATE: 100, CHANGED_BY: 240, AREA: 200, STAFF_SIGN: 200, SUP_SIGN: 200 },
+        _tableWidth: 100+240+200+200+200,
+        assets: logoDataUri ? { logoDataUri } : undefined,
+        savedAt: Date.now(),
+      };
+      const formId = `BinLinersChangingLog_${Date.now()}`;
+      await formStorage.saveForm(formId, payload);
+      try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } }); } catch (e) {}
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      setLogEntries(initialLog);
+      setVerifiedBy('');
+      setHseqManager('');
+      Alert.alert('Saved', 'Form saved to history');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save form');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -134,6 +208,17 @@ export default function BinLinersChangingLog() {
             <Text style={styles.verifyLabel}>HSEQ Manager:</Text>
             <TextInput style={[styles.verifyInput]} value={hseqManager} onChangeText={setHseqManager} placeholder="" />
           </View>
+        </View>
+
+        {/* Action buttons - Save Draft & Submit */}
+        <View style={{ height: 18 }} />
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
+          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+          </TouchableOpacity>
         </View>
 
       </ScrollView>

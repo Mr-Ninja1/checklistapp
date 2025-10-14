@@ -1,3 +1,5 @@
+import ProductRejectionPresentational from '../forms/components/ProductRejectionPresentational';
+import BinLinersChangingLogPresentational from '../forms/components/BinLinersChangingLogPresentational';
 import React from 'react';
 import FoodHandlersPresentational from '../forms/components/FoodHandlersPresentational';
 import FOH_DailyCleaningPresentational from '../forms/components/FOH_DailyCleaningPresentational';
@@ -49,6 +51,14 @@ export default function SavedFormRenderer({ savedPayload }) {
         <DisplayChillerShelfLifeInspectionPresentational payload={payload} />
       </View>
     );
+  }
+  // Bin Liners Changing Log
+  if (/BinLinersChangingLog|Bin Liners Changing Log/i.test(type)) {
+    return <BinLinersChangingLogPresentational payload={payload} />;
+  }
+  // Product Rejection Form
+  if (/ProductRejectionForm/i.test(type)) {
+    return <ProductRejectionPresentational payload={payload} />;
   }
   // Pre Shift Meeting Attendance
   if (/PreShiftMeetingAttendance/i.test(type)) {

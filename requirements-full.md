@@ -1,3 +1,51 @@
+# Canonical Form Saving & Pixel-Perfect Reproduction (AI Implementation Spec)
+
+## Overview
+Every form in the app must save its data using a canonical payload schema, so that any AI or developer can reproduce the exact saved-form display and export logic. Saved forms must look identical to the editable forms, both on mobile and desktop, and support seamless PDF export and cross-device sync.
+
+## Canonical Payload Schema
+All forms save using this object structure:
+```
+{
+	formType: string, // Unique form identifier (e.g. 'BinLinersChangingLog')
+	templateVersion: string, // Version of the form template
+	title: string, // Human-readable form title
+	date: string, // User-facing date
+	metadata: object, // All header fields (location, shift, verifiedBy, etc.)
+	timeSlots: array, // Array of time column headings (if applicable)
+	formData: array|object, // All user-entered fields, rows, tables, etc.
+	layoutHints: object, // Per-column pixel widths for renderer
+	_tableWidth: number, // Total table width in pixels
+	assets: { logoDataUri: string }, // Embedded logo as base64 data URI
+	savedAt: number // Timestamp
+}
+```
+
+## Save Draft & Submit Flows
+- Every form must have Save Draft and Submit buttons, always visible at the bottom.
+- Save Draft stores the canonical payload locally (draft state).
+- Submit stores the canonical payload as a final submission and clears the form.
+- After saving, the form should clear all fields and reset state.
+
+## Presentational Renderer Pattern
+- For every form, create a presentational renderer (e.g. BinLinersChangingLogPresentational.js) that displays the saved payload exactly as the editable form, including all tables, branding, and layout.
+- Use the embedded logoDataUri for branding.
+- All tables must have fixed column widths and visible borders for pixel-perfect reproduction.
+
+## SavedFormRenderer Dispatch
+- SavedFormRenderer.js must detect the form type and dispatch to the correct presentational renderer.
+- If a saved form type is not supported, show a clear error message.
+
+## QA Requirements
+- Saved forms must look identical to the editable forms (pixel-perfect).
+- All metadata, assets, and layout hints must be preserved.
+- Wide tables must be scrollable in the modal.
+
+## Implementation Steps (for any new form)
+1. Add Save Draft/Submit logic to the editable form, saving canonical payload.
+2. Create a presentational renderer for the form.
+3. Wire up the renderer in SavedFormRenderer.js.
+4. Test saved-form display for pixel-perfect reproduction.
 # BRAVO Restaurant Cleaning Checklist App Requirements
 
 ## Overview
