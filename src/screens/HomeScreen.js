@@ -146,13 +146,14 @@ export default function HomeScreen() {
   const dateString = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const yearString = now.getFullYear();
 
-  // Filter forms by category and search
+  // Filter forms by category and search; exclude cards that don't link to a form
   function getFilteredForms(category) {
-    const forms = formCategories[category].forms;
+    const forms = formCategories[category].forms
+      .filter(f => f.route || f.isHandwashingLog); // only show cards that navigate somewhere
     if (!searchTerm) return forms;
     return forms.filter(f =>
       f.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.location.toLowerCase().includes(searchTerm.toLowerCase())
+      (f.location && f.location.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }
 
@@ -339,7 +340,10 @@ export default function HomeScreen() {
       {/* Removed kitchen quick access featured cards per request */}
 
       {/* Form Lists */}
-      <ScrollView style={{ flex: 1, width: '100%' }} contentContainerStyle={[styles.formListContent, { minHeight: 0 }]}> 
+      <ScrollView
+        style={{ flex: 1, width: '100%' }}
+        contentContainerStyle={[styles.formListContent, { flexGrow: 1, paddingBottom: 120 }]}
+      >
         {getFilteredForms(activeCategory).map((form, idx) => (
           <View key={`form-card-${form.id}-${idx}-${form.title}` }>
             <TouchableOpacity

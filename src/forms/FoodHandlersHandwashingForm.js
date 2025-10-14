@@ -3,8 +3,11 @@ import { View, Text, TextInput, StyleSheet, SafeAreaView, ScrollView, Image, Ale
 import Spinner from 'react-native-loading-spinner-overlay';
 import { addFormHistory } from '../utils/formHistory';
 import useExportFormAsPDF from '../utils/useExportFormAsPDF';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import useResponsive from '../utils/responsive';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import formStorage from '../utils/formStorage';
 import { useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -130,37 +133,112 @@ export default function FoodHandlersHandwashingForm() {
       await new Promise(res => setTimeout(res, 250));
       const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
 
-      const formData = {
+      // try to embed logo as base64 for perfect saved rendering (best-effort)
+      let logoDataUri = null;
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.png'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          // read file as base64 (may fail on some environments)
+          try {
+            const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+            if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+          } catch (e) {
+            // ignore and proceed without embedded image
+            logoDataUri = null;
+          }
+        }
+      } catch (e) {
+        // best-effort, ignore failures
+        logoDataUri = null;
+      }
+
+      const payload = {
+        formType: 'FoodHandlersHandwashing',
+        templateVersion: 'v1.0',
         title: 'Food Handlers Daily Handwashing Tracking Log Sheet',
         date: logDetails.date,
         location: logDetails.location,
         shift: logDetails.shift,
         verifiedBy: logDetails.verifiedBy,
-        handlers: handlersWithId,
         timeSlots: TIME_SLOTS,
+        handlers: handlersWithId,
+        assets: logoDataUri ? { logoDataUri } : undefined,
+        layoutHints: {
+          nameW: dyn.nameW,
+          jobW: dyn.jobW,
+          signW: dyn.signW,
+        }
       };
 
+      const formId = `FoodHandlersHandwashing_${Date.now()}`;
       try {
-  await addFormHistory({ title: formData.title, date: formData.date, shift: formData.shift, savedAt: Date.now(), meta: formData });
-  setExporting(false);
-  Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
+        await formStorage.saveForm(formId, payload);
+        setExporting(false);
+        // clear draft and reset form fields
+        try { await removeDraft(draftKey); } catch (e) {}
+        setHandlers(Array.from({ length: NUM_ROWS }, () => ({
+          fullName: '',
+          jobTitle: '',
+          checks: createInitialChecks(),
+          staffSign: '',
+          supName: '',
+          supSign: '',
+        })));
+        setLogDetails({ date: getCurrentDate(), location: '', shift: getCurrentShift(), verifiedBy: '', complexManagerSign: '' });
+        Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
       } catch (e) {
         setExporting(false);
-        console.warn('save meta failed', e);
-        Alert.alert('Error', 'Failed to save form metadata.');
+        console.warn('save payload failed', e);
+        Alert.alert('Error', 'Failed to save form payload.');
       }
     } catch (e) {
       setExporting(false);
       Alert.alert('Error', 'Failed to save form.');
+    } finally {
+      // ensure the busy overlay is always cleared
+      setBusy(false);
     }
   };
 
   const handleSave = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Food Handlers Handwashing', date: logDetails.date, savedAt: Date.now(), meta: { logDetails, handlers } });
-      await removeDraft(draftKey);
-      alert('Submitted and saved to history');
+      // Build a deterministic payload that can be rendered exactly later
+      const formId = `FoodHandlersHandwashing_${Date.now()}`;
+      const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
+      const payload = {
+        formType: 'FoodHandlersHandwashing',
+        templateVersion: 'v1.0',
+        title: 'Food Handlers Daily Handwashing Tracking Log Sheet',
+        date: logDetails.date,
+        shift: logDetails.shift,
+        location: logDetails.location,
+        verifiedBy: logDetails.verifiedBy,
+        complexManagerSign: logDetails.complexManagerSign,
+        timeSlots: TIME_SLOTS,
+        handlers: handlersWithId,
+        // layout hints help desktop/renderer match the original spacing if needed
+        layoutHints: {
+          nameW: dyn.nameW,
+          jobW: dyn.jobW,
+          signW: dyn.signW,
+        }
+      };
+
+      await formStorage.saveForm(formId, payload);
+      try { await removeDraft(draftKey); } catch (e) {}
+      // reset form fields after successful save
+      setHandlers(Array.from({ length: NUM_ROWS }, () => ({
+        fullName: '',
+        jobTitle: '',
+        checks: createInitialChecks(),
+        staffSign: '',
+        supName: '',
+        supSign: '',
+      })));
+      setLogDetails({ date: getCurrentDate(), location: '', shift: getCurrentShift(), verifiedBy: '', complexManagerSign: '' });
+      alert('Submitted and saved');
       navigation.navigate('Home');
     } catch (e) { alert('Failed to submit'); }
     finally { setBusy(false); }

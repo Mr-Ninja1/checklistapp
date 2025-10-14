@@ -132,3 +132,15 @@ This snapshot is intentionally concise; paste it into this file to let the assis
 	- Decide whether to use raster (screenshot→PDF) or vector (HTML→PDF) export for selectable/searchable text; implement later if required.
 
 Add this task to the implementation backlog and schedule after all forms are implemented and stabilized.
+
+
+creating form saving logic
+so check for the saving part lets discuss,
+ there is a formsaves screen that will show all saved forms in the system 
+ so i noticed that the export pdf was not working on mobile there was no library that was getting the entire form exactly the way it is with all its contents so i thought why not just make a trick were when you fill in the form and click submit(save) just get all the metadata of the form , then save it , when the user goes to the scrensaves forms and clicks a save form to view it that exact form is recreated on that side too
+
+ since this app will have both desktop and mobile app version , so pdf export +print from the saves screen will only happen on desktop but on mobile the user will just be able to view that actuall form the way it was saved .because we noticed on mobile it was not possible to get the form in A4 full view but can only be saved as such so the user can work and save form on mobile and to print it or downlod they have to go to the desktop app and sync, so meaning we have to ensure that each form appears exactly when its saved .check the  foodhandlers daily handwashing Tracking Log sheet , it has a tech that is close but wasnt perfectly implemented , the form was being saved and all the texts and checkboxes but the structure of the layout was differing when it was saved. i hope you get the idea
+
+ as long as the form appears exactly as it is and also its saved content , so we are focusing on mobile
+but we want even if the form was saved using mobile but even on pc its comming out perfect condition and size , so i will late use this same codebase to build a desktop version of this , there will be only connected through saved forms via google drive sync , so when i save a form on mobile it will also appear perfectly in the desktop form screen saves 
+and they are a lot of unused form cards on the home screen these card are not linked to any forms remove them before we start
