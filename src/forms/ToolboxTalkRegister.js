@@ -97,6 +97,9 @@ export default function ToolboxTalkRegister() {
     return () => { mounted = false; };
   }, []);
 
+  // Local wrapper for submit so we can pass a stable callback to the action bar
+  const handleSubmitLocal = async () => { await handleSubmit(); };
+
   // --- Component Rendering ---
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -229,6 +232,14 @@ export default function ToolboxTalkRegister() {
           </View>
         </View>
         {/* End of table horizontal scroll view */}
+
+        {/* Action bar + overlays */}
+        <View style={styles.buttonRow}>
+          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
+        </View>
+
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
       </ScrollView>
     </SafeAreaView>
@@ -383,4 +394,9 @@ const styles = StyleSheet.create({
   },
   cellText: { fontSize: 12, textAlign: 'center' },
   
+});
+
+// Add buttonRow style at file end (keeps style block small and localized)
+Object.assign(styles, {
+  buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 12, borderTopWidth: 1, borderColor: '#eee' }
 });
