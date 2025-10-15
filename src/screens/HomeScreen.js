@@ -342,7 +342,9 @@ export default function HomeScreen() {
       {/* Form Lists */}
       <ScrollView
         style={{ flex: 1, width: '100%' }}
-        contentContainerStyle={[styles.formListContent, { flexGrow: 1, paddingBottom: 120 }]}
+        contentContainerStyle={[styles.formListContent, { paddingBottom: 120 }]}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}
       >
         {getFilteredForms(activeCategory).map((form, idx) => (
           <View key={`form-card-${form.id}-${idx}-${form.title}` }>

@@ -26,6 +26,22 @@ async function saveForm(formId, payload) {
   }
 }
 
+// Save a draft without adding an entry to the global history index.
+// Used for silent autosave so the Saved Forms modal/list isn't updated on every keystroke.
+async function saveDraft(formId, payload) {
+  const dir = BASE_DIR + `${formId}/`;
+  const filePath = dir + 'payload.json';
+  try {
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+    const wrapped = { payload, savedAt: Date.now() };
+    await FileSystem.writeAsStringAsync(filePath, JSON.stringify(wrapped));
+    return { filePath };
+  } catch (err) {
+    console.error('formStorage.saveDraft error', err);
+    throw err;
+  }
+}
+
 async function loadForm(formId) {
   const filePath = BASE_DIR + `${formId}/payload.json`;
   try {
@@ -72,6 +88,7 @@ async function deleteForm(formId) {
 
 export default {
   saveForm,
+  saveDraft,
   loadForm,
   listForms,
   deleteForm,

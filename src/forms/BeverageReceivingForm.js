@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
+import formStorage from '../utils/formStorage';
+import useFormSave from '../hooks/useFormSave';
+import FormActionBar from '../components/FormActionBar';
+import NotificationModal from '../components/NotificationModal';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const { width } = Dimensions.get('window');
 
@@ -18,8 +24,71 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
 
 // --- Main Form Component (BEVERAGE AND WATER RECEIVING CHECKLIST) ---
 const BeverageReceivingForm = () => {
-    // Initializing with data for the product log
-    const [receivingData, setReceivingData] = useState(createInitialProductData(10));
+        // Initializing with data for the product log
+        const DRAFT_KEY = 'beverage_receiving_form';
+        const [receivingData, setReceivingData] = useState(createInitialProductData(10));
+        const [deliveryDetails, setDeliveryDetails] = useState({
+            dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: ''
+        });
+        // preload logo as base64 for payload assets
+        const [logoDataUri, setLogoDataUri] = React.useState(null);
+        React.useEffect(() => {
+            let mounted = true;
+            (async () => {
+                try {
+                    const asset = Asset.fromModule(require('../assets/logo.png'));
+                    await asset.downloadAsync();
+                    if (asset.localUri) {
+                        const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+                        if (b64 && mounted) setLogoDataUri(`data:image/png;base64,${b64}`);
+                    }
+                } catch (e) { /* ignore */ }
+            })();
+            return () => { mounted = false; };
+        }, []);
+
+        const draftId = 'BeverageReceivingForm_draft';
+
+        const buildPayload = (status = 'draft') => {
+            const layoutHints = { NAME: 260, SUPPLIER: 180, CLEAN: 90, TEMP: 90, TEMP_OF_BEVERAGE: 120, STATE_OF_PRODUCT: 140, EXPIRY_DATE: 120, REMARKS: 300 };
+            const _tableWidth = 260+180+90+90+120+140+120+300;
+            return {
+                formType: 'BeverageReceivingForm',
+                templateVersion: 'v1.0',
+                title: 'Beverage and Water Receiving Checklist',
+                date: issueDate,
+                metadata: { ...deliveryDetails },
+                formData: receivingData,
+                layoutHints,
+                _tableWidth,
+                assets: logoDataUri ? { logoDataUri } : undefined,
+                savedAt: Date.now(),
+                status,
+            };
+        };
+
+        const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
+            setReceivingData(createInitialProductData(10));
+            setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+            setIssueDate(defaultIssueDate);
+        }});
+
+        // load any existing draft saved via formStorage
+        React.useEffect(() => {
+            let mounted = true;
+            (async () => {
+                try {
+                    const wrapped = await formStorage.loadForm(draftId);
+                    const payload = wrapped?.payload || null;
+                    if (payload && mounted) {
+                        if (payload.formData) setReceivingData(payload.formData);
+                        if (payload.metadata) setDeliveryDetails(payload.metadata);
+                        if (payload.date) setIssueDate(payload.date);
+                    }
+                } catch (e) { /* ignore */ }
+            })();
+            return () => { mounted = false; };
+        }, []);
 
     // Compute document details for the header
     const today = new Date();
@@ -32,20 +101,14 @@ const BeverageReceivingForm = () => {
 
     // Helper to update the receiving data fields
     const updateReceivingField = (id, field, value) => {
-        setReceivingData(prevData => prevData.map(item => {
-            if (item.id === id) {
-                return {
-                    ...item,
-                    [field]: value,
-                };
-            }
-            return item;
-        }));
+        setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
+        scheduleAutoSave();
     };
 
     // Toggle the boolean clean field (checkbox)
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
+        scheduleAutoSave();
     };
 
     // Renders one row of the receiving log table
@@ -174,25 +237,25 @@ const BeverageReceivingForm = () => {
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.dateOfDelivery} onChangeText={t => setDeliveryDetails(d => ({ ...d, dateOfDelivery: t }))} />
                             <Text style={styles.deliveryLabel}>Received By:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} onChangeText={t => setDeliveryDetails(d => ({ ...d, receivedBy: t }))} />
                             <Text style={styles.deliveryLabel}>Complex Manager:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={t => setDeliveryDetails(d => ({ ...d, complexManager: t }))} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Time of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.timeOfDelivery} onChangeText={t => setDeliveryDetails(d => ({ ...d, timeOfDelivery: t }))} />
                             <Text style={styles.deliveryLabel}>Invoice No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.invoiceNo} onChangeText={t => setDeliveryDetails(d => ({ ...d, invoiceNo: t }))} />
                             <Text style={styles.deliveryLabel}>Drivers Name:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={t => setDeliveryDetails(d => ({ ...d, driversName: t }))} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => setDeliveryDetails(d => ({ ...d, vehicleRegNo: t }))} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} />
+                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={t => setDeliveryDetails(d => ({ ...d, signature: t }))} />
                         </View>
                     </View>
 
@@ -240,7 +303,11 @@ const BeverageReceivingForm = () => {
                         <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
                     </View>
 
-                </View>
+                                {/* Action buttons - Save Draft & Submit */}
+                                <View style={{ height: 18 }} />
+                                <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
+                                <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+                            </View>
             </ScrollView>
         </SafeAreaView>
     );

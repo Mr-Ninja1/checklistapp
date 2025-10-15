@@ -1,4 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import useFormSave from '../hooks/useFormSave';
+import { Alert } from 'react-native';
+import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import formStorage from '../utils/formStorage';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -16,6 +22,8 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
 
 const VegetablesFruitsReceivingForm = () => {
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
+    const [deliveryDetails, setDeliveryDetails] = useState({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+    const updateDeliveryDetail = (field, value) => { setDeliveryDetails(prev => ({ ...prev, [field]: value })); scheduleAutoSave(); };
 
     const today = new Date();
     const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
@@ -25,11 +33,57 @@ const VegetablesFruitsReceivingForm = () => {
 
     const updateReceivingField = (id, field, value) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
+        scheduleAutoSave();
     };
 
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
+        scheduleAutoSave();
     };
+
+    const buildCanonicalPayload = (status = 'draft') => ({
+        formType: 'VegetablesFruitsReceiving',
+        templateVersion: '01',
+        title: 'Vegetables and Fruits Receiving Checklist',
+        metadata: { issueDate, templateVersion: '01', status, ...deliveryDetails },
+        formData: receivingData,
+        layoutHints: {},
+        assets: { logoDataUri: null },
+        savedAt: new Date().toISOString(),
+    });
+
+    // clear form helper
+    const clearForm = () => {
+        setReceivingData(createInitialProductData(10));
+        setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+        setIssueDate(defaultIssueDate);
+    };
+
+    const getPayload = (status) => buildCanonicalPayload(status);
+    const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload: getPayload, draftId: 'VegetablesFruitsReceiving_draft', clearOnSubmit: () => clearForm() });
+
+    useEffect(() => { if (showNotification) { Alert.alert(notificationMessage || 'Saved'); setShowNotification(false); } }, [showNotification]);
+
+    // preload draft if present
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const wrapped = await formStorage.loadForm('VegetablesFruitsReceiving_draft');
+                const payload = wrapped?.payload || null;
+                if (payload && mounted) {
+                    if (payload.metadata) {
+                        setIssueDate(payload.metadata.issueDate || defaultIssueDate);
+                        setDeliveryDetails(prev => ({ ...prev, ...payload.metadata }));
+                    }
+                    if (payload.formData) {
+                        setReceivingData(payload.formData || createInitialProductData(10));
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
@@ -105,25 +159,25 @@ const VegetablesFruitsReceivingForm = () => {
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.dateOfDelivery} onChangeText={t => updateDeliveryDetail('dateOfDelivery', t)} />
                             <Text style={styles.deliveryLabel}>Received By:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} onChangeText={t => updateDeliveryDetail('receivedBy', t)} />
                             <Text style={styles.deliveryLabel}>Complex Manager:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={t => updateDeliveryDetail('complexManager', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Time of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.timeOfDelivery} onChangeText={t => updateDeliveryDetail('timeOfDelivery', t)} />
                             <Text style={styles.deliveryLabel}>Invoice No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.invoiceNo} onChangeText={t => updateDeliveryDetail('invoiceNo', t)} />
                             <Text style={styles.deliveryLabel}>Drivers Name:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={t => updateDeliveryDetail('driversName', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => updateDeliveryDetail('vehicleRegNo', t)} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} />
+                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={t => updateDeliveryDetail('signature', t)} />
                         </View>
                     </View>
 
@@ -157,6 +211,12 @@ const VegetablesFruitsReceivingForm = () => {
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
                         <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
                     </View>
+                                    <View style={{ height: 18 }} />
+                                    <View style={{ marginTop: 12 }}>
+                                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => clearForm())} showSavePdf={false} />
+                                    </View>
+                                    <LoadingOverlay visible={isSaving} />
+                                    <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                 </View>
             </ScrollView>
         </SafeAreaView>

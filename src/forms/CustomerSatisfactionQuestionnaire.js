@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
 
 const DRAFT_KEY = 'customer_satisfaction_questionnaire_draft';
 
@@ -58,14 +58,13 @@ export default function CustomerSatisfactionQuestionnaire() {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
+        const wrapped = await formStorage.loadForm(DRAFT_KEY);
+        const d = wrapped?.payload || null;
         const base = initialState();
         if (d && mounted) {
-          // Merge with base to ensure required structure (sections etc.) exists
           const merged = { ...base, ...d, sections: d.sections || base.sections };
           setState(merged);
         } else if (mounted) {
-          // No draft found: set initial state with today's date
           const dNow = new Date();
           const dd = String(dNow.getDate()).padStart(2, '0');
           const mm = String(dNow.getMonth() + 1).padStart(2, '0');
@@ -92,11 +91,11 @@ export default function CustomerSatisfactionQuestionnaire() {
 
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, state), 600);
+    saveTimer.current = setTimeout(() => scheduleAutoSave(), 600);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [state]);
 
-  const setField = (k, v) => setState(prev => ({ ...prev, [k]: v }));
+  const setField = (k, v) => { setState(prev => ({ ...prev, [k]: v })); scheduleAutoSave(); };
   const setSectionQuestion = (sectionIndex, questionIndex, key, val) => setState(prev => ({
     ...prev,
     sections: prev.sections.map((s, si) => si === sectionIndex ? {
@@ -105,17 +104,24 @@ export default function CustomerSatisfactionQuestionnaire() {
     } : s)
   }));
 
-  const handleSubmit = async () => {
+  const buildPayload = (status = 'draft') => ({
+    formType: 'CustomerSatisfactionQuestionnaire',
+    templateVersion: '01',
+    title: state.subject,
+    metadata: { issueDate: state.issueDate, formDate: state.formDate, formTime: state.formTime },
+    formData: state,
+    layoutHints: {},
+    assets: {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => setState(initialState()) });
+
+  const handleSubmitLocal = async () => {
     const anyRated = Array.isArray(state.sections) && state.sections.some(s => s.questions && s.questions.some(q => q.rating && String(q.rating).trim() !== ''));
     if (!anyRated) { Alert.alert('Empty', 'Please rate at least one question before submitting.'); return; }
-    setBusy(true);
-    try {
-      await addFormHistory({ title: state.subject, savedAt: Date.now(), data: state });
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Saved', 'Thank you for your feedback');
-      setState(initialState());
-    } catch (e) { console.warn(e); Alert.alert('Error', 'Failed to submit'); }
-    setBusy(false);
+    await handleSubmit();
   };
 
   return (
@@ -201,9 +207,11 @@ export default function CustomerSatisfactionQuestionnaire() {
           </View>
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={[styles.btn, styles.draftBtn]} onPress={() => setDraft(DRAFT_KEY, state)} disabled={busy}><Text style={styles.btnText}>Save Draft</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.submitBtn]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit'}</Text></TouchableOpacity>
+            <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} />
           </View>
+
+          <LoadingOverlay visible={isSaving} />
+          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
         </View>
       </ScrollView>
