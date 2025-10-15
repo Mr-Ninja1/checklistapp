@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
-
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
 
 const DRAFT_KEY = 'certificate_of_analysis_draft';
 
@@ -30,53 +29,52 @@ const initialFormData = {
 export default function CertificateOfAnalysis() {
   const [formData, setFormData] = useState(initialFormData);
   const [busy, setBusy] = useState(false);
-  const saveTimer = useRef(null);
-
+  // load stable draft if present, else populate issue date
   useEffect(() => {
+    let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
-        if (d) {
-          setFormData(prev => ({ ...prev, ...d }));
-        } else {
-          // auto-populate issueDate, month and year from system
+        const wrapped = await formStorage.loadForm('CertificateOfAnalysis_draft');
+        if (wrapped && wrapped.payload && mounted) {
+          const payload = wrapped.payload;
+          if (payload.formData && typeof payload.formData === 'object') {
+            setFormData(prev => ({ ...prev, ...payload.formData }));
+          }
+        } else if (mounted) {
           const today = new Date();
           const issueDate = today.toLocaleDateString();
           const month = today.toLocaleString('default', { month: 'long' });
           const year = today.getFullYear();
           setFormData(prev => ({ ...prev, issueDate, month, year }));
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        // ignore
+      }
     })();
+    return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, formData), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData]);
+  const buildPayload = (status = 'draft') => ({
+    formType: 'CertificateOfAnalysis',
+    templateVersion: '01',
+    title: 'Certificate of Analysis',
+    metadata: { status, compiledBy: initialFormData.compiledBy, issueDate: formData.issueDate },
+    formData: formData,
+    layoutHints: {},
+    assets: { logoDataUri: null },
+    savedAt: new Date().toISOString(),
+  });
 
-  const handleChange = (k, v) => setFormData(prev => ({ ...prev, [k]: v }));
+  const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: 'CertificateOfAnalysis_draft', clearOnSubmit: () => setFormData(initialFormData), formType: 'CertificateOfAnalysis' });
 
-  const handleSaveDraft = async () => {
-    setBusy(true);
-    try {
-      await setDraft(DRAFT_KEY, formData);
-      Alert.alert('Success', 'Draft saved');
-    } catch (e) { Alert.alert('Error', 'Failed to save draft'); }
-    finally { setBusy(false); }
-  };
+  useEffect(() => { if (showNotification) { Alert.alert(notificationMessage || 'Saved'); setShowNotification(false); } }, [showNotification]);
 
-  const handleSubmit = async () => {
-    setBusy(true);
-    try {
-      await addFormHistory({ title: 'Certificate of Analysis', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { formData } });
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Success', 'Certificate submitted successfully');
-      setFormData(initialFormData);
-    } catch (e) { Alert.alert('Error', 'Submission failed'); }
-    finally { setBusy(false); }
-  };
+  const handleChange = (k, v) => setFormData(prev => {
+    const next = { ...prev, [k]: v };
+    // schedule an autosave for the updated form
+    try { scheduleAutoSave(); } catch (e) { /* ignore if not ready */ }
+    return next;
+  });
 
   const renderInputLine = (label, key, placeholder = '', type = 'default', width = '48%') => (
     <View style={[styles.inputRow, { width }]}> 
@@ -87,7 +85,7 @@ export default function CertificateOfAnalysis() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
         <View style={styles.card}>
           <View style={styles.headerRowTop}>
             <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
@@ -137,8 +135,8 @@ export default function CertificateOfAnalysis() {
           </View>
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Certificate</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={async () => { setBusy(true); try { await handleSaveDraft(); Alert.alert('Success', 'Draft saved'); } catch (e) { Alert.alert('Error', 'Failed to save draft'); } finally { setBusy(false); } }} style={[styles.button, styles.draftButton]} disabled={isSaving || busy}>{(isSaving || busy) ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={async () => { setBusy(true); try { await handleSubmit(); Alert.alert('Success', 'Certificate submitted successfully'); } catch (e) { Alert.alert('Error', 'Submission failed'); } finally { setBusy(false); } }} style={[styles.button, styles.submitButton]} disabled={isSaving || busy}>{(isSaving || busy) ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Certificate</Text>}</TouchableOpacity>
           </View>
         </View>
       </ScrollView>

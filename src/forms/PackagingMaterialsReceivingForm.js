@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import useFormSave from '../hooks/useFormSave';
+import FormActionBar from '../components/FormActionBar';
+import NotificationModal from '../components/NotificationModal';
 
 const { width } = Dimensions.get('window');
 
@@ -24,14 +27,31 @@ const PackagingMaterialsReceivingForm = () => {
     const docRef = useMemo(() => 'BBN-SHEQ-P-F-9.5', []);
     const versionNo = useMemo(() => '01', []);
     const revNo = useMemo(() => '00', []);
+    const [deliveryDetails, setDeliveryDetails] = useState({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
 
     const updateReceivingField = (id, field, value) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
+        autoSaveDraft();
     };
 
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
+        autoSaveDraft();
     };
+
+    const buildCanonicalPayload = (status = 'draft') => ({
+        formType: 'PackagingMaterialsReceiving',
+        templateVersion: versionNo,
+        title: 'Packaging Materials Receiving Checklist',
+        metadata: { ...deliveryDetails, issueDate, versionNo, revNo },
+        formData: receivingData,
+        layoutHints: {},
+        assets: { logoDataUri: null },
+        savedAt: new Date().toISOString(),
+        status,
+    });
+
+    const { autoSaveDraft, handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave(buildCanonicalPayload, { formType: 'PackagingMaterialsReceivingForm', draftId: 'PackagingMaterialsReceivingForm_draft' });
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
@@ -110,25 +130,25 @@ const PackagingMaterialsReceivingForm = () => {
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.dateOfDelivery} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, dateOfDelivery: t })); autoSaveDraft(); }} />
                             <Text style={styles.deliveryLabel}>Received By:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, receivedBy: t })); autoSaveDraft(); }} />
                             <Text style={styles.deliveryLabel}>Complex Manager:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, complexManager: t })); autoSaveDraft(); }} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Time of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.timeOfDelivery} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, timeOfDelivery: t })); autoSaveDraft(); }} />
                             <Text style={styles.deliveryLabel}>Invoice No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.invoiceNo} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, invoiceNo: t })); autoSaveDraft(); }} />
                             <Text style={styles.deliveryLabel}>Drivers Name:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, driversName: t })); autoSaveDraft(); }} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, vehicleRegNo: t })); autoSaveDraft(); }} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} />
+                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, signature: t })); autoSaveDraft(); }} />
                         </View>
                     </View>
 
@@ -162,13 +182,20 @@ const PackagingMaterialsReceivingForm = () => {
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
                         <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
                     </View>
+                    <View style={{ marginTop: 12 }}>
+                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => {
+                            setReceivingData(createInitialProductData(10));
+                        })} showSavePdf={false} />
+                    </View>
+                    {/* Notification shown after submit (useFormSave sets message) */}
+                    <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                 </View>
             </ScrollView>
-        </SafeAreaView>
+    </SafeAreaView>
     );
 };
 
-// --- GENERAL STYLES (copied from BeverageReceivingForm for consistency) ---
+// --- GENERAL STYLES ---
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,

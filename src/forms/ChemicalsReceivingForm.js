@@ -1,5 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import FormActionBar from '../components/FormActionBar';
+import formStorage from '../utils/formStorage';
+import useFormSave from '../hooks/useFormSave';
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +20,23 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
 
 const ChemicalsReceivingForm = () => {
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
+    const [deliveryDetails, setDeliveryDetails] = useState({
+        dateOfDelivery: '',
+        receivedBy: '',
+        complexManager: '',
+        timeOfDelivery: '',
+        invoiceNo: '',
+        driversName: '',
+        vehicleRegNo: '',
+        signature: '',
+    });
+    const updateDeliveryDetail = (field, value) => {
+        setDeliveryDetails(prev => ({ ...prev, [field]: value }));
+        scheduleAutoSave();
+    };
+
+    const isMounted = useRef(true);
+    useEffect(() => () => { isMounted.current = false; }, []);
 
     const today = new Date();
     const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
@@ -26,10 +48,12 @@ const ChemicalsReceivingForm = () => {
 
     const updateReceivingField = (id, field, value) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
+        scheduleAutoSave();
     };
 
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
+        scheduleAutoSave();
     };
 
     const renderReceivingLogItem = ({ item }) => (
@@ -45,6 +69,43 @@ const ChemicalsReceivingForm = () => {
         </View>
     );
 
+    const buildCanonicalPayload = (status = 'draft') => ({
+        formType: 'ChemicalsReceiving',
+        templateVersion: versionNo,
+        title: 'Chemicals Receiving Checklist',
+        metadata: { issueDate, versionNo, revNo, ...deliveryDetails },
+        formData: receivingData,
+        layoutHints: {},
+        assets: { logoDataUri: null },
+        savedAt: new Date().toISOString(),
+        status,
+    });
+
+    // use shared hook for autosave/save/submit
+    const draftId = 'ChemicalsReceiving_draft';
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload: buildCanonicalPayload, draftId, clearOnSubmit: () => {
+        setReceivingData(createInitialProductData(10));
+        setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+        setIssueDate(defaultIssueDate);
+    }});
+
+    // preload any existing draft into the form UI
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const wrapped = await formStorage.loadForm(draftId);
+                const payload = wrapped?.payload || null;
+                if (payload && mounted) {
+                    if (payload.formData) setReceivingData(payload.formData);
+                    if (payload.metadata) setDeliveryDetails(payload.metadata);
+                    if (payload.issueDate || payload.metadata?.issueDate) setIssueDate(payload.issueDate || payload.metadata?.issueDate);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+        return () => { mounted = false; };
+    }, []);
+
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView
@@ -53,7 +114,9 @@ const ChemicalsReceivingForm = () => {
                 keyboardShouldPersistTaps="handled"
                 nestedScrollEnabled={true}
             >
-                <View style={styles.container}>
+                {/* Allow horizontal scrolling for wide printed layout while preserving vertical scroll */}
+                <ScrollView horizontal={true} nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1 }}>
+                    <View style={styles.container}>
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
                             <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
@@ -108,25 +171,25 @@ const ChemicalsReceivingForm = () => {
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.dateOfDelivery} onChangeText={(t) => updateDeliveryDetail('dateOfDelivery', t)} />
                             <Text style={styles.deliveryLabel}>Received By:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} onChangeText={(t) => updateDeliveryDetail('receivedBy', t)} />
                             <Text style={styles.deliveryLabel}>Complex Manager:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={(t) => updateDeliveryDetail('complexManager', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Time of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.timeOfDelivery} onChangeText={(t) => updateDeliveryDetail('timeOfDelivery', t)} />
                             <Text style={styles.deliveryLabel}>Invoice No.:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.invoiceNo} onChangeText={(t) => updateDeliveryDetail('invoiceNo', t)} />
                             <Text style={styles.deliveryLabel}>Drivers Name:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={(t) => updateDeliveryDetail('driversName', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Vehicle Reg No.:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={(t) => updateDeliveryDetail('vehicleRegNo', t)} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} />
+                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={(t) => updateDeliveryDetail('signature', t)} />
                         </View>
                     </View>
 
@@ -136,7 +199,7 @@ const ChemicalsReceivingForm = () => {
                             <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
 
                             <View style={dailyStyles.deliveryGroupHeaderCol}>
-                                <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
+                                    <Text style={dailyStyles.groupHeaderTitle}>{'Delivery\nVehicle'}</Text>
                                 <View style={dailyStyles.subHeaderRow}>
                                     <Text style={[dailyStyles.subHeaderCell, dailyStyles.cleanCol, dailyStyles.lastSubHeaderCell]}>Clean</Text>
                                 </View>
@@ -165,7 +228,12 @@ const ChemicalsReceivingForm = () => {
                         <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
                     </View>
 
-                </View>
+                    <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => {})} showSavePdf={false} />
+                    <LoadingOverlay visible={isSaving} message={isSaving ? 'Saving...' : ''} />
+                    <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+
+                    </View>
+                </ScrollView>
             </ScrollView>
         </SafeAreaView>
     );
@@ -213,9 +281,10 @@ const dailyStyles = StyleSheet.create({
     tableHeader: { flexDirection: 'row', backgroundColor: '#eee', alignItems: 'stretch' },
     headerCell: { fontWeight: 'bold', fontSize: 12, padding: 8, textAlign: 'center', borderRightWidth: 1, borderRightColor: '#000', minHeight: 60, textAlignVertical: 'center' },
     spanTwoRows: { minHeight: 90 },
+    // Make grouped header widths match the sum of their sub-column widths so headers align with data cells
     deliveryGroupHeaderCol: { width: 90, borderRightWidth: 1, borderRightColor: '#000' },
-    productGroupHeaderCol: { width: 670, borderRightWidth: 0 },
-    groupHeaderTitle: { fontWeight: 'bold', fontSize: 14, padding: 6, textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#000', height: 36, textAlignVertical: 'center' },
+    productGroupHeaderCol: { width: 560, borderRightWidth: 0 },
+    groupHeaderTitle: { fontWeight: 'bold', fontSize: 14, paddingHorizontal: 6, paddingVertical: 6, textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#000', minHeight: 45, flexWrap: 'wrap' },
     subHeaderRow: { flexDirection: 'row', height: 45 },
     subHeaderCell: { fontWeight: 'bold', fontSize: 12, padding: 4, textAlign: 'center', borderRightWidth: 1, borderRightColor: '#000', textAlignVertical: 'center' },
     lastSubHeaderCell: { borderRightWidth: 0 },

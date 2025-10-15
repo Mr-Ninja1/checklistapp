@@ -1,4 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import formStorage from '../utils/formStorage';
+import { addFormHistory, removeFormHistory } from '../utils/formHistory';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -17,6 +21,102 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
 }));
 
 const ChilledFrozenReceivingForm = () => {
+    // Delivery details state
+    const [deliveryDetails, setDeliveryDetails] = useState({
+        dateOfDelivery: '',
+        receivedBy: '',
+        complexManager: '',
+        timeOfDelivery: '',
+        invoiceNo: '',
+        driversName: '',
+        vehicleRegNo: '',
+        signature: '',
+    });
+
+    // Save status
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Update delivery details
+    const updateDeliveryDetail = (field, value) => {
+        setDeliveryDetails(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Canonical payload builder
+    const buildCanonicalPayload = (status) => {
+        return {
+            formType: 'ChilledFrozenReceiving',
+            templateVersion: versionNo,
+            title: 'Chilled & Frozen Receiving Checklist',
+            metadata: {
+                issueDate,
+                versionNo,
+                revNo,
+                ...deliveryDetails,
+            },
+            formData: receivingData,
+            layoutHints: {},
+            assets: {
+                logoDataUri: null,
+            },
+            savedAt: new Date().toISOString(),
+            status,
+        };
+    };
+
+    // Save Draft
+    const handleSaveDraft = async () => {
+        setIsSaving(true);
+        const payload = buildCanonicalPayload('draft');
+        const formId = `chilled-frozen-${Date.now()}`;
+        try {
+            await formStorage.saveForm(formId, payload);
+        } finally {
+            setIsSaving(false);
+            // Optionally clear form after save
+        }
+    };
+    const [showNotification, setShowNotification] = useState(false);
+    const [notificationMessage, setNotificationMessage] = useState('');
+    // Auto draft save (debounced) - silent save (no overlay/notification)
+    const autoSaveTimeout = React.useRef(null);
+    function autoSaveDraft(delay = 1500) {
+        if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
+        autoSaveTimeout.current = setTimeout(async () => {
+            try {
+                const payload = buildCanonicalPayload('draft');
+                // use a stable draft id so autosave overwrites the previous draft instead of creating many saved cards
+                const formId = `ChilledFrozenReceiving_draft`;
+                await formStorage.saveForm(formId, payload);
+                // compact history: remove any existing entries for this draft id then add a single normalized entry
+                try {
+                    await removeFormHistory(f => f.meta && f.meta.formId === formId);
+                    await addFormHistory({ title: payload.title || payload.formType, savedAt: Date.now(), meta: { formId } });
+                } catch (e) {
+                    // non-fatal
+                }
+                // intentionally do not toggle isSaving or show notifications for autosave
+            } catch (err) {
+                console.error('autoSaveDraft error', err);
+            }
+        }, delay);
+    }
+
+    // Submit
+    const handleSubmit = async () => {
+        setIsSaving(true);
+        const payload = buildCanonicalPayload('submitted');
+        const formId = `chilled-frozen-${Date.now()}`;
+        try {
+            await formStorage.saveForm(formId, payload);
+        } finally {
+            setIsSaving(false);
+            // Optionally clear form after submit
+            // remove any autosave draft history so submitted form is the primary entry
+            try { await removeFormHistory(f => f.meta && f.meta.formId === 'ChilledFrozenReceiving_draft'); } catch (e) {}
+            setNotificationMessage('Form submitted successfully.');
+            setShowNotification(true);
+        }
+    };
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
 
     const today = new Date();
@@ -29,12 +129,15 @@ const ChilledFrozenReceivingForm = () => {
 
     const updateReceivingField = (id, field, value) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
+        autoSaveDraft();
     };
+
+    // Duplicate declaration removed. Use the earlier definition.
 
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
+        autoSaveDraft();
     };
-
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
             <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.nameOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)} />
@@ -52,6 +155,12 @@ const ChilledFrozenReceivingForm = () => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
+            {isSaving && <LoadingOverlay visible={true} message="Saving..." />}
+            <NotificationModal
+                visible={showNotification}
+                message={notificationMessage}
+                onClose={() => setShowNotification(false)}
+            />
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]}
@@ -173,7 +282,23 @@ const ChilledFrozenReceivingForm = () => {
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
                         <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
                     </View>
-
+                    {/* Save Draft & Submit Buttons */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 32, gap: 24 }}>
+                        <TouchableOpacity
+                            style={{ backgroundColor: '#007A33', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8, minWidth: 120 }}
+                            onPress={handleSaveDraft}
+                            disabled={isSaving}
+                        >
+                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>Save Draft</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={{ backgroundColor: '#b00', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8, minWidth: 120 }}
+                            onPress={handleSubmit}
+                            disabled={isSaving}
+                        >
+                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>Submit</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>

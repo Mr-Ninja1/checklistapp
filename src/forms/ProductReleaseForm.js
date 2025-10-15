@@ -1,4 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
+import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -28,6 +33,7 @@ const ProductReleaseForm = () => {
 
     const updateProductField = (id, field, value) => {
         setProductData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
+        scheduleAutoSave();
     };
 
     const renderProductLogItem = ({ item }) => (
@@ -76,6 +82,38 @@ const ProductReleaseForm = () => {
             />
         </View>
     );
+
+    // Build payload for saving
+    const buildPayload = (status = 'draft') => ({
+        formType: 'ProductReleaseForm',
+        templateVersion: '01',
+        title: 'Product Release Form',
+        metadata: { issueDate },
+        formData: productData,
+        layoutHints: {},
+        assets: {},
+        savedAt: new Date().toISOString(),
+        status,
+    });
+
+    const draftId = 'ProductReleaseForm_draft';
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); } });
+
+    // preload draft if present
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const wrapped = await formStorage.loadForm(draftId);
+                const payload = wrapped?.payload || null;
+                if (payload && mounted) {
+                    if (payload.formData) setProductData(payload.formData);
+                    if (payload.metadata) setIssueDate(payload.metadata.issueDate || defaultIssueDate);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     return (
         <SafeAreaView style={styles.safeArea}>

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
+import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 const DRAFT_KEY = 'process_quality_out_of_control_report_draft';
 
@@ -63,7 +66,8 @@ export default function ProcessQualityOutOfControlReport() {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
+        const wrapped = await formStorage.loadForm(DRAFT_KEY);
+        const d = wrapped?.payload || null;
         if (d && mounted) setFormData(d);
         if (mounted && (!d || !d.date)) setFormData(prev => ({ ...prev, date: getToday() }));
       } catch (e) { console.warn('load draft', e); }
@@ -71,42 +75,35 @@ export default function ProcessQualityOutOfControlReport() {
     return () => { mounted = false; };
   }, []);
 
-  // Auto-save
+  // Auto-save -> use hook's scheduleAutoSave
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, formData), 700);
+    saveTimer.current = setTimeout(() => scheduleAutoSave(), 700);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [formData]);
 
-  const setField = useCallback((k, v) => setFormData(prev => ({ ...prev, [k]: v })), []);
+  const setField = useCallback((k, v) => { setFormData(prev => ({ ...prev, [k]: v })); scheduleAutoSave(); }, []);
   const setSample = (id, key, value) => setFormData(prev => ({
     ...prev,
     samples: prev.samples.map(s => s.id === id ? { ...s, [key]: value } : s)
   }));
 
-  const handleSubmit = async () => {
-    if (!formData.outOfControlDescription || !formData.q1 || !formData.rootCause || !formData.correctiveAction) {
-      Alert.alert('Missing fields', 'Please fill Out of Control Description, Problem, Root Cause and Corrective Action before submitting.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await addFormHistory({
-        title: 'Process & Quality Out of Control Report',
-        reportNumber: formData.number || 'N/A',
-        savedAt: Date.now(),
-        data: formData
-      });
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Success', 'Report submitted');
-      setFormData(initialFormData);
-      setFormData(prev => ({ ...prev, date: getToday() }));
-    } catch (e) {
-      console.warn(e);
-      Alert.alert('Error', 'Failed to submit');
-    }
-    setBusy(false);
-  };
+  const buildPayload = (status = 'draft') => ({
+    formType: 'ProcessQualityOutOfControlReport',
+    templateVersion: '01',
+    title: 'Process & Quality Out of Control Report',
+    metadata: { date: formData.date, number: formData.number },
+    formData,
+    layoutHints: {},
+    assets: {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
+  const draftId = DRAFT_KEY;
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setFormData(initialFormData); setFormData(prev => ({ ...prev, date: getToday() })); } });
+
+  const handleSubmitLocal = async () => { await handleSubmit(); };
 
   return (
     <View style={styles.container}>

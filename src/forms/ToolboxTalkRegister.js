@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
+import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
 
 /**
@@ -38,7 +43,62 @@ export default function ToolboxTalkRegister() {
       ...prev,
       [side]: { ...prev[side], [idx]: { ...prev[side][idx], [field]: value } }
     }));
+    scheduleAutoSave();
   };
+
+  // Build payload
+  const buildPayload = (status = 'draft') => ({
+    formType: 'ToolboxTalkRegister',
+    templateVersion: '01',
+    title: 'Toolbox Talk Register',
+    metadata: { agenda, presenter, date: dateVal },
+    formData: { cells, issues },
+    layoutHints: {},
+    assets: {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
+  const draftId = 'ToolboxTalkRegister_draft';
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
+    // clear form
+    setAgenda(''); setPresenter(''); setIssues(['', '', '', '']);
+    setCells(() => {
+      const state = { left: {}, right: {} };
+      for (let i = 1; i <= 10; i++) state.left[i] = { name: '', job: '', sign: '' };
+      for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' };
+      return state;
+    });
+  }});
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const wrapped = await formStorage.loadForm(draftId);
+        const payload = wrapped?.payload || null;
+        if (payload && mounted) {
+          if (payload.metadata) {
+            setAgenda(payload.metadata.agenda || '');
+            setPresenter(payload.metadata.presenter || '');
+            setDateVal(payload.metadata.date || dateVal);
+          }
+          if (payload.formData) {
+            setIssues(payload.formData.issues || ['','','','']);
+            if (payload.formData.cells) {
+              const loaded = payload.formData.cells;
+              if (loaded.left) setCells(prev => ({ ...prev, left: loaded.left }));
+              if (loaded.right) setCells(prev => ({ ...prev, right: loaded.right }));
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Local wrapper for submit so we can pass a stable callback to the action bar
+  const handleSubmitLocal = async () => { await handleSubmit(); };
 
   // --- Component Rendering ---
   return (
@@ -172,6 +232,14 @@ export default function ToolboxTalkRegister() {
           </View>
         </View>
         {/* End of table horizontal scroll view */}
+
+        {/* Action bar + overlays */}
+        <View style={styles.buttonRow}>
+          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
+        </View>
+
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
       </ScrollView>
     </SafeAreaView>
@@ -326,4 +394,9 @@ const styles = StyleSheet.create({
   },
   cellText: { fontSize: 12, textAlign: 'center' },
   
+});
+
+// Add buttonRow style at file end (keeps style block small and localized)
+Object.assign(styles, {
+  buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, padding: 12, borderTopWidth: 1, borderColor: '#eee' }
 });

@@ -1,5 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
+import useFormSave from '../hooks/useFormSave';
+import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import formStorage from '../utils/formStorage';
 
 export default function TrainingAttendanceRegister() {
   // Use app logo from assets if available
@@ -8,15 +13,17 @@ export default function TrainingAttendanceRegister() {
   );
 
   const rows = Array.from({ length: 18 }, (_, i) => i + 1);
-  const [subject, setSubject] = useState('');
-  const [presenter, setPresenter] = useState('');
-  const [dateVal, setDateVal] = useState(() => {
+  const getDefaultDate = () => {
     const today = new Date();
     const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+    const month = String(today.getMonth() + 1).padStart(2, '0');
     const year = today.getFullYear();
     return `${day}/${month}/${year}`;
-  });
+  };
+  const defaultDate = getDefaultDate();
+  const [subject, setSubject] = useState('');
+  const [presenter, setPresenter] = useState('');
+  const [dateVal, setDateVal] = useState(defaultDate);
   const [topics, setTopics] = useState(['', '', '', '']);
   const [cells, setCells] = useState(() => {
     // structure: { left: {1: {name:'', nrc:'', job:'', sign:''}, ... }, right: {...} }
@@ -31,12 +38,67 @@ export default function TrainingAttendanceRegister() {
       ...prev,
       [side]: { ...prev[side], [idx]: { ...prev[side][idx], [field]: value } }
     }));
+    scheduleAutoSave();
   };
+
+  // Build payload for saving
+  const buildPayload = (status = 'draft') => ({
+    formType: 'TrainingAttendanceRegister',
+    templateVersion: '01',
+    title: 'Training Attendance Register',
+    metadata: { subject, presenter, date: dateVal },
+    formData: { cells, topics },
+    layoutHints: {},
+    assets: {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
+  const draftId = 'TrainingAttendanceRegister_draft';
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
+    // clear form when submit completes
+    setSubject(''); setPresenter(''); setDateVal(defaultDate);
+    setTopics(['', '', '', '']);
+    setCells(() => {
+      const state = { left: {}, right: {} };
+      for (let i = 1; i <= 9; i++) state.left[i] = { name: '', nrc: '', job: '', sign: '' };
+      for (let i = 10; i <= 18; i++) state.right[i] = { name: '', nrc: '', job: '', sign: '' };
+      return state;
+    });
+  }});
+
+  // preload draft if present
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const wrapped = await formStorage.loadForm(draftId);
+        const payload = wrapped?.payload || null;
+        if (payload && mounted) {
+          if (payload.metadata) {
+            setSubject(payload.metadata.subject || '');
+            setPresenter(payload.metadata.presenter || '');
+            setDateVal(payload.metadata.date || payload.metadata.dateVal || defaultDate);
+          }
+          if (payload.formData) {
+            if (payload.formData.topics) setTopics(payload.formData.topics || ['','','','']);
+            if (payload.formData.cells) {
+              const loaded = payload.formData.cells;
+              if (loaded.left) setCells(prev => ({ ...prev, left: loaded.left }));
+              if (loaded.right) setCells(prev => ({ ...prev, right: loaded.right }));
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Main ScrollView for vertical scrolling of the entire page */}
-      <ScrollView contentContainerStyle={styles.mainScrollContent}> 
+      {/* Main ScrollView for vertical scrolling of the entire page. Use keyboardShouldPersistTaps and
+          nestedScrollEnabled to avoid the common 'freeze' when interacting with inputs inside lists. */}
+      <ScrollView contentContainerStyle={styles.mainScrollContent} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
 
         {/* TOP HEADER BLOCK - Structured to match the printed form */}
         <View style={styles.topHeader}>
@@ -128,8 +190,10 @@ export default function TrainingAttendanceRegister() {
           </View>
         </View>
 
-        {/* ATTENDANCE TABLE - responsive table that fills available width */}
-        <View style={{ width: '100%' }}>
+    {/* ATTENDANCE TABLE - responsive table that fills available width. Wrap wide rows in a
+      horizontal ScrollView in the modal/viewer; here we keep responsive layout but allow
+      the table to grow and not block vertical scroll. */}
+    <View style={{ width: '100%' }}>
           <View style={[styles.tableOuter, { alignSelf: 'stretch', paddingHorizontal: 0 }]}>
             
             {/* Header Row (Must be wide enough to fit two tables) */}

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-
-// Mock utility functions for runnable code
-const getDraft = async () => null;
-const setDraft = async () => {};
-const removeDraft = async () => {};
-const addFormHistory = async () => {};
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
+import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 const DRAFT_KEY = 'past_inspection_form_draft';
 
@@ -66,13 +65,65 @@ export default function PastInspectionForm() {
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
 
+  // build payload for save operations
+  const buildPayload = (status = 'draft') => ({
+    formType: 'PastInspectionForm',
+    templateVersion: '01',
+    title: 'Pest Inspection Form',
+    metadata: {
+      companyName: state.companyName,
+      companySubtitle: state.companySubtitle,
+      subject: state.subject,
+      compiledBy: state.compiledBy,
+      approvedBy: state.approvedBy,
+      hseqManager: state.hseqManager,
+      issueDate: state.issueDate,
+    },
+    formData: state.rows,
+    layoutHints: {},
+    assets: {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
+  const draftId = DRAFT_KEY;
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => setState(initialState()) });
+
+  // preload draft if present
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const wrapped = await formStorage.loadForm(draftId);
+        const payload = wrapped?.payload || null;
+        if (payload && mounted) {
+          if (payload.metadata) {
+            setState(prev => ({ ...prev, ...payload.metadata }));
+          }
+          if (payload.formData) {
+            setState(prev => ({ ...prev, rows: payload.formData }));
+          }
+        }
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   // --- Functional Logic (Kept for completeness) ---
-  const setField = useCallback((k, v) => setState(prev => ({ ...prev, [k]: v })), []);
-  const setRow = (id, key, value) => setState(prev => ({
-    ...prev,
-    rows: prev.rows.map(r => r.id === id ? { ...r, [key]: value } : r)
-  }));
-  const handleSubmit = async () => { /* ... submission logic ... */ };
+  const setField = useCallback((k, v) => {
+    setState(prev => ({ ...prev, [k]: v }));
+    scheduleAutoSave();
+  }, [scheduleAutoSave]);
+
+  const setRow = (id, key, value) => {
+    setState(prev => ({
+      ...prev,
+      rows: prev.rows.map(r => r.id === id ? { ...r, [key]: value } : r)
+    }));
+    scheduleAutoSave();
+  };
+
+  const handleSubmitLocal = async () => { await handleSubmit(); };
 
   // --- Column Definitions ---
   // Flex values kept the same for proportional scaling
@@ -117,7 +168,7 @@ export default function PastInspectionForm() {
             <TextInput
               style={styles.inputField}
               value={row ? row[col.key] : ''}
-              onChangeText={v => row && setRow(row.id, col.key, v)}
+              onChangeText={v => { if (row) setRow(row.id, col.key, v); }}
               textAlignVertical="center"
             />
           </View>
@@ -182,11 +233,13 @@ export default function PastInspectionForm() {
             </View>
           </View>
 
-          {/* Functional Buttons */}
+          {/* Functional Buttons provided by FormActionBar */}
           <View style={styles.buttonRow}>
-            <TouchableOpacity style={[styles.btn, styles.draftBtn]} onPress={() => setDraft(DRAFT_KEY, state)} disabled={busy}><Text style={styles.btnText}>Save Draft</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.submitBtn]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit'}</Text></TouchableOpacity>
+            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
           </View>
+
+          <LoadingOverlay visible={isSaving} />
+          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
         </View>
       </ScrollView>
