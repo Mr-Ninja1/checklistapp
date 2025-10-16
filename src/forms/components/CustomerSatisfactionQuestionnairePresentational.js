@@ -1,27 +1,38 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 
 export default function CustomerSatisfactionQuestionnairePresentational({ payload }) {
-  const p = payload || {};
+  const p = (payload && (payload.payload || payload)) || {};
   const data = p.formData || {};
   const sections = data.sections || [];
+  const logoDataUri = p.assets && p.assets.logoDataUri;
+  const hints = p.layoutHints || {};
+  const qWidth = hints.QUESTION || 520;
+  const aWidth = hints.ANSWER || 80;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.company}>{data.companyName || 'Bravo'}</Text>
-        <Text style={styles.subject}>{data.subject || 'Customer Satisfaction Questionnaire'}</Text>
-        <Text style={styles.meta}>{data.issueDate || ''} {data.formTime ? `· ${data.formTime}` : ''}</Text>
+      <View style={styles.headerRow}>
+        {logoDataUri ? <Image source={{ uri: logoDataUri }} style={styles.logo} resizeMode="contain" /> : <Image source={require('../../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />}
+        <View style={styles.headerMeta}>
+          <Text style={styles.company}>{data.companyName || 'Bravo'}</Text>
+          <Text style={styles.subject}>{data.subject || 'Customer Satisfaction Questionnaire'}</Text>
+          <Text style={styles.meta}>{data.issueDate || ''} {data.formTime ? `· ${data.formTime}` : ''}</Text>
+        </View>
       </View>
 
-      <View style={styles.questions}>
+      <View style={styles.table}>
         {sections.map((s, si) => (
           <View key={si} style={styles.sectionBlock}>
             <Text style={styles.sectionTitle}>{s.title}</Text>
-            {s.questions.map((q) => (
-              <View key={q.id} style={styles.questionRow}>
-                <Text style={styles.questionText}>{q.text}</Text>
-                <Text style={styles.answerText}>{q.rating || ''}</Text>
+            {s.questions.map(q => (
+              <View key={q.id} style={styles.questionRowFixed}>
+                <View style={[styles.questionCell, { width: qWidth }]}>
+                  <Text style={styles.questionText} numberOfLines={2} ellipsizeMode="tail">{q.text}</Text>
+                </View>
+                <View style={[styles.answerCell, { width: aWidth }]}>
+                  <Text style={styles.answerText}>{q.rating || ''}</Text>
+                </View>
               </View>
             ))}
           </View>

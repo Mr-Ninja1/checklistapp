@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import useFormSave from '../hooks/useFormSave';
 import { addFormHistory } from '../utils/formHistory';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 
 // TIME SLOTS (AM shift) from cat.md
 const TIME_SLOTS = [
@@ -39,29 +40,17 @@ export default function Bakery_SanitizingLog() {
   const draftKey = 'bakery_sanitizing_log';
   const saveTimer = useRef(null);
   const navigation = (typeof require('@react-navigation/native') !== 'undefined') ? require('@react-navigation/native').useNavigation() : null;
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const d = await getDraft(draftKey);
-        if (d && mounted) {
-          if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
-        }
-      } catch (e) {}
-      if (mounted) setLoadingDraft(false);
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      setDraft(draftKey, { formData, metadata });
-    }, 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata]);
+  // useFormSave integration
+  const buildPayload = () => ({
+    formType: 'Bakery_SanitizingLog',
+    templateVersion: 'v1',
+    title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery',
+    metadata,
+    formData,
+  });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: draftKey, clearOnSubmit: () => {
+    setFormData(makeInitial()); setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+  } });
 
   const COL_WIDTHS = useMemo(() => ({
     EQUIP: Math.max(120, Math.round(vw * 0.22)),
@@ -80,14 +69,11 @@ export default function Bakery_SanitizingLog() {
     setBusy(true);
     try {
       await addFormHistory({ title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery', date: metadata.date || new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(draftKey);
-      alert('Submitted and saved to history');
+      // after successful submit, clear stable draft via hook's clearOnSubmit
       if (navigation && navigation.navigate) navigation.navigate('Home');
     } catch (e) { alert('Failed to submit'); }
     finally { setBusy(false); }
   };
-
-  const handleSaveDraft = async () => { setBusy(true); try { await setDraft(draftKey, { formData, metadata }); alert('Draft saved'); } catch (e) { alert('Failed to save draft'); } finally { setBusy(false); } };
   const handleBack = () => { setBusy(true); setTimeout(()=>{ if (navigation && navigation.navigate) navigation.navigate('Home'); setBusy(false); }, 150); };
 
   return (
@@ -95,14 +81,14 @@ export default function Bakery_SanitizingLog() {
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerRow}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
           <Text style={styles.companyName}>Bravo</Text>
         </View>
         <Text style={[styles.title, { fontSize: ms(16), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET - BAKERY</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity onPress={handleBack} style={styles.ghostBtn}><Text>Back</Text></TouchableOpacity>
-          <TouchableOpacity onPress={handleSaveDraft} style={styles.warnBtn}><Text style={{ color: '#fff' }}>Save Draft</Text></TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} style={styles.primaryBtn}><Text style={{ color: '#fff' }}>Submit</Text></TouchableOpacity>
+          <TouchableOpacity onPress={async () => { try { await handleSaveDraft(); alert('Draft saved'); } catch (e) { alert('Failed to save draft'); } }} style={styles.warnBtn}><Text style={{ color: '#fff' }}>Save Draft</Text></TouchableOpacity>
+          <TouchableOpacity onPress={async () => { try { await handleSubmit(() => handleSave()); } catch (e) { /* handle error */ } }} style={styles.primaryBtn}><Text style={{ color: '#fff' }}>Submit</Text></TouchableOpacity>
         </View>
       </View>
 
@@ -116,7 +102,7 @@ export default function Bakery_SanitizingLog() {
         <Text style={styles.tick}>✓ TICK AFTER CLEANING</Text>
       </View>
 
-      <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: 900 }}>
+  <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: 900 }}>
         <View style={{ minWidth: 900 }}>
           <View style={[styles.tableHeader, { minWidth: 900 }]}>
             <View style={[styles.hCell, { width: COL_WIDTHS.EQUIP }]}><Text style={styles.hText}>EQUIPMENT</Text></View>
@@ -149,6 +135,8 @@ export default function Bakery_SanitizingLog() {
       </ScrollView>
 
       <Text style={styles.footer}>Instruction: All food handlers are required to clean and sanitize equipment after use.</Text>
+      <LoadingOverlay visible={isSaving || busy} message={(isSaving||busy) ? 'Saving...' : ''} />
+      <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
     </ScrollView>
   );
 }

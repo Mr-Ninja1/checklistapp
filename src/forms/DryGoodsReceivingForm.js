@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
+import FormActionBar from '../components/FormActionBar';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -130,7 +131,7 @@ const DryGoodsReceivingForm = () => {
                     {/* ...existing code... */}
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
-                            <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                            <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
                             <View style={styles.systemDetailsWrap}>
                                 <Text style={styles.logoText}>Bravo</Text>
                                 <View style={styles.systemDetails}>

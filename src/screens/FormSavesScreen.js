@@ -89,7 +89,7 @@ export default function FormSavesScreen() {
       // Remove files if native
       if (Platform.OS !== 'web') {
         if (form.pdfPath) await FileSystem.deleteAsync(form.pdfPath, { idempotent: true }).catch(() => {});
-        // no png files are stored anymore; only PDFs
+        // no jpeg files are stored anymore; only PDFs
       }
       // Remove from history store
       await removeFormHistory(f => f.savedAt === form.savedAt && f.pdfPath === form.pdfPath);
@@ -135,9 +135,21 @@ export default function FormSavesScreen() {
 
                               // 2) If not found, check meta.formData or meta.payload shape
                               if (!payload) {
-                                if (meta.formData && Object.keys(meta.formData).length) payload = meta.formData;
-                                else if (meta.payload && Object.keys(meta.payload).length) payload = meta.payload;
-                                else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) payload = meta;
+                                // Some forms (e.g. FruitWashingLog) stored metadata and formData inside the history `meta` object.
+                                // In that case meta.formData is an array of rows — reconstruct a canonical payload:
+                                if (meta && Array.isArray(meta.formData)) {
+                                  const m = { ...meta };
+                                  const rows = m.formData || [];
+                                  delete m.formData;
+                                  payload = { metadata: m, formData: rows };
+                                } else if (meta.formData && Object.keys(meta.formData).length) {
+                                  // fallback for unexpected shapes
+                                  payload = meta.formData;
+                                } else if (meta.payload && Object.keys(meta.payload).length) {
+                                  payload = meta.payload;
+                                } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
+                                  payload = meta;
+                                }
                               }
 
                               // 3) If still not found, fall back to history entry fields
@@ -186,9 +198,18 @@ export default function FormSavesScreen() {
                             } catch (e) { console.warn('FormSavesScreen: loadForm failed for formId', meta.formId, e); }
                           }
                           if (!payload) {
-                            if (meta.formData && Object.keys(meta.formData).length) payload = meta.formData;
-                            else if (meta.payload && Object.keys(meta.payload).length) payload = meta.payload;
-                            else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) payload = meta;
+                            if (meta && Array.isArray(meta.formData)) {
+                              const m = { ...meta };
+                              const rows = m.formData || [];
+                              delete m.formData;
+                              payload = { metadata: m, formData: rows };
+                            } else if (meta.formData && Object.keys(meta.formData).length) {
+                              payload = meta.formData;
+                            } else if (meta.payload && Object.keys(meta.payload).length) {
+                              payload = meta.payload;
+                            } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
+                              payload = meta;
+                            }
                           }
                           if (!payload) payload = form;
                           payload.pdfPath = form.pdfPath;

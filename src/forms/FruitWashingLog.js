@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 
 const DRAFT_KEY = 'fruit_washing_log_draft';
 const MAX_ENTRIES = 15;
@@ -41,6 +46,7 @@ export default function FruitWashingLog() {
   const [metadata, setMetadata] = useState(initialMetadata);
   // verification is nested on metadata.verification per template
   const [busy, setBusy] = useState(false);
+  const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
 
   useEffect(() => {
@@ -61,13 +67,57 @@ export default function FruitWashingLog() {
         if (mounted && (!d || !d.metadata)) setMetadata(prev => ({ ...prev, issueDate: todayStr }));
       } catch (e) { console.warn('load draft failed', e); }
     })();
+    // attempt to embed logo as base64 into payload so saved presentational is identical
+    (async () => {
+      let m = true;
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        if (!asset.localUri) await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (b64 && m) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+      } catch (e) {
+        // ignore and fall back to bundled image in presentational
+      }
+      return () => { m = false; };
+    })();
     return () => { mounted = false; };
   }, []);
 
+  // useFormSave: build payload and integrate autosave + save/submit handlers
+  const draftId = DRAFT_KEY;
+  const buildPayload = () => ({
+    formType: 'FruitWashingLog',
+    templateVersion: 'v1.0',
+    title: 'Fruit, Vegetable and Egg Washing & Sanitizing Log',
+    metadata,
+    formData,
+    // layout hints used by presentational renderers to keep column widths consistent
+    layoutHints: {
+      DATE: 80,
+      NAME: 220,
+      SANITIZER: 180,
+      CONC: 140,
+      START: 100,
+      END: 100,
+      RINSING: 80,
+      PERSON: 160,
+      SIGN: 100,
+      gap: 8
+    },
+    _tableWidth: 80 + 220 + 180 + 140 + 100 + 100 + 80 + 160 + 100,
+    assets: logoDataUri ? { logoDataUri } : undefined,
+    savedAt: Date.now(),
+  });
+
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
+    setFormData(initialLogState);
+    setMetadata(initialMetadata);
+  } });
+
+  // Trigger the hook's debounced autosave when form data or metadata changes
   useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-  saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+    scheduleAutoSave();
   }, [formData, metadata]);
 
   const handleMetaChange = (key, value) => setMetadata(prev => ({ ...prev, [key]: value }));
@@ -78,30 +128,25 @@ export default function FruitWashingLog() {
 
   const handleVerificationChange = (key, value) => setMetadata(prev => ({ ...prev, verification: { ...prev.verification, [key]: value } }));
 
-  const handleSubmit = async () => {
-    setBusy(true);
+  const submitAndRecord = async () => {
     try {
-  await addFormHistory({ title: 'Fruit, Vegetable and Egg Washing & Sanitizing Log', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { ...metadata, formData: formData.filter(item => item.productWashed) } });
-      await removeDraft(DRAFT_KEY);
-      setFormData(initialLogState);
-  // reset verification nested in metadata
-  setMetadata(prev => ({ ...prev, verification: { hseqManagerSign: '', complexManagerSign: '' }, site: '' }));
-    } catch (e) { console.warn('submit failed', e); }
-    setBusy(false);
+      await handleSubmit();
+      // include a snapshot of the canonical payload so Saved Forms can render presentational reliably
+      await addFormHistory({ title: 'Fruit, Vegetable and Egg Washing & Sanitizing Log', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { payload: buildPayload('final') } });
+      try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.warn('submit failed', e);
+    }
   };
 
-  const handleSaveDraft = async () => {
-    setBusy(true);
-  try { await setDraft(DRAFT_KEY, { formData, metadata }); } catch (e) { console.warn('save draft failed', e); }
-    setBusy(false);
-  };
+  // UI: render buttons and overlays
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerBox}>
           <View style={styles.brandRow}>
-            <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+            <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
             <View style={styles.brandTextWrap}>
               <Text style={styles.brandTitle}>Bravo!</Text>
               <Text style={styles.brandSubtitle}>Food Safety Inspections</Text>
@@ -163,10 +208,11 @@ export default function FruitWashingLog() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={submitAndRecord} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
         </View>
-
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
     </View>
   );

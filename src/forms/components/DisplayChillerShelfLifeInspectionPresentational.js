@@ -13,7 +13,7 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
         {assets?.logoDataUri ? (
           <Image source={{ uri: assets.logoDataUri }} style={styles.logo} />
         ) : (
-          <Image source={require('../../assets/logo.png')} style={styles.logo} />
+          <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />
         )}
         <View style={{ flex: 1 }}>
           <Text style={styles.companyName}>Bravo</Text>

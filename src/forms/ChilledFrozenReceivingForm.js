@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
-import formStorage from '../utils/formStorage';
+import useFormSave from '../hooks/useFormSave';
 import { addFormHistory, removeFormHistory } from '../utils/formHistory';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 
@@ -63,60 +63,26 @@ const ChilledFrozenReceivingForm = () => {
         };
     };
 
-    // Save Draft
-    const handleSaveDraft = async () => {
-        setIsSaving(true);
-        const payload = buildCanonicalPayload('draft');
-        const formId = `chilled-frozen-${Date.now()}`;
-        try {
-            await formStorage.saveForm(formId, payload);
-        } finally {
-            setIsSaving(false);
-            // Optionally clear form after save
-        }
-    };
     const [showNotification, setShowNotification] = useState(false);
     const [notificationMessage, setNotificationMessage] = useState('');
-    // Auto draft save (debounced) - silent save (no overlay/notification)
-    const autoSaveTimeout = React.useRef(null);
-    function autoSaveDraft(delay = 1500) {
-        if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
-        autoSaveTimeout.current = setTimeout(async () => {
-            try {
-                const payload = buildCanonicalPayload('draft');
-                // use a stable draft id so autosave overwrites the previous draft instead of creating many saved cards
-                const formId = `ChilledFrozenReceiving_draft`;
-                await formStorage.saveForm(formId, payload);
-                // compact history: remove any existing entries for this draft id then add a single normalized entry
-                try {
-                    await removeFormHistory(f => f.meta && f.meta.formId === formId);
-                    await addFormHistory({ title: payload.title || payload.formType, savedAt: Date.now(), meta: { formId } });
-                } catch (e) {
-                    // non-fatal
-                }
-                // intentionally do not toggle isSaving or show notifications for autosave
-            } catch (err) {
-                console.error('autoSaveDraft error', err);
-            }
-        }, delay);
-    }
 
-    // Submit
-    const handleSubmit = async () => {
-        setIsSaving(true);
-        const payload = buildCanonicalPayload('submitted');
-        const formId = `chilled-frozen-${Date.now()}`;
-        try {
-            await formStorage.saveForm(formId, payload);
-        } finally {
-            setIsSaving(false);
-            // Optionally clear form after submit
-            // remove any autosave draft history so submitted form is the primary entry
-            try { await removeFormHistory(f => f.meta && f.meta.formId === 'ChilledFrozenReceiving_draft'); } catch (e) {}
-            setNotificationMessage('Form submitted successfully.');
-            setShowNotification(true);
-        }
-    };
+    // integrate useFormSave hook (buildCanonicalPayload already defined above)
+    const DRAFT_ID = 'ChilledFrozenReceiving_draft';
+    const { isSaving: saving, showNotification: hookShowNotification, notificationMessage: hookNotificationMessage, setShowNotification: setHookShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave(buildCanonicalPayload, { formType: 'ChilledFrozenReceiving', draftId: DRAFT_ID, clearOnSubmit: () => {
+        // reset local form state on submit
+        setReceivingData(createInitialProductData(10));
+        setIssueDate(defaultIssueDate);
+        setDeliveryDetails({
+            dateOfDelivery: '',
+            receivedBy: '',
+            complexManager: '',
+            timeOfDelivery: '',
+            invoiceNo: '',
+            driversName: '',
+            vehicleRegNo: '',
+            signature: '',
+        });
+    } });
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
 
     const today = new Date();
@@ -129,14 +95,14 @@ const ChilledFrozenReceivingForm = () => {
 
     const updateReceivingField = (id, field, value) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
-        autoSaveDraft();
+        try { scheduleAutoSave(); } catch (e) { /* ignore */ }
     };
 
     // Duplicate declaration removed. Use the earlier definition.
 
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
-        autoSaveDraft();
+        try { scheduleAutoSave(); } catch (e) { /* ignore */ }
     };
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
@@ -155,11 +121,11 @@ const ChilledFrozenReceivingForm = () => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            {isSaving && <LoadingOverlay visible={true} message="Saving..." />}
+            {saving && <LoadingOverlay visible={true} message="Saving..." />}
             <NotificationModal
-                visible={showNotification}
-                message={notificationMessage}
-                onClose={() => setShowNotification(false)}
+                visible={hookShowNotification || showNotification}
+                message={hookNotificationMessage || notificationMessage}
+                onClose={() => { setHookShowNotification(false); setShowNotification(false); }}
             />
             <ScrollView
                 style={{ flex: 1 }}
@@ -170,7 +136,7 @@ const ChilledFrozenReceivingForm = () => {
                 <View style={styles.container}>
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
-                            <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                            <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
                             <View style={styles.systemDetailsWrap}>
                                 <Text style={styles.logoText}>Bravo</Text>
                                 <View style={styles.systemDetails}>
@@ -287,14 +253,14 @@ const ChilledFrozenReceivingForm = () => {
                         <TouchableOpacity
                             style={{ backgroundColor: '#007A33', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8, minWidth: 120 }}
                             onPress={handleSaveDraft}
-                            disabled={isSaving}
+                            disabled={saving}
                         >
                             <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>Save Draft</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={{ backgroundColor: '#b00', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8, minWidth: 120 }}
-                            onPress={handleSubmit}
-                            disabled={isSaving}
+                            onPress={() => handleSubmit()}
+                            disabled={saving}
                         >
                             <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>Submit</Text>
                         </TouchableOpacity>

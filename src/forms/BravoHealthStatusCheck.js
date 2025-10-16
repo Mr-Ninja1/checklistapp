@@ -108,7 +108,7 @@ const HealthStatusCheck = () => {
                 <View style={styles.container}>
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndTitle}>
-                            <Image source={require('../assets/logo.png')} style={styles.logoImageLeft} />
+                            <Image source={require('../assets/logo.jpeg')} style={styles.logoImageLeft} />
                             <View>
                                 <Text style={styles.logoText}>Bravo</Text>
                                 <Text style={styles.documentTitle}>FOOD PRODUCTION AND SERVICE PERSONNEL</Text>

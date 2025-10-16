@@ -187,7 +187,7 @@ export default function Kitchen_DailyCleaningForm() {
     <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} alwaysBounceVertical>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerTop}>
-        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>
         <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>KITCHEN DAILY CLEANING & SANITIZING LOG SHEET</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

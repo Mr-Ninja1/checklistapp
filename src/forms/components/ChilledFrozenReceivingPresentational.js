@@ -13,7 +13,7 @@ export default function ChilledFrozenReceivingPresentational({ payload }) {
           {logoUri ? (
             <Image source={{ uri: logoUri }} style={styles.logoImage} />
           ) : (
-            <Image source={require('../../assets/logo.png')} style={styles.logoImage} />
+            <Image source={require('../../assets/logo.jpeg')} style={styles.logoImage} />
           )}
           <View style={styles.headerTextWrap}>
             <Text style={styles.logoText}>Bravo</Text>

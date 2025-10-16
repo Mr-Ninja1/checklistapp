@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-export default function FormActionBar({ onBack, onSaveDraft, onSubmit, showSavePdf = false, onSavePdf }) {
+function FormActionBarComponent({ onBack, onSaveDraft, onSubmit, showSavePdf = false, onSavePdf }) {
   return (
     <View style={styles.row}>
       <TouchableOpacity onPress={onBack} style={[styles.button, styles.aux]}>
@@ -24,6 +24,10 @@ export default function FormActionBar({ onBack, onSaveDraft, onSubmit, showSaveP
     </View>
   );
 }
+
+// Export both default and named to support different import/require patterns
+export default FormActionBarComponent;
+export { FormActionBarComponent as FormActionBar };
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginVertical: 8 },

@@ -4,7 +4,7 @@ import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
 export default function BeverageReceivingPresentational({ payload }) {
   const p = payload || {};
   const rows = p.formData || [];
-  const logoSource = p.assets?.logoDataUri ? { uri: p.assets.logoDataUri } : require('../../assets/logo.png');
+  const logoSource = p.assets?.logoDataUri ? { uri: p.assets.logoDataUri } : require('../../assets/logo.jpeg');
   const hints = p.layoutHints || {};
   const tableWidth = p._tableWidth || 1200;
   const meta = p.metadata || {};

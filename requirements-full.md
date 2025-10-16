@@ -103,7 +103,7 @@ A cross-platform React Native mobile app for BRAVO restaurant supervisors to man
 We adopted the "screenshot → embed → PDF" approach for reliable visual fidelity across devices. Key points and how to reuse the logic for other forms:
 
 - Output format
-	- The produced file is a PDF (.pdf) where the page contains a raster image (PNG) of the form. The PDF is A4 landscape by construction (the HTML wrapper sets `@page { size: A4 landscape; }`).
+	- The produced file is a PDF (.pdf) where the page contains a raster image (jpeg) of the form. The PDF is A4 landscape by construction (the HTML wrapper sets `@page { size: A4 landscape; }`).
 	- The PDF can be opened by any external PDF viewer on the device (Open with ...). On native platforms we call the OS URL launcher to open the `file://` path.
 
 - Why this approach
@@ -122,7 +122,7 @@ We adopted the "screenshot → embed → PDF" approach for reliable visual fidel
 - Implementation details to keep in mind
 	- Wait for images and layout to finish before calling `exportAsPDF` (we recommend awaiting asset download then `requestAnimationFrame` twice or a short timeout) so the snapshot includes every visual element.
 	- Use `captureRef` with a high `pixelRatio` (3–4) for sharp results.
-	- The hook embeds the captured PNG as a `data:image/png;base64,...` URI inside a minimal HTML page sized to A4 landscape and calls `Print.printToFileAsync` to create the PDF.
+	- The hook embeds the captured jpeg as a `data:image/jpeg;base64,...` URI inside a minimal HTML page sized to A4 landscape and calls `Print.printToFileAsync` to create the PDF.
 	- The PDF and a `history.json` entry (containing `pdfPath`, `savedAt`, `title`, and `meta`) are saved to the app document directory under `forms/`.
 
 - Reusing for multiple forms
@@ -213,7 +213,7 @@ This section documents the exact contract, payload shape, and step-by-step check
 
 - Saving steps for an editable form (detailed)
 	1. Compute layout hints and total table width using the same algorithm the editable form uses for responsive columns (store the per-column pixel widths as `layoutHints` and `_tableWidth`).
-	2. Attempt to embed the logo synchronously into the payload: use the app Asset helper to locate `../assets/logo.png`, download it (Asset.fromModule(...).downloadAsync()), then read it as base64 (FileSystem.readAsStringAsync) and set `assets.logoDataUri = 'data:image/png;base64,...'`. If this fails, proceed without assets.
+	2. Attempt to embed the logo synchronously into the payload: use the app Asset helper to locate `../assets/logo.jpeg`, download it (Asset.fromModule(...).downloadAsync()), then read it as base64 (FileSystem.readAsStringAsync) and set `assets.logoDataUri = 'data:image/jpeg;base64,...'`. If this fails, proceed without assets.
 	3. Build `payload` following the canonical schema above. Include `formData` in a simplified, serializable form (strings, numbers, booleans). Avoid embedding functions or class instances.
 	4. Generate a stable `formId` (e.g. `${formType}_${Date.now()}`) and call `await formStorage.saveForm(formId, payload)`. `formStorage.saveForm` should write `forms/<formId>/payload.json` and register a history entry.
 	5. After successful save, call `addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } })` if `formStorage.saveForm` does not already register history in your environment. This ensures the FormSaves screen can find the file.
@@ -223,7 +223,7 @@ This section documents the exact contract, payload shape, and step-by-step check
 	- Each presentational (read-only) renderer must accept a single prop: `payload` (the canonical payload above).
 	- It must read `payload.layoutHints` and use those widths to size columns. Fallback to conservative defaults when keys are missing.
 	- It must render header metadata (Date, Location, Shift, Verified By, Manager Sign) using `payload.metadata` or other top-level keys (`payload.date`) in a tolerant manner.
-	- It must prefer `payload.assets.logoDataUri` for logo rendering; if missing, use a local `require('../../assets/logo.png')` fallback.
+	- It must prefer `payload.assets.logoDataUri` for logo rendering; if missing, use a local `require('../../assets/logo.jpeg')` fallback.
 	- The renderer should be resilient to legacy saves: prefer modern keys but check common legacy variants (e.g., `SUPName` vs `slipName`).
 
 - Migration / Legacy support
@@ -234,7 +234,7 @@ This section documents the exact contract, payload shape, and step-by-step check
 
 - Export / PDF notes
 	- Desktop (vector preferred): implement a small form-specific HTML generator that accepts a canonical payload and renders a pixel-perfect HTML+CSS A4 page. Use Print.printToFileAsync to create a vector PDF. This yields best printing fidelity (text selectable).
-	- Mobile (screenshot→PDF): to preserve fidelity across complex RN components, continue using captureRef with a high pixelRatio and embed the PNG into an A4 HTML wrapper. Ensure images/logo are embedded as base64 before capture.
+	- Mobile (screenshot→PDF): to preserve fidelity across complex RN components, continue using captureRef with a high pixelRatio and embed the jpeg into an A4 HTML wrapper. Ensure images/logo are embedded as base64 before capture.
 	- Timing: always wait for images to load, then run two requestAnimationFrame cycles (or a short timeout) before capture to ensure layout is stable.
 
 - QA checklist (pre-merge)

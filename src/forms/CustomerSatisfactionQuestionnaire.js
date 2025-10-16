@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
+import { addFormHistory } from '../utils/formHistory';
 
 const DRAFT_KEY = 'customer_satisfaction_questionnaire_draft';
 
@@ -51,6 +54,7 @@ const initialState = () => ({
 
 export default function CustomerSatisfactionQuestionnaire() {
   const [state, setState] = useState(initialState());
+  const [logoDataUri, setLogoDataUri] = useState(null);
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
 
@@ -110,8 +114,13 @@ export default function CustomerSatisfactionQuestionnaire() {
     title: state.subject,
     metadata: { issueDate: state.issueDate, formDate: state.formDate, formTime: state.formTime },
     formData: state,
-    layoutHints: {},
-    assets: {},
+    layoutHints: {
+      QUESTION: 520,
+      ANSWER: 80,
+      gap: 8
+    },
+    _tableWidth: 520 + 80,
+    assets: logoDataUri ? { logoDataUri } : {},
     savedAt: new Date().toISOString(),
     status,
   });
@@ -122,7 +131,26 @@ export default function CustomerSatisfactionQuestionnaire() {
     const anyRated = Array.isArray(state.sections) && state.sections.some(s => s.questions && s.questions.some(q => q.rating && String(q.rating).trim() !== ''));
     if (!anyRated) { Alert.alert('Empty', 'Please rate at least one question before submitting.'); return; }
     await handleSubmit();
+    try {
+      // add history snapshot so Saved Forms can render presentational even if file load later fails
+      await addFormHistory({ title: state.subject, date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { payload: buildPayload('final') } });
+    } catch (e) { /* ignore */ }
   };
+
+  // embed logo as base64 for deterministic rendering of saved presentational views
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        if (!asset.localUri) await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -130,7 +158,7 @@ export default function CustomerSatisfactionQuestionnaire() {
         <View style={styles.mainContainer}>
 
           <View style={styles.header}>
-            {(() => { try { const logo = require('../assets/logo.png'); return <Image source={logo} style={styles.logo} resizeMode="contain"/>; } catch (e) { return <Text style={styles.logoPlaceholder}>Bravo</Text>; } })()}
+            {(() => { try { const logo = require('../assets/logo.jpeg'); return <Image source={logo} style={styles.logo} resizeMode="contain"/>; } catch (e) { return <Text style={styles.logoPlaceholder}>Bravo</Text>; } })()}
             <View style={styles.headerMeta}>
               <TextInput style={styles.companyInput} value={state.companyName} onChangeText={v=>setField('companyName',v)} />
               <Text style={styles.subject}>{state.subject}</Text>

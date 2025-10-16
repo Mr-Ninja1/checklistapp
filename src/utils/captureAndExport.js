@@ -21,13 +21,13 @@ export default async function captureAndExport({ ref, filenameBase = null, paylo
       try {
         onProgress && onProgress({ stage: 'capturing' });
         const base64 = await captureRefSafe(ref.current, {
-          format: 'png',
+          format: 'jpeg',
           quality: 1,
           result: 'base64',
           pixelRatio: 3,
         });
 
-        const imgSrc = `data:image/png;base64,${base64}`;
+        const imgSrc = `data:image/jpeg;base64,${base64}`;
         const html = `<!doctype html><html><head><meta charset='utf-8'><style>@page{size:297mm 210mm;margin:8mm;}body{margin:0;padding:0;background:#fff;}img{display:block;width:297mm;height:210mm;object-fit:contain;}</style></head><body><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><img src="${imgSrc}"/></div></body></html>`;
 
         onProgress && onProgress({ stage: 'printing' });

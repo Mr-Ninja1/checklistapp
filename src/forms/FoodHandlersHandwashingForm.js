@@ -6,11 +6,13 @@ import useExportFormAsPDF from '../utils/useExportFormAsPDF';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import useResponsive from '../utils/responsive';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { removeDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
 import { useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import LoadingOverlay from '../components/LoadingOverlay';
+import useFormSave from '../hooks/useFormSave';
+import NotificationModal from '../components/NotificationModal';
 
 // Helper functions for dynamic details
 function getCurrentDate() {
@@ -62,8 +64,80 @@ export default function FoodHandlersHandwashingForm() {
     }))
   );
 
+  // preload logo as base64 for payload assets (best-effort)
+  const [logoDataUri, setLogoDataUri] = React.useState(null);
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+          if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+        }
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Hook integration: build payload, autosave, save draft and submit handlers
+  const draftId = 'FoodHandlersHandwashing_draft';
+  const buildPayload = (status = 'draft') => ({
+    formType: 'FoodHandlersHandwashing',
+    templateVersion: 'v1.0',
+    title: 'Food Handlers Daily Handwashing Tracking Log Sheet',
+    date: logDetails.date,
+    location: logDetails.location,
+    shift: logDetails.shift,
+    verifiedBy: logDetails.verifiedBy,
+    timeSlots: TIME_SLOTS,
+    handlers: handlers.map((h, idx) => ({ id: idx + 1, ...h })),
+    assets: logoDataUri ? { logoDataUri } : undefined,
+    layoutHints: { nameW: dyn?.nameW, jobW: dyn?.jobW, signW: dyn?.signW },
+    savedAt: Date.now(),
+    status,
+  });
+
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
+    // reset form after successful submit
+    setHandlers(Array.from({ length: NUM_ROWS }, () => ({
+      fullName: '',
+      jobTitle: '',
+      checks: createInitialChecks(),
+      staffSign: '',
+      supName: '',
+      supSign: '',
+    })));
+    setLogDetails({ date: getCurrentDate(), location: '', shift: getCurrentShift(), verifiedBy: '', complexManagerSign: '' });
+    try { removeDraft(draftKey); } catch (e) { /* ignore */ }
+  }});
+
+  // preload any stable draft saved via formStorage
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const wrapped = await formStorage.loadForm(draftId);
+        const payload = wrapped?.payload || null;
+        if (payload && mounted) {
+          if (payload.handlers) setHandlers(payload.handlers.map(h => ({ ...h })));
+          if (payload.timeSlots) {
+            // maintain timeSlots if present
+          }
+          if (payload.date || payload.date === 0) setLogDetails(prev => ({ ...prev, date: payload.date || prev.date }));
+          if (payload.location || payload.location === '') setLogDetails(prev => ({ ...prev, location: payload.location || prev.location }));
+        }
+      } catch (e) { /* ignore */ }
+      if (mounted) setLoadingDraft(false);
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // update functions now call scheduleAutoSave from the hook
   const updateHandlerField = (rowIdx, field, value) => {
     setHandlers(prev => prev.map((row, idx) => (idx === rowIdx ? { ...row, [field]: value } : row)));
+    try { scheduleAutoSave(); } catch (e) { /* ignore until hook ready */ }
   };
 
   const toggleHandlerCheck = (rowIdx, timeSlot) => {
@@ -72,26 +146,8 @@ export default function FoodHandlersHandwashingForm() {
         ? { ...row, checks: { ...row.checks, [timeSlot]: !row.checks[timeSlot] } }
         : row
     ));
+    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
   };
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const d = await getDraft(draftKey);
-      if (d && mounted) {
-        if (d.handlers) setHandlers(d.handlers);
-        if (d.logDetails) setLogDetails(d.logDetails);
-      }
-      if (mounted) setLoadingDraft(false);
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(draftKey, { handlers, logDetails }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [handlers, logDetails]);
 
   // responsive helpers
   const resp = useResponsive();
@@ -136,13 +192,13 @@ export default function FoodHandlersHandwashingForm() {
       // try to embed logo as base64 for perfect saved rendering (best-effort)
       let logoDataUri = null;
       try {
-        const asset = Asset.fromModule(require('../assets/logo.png'));
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
         await asset.downloadAsync();
         if (asset.localUri) {
           // read file as base64 (may fail on some environments)
           try {
             const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
-            if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+            if (b64) logoDataUri = `data:image/jpeg;base64,${b64}`;
           } catch (e) {
             // ignore and proceed without embedded image
             logoDataUri = null;
@@ -173,19 +229,9 @@ export default function FoodHandlersHandwashingForm() {
 
       const formId = `FoodHandlersHandwashing_${Date.now()}`;
       try {
-        await formStorage.saveForm(formId, payload);
+        // Use the shared submit so history/draft semantics are consistent
+        await handleSubmit();
         setExporting(false);
-        // clear draft and reset form fields
-        try { await removeDraft(draftKey); } catch (e) {}
-        setHandlers(Array.from({ length: NUM_ROWS }, () => ({
-          fullName: '',
-          jobTitle: '',
-          checks: createInitialChecks(),
-          staffSign: '',
-          supName: '',
-          supSign: '',
-        })));
-        setLogDetails({ date: getCurrentDate(), location: '', shift: getCurrentShift(), verifiedBy: '', complexManagerSign: '' });
         Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
       } catch (e) {
         setExporting(false);
@@ -201,57 +247,7 @@ export default function FoodHandlersHandwashingForm() {
     }
   };
 
-  const handleSave = async () => {
-    setBusy(true);
-    try {
-      // Build a deterministic payload that can be rendered exactly later
-      const formId = `FoodHandlersHandwashing_${Date.now()}`;
-      const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
-      const payload = {
-        formType: 'FoodHandlersHandwashing',
-        templateVersion: 'v1.0',
-        title: 'Food Handlers Daily Handwashing Tracking Log Sheet',
-        date: logDetails.date,
-        shift: logDetails.shift,
-        location: logDetails.location,
-        verifiedBy: logDetails.verifiedBy,
-        complexManagerSign: logDetails.complexManagerSign,
-        timeSlots: TIME_SLOTS,
-        handlers: handlersWithId,
-        // layout hints help desktop/renderer match the original spacing if needed
-        layoutHints: {
-          nameW: dyn.nameW,
-          jobW: dyn.jobW,
-          signW: dyn.signW,
-        }
-      };
-
-      await formStorage.saveForm(formId, payload);
-      try { await removeDraft(draftKey); } catch (e) {}
-      // reset form fields after successful save
-      setHandlers(Array.from({ length: NUM_ROWS }, () => ({
-        fullName: '',
-        jobTitle: '',
-        checks: createInitialChecks(),
-        staffSign: '',
-        supName: '',
-        supSign: '',
-      })));
-      setLogDetails({ date: getCurrentDate(), location: '', shift: getCurrentShift(), verifiedBy: '', complexManagerSign: '' });
-      alert('Submitted and saved');
-      navigation.navigate('Home');
-    } catch (e) { alert('Failed to submit'); }
-    finally { setBusy(false); }
-  };
-
-  const handleSaveDraft = async () => {
-    setBusy(true);
-    try {
-      await setDraft(draftKey, { handlers, logDetails });
-      alert('Draft saved');
-    } catch (e) { alert('Failed to save draft'); }
-    finally { setBusy(false); }
-  };
+  
 
   const handleBack = () => navigation.navigate('Home');
   const [busy, setBusy] = useState(false);
@@ -262,7 +258,7 @@ export default function FoodHandlersHandwashingForm() {
       <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
   <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         <View style={styles.logoRow}>
-          <Image source={require('../assets/logo.png')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
+          <Image source={require('../assets/logo.jpeg')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
           <View style={{ flexDirection: 'column', flex: 1 }}>
             <Text style={[styles.companyNameSmall]}>Bravo</Text>
           </View>

@@ -14,7 +14,7 @@ export default function SplashScreen({ navigation }) {
   return (
     <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.container}>
       <View style={styles.logoContainer}>
-        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
       </View>
       <Text style={styles.bravo}>Bravo!</Text>
       <ActivityIndicator size="large" color="#fff" style={styles.spinner} />

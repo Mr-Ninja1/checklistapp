@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
+import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 const DRAFT_KEY = 'baking_control_sheet_draft';
 
@@ -20,7 +23,6 @@ const initialEntry = {
 const initialLogState = Array.from({ length: 15 }, () => ({ ...initialEntry }));
 
 const initialMetadata = {
-  // issueDate will be set to system date when no draft exists
   issueDate: '',
   compiledBy: 'Michael Zulu C.',
   approvedBy: 'Hassani Ali',
@@ -29,19 +31,38 @@ const initialMetadata = {
 export default function BakingControlSheet({ navigation }) {
   const [formData, setFormData] = useState(initialLogState);
   const [metadata, setMetadata] = useState(initialMetadata);
-  const [busy, setBusy] = useState(false);
-  const saveTimer = useRef(null);
+
+  const buildPayload = (status = 'draft') => ({
+    formType: 'BakingControlSheet',
+    templateVersion: '01',
+    title: 'Baking Control Sheet',
+    metadata,
+    formData,
+    layoutHints: {},
+    assets: {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({
+    buildPayload,
+    draftId: DRAFT_KEY,
+    clearOnSubmit: () => {
+      setFormData(initialLogState);
+      setMetadata(initialMetadata);
+    },
+  });
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
-        if (d && mounted) {
-          if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
+        const d = await formStorage.loadForm(DRAFT_KEY);
+        const payload = d?.payload || null;
+        if (payload && mounted) {
+          if (payload.formData) setFormData(payload.formData);
+          if (payload.metadata) setMetadata(payload.metadata);
         } else if (mounted) {
-          // No draft: auto-populate issueDate with today's date
           const today = new Date();
           const dd = String(today.getDate()).padStart(2, '0');
           const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -53,41 +74,13 @@ export default function BakingControlSheet({ navigation }) {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata]);
-
   const handleEntryChange = useCallback((index, field, value) => {
-    setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-  }, []);
-
-  const handleSaveDraft = async () => {
-    setBusy(true);
-    try {
-      await setDraft(DRAFT_KEY, { formData, metadata });
-      setBusy(false);
-      // lightweight feedback - navigation param or simple console
-      console.log('Draft saved');
-    } catch (e) {
-      console.warn('save draft failed', e);
-      setBusy(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    setBusy(true);
-    try {
-      await addFormHistory({ title: 'Baking Control Sheet', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
-      // reset
-      setFormData(initialLogState);
-      setMetadata(prev => ({ ...initialMetadata, docNo: prev.docNo, issueDate: prev.issueDate }));
-    } catch (e) {
-      console.warn('submit failed', e);
-    } finally { setBusy(false); }
-  };
+    setFormData(prev => {
+      const newData = prev.map((item, i) => i === index ? { ...item, [field]: value } : item);
+      scheduleAutoSave();
+      return newData;
+    });
+  }, [scheduleAutoSave]);
 
   // Wider columns for A4 landscape friendliness
   const columnHeaders = useMemo(() => [
@@ -125,7 +118,7 @@ export default function BakingControlSheet({ navigation }) {
         <View style={styles.headerBox}>
               <View style={styles.headerTop}>
                 <View style={styles.logoWrap}>
-                  <Image source={require('../assets/logo.png')} style={styles.logo} />
+                  <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
                   <View>
                     <Text style={styles.brand}>Bravo Brands Limited</Text>
                     <Text style={styles.sub}>Food Safety Management System</Text>
@@ -158,14 +151,13 @@ export default function BakingControlSheet({ navigation }) {
           {formData.map(renderRow)}
         </View>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
-            <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
-          </TouchableOpacity>
-              <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
-                <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
-              </TouchableOpacity>
-        </View>
+                        <FormActionBar
+          onSaveDraft={handleSaveDraft}
+          onSubmit={handleSubmit}
+          showSavePdf={false} // or true, depending on requirements
+        />
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
     </View>
   );

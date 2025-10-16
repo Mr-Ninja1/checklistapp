@@ -5,11 +5,13 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import formStorage from '../utils/formStorage';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 
 export default function TrainingAttendanceRegister() {
   // Use app logo from assets if available
   const logo = () => (
-    <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+    <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
   );
 
   const rows = Array.from({ length: 18 }, (_, i) => i + 1);
@@ -33,6 +35,26 @@ export default function TrainingAttendanceRegister() {
     return state;
   });
 
+  const [logoDataUri, setLogoDataUri] = useState(null);
+
+  // load logo as base64 data URI for embedding in saved payloads
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        // ensure asset is downloaded
+        if (!asset.localUri) await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+      } catch (e) {
+        // silently ignore; logo will fall back to bundled image
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const updateCell = (side, idx, field, value) => {
     setCells(prev => ({
       ...prev,
@@ -48,9 +70,15 @@ export default function TrainingAttendanceRegister() {
     title: 'Training Attendance Register',
     metadata: { subject, presenter, date: dateVal },
     formData: { cells, topics },
-    layoutHints: {},
-    assets: {},
-    savedAt: new Date().toISOString(),
+    // approximate layout hints so presentational renderer & PDF exporter can size columns
+    layoutHints: {
+      left: { SN: 40, NAME: 220, NRC: 120, JOB: 160, SIGN: 150 },
+      right: { SN: 40, NAME: 220, NRC: 120, JOB: 160, SIGN: 150 },
+      gap: 8
+    },
+    _tableWidth: 40 + 220 + 120 + 160 + 150 + 8 + 40 + 220 + 120 + 160 + 150,
+    assets: logoDataUri ? { logoDataUri } : undefined,
+    savedAt: Date.now(),
     status,
   });
 
@@ -235,6 +263,13 @@ export default function TrainingAttendanceRegister() {
         </View>
         {/* End of table horizontal scroll view */}
 
+        {/* Action bar + overlays */}
+        <View style={{ height: 18 }} />
+        <View style={{ marginTop: 8, paddingHorizontal: 8 }}>
+          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } }} showSavePdf={false} />
+        </View>
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
     </SafeAreaView>
   );

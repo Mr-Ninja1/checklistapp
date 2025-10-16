@@ -139,7 +139,7 @@ export default function DryStorageChecklist() {
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
-              <Image source={require('../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
+              <Image source={require('../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.brandName}>Bravo! Food Safety Inspections</Text>
                 <Text style={styles.brandSub}>Bravo Brands Central</Text>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
 import FormActionBar from '../components/FormActionBar';
@@ -51,7 +53,7 @@ const initialFormData = {
 export default function ProcessQualityOutOfControlReport() {
   const [formData, setFormData] = useState(initialFormData);
   const [busy, setBusy] = useState(false);
-  const saveTimer = useRef(null);
+  const [logoDataUri, setLogoDataUri] = useState(null);
 
   const getToday = () => {
     const d = new Date();
@@ -61,7 +63,30 @@ export default function ProcessQualityOutOfControlReport() {
     return `${dd}/${mm}/${yyyy}`;
   };
 
-  // Load draft
+  // buildPayload and hook wiring (use scheduleAutoSave below)
+  const buildPayload = (status = 'draft') => ({
+    formType: 'ProcessQualityOutOfControlReport',
+    templateVersion: '01',
+    title: 'Process & Quality Out of Control Report',
+    metadata: { date: formData.date, number: formData.number },
+    // include header fields so presentational can reproduce editable header
+    companyName: formData.companyName || 'Bravo',
+    companySubtitle: formData.companySubtitle || 'Food Safety Management System',
+    formData,
+    // allow presentational to size columns/tables consistently
+    layoutHints: {
+      samples: { ID: 240, RESULT: 140, SPEC: 140, AFTER: 180 }
+    },
+    _tableWidth: 240 + 140 + 140 + 180,
+    assets: logoDataUri ? { logoDataUri } : {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
+  const draftId = DRAFT_KEY;
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setFormData(initialFormData); setFormData(prev => ({ ...prev, date: getToday() })); } });
+
+  // Load draft (after hook available)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -75,35 +100,29 @@ export default function ProcessQualityOutOfControlReport() {
     return () => { mounted = false; };
   }, []);
 
-  // Auto-save -> use hook's scheduleAutoSave
   useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => scheduleAutoSave(), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData]);
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        if (!asset.localUri) await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+      } catch (e) {
+        // ignore failures to embed logo; presentational will fallback to bundled asset
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
-  const setField = useCallback((k, v) => { setFormData(prev => ({ ...prev, [k]: v })); scheduleAutoSave(); }, []);
-  const setSample = (id, key, value) => setFormData(prev => ({
+  const setField = useCallback((k, v) => { setFormData(prev => ({ ...prev, [k]: v })); scheduleAutoSave(); }, [scheduleAutoSave]);
+  const setSample = (id, key, value) => { setFormData(prev => ({
     ...prev,
     samples: prev.samples.map(s => s.id === id ? { ...s, [key]: value } : s)
-  }));
+  })); scheduleAutoSave(); };
 
-  const buildPayload = (status = 'draft') => ({
-    formType: 'ProcessQualityOutOfControlReport',
-    templateVersion: '01',
-    title: 'Process & Quality Out of Control Report',
-    metadata: { date: formData.date, number: formData.number },
-    formData,
-    layoutHints: {},
-    assets: {},
-    savedAt: new Date().toISOString(),
-    status,
-  });
-
-  const draftId = DRAFT_KEY;
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setFormData(initialFormData); setFormData(prev => ({ ...prev, date: getToday() })); } });
-
-  const handleSubmitLocal = async () => { await handleSubmit(); };
+  
 
   return (
     <View style={styles.container}>
@@ -112,7 +131,7 @@ export default function ProcessQualityOutOfControlReport() {
         {/* Header */}
         <View style={styles.headerBox}>
           <View style={styles.leftHeader}>
-            {(() => { try { const logo = require('../assets/logo.png'); return <Image source={logo} style={styles.logo} resizeMode="contain"/>; } catch (e) { return <View style={styles.logoPlaceholder}><Text style={styles.logoText}>Logo</Text></View>; } })()}
+            {(() => { try { const logo = require('../assets/logo.jpeg'); return <Image source={logo} style={styles.logo} resizeMode="contain"/>; } catch (e) { return <View style={styles.logoPlaceholder}><Text style={styles.logoText}>Logo</Text></View>; } })()}
             <View style={styles.brandWrap}>
               <TextInput style={[styles.companyName, styles.companyNameInput]} value={formData.companyName} onChangeText={v => setField('companyName', v)} />
               <TextInput style={[styles.subtitle, styles.subtitleInput]} value={formData.companySubtitle} onChangeText={v => setField('companySubtitle', v)} />
@@ -287,10 +306,11 @@ export default function ProcessQualityOutOfControlReport() {
           </View>
   </ScrollView>
 
-  <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={() => setDraft(DRAFT_KEY, formData)} disabled={busy}><Text style={styles.btnText}>Save Draft</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Report'}</Text></TouchableOpacity>
+  <View style={{ marginTop: 12 }}>
+          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit()} showSavePdf={false} />
         </View>
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
       </ScrollView>
     </View>

@@ -13,7 +13,7 @@ import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } fr
 export default function ToolboxTalkRegister() {
   // Mock image asset placeholder since local assets aren't available in this environment
   const logo = () => (
-    <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+    <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
   );
 
   // 20 total rows for attendees: 10 left, 10 right

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 const DRAFT_KEY = 'products_net_content_checklist_draft';
 
@@ -44,18 +47,17 @@ export default function ProductsNetContentChecklist() {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
-        if (d && mounted) {
-          if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
+        const d = await formStorage.loadForm(DRAFT_KEY);
+        const payload = d?.payload || null;
+        if (payload && mounted) {
+          if (payload.formData) setFormData(payload.formData);
+          if (payload.metadata) setMetadata(payload.metadata);
         }
-        // auto-populate issue date and item dates when no draft exists
         const today = new Date();
         const dd = String(today.getDate()).padStart(2, '0');
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const yyyy = today.getFullYear();
         const todayStr = `${dd}/${mm}/${yyyy}`;
-        // always set issue date to system current date
         if (mounted) {
           setMetadata(prev => ({ ...prev, issueDate: todayStr }));
           setFormData(prev => prev.map(item => ({ ...item, date: item.date || todayStr })));
@@ -65,31 +67,32 @@ export default function ProductsNetContentChecklist() {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata, verification }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata, verification]);
+  // autosave handled by useFormSave scheduleAutoSave
+
+  const buildPayload = (status = 'draft') => ({ formType: 'ProductsNetContentChecklist', templateVersion: '01', title: 'Products Net Content Checklist', metadata, formData, verification, status });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setVerification({ supervisorSign: '', hseqManagerSign: '', complexManagerSign: '' }); } });
 
   const handleEntryChange = useCallback((index, field, value) => {
-    setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-  }, []);
+    setFormData(prev => {
+      const newData = prev.map((item, i) => i === index ? { ...item, [field]: value } : item);
+      try { scheduleAutoSave(); } catch (e) {}
+      return newData;
+    });
+  }, [scheduleAutoSave]);
 
   const handleVerificationChange = (key, value) => setVerification(prev => ({ ...prev, [key]: value }));
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraftLocal = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata, verification }); } catch (e) { console.warn('save draft failed', e); }
+    try { await handleSaveDraft(); } catch (e) { console.warn('save draft failed', e); }
     setBusy(false);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmitLocal = async () => {
     setBusy(true);
     try {
+      await handleSubmit();
       await addFormHistory({ title: 'Products Net Content Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } });
-      await removeDraft(DRAFT_KEY);
-      setFormData(initialLogState);
-      setVerification({ supervisorSign: '', hseqManagerSign: '', complexManagerSign: '' });
     } catch (e) { console.warn('submit failed', e); }
     setBusy(false);
   };
@@ -100,7 +103,7 @@ export default function ProductsNetContentChecklist() {
 
         <View style={styles.headerBox}>
           <View style={styles.logoRow}>
-            <Image source={require('../assets/logo.png')} style={styles.logo} />
+            <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
             <View style={styles.brandWrap}>
               <Text style={styles.brand}>Bravo Brands Limited</Text>
               <Text style={styles.brandSub}>Food Safety Inspections</Text>
@@ -159,9 +162,11 @@ export default function ProductsNetContentChecklist() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}><Text style={styles.btnText}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmitLocal} disabled={busy || isSaving}><Text style={styles.btnText}>{(busy || isSaving) ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
         </View>
+        <LoadingOverlay visible={isSaving || busy} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
       </ScrollView>
     </View>

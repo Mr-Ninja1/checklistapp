@@ -173,12 +173,12 @@ export default function FOH_DailyCleaningForm() {
       // try to embed logo as base64 for perfect saved rendering (best-effort)
       let logoDataUri = null;
       try {
-        const asset = Asset.fromModule(require('../assets/logo.png'));
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
         await asset.downloadAsync();
         if (asset.localUri) {
           try {
             const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
-            if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+            if (b64) logoDataUri = `data:image/jpeg;base64,${b64}`;
           } catch (e) { /* ignore */ }
         }
       } catch (e) { /* ignore */ }
@@ -240,7 +240,7 @@ export default function FOH_DailyCleaningForm() {
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       {/* Header: logo + company name at top-left, title centered below */}
       <View style={styles.headerTop}>
-        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>
       </View>
       <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text></View>

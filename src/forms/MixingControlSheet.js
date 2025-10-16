@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import useFormSave from '../hooks/useFormSave';
+import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 const DRAFT_KEY = 'mixing_control_sheet_draft';
 
@@ -38,17 +41,18 @@ export default function MixingControlSheet() {
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
 
+  // load existing stable draft (if any) using formStorage (payload wrapper)
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
-        if (d && mounted) {
-          if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
-          if (d.verification) setVerification(d.verification);
+        const d = await formStorage.loadForm(DRAFT_KEY);
+        const payload = d?.payload || null;
+        if (payload && mounted) {
+          if (payload.formData) setFormData(payload.formData);
+          if (payload.metadata) setMetadata(payload.metadata);
+          if (payload.verification) setVerification(payload.verification);
         } else if (mounted) {
-          // auto-populate issueDate
           const today = new Date();
           const dd = String(today.getDate()).padStart(2, '0');
           const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -60,30 +64,29 @@ export default function MixingControlSheet() {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata, verification }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata, verification]);
+  // integrate useFormSave and autosave
+  const buildPayload = (status = 'draft') => ({ formType: 'MixingControlSheet', templateVersion: '01', title: 'Mixing Control Sheet', metadata, formData, verification, status });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setVerification({ mixerManSign: '', complexManagerSign: '' }); } });
 
   const handleEntryChange = useCallback((index, field, value) => {
-    setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-  }, []);
+    setFormData(prev => {
+      const newData = prev.map((item, i) => i === index ? { ...item, [field]: value } : item);
+      try { scheduleAutoSave(); } catch (e) {}
+      return newData;
+    });
+  }, [scheduleAutoSave]);
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraftLocal = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata, verification }); console.log('Draft saved'); }
-    catch (e) { console.warn('save draft failed', e); }
+    try { await handleSaveDraft(); } catch (e) { console.warn('save draft failed', e); }
     finally { setBusy(false); }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmitLocal = async () => {
     setBusy(true);
     try {
+      await handleSubmit();
       await addFormHistory({ title: 'Mixing Control Sheet', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } });
-      await removeDraft(DRAFT_KEY);
-      setFormData(initialLogState);
-      setVerification({ mixerManSign: '', complexManagerSign: '' });
     } catch (e) { console.warn('submit failed', e); }
     finally { setBusy(false); }
   };
@@ -126,7 +129,7 @@ export default function MixingControlSheet() {
         <View style={styles.headerBox}>
           <View style={styles.headerTop}>
             <View style={styles.logoWrap}>
-              <Image source={require('../assets/logo.png')} style={styles.logo} />
+              <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
               <View>
                 <Text style={styles.brand}>Bravo Brands Limited</Text>
                 <Text style={styles.sub}>Food Safety Management System</Text>
@@ -173,13 +176,15 @@ export default function MixingControlSheet() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
-            <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}>
+            <Text style={styles.btnText}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
-            <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmitLocal} disabled={busy || isSaving}>
+            <Text style={styles.btnText}>{(busy || isSaving) ? 'Submitting...' : 'Submit Log'}</Text>
           </TouchableOpacity>
         </View>
+        <LoadingOverlay visible={isSaving || busy} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
     </View>
   );

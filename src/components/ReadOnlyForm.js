@@ -12,7 +12,7 @@ export default function ReadOnlyForm({ form }) {
           {form.logoDataUri ? (
             <Image source={{ uri: form.logoDataUri }} style={styles.logoSmall} resizeMode="contain" />
           ) : (
-            <Image source={require('../assets/logo.png')} style={styles.logoSmall} resizeMode="contain" />
+            <Image source={require('../assets/logo.jpeg')} style={styles.logoSmall} resizeMode="contain" />
           )}
           <Text style={styles.brandName}>Bravo</Text>
         </View>

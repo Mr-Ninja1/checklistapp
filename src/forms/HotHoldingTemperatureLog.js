@@ -91,7 +91,7 @@ export default function HotHoldingTemperatureLog() {
                 <View style={styles.metaContainer}>
                     <View style={styles.metaHeaderBox}>
                         <View style={styles.brandRow}>
-                            <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                            <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
                             <View style={styles.brandTextWrap}>
                                 <Text style={styles.brandTitle}>BRAVO BRANDS LIMITED</Text>
                                 <Text style={styles.brandSubtitle}>Food Safety Management System</Text>

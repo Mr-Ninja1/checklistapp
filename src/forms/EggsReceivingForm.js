@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 
 const { width } = Dimensions.get('window');
 
@@ -31,6 +33,25 @@ const EggsReceivingForm = () => {
         scheduleAutoSave();
     };
 
+        const [logoDataUri, setLogoDataUri] = React.useState(null);
+
+        // embed logo as base64 for saved payloads
+        React.useEffect(() => {
+            let mounted = true;
+            (async () => {
+                try {
+                    const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+                    if (!asset.localUri) await asset.downloadAsync();
+                    const uri = asset.localUri || asset.uri;
+                    const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+                    if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+                } catch (e) {
+                    // ignore
+                }
+            })();
+            return () => { mounted = false; };
+        }, []);
+
     let scheduleAutoSave = (delay = 1500) => { /* will be injected by hook */ };
 
     const toggleClean = (id) => {
@@ -50,8 +71,17 @@ const EggsReceivingForm = () => {
         title: 'Eggs Receiving Checklist',
         metadata: { issueDate, versionNo, status, ...deliveryDetails },
         formData: receivingData,
-        layoutHints: {},
-        assets: { logoDataUri: null },
+        layoutHints: {
+            CATEGORY: 300,
+            SUPPLIER: 180,
+            CLEAN: 90,
+            STATE: 140,
+            EXPIRY: 120,
+            REMARKS: 300,
+            gap: 8
+        },
+        _tableWidth: 300 + 180 + 90 + 140 + 120 + 300,
+        assets: { logoDataUri: logoDataUri || null },
         savedAt: new Date().toISOString(),
     });
 
@@ -75,6 +105,15 @@ const EggsReceivingForm = () => {
         </View>
     );
 
+    const saveAndRecord = async () => {
+        try {
+            await handleSubmit();
+            await addFormHistory({ title: 'Eggs Receiving Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { payload: buildCanonicalPayload('final') } });
+        } catch (e) {
+            console.warn('save failed', e);
+        }
+    };
+
     return (
         <SafeAreaView style={styles.safeArea}>
             {/* The outer ScrollView handles all vertical scrolling */}
@@ -87,7 +126,7 @@ const EggsReceivingForm = () => {
                     <View style={styles.container}>
                         <View style={styles.docHeader}>
                             <View style={styles.logoAndSystem}>
-                                <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                                <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
                                 <View style={styles.systemDetailsWrap}>
                                     <Text style={styles.logoText}>Bravo</Text>
                                     <View style={styles.systemDetails}>

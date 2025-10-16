@@ -356,7 +356,7 @@ export default function CoolingTemperatureLog() {
               <div className="flex items-center flex-3 py-1 px-2">
                 {/* Actual Logo Image */}
                 <div className="w-10 h-10 mr-2 flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-800 rounded-md">
-                  <img src="image_eba023.png" alt="Food Safety Checkmark Logo" className="w-full h-full object-cover" />
+                  <img src="image_eba023.jpeg" alt="Food Safety Checkmark Logo" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 justify-center">
                   <p className="text-xs font-bold text-gray-800">Bravo! Food Safety Management System</p>

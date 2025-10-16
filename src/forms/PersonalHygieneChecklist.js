@@ -122,7 +122,7 @@ const PersonalHygieneChecklist = () => {
                     {/* --- HEADER SECTION --- */}
                     <View style={styles.header}>
                 <View style={styles.logoAndTitle}>
-                    <Image source={require('../assets/logo.png')} style={styles.logoImageLeft} />
+                    <Image source={require('../assets/logo.jpeg')} style={styles.logoImageLeft} />
                     <Text style={styles.logoText}>Bravo</Text>
                     <View style={styles.titleBlock}>
                                 <Text style={styles.documentTitle}>BRAVO BRANDS LIMITED</Text>

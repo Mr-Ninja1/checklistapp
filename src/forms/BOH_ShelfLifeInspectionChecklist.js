@@ -152,7 +152,7 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerBox}>
-          <View style={styles.logoWrap}><Image source={require('../assets/logo.png')} style={styles.logo} /><Text style={styles.brand}>Bravo Brands Limited</Text></View>
+          <View style={styles.logoWrap}><Image source={require('../assets/logo.jpeg')} style={styles.logo} /><Text style={styles.brand}>Bravo Brands Limited</Text></View>
           <Text style={styles.title}>BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST</Text>
           <Text style={styles.frequency}>FREQUENCY: {metadata.frequency}</Text>
         </View>

@@ -158,7 +158,7 @@ export default function UnderbarChillerTemperatureLog() {
               {
                 (() => {
                   try {
-                    const logo = require('../assets/logo.png');
+                    const logo = require('../assets/logo.jpeg');
                     return <Image source={logo} style={styles.logoImage} resizeMode="contain" />;
                   } catch (e) {
                     return <View style={styles.logoPlaceholder}><Text style={styles.logoText}>Logo</Text></View>;

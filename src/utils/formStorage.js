@@ -14,7 +14,9 @@ async function saveForm(formId, payload) {
 
     // Register a lightweight history entry so the saved form appears in the saved list
     try {
-      await addFormHistory({ title: payload.title || payload.formType || 'Saved Form', date: payload.date || null, shift: payload.shift || null, savedAt: Date.now(), meta: { formId, filePath } });
+      // include a small snapshot of the payload inside the history meta so the Saved Forms
+      // screen can render the presentational quickly even if the file can't be loaded later.
+      await addFormHistory({ title: payload.title || payload.formType || 'Saved Form', date: payload.date || null, shift: payload.shift || null, savedAt: Date.now(), meta: { formId, filePath, payload } });
     } catch (e) {
       console.warn('formStorage: addFormHistory failed', e);
     }

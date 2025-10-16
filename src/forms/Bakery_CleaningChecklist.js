@@ -10,6 +10,9 @@ import {
     Alert, // Using Alert for RN native environment
     Image,
 } from 'react-native';
+import useFormSave from '../hooks/useFormSave';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 // --- STUBBED ASYNC STORAGE AND API UTILITIES ---
 // NOTE: Since this environment cannot access native AsyncStorage, these functions
@@ -17,19 +20,6 @@ import {
 
 const DRAFT_KEY = 'bakery_cleaning_checklist_draft';
 
-// Mock storage functions (replace with actual AsyncStorage logic in your app)
-const getDraft = async (key) => {
-    // In a real RN app, this would use AsyncStorage.getItem
-    return new Promise(resolve => setTimeout(() => resolve(null), 10)); // Always returns null in stub
-};
-const setDraft = async (key, data) => {
-    // In a real RN app, this would use AsyncStorage.setItem
-    return new Promise(resolve => setTimeout(resolve, 10));
-};
-const removeDraft = async (key) => {
-    // In a real RN app, this would use AsyncStorage.removeItem
-    return new Promise(resolve => setTimeout(resolve, 10));
-};
 const addFormHistory = async (data) => {
     console.log("Form submitted to API:", data);
     return new Promise(resolve => setTimeout(resolve, 300));
@@ -103,37 +93,21 @@ export default function BakeryCleaningChecklist() {
     const [verification, setVerification] = useState({ hseqManager: '', complexManager: '' });
     const [busy, setBusy] = useState(false);
     const saveTimer = useRef(null);
+    // useFormSave integration
+    const buildPayload = () => ({
+        formType: 'BakeryCleaningChecklist',
+        templateVersion: 'v1',
+        title: 'Bakery Area Cleaning Checklist',
+        metadata,
+        verification,
+        formData,
+    });
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+        setFormData(initialCleaningState); setMetadata({ location: '', week: '', month: issueMonth, year: issueYear }); setVerification({ hseqManager: '', complexManager: '' });
+    } });
 
     // Load Draft Effect
-    useEffect(() => {
-        let mounted = true;
-        (async () => {
-            try {
-                const d = await getDraft(DRAFT_KEY);
-                if (d && mounted) {
-                    if (d.formData) setFormData(d.formData);
-                    if (d.metadata) setMetadata(d.metadata);
-                    if (d.verification) setVerification(d.verification);
-                    if (d.formData || d.metadata || d.verification) {
-                        // Alert.alert('Draft Loaded', 'Previous draft loaded from storage.');
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to load draft:", e);
-            }
-            return () => { mounted = false; };
-        })();
-    }, []);
-
-    // Auto-Save Draft Effect
-    useEffect(() => {
-        if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => {
-            setDraft(DRAFT_KEY, { formData, metadata, verification });
-            console.log('Auto-draft saved.');
-        }, 700);
-        return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-    }, [formData, metadata, verification]);
+    // NOTE: draft load handled by hook's save/load or external code; autosave triggered below in handlers
 
     // Handler: Toggle Checkbox
     const handleCheck = (id, day) => {
@@ -173,7 +147,7 @@ export default function BakeryCleaningChecklist() {
     const handleVerificationChange = (key, value) => setVerification(prev => ({ ...prev, [key]: value }));
 
 
-    const handleSubmit = async () => {
+    const handleSubmitLocal = async () => {
         setBusy(true);
         try {
             await addFormHistory({
@@ -182,12 +156,7 @@ export default function BakeryCleaningChecklist() {
                 savedAt: Date.now(),
                 meta: { metadata, verification, formData }
             });
-            await removeDraft(DRAFT_KEY);
             Alert.alert('Success', 'Checklist Submitted successfully!');
-            // Reset form after submission
-            setFormData(initialCleaningState);
-            setMetadata({ location: '', week: '', month: '', year: new Date().getFullYear().toString() });
-            setVerification({ hseqManager: '', complexManager: '' });
         } catch (e) {
             Alert.alert('Error', 'Submission failed.');
         } finally {
@@ -195,10 +164,10 @@ export default function BakeryCleaningChecklist() {
         }
     };
 
-    const handleSaveDraft = async () => {
+    const handleSaveDraftLocal = async () => {
         setBusy(true);
         try {
-            await setDraft(DRAFT_KEY, { formData, metadata, verification });
+            await handleSaveDraft();
             Alert.alert('Success', 'Draft saved manually.');
         } catch (e) {
             Alert.alert('Error', 'Failed to save draft.');
@@ -266,7 +235,7 @@ export default function BakeryCleaningChecklist() {
                 <View style={styles.card}>
                     {/* Header Section - show logo, company name and issued date */}
                     <View style={styles.headerTop}>
-                        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+                        <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
                         <View style={{ flex: 1, paddingLeft: 12 }}>
                             <Text style={styles.companyName}>Bravo</Text>
                             <Text style={styles.areaTitle}>BAKERY & CONFECTIONARY AREA</Text>
@@ -375,7 +344,7 @@ export default function BakeryCleaningChecklist() {
                             <Text style={styles.buttonText}>Back</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={handleSaveDraft}
+                            onPress={handleSaveDraftLocal}
                             style={[styles.button, styles.draftButton]}
                             disabled={busy}
                         >
@@ -386,7 +355,7 @@ export default function BakeryCleaningChecklist() {
                             )}
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={handleSubmit}
+                            onPress={async () => { await handleSubmit(() => handleSubmitLocal()); }}
                             style={[styles.button, styles.submitButton]}
                             disabled={busy}
                         >
@@ -399,6 +368,8 @@ export default function BakeryCleaningChecklist() {
                     </View>
                 </View>
             </ScrollView>
+            <LoadingOverlay visible={isSaving || busy} message={(isSaving||busy) ? 'Saving...' : ''} />
+            <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
     );
 }

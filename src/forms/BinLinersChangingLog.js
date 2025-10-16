@@ -36,7 +36,7 @@ export default function BinLinersChangingLog() {
   };
 
   const logo = () => (
-    <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+    <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
   );
 
   // Load draft on mount
@@ -73,11 +73,11 @@ export default function BinLinersChangingLog() {
       // try to embed logo as base64
       let logoDataUri = null;
       try {
-        const asset = Asset.fromModule(require('../assets/logo.png'));
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
         await asset.downloadAsync();
         if (asset.localUri) {
           const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
-          if (b64) logoDataUri = `data:image/png;base64,${b64}`;
+          if (b64) logoDataUri = `data:image/jpeg;base64,${b64}`;
         }
       } catch (e) { logoDataUri = null; }
 

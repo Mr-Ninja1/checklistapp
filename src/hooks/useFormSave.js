@@ -80,15 +80,35 @@ export default function useFormSave(a, b = {}) {
     // mark saving and ensure we always clear the saving flag in finally
     setIsSaving(true);
     try {
-      // wait for any in-flight autosave/save to finish before submitting
-      while (inFlightSave.current) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise(r => setTimeout(r, 50));
-      }
-      inFlightSave.current = true;
+      // wait for any in-flight autosave/save to finish before submitting, but don't wait forever
+      const waitForInFlight = async (timeoutMs = 5000) => {
+        const start = Date.now();
+        while (inFlightSave.current && Date.now() - start < timeoutMs) {
+          // eslint-disable-next-line no-await-in-loop
+          await new Promise(r => setTimeout(r, 50));
+        }
+        if (inFlightSave.current) {
+          console.warn('useFormSave: in-flight save did not finish within timeout, proceeding with submit');
+        }
+      };
+      await waitForInFlight(5000);
       const payload = getPayload('submitted');
       const id = `${formType}_${Date.now()}`;
-      await formStorage.saveForm(id, payload);
+
+      // Start saving but don't block the UI indefinitely. We'll wait a short time
+      // for the save to complete; if it doesn't, proceed and let the save finish
+      // in the background. Attach a finally to clear the inFlight flag when done.
+      inFlightSave.current = true;
+      const savePromise = formStorage.saveForm(id, payload)
+        .catch(e => { console.error('useFormSave: background save failed', e); })
+        .finally(() => { inFlightSave.current = false; });
+
+      // wait up to 800ms for the save to complete to give a snappy submit UX
+      const shortWait = new Promise(r => setTimeout(() => r(null), 800));
+      const saveResult = await Promise.race([savePromise, shortWait]);
+      if (saveResult === null) {
+        console.warn('useFormSave: save did not finish quickly; continuing while saving in background');
+      }
 
       // try to remove stable draft and its history entry; failures here shouldn't block submit success path
       try {

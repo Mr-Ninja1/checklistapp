@@ -6,7 +6,7 @@ export default function CustomerSatisfactionPresentational({ payload }) {
   const data = payload.formData || {};
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}><Image source={require('../../assets/logo.png')} style={styles.logo} /><Text style={styles.title}>{data.subject}</Text></View>
+      <View style={styles.header}><Image source={require('../../assets/logo.jpeg')} style={styles.logo} /><Text style={styles.title}>{data.subject}</Text></View>
       <View style={styles.section}><Text>Customer: {data.customerName}</Text><Text>Contact: {data.contactInfo}</Text></View>
     </ScrollView>
   );

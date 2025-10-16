@@ -11,7 +11,7 @@ export default function CertificateOfAnalysisPresentational({ payload }) {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
         <View style={styles.headerRowTop}>
-          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('../../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
           <View style={{ flex: 1 }}>
             <Text style={styles.brandName}>BRAVO BRANDS LIMITED</Text>
             <Text style={styles.title}>CERTIFICATE OF ANALYSIS</Text>

@@ -102,7 +102,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 160 }}>
         <View style={styles.header}>
-          <Image source={require('../assets/logo.png')} style={styles.logo} />
+          <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <View style={{ marginRight: 12 }}>
               <Text style={styles.companyName}>Bravo</Text>

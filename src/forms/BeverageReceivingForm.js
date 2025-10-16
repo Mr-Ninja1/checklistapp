@@ -36,11 +36,11 @@ const BeverageReceivingForm = () => {
             let mounted = true;
             (async () => {
                 try {
-                    const asset = Asset.fromModule(require('../assets/logo.png'));
+                    const asset = Asset.fromModule(require('../assets/logo.jpeg'));
                     await asset.downloadAsync();
                     if (asset.localUri) {
                         const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
-                        if (b64 && mounted) setLogoDataUri(`data:image/png;base64,${b64}`);
+                        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
                     }
                 } catch (e) { /* ignore */ }
             })();
@@ -180,7 +180,7 @@ const BeverageReceivingForm = () => {
                     {/* --- 1. DOCUMENT HEADER --- */}
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
-                            <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                            <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
                             <View style={styles.systemDetailsWrap}>
                                 <Text style={styles.logoText}>Bravo</Text>
                                 <View style={styles.systemDetails}>

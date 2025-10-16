@@ -9,7 +9,7 @@ const TIME_SLOTS = [
 const ReadOnlyFormCapture = forwardRef(({ logDetails, handlerData }, ref) => (
   <View ref={ref} style={styles.captureContainer} collapsable={false}>
     <View style={{ alignItems: 'center', marginBottom: 10 }}>
-      <Image source={require('../assets/logo.png')} style={{ width: 60, height: 60, borderRadius: 16, marginBottom: 4 }} resizeMode="contain" />
+      <Image source={require('../assets/logo.jpeg')} style={{ width: 60, height: 60, borderRadius: 16, marginBottom: 4 }} resizeMode="contain" />
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#185a9d', letterSpacing: 2 }}>Bravo</Text>
     </View>
     <Text style={styles.title}>Food Handlers Daily Handwashing Tracking Log Sheet</Text>

@@ -31,7 +31,7 @@ export default function FoodHandlersPresentational({ payload }) {
         {assets && assets.logoDataUri ? (
           <Image source={{ uri: assets.logoDataUri }} style={styles.logo} resizeMode="contain" />
         ) : (
-          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+          <Image source={require('../../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
         )}
         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
           <Text style={styles.companyNameLarge}>Bravo</Text>

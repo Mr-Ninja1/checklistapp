@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, SafeAreaView, Image } from 'react-native';
+import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, SafeAreaView, Image, TouchableOpacity } from 'react-native';
+import useFormSave from '../hooks/useFormSave';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 // --- Configuration Constants ---
 
@@ -103,6 +106,33 @@ export default function FoodHandlersDailyShoweringForm() {
   const initialLog = Array.from({ length: DATA_ROWS }, () => Array(finalWidths.length).fill(''));
   const [logEntries, setLogEntries] = useState(initialLog);
 
+  // useFormSave integration
+  const draftId = 'FoodHandlersDailyShowering_draft';
+  const buildPayload = () => ({
+    formType: 'FoodHandlersDailyShowering',
+    templateVersion: 'v1.0',
+    title: 'Food Handlers Daily Showering Log',
+    week,
+    month,
+    year,
+    compiledBy,
+    approvedBy,
+    verifiedBy,
+    logEntries,
+    layoutHints: { largeCol, mediumCol },
+    assets: {},
+  });
+
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
+    setLogEntries(initialLog);
+    setWeek('A');
+    setMonth(monthName);
+    setYear(`${now.getFullYear()}`);
+    setCompiledBy('Michael Zulu C.');
+    setApprovedBy('Hassani Ali');
+    setVerifiedBy('');
+  } });
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -115,7 +145,7 @@ export default function FoodHandlersDailyShoweringForm() {
             {/* Top Banner Row */}
             <View style={styles.docInfoRow}>
               <View style={styles.headerColLeft}>
-                <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
                 <View style={{ flexDirection: 'column', marginLeft: 8 }}>
                   <Text style={styles.companyName}>BRAVO BRANDS LIMITED</Text>
                   <Text style={styles.subtitleText}>Food Safety Management System</Text>
@@ -253,17 +283,28 @@ export default function FoodHandlersDailyShoweringForm() {
                   <View key={`row-${rIdx}`} style={styles.dataRow}>
                     {/* The 17 columns of input fields */}
                     {finalWidths.map((w, cIdx) => (
-                      <View 
-                        key={`cell-${rIdx}-${cIdx}`} 
-                        style={[
-                          styles.cell, 
-                          { width: w, height: W_FIXED.rowHeight },
-                          styles.bottomBorder, // All data cells need a bottom border for separation
-                          cIdx === finalWidths.length - 1 ? styles.lastCell : styles.rightBorder // Ensure right border is consistently applied
-                        ]}
-                      >
-                        <TextInput style={styles.inputField} />
-                      </View>
+                              <View 
+                                key={`cell-${rIdx}-${cIdx}`} 
+                                style={[
+                                  styles.cell, 
+                                  { width: w, height: W_FIXED.rowHeight },
+                                  styles.bottomBorder, // All data cells need a bottom border for separation
+                                  cIdx === finalWidths.length - 1 ? styles.lastCell : styles.rightBorder // Ensure right border is consistently applied
+                                ]}
+                              >
+                                <TextInput 
+                                  style={styles.inputField} 
+                                  value={logEntries[rIdx]?.[cIdx]}
+                                  onChangeText={(text) => {
+                                    setLogEntries(prev => {
+                                      const next = prev.map(row => row.slice());
+                                      next[rIdx][cIdx] = text;
+                                      return next;
+                                    });
+                                    scheduleAutoSave();
+                                  }}
+                                />
+                              </View>
                     ))}
                   </View>
                 ))}
@@ -277,6 +318,15 @@ export default function FoodHandlersDailyShoweringForm() {
                 <Text style={{fontWeight: '900'}}>Instruction:</Text> All food handlers who handle food directly are required to take a shower before starting work.
             </Text>
           </View>
+
+          {/* Action buttons */}
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+          </View>
+
+          <LoadingOverlay visible={isSaving} />
+          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
       </ScrollView>
     </SafeAreaView>

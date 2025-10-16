@@ -6,8 +6,8 @@ export default function EggsReceivingPresentational({ payload }) {
   const p = payload.payload || payload;
   const meta = p.metadata || {};
   const rows = Array.isArray(p.formData) ? p.formData : [];
-
-  const logoSource = (p.assets && p.assets.logoDataUri) ? { uri: p.assets.logoDataUri } : require('../../assets/logo.png');
+  const logoSource = (p.assets && p.assets.logoDataUri) ? { uri: p.assets.logoDataUri } : require('../../assets/logo.jpeg');
+  const hints = p.layoutHints || {};
 
   return (
     // Outer vertical scroll for modal; inner horizontal scroll for wide printed layout
@@ -114,8 +114,8 @@ export default function EggsReceivingPresentational({ payload }) {
 
   <View style={dailyStyles.tableContainer}>
           <View style={dailyStyles.tableHeader}>
-            <Text style={[dailyStyles.headerCell, dailyStyles.categoryCol, dailyStyles.spanTwoRows]}>Category of Eggs (Large, Medium, Small or mixed sizes)</Text>
-            <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
+            <Text style={[dailyStyles.headerCell, { width: hints.CATEGORY || dailyStyles.categoryCol.width, minHeight: 60 }, dailyStyles.spanTwoRows]}>Category of Eggs (Large, Medium, Small or mixed sizes)</Text>
+            <Text style={[dailyStyles.headerCell, { width: hints.SUPPLIER || dailyStyles.supplierCol.width, minHeight: 60 }, dailyStyles.spanTwoRows]}>Supplier</Text>
 
             <View style={dailyStyles.deliveryGroupHeaderCol}>
               <Text style={dailyStyles.groupHeaderTitle}>{'Delivery\nVehicle'}</Text>
@@ -136,12 +136,12 @@ export default function EggsReceivingPresentational({ payload }) {
 
           {rows.map((item) => (
             <View style={dailyStyles.tableRow} key={item.id || item._id || JSON.stringify(item).slice(0,20)}>
-              <Text style={[dailyStyles.dataCell, dailyStyles.categoryCol]}>{item.categoryOfEggs}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{item.supplier}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>{item.clean ? '\u2713' : ''}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{item.stateOfProduct}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{item.expiryDate}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{item.remarks}</Text>
+              <Text style={[dailyStyles.dataCell, { width: hints.CATEGORY || dailyStyles.categoryCol.width }]} numberOfLines={1} ellipsizeMode="tail">{item.categoryOfEggs}</Text>
+              <Text style={[dailyStyles.dataCell, { width: hints.SUPPLIER || dailyStyles.supplierCol.width }]} numberOfLines={1} ellipsizeMode="tail">{item.supplier}</Text>
+              <Text style={[dailyStyles.dataCell, { width: hints.CLEAN || dailyStyles.cleanCol.width }, dailyStyles.checkboxCell]} numberOfLines={1} ellipsizeMode="tail">{item.clean ? '\u2713' : ''}</Text>
+              <Text style={[dailyStyles.dataCell, { width: hints.STATE || dailyStyles.stateOfProductCol.width }]} numberOfLines={1} ellipsizeMode="tail">{item.stateOfProduct}</Text>
+              <Text style={[dailyStyles.dataCell, { width: hints.EXPIRY || dailyStyles.expiryDateCol.width }]} numberOfLines={1} ellipsizeMode="tail">{item.expiryDate}</Text>
+              <Text style={[dailyStyles.dataCell, { width: hints.REMARKS || dailyStyles.remarksCol.width }]} numberOfLines={1} ellipsizeMode="tail">{item.remarks}</Text>
             </View>
           ))}
         </View>

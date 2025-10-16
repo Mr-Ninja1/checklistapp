@@ -4,7 +4,7 @@ import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
 export default function BinLinersChangingLogPresentational({ payload }) {
   const p = payload || {};
   const entries = p.logEntries || [];
-  const logoSource = p.assets?.logoDataUri ? { uri: p.assets.logoDataUri } : require('../../assets/logo.png');
+  const logoSource = p.assets?.logoDataUri ? { uri: p.assets.logoDataUri } : require('../../assets/logo.jpeg');
   const hints = p.layoutHints || {};
   const tableWidth = p._tableWidth || null;
 

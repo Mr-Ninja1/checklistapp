@@ -14,7 +14,7 @@ export default function PackagingMaterialsReceivingPresentational({ payload }) {
         <View style={styles.innerContainer}>
           <View style={styles.docHeader}>
             <View style={styles.logoAndSystem}>
-              <Image source={require('../../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+              <Image source={require('../../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
               <View>
                 <Text style={styles.logoText}>Bravo</Text>
                 <Text style={styles.systemText}>BRAVO BRANDS LIMITED</Text>

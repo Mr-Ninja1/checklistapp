@@ -28,7 +28,7 @@ export default function ProductRejectionPresentational({ payload }) {
           {assets.logoDataUri ? (
             <Image source={{ uri: assets.logoDataUri }} style={styles.logoImage} resizeMode="contain" />
           ) : (
-            <Image source={require('../../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+            <Image source={require('../../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
           )}
           <Text style={styles.bravoBrand}>Bravo</Text>
           <Text style={styles.companyName}>BRAVO BRANDS LIMITED</Text>

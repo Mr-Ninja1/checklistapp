@@ -27,7 +27,7 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
           {payload.assets?.logoDataUri ? (
             <Image source={{ uri: payload.assets.logoDataUri }} style={styles.logo} />
           ) : (
-            <Image source={require('../../assets/logo.png')} style={styles.logo} />
+            <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <Text style={styles.companyNameLarge}>Bravo</Text>

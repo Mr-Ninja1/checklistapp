@@ -121,7 +121,7 @@ const ProductReleaseForm = () => {
                 <View style={styles.container}>
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
-                            <Image source={require('../assets/logo.png')} style={styles.logoImage} resizeMode="contain" />
+                            <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
                             <View>
                                 <Text style={styles.logoText}>Bravo</Text>
                                 <View style={styles.systemDetails}>
@@ -194,6 +194,12 @@ const ProductReleaseForm = () => {
                             scrollEnabled={false}
                         />
                     </View>
+                                        <View style={{ height: 18 }} />
+                                        <View style={{ marginTop: 12 }}>
+                                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); })} showSavePdf={false} />
+                                        </View>
+                                        <LoadingOverlay visible={isSaving} />
+                                        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                 </View>
             </ScrollView>
         </SafeAreaView>

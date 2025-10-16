@@ -44,7 +44,7 @@ const GenericReadOnlyForm = ({ form, children, title, area, docNo, issueDate }) 
             <ScrollView style={styles.container}>
                 <View style={styles.card}>
                     <View style={styles.headerTop}>
-                        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+                        <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
                         <View style={{ flex: 1, paddingLeft: 12 }}>
                             <Text style={styles.companyName}>Bravo</Text>
                             {area && <Text style={styles.areaTitle}>{area}</Text>}

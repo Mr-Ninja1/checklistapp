@@ -7,6 +7,10 @@ import BeverageReceivingPresentational from '../forms/components/BeverageReceivi
 import PackagingMaterialsReceivingPresentational from '../forms/components/PackagingMaterialsReceivingPresentational';
 import VegetablesFruitsReceivingPresentational from '../forms/components/VegetablesFruitsReceivingPresentational';
 import ToolboxTalkRegisterPresentational from '../forms/components/ToolboxTalkRegisterPresentational';
+import WelfareFacilitiesPresentational from '../forms/components/WelfareFacilitiesPresentational';
+import FoodHandlersDailyShoweringPresentational from '../forms/components/FoodHandlersDailyShoweringPresentational';
+import FoodSamplesCollectionPresentational from '../forms/components/FoodSamplesCollectionPresentational';
+import FruitWashingLogPresentational from '../forms/components/FruitWashingLogPresentational';
 import PastInspectionFormPresentational from '../forms/components/PastInspectionFormPresentational';
 import EggsReceivingPresentational from '../forms/components/EggsReceivingPresentational';
 import CertificateOfAnalysisPresentational from '../forms/components/CertificateOfAnalysisPresentational';
@@ -21,6 +25,10 @@ import ProcessQualityOutOfControlPresentational from '../forms/components/Proces
 import ProductReleasePresentational from '../forms/components/ProductReleasePresentational';
 import CustomerSatisfactionPresentational from '../forms/components/CustomerSatisfactionPresentational';
 import CustomerSatisfactionQuestionnairePresentational from '../forms/components/CustomerSatisfactionQuestionnairePresentational';
+import BakerySanitizingPresentational from '../forms/components/BakerySanitizingPresentational';
+import BakeryCleaningChecklistPresentational from '../forms/components/BakeryCleaningChecklistPresentational';
+import MixingControlSheetPresentational from '../forms/components/MixingControlSheetPresentational';
+import ProductsNetContentChecklistPresentational from '../forms/components/ProductsNetContentChecklistPresentational';
 import { View, Text, StyleSheet } from 'react-native';
 // Add other form imports as needed
 
@@ -142,6 +150,38 @@ export default function SavedFormRenderer({ savedPayload }) {
   // Toolbox Talk Register
   if (/ToolboxTalkRegister|Tool Box Talk Register|TBT Register/i.test(type)) {
     return <ToolboxTalkRegisterPresentational payload={payload} />;
+  }
+  // Welfare Facilities Cleaning Checklist
+  if (/WelfareFacilities_CleaningChecklist|Welfare Facilities Cleaning Checklist|Welfare Facilities/i.test(type)) {
+    return <WelfareFacilitiesPresentational payload={payload} />;
+  }
+  // Food Handlers Daily Showering Log (reuse if type matches)
+  if (/FoodHandlersDailyShowering|Daily Showering|FOOD HANDLERS DAILY SHOWERING/i.test(type)) {
+    return <FoodHandlersDailyShoweringPresentational payload={payload} />;
+  }
+  // Food Samples Collection Log
+  if (/FoodSamplesCollectionLog|Food Samples Collection/i.test(type)) {
+    return <FoodSamplesCollectionPresentational payload={payload} />;
+  }
+  // Fruit, Vegetable & Egg Washing Log
+  if (/FruitWashingLog|Fruit, Vegetable and Egg Washing|Fruit Washing/i.test(type)) {
+    return <FruitWashingLogPresentational payload={payload} />;
+  }
+
+  // Bakery forms
+  if (/Bakery_SanitizingLog|Sanitizing Log|Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery/i.test(type)) {
+    return <BakerySanitizingPresentational payload={payload} />;
+  }
+  if (/Bakery_CleaningChecklist|Bakery Area Cleaning Checklist|BAKERY AREA CLEANING CHECKLIST/i.test(type)) {
+    return <BakeryCleaningChecklistPresentational payload={payload} />;
+  }
+  // Mixing Control Sheet
+  if (/MixingControlSheet|Mixing Control Sheet|MIXING CONTROL SHEET/i.test(type)) {
+    return <MixingControlSheetPresentational payload={payload} />;
+  }
+  // Products Net Content Checklist
+  if (/ProductsNetContentChecklist|Products Net Content Checklist|PRODUCTS NET CONTENT CHECKLIST/i.test(type)) {
+    return <ProductsNetContentChecklistPresentational payload={payload} />;
   }
   // Past Inspection / Pest Inspection Form
   if (/PastInspectionForm|Pest Inspection Form|PestInspection/i.test(type)) {
