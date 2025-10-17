@@ -9,6 +9,7 @@ export default function CustomerSatisfactionQuestionnairePresentational({ payloa
   const hints = p.layoutHints || {};
   const qWidth = hints.QUESTION || 520;
   const aWidth = hints.ANSWER || 80;
+  const gap = hints.gap || 8;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -26,11 +27,11 @@ export default function CustomerSatisfactionQuestionnairePresentational({ payloa
           <View key={si} style={styles.sectionBlock}>
             <Text style={styles.sectionTitle}>{s.title}</Text>
             {s.questions.map(q => (
-              <View key={q.id} style={styles.questionRowFixed}>
+              <View key={q.id} style={[styles.questionRowFixed, { marginBottom: gap }]}> 
                 <View style={[styles.questionCell, { width: qWidth }]}>
                   <Text style={styles.questionText} numberOfLines={2} ellipsizeMode="tail">{q.text}</Text>
                 </View>
-                <View style={[styles.answerCell, { width: aWidth }]}>
+                <View style={[styles.answerCell, { width: aWidth }]}> 
                   <Text style={styles.answerText}>{q.rating || ''}</Text>
                 </View>
               </View>
@@ -40,10 +41,14 @@ export default function CustomerSatisfactionQuestionnairePresentational({ payloa
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.label}>Customer:</Text>
-        <Text style={styles.value}>{data.customerName || ''}</Text>
-        <Text style={styles.label}>Comments:</Text>
-        <Text style={styles.value}>{data.otherComment || ''}</Text>
+        <View style={styles.footerRow}>
+          <Text style={styles.label}>Customer:</Text>
+          <Text style={styles.value}>{data.customerName || ''}</Text>
+        </View>
+        <View style={styles.footerRow}>
+          <Text style={styles.label}>Comments:</Text>
+          <Text style={styles.value}>{data.otherComment || ''}</Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -51,17 +56,22 @@ export default function CustomerSatisfactionQuestionnairePresentational({ payloa
 
 const styles = StyleSheet.create({
   container: { padding: 12 },
-  header: { marginBottom: 12 },
-  company: { fontSize: 20, fontWeight: '700', color: '#185a9d' },
-  subject: { fontSize: 16, fontWeight: '700', marginTop: 6 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  logo: { width: 72, height: 36, marginRight: 12 },
+  headerMeta: { flex: 1 },
+  company: { fontSize: 20, fontWeight: '800', color: '#185a9d' },
+  subject: { fontSize: 16, fontWeight: '800', marginTop: 4 },
   meta: { color: '#666', marginTop: 4 },
-  questions: { marginTop: 8 },
-  sectionBlock: { marginBottom: 10 },
-  sectionTitle: { fontWeight: '700', marginBottom: 6 },
-  questionRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  questionText: { flex: 1, marginRight: 12 },
-  answerText: { width: 80, textAlign: 'center', fontWeight: '700' },
+  table: { marginTop: 8 },
+  sectionBlock: { marginBottom: 12 },
+  sectionTitle: { fontWeight: '800', marginBottom: 8, fontSize: 14 },
+  questionRowFixed: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 8, borderWidth: 1, borderColor: '#eee', borderRadius: 6 },
+  questionCell: { paddingRight: 12 },
+  questionText: { fontSize: 14, color: '#222' },
+  answerCell: { justifyContent: 'center', alignItems: 'center' },
+  answerText: { fontWeight: '700', fontSize: 14 },
   footer: { marginTop: 12 },
-  label: { fontWeight: '700', marginTop: 8 },
-  value: { marginTop: 4 },
+  footerRow: { flexDirection: 'row', marginTop: 8 },
+  label: { fontWeight: '700', marginRight: 8, minWidth: 100 },
+  value: { flex: 1 }
 });

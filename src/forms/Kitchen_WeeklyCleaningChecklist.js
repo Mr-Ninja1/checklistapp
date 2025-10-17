@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
+import useFormSave from '../hooks/useFormSave';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 import { useNavigation } from '@react-navigation/native';
-import useExportFormAsPDF from '../utils/useExportFormAsPDF';
-import generateWeeklyChecklistHtml from '../utils/generateWeeklyChecklistHtml';
 
 // Stubs / utilities (the project already has equivalents; these mirror them)
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -61,13 +64,15 @@ const Checkbox = ({ checked, onPress }) => (
 );
 
 export default function KitchenWeeklyCleaningChecklist() {
-  const { ref, exportAsPDF } = useExportFormAsPDF();
   const navigation = useNavigation();
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '' });
+  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', companyName: 'Bravo' });
   const [busy, setBusy] = useState(false);
-  const saveTimer = useRef(null);
   const [exporting, setExporting] = useState(false);
+  const saveTimer = useRef(null);
+  
+  const [logoDataUri, setLogoDataUri] = useState(null);
+  // companyName defaults to 'Bravo' (read-only display)
 
   useEffect(() => {
     let mounted = true;
@@ -91,6 +96,47 @@ export default function KitchenWeeklyCleaningChecklist() {
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [formData, metadata]);
 
+  // embed logo as base64 for deterministic saved payload rendering
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        if (!asset.localUri) await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const totalTableWidth = COL_WIDTHS.AREA + COL_WIDTHS.FREQ + WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP;
+
+  const buildPayload = () => ({
+    formType: 'KitchenWeeklyCleaningChecklist',
+    templateVersion: 'v1.0',
+    title: 'Kitchen Weekly Cleaning Checklist',
+    date: new Date().toLocaleDateString(),
+    metadata,
+    formData,
+    layoutHints: { ...COL_WIDTHS },
+    _tableWidth: totalTableWidth,
+    assets: logoDataUri ? { logoDataUri } : {},
+    savedAt: Date.now(),
+  });
+
+  const { isSaving, showNotification, notificationMessage, setShowNotification, handleSaveDraft, handleSubmit, scheduleAutoSave } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+    // reset form after submit
+    setFormData(initialCleaningState);
+    // clear saved draft so reopening the form starts fresh
+    try { removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
+    // reset metadata (keep companyName as default header)
+    setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', companyName: 'Bravo' });
+    // navigate back after submit
+    navigation.goBack();
+  }, waitForSave: true });
+
   const handleCellChange = (id, day, type, value) => {
     setFormData(prev => prev.map(item => {
       if (item.id === id) {
@@ -108,51 +154,8 @@ export default function KitchenWeeklyCleaningChecklist() {
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
-  const handleSaveDraft = async () => {
-    setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Draft saved'); }
-    catch (e) { Alert.alert('Error', 'Failed to save draft'); }
-    finally { setBusy(false); }
-  };
-
-  const handleExportPdf = async () => {
-    setExporting(true);
-    setBusy(true);
-    try {
-      // prepare payload for HTML generator
-      const payload = { title: 'Kitchen Weekly Cleaning Checklist', meta: metadata, areas: formData, footerText: 'Verified records kept on file' };
-      // embed logo as dataUri if available (skip for now)
-      const html = generateWeeklyChecklistHtml(payload);
-      const exportResult = await exportAsPDF({ title: payload.title, date: new Date().toLocaleDateString(), formData: payload, });
-      if (exportResult && exportResult.pdfPath) {
-        Alert.alert('Saved', 'PDF exported and saved to history.');
-      } else if (exportResult && exportResult.pdfDataUri) {
-        Alert.alert('Saved', 'PDF prepared (web).');
-      } else {
-        Alert.alert('Error', exportResult.error || 'Export failed');
-      }
-    } catch (e) {
-      console.warn('export failed', e);
-      Alert.alert('Error', 'Export failed');
-    } finally {
-      setExporting(false);
-      setBusy(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    setBusy(true);
-    try {
-      await addFormHistory({ title: 'Kitchen Weekly Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Success', 'Checklist submitted');
-      setFormData(initialCleaningState);
-      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '' });
-      navigation.goBack();
-    } catch (e) {
-      Alert.alert('Error', 'Failed to submit');
-    } finally { setBusy(false); }
-  };
+  // Export now uses exportAsPDF helper unchanged
+  
 
   const renderRow = (item) => (
     <View key={item.id} style={styles.row}>
@@ -179,8 +182,16 @@ export default function KitchenWeeklyCleaningChecklist() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
-          <View style={styles.headerTop}>
-            <Text style={styles.mainTitle}>KITCHEN WEEKLY CLEANING CHECKLIST</Text>
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerLeft}>
+              <View style={styles.logoWrap}>
+                <Image source={logoDataUri ? { uri: logoDataUri } : require('../assets/logo.jpeg')} style={styles.logo} />
+              </View>
+              <Text style={styles.companyText}>{metadata.companyName || 'Bravo'}</Text>
+            </View>
+            <View style={styles.headerCenter}>
+              <Text style={styles.mainTitle}>KITCHEN WEEKLY CLEANING CHECKLIST</Text>
+            </View>
           </View>
 
           <View style={styles.metadataRow}>
@@ -231,23 +242,32 @@ export default function KitchenWeeklyCleaningChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={busy || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleExportPdf} style={[styles.button, { backgroundColor: '#185a9d' }]} disabled={busy || exporting}><Text style={styles.buttonText}>{exporting ? 'Exporting...' : 'Save as PDF'}</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy || exporting}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
           </View>
         </View>
       </ScrollView>
+      <LoadingOverlay visible={isSaving} />
+      <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
-  scrollContent: { padding: 8 },
+  // Add extra bottom padding so action buttons can be scrolled into view on small screens
+  scrollContent: { padding: 8, paddingBottom: 180 },
   card: { backgroundColor: '#fff', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#D1D5DB' },
   headerTop: { marginBottom: 12 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  logoWrap: { width: 80, height: 80, marginRight: 12, justifyContent: 'center', alignItems: 'center' },
+  logo: { width: 72, height: 72, resizeMode: 'contain' },
+  logoPlaceholder: { width: 72, height: 72, borderWidth: 1, borderColor: '#D1D5DB', justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF' },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerCenter: { flex: 1, alignItems: 'center' },
   mainTitle: { fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center' },
+  companyText: { fontSize: 16, fontWeight: '800', color: '#1F2937', marginLeft: 8 },
   metadataRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginVertical: 8 },
   metaField: { width: '24%', minWidth: 120, marginVertical: 4 },
   metaLabel: { fontWeight: '600', color: '#4B5563', marginBottom: 4 },

@@ -233,33 +233,14 @@ This section documents the exact contract, payload shape, and step-by-step check
 		- Update the history entry to include `meta.formId` and any new `pdfPath` if created.
 
 - Export / PDF notes
-	- Desktop (vector preferred): implement a small form-specific HTML generator that accepts a canonical payload and renders a pixel-perfect HTML+CSS A4 page. Use Print.printToFileAsync to create a vector PDF. This yields best printing fidelity (text selectable).
-	- Mobile (screenshot→PDF): to preserve fidelity across complex RN components, continue using captureRef with a high pixelRatio and embed the jpeg into an A4 HTML wrapper. Ensure images/logo are embedded as base64 before capture.
-	- Timing: always wait for images to load, then run two requestAnimationFrame cycles (or a short timeout) before capture to ensure layout is stable.
-
-- QA checklist (pre-merge)
-	- Save+Load roundtrip: programmatically save a sample payload and immediately load it in the Saved Forms modal; assert `payload.formData` equality and visually validate.
-	- Metadata fidelity: validate Date, Shift, Verified By, Manager Sign appear in saved renderer.
-	- Layout fidelity: saved renderer uses `layoutHints` to size columns so the layout matches the editable UI in both desktop and mobile widths.
-	- Asset embedding: if a logo was embedded, ensure `payload.assets.logoDataUri` is present and the renderer displays the logo.
-	- Export smoke: produce a PDF from a saved payload and visually check header/logo, table borders and full-width capture.
-
-- Example snippet (save flow)
-
 ```javascript
 // inside a form screen
 const payload = {
 	formType: 'MyForm',
-	templateVersion: 'v1',
 	title: 'My Form Title',
 	date: metadata.date,
-	metadata,
 	timeSlots,
 	formData,
-	layoutHints: COL_WIDTHS,
-	_tableWidth: TOTAL_TABLE_WIDTH,
-	assets: logoDataUri ? { logoDataUri } : undefined,
-	savedAt: Date.now(),
 };
 const formId = `${payload.formType}_${Date.now()}`;
 await formStorage.saveForm(formId, payload);
@@ -269,21 +250,12 @@ await addFormHistory({ title: payload.title, date: payload.date, savedAt: payloa
 - Tests to add
 	- Unit: serializer roundtrip test that serializes `payload` to JSON file and `formStorage.loadForm(formId)` returns same object.
 	- Integration: E2E test that fills a form, saves it, opens Saved Forms modal, and asserts key DOM/text elements exist (date, shift, at least one ticked cell).
-	- Export test: automated run that captures a sample view and verifies the generated PDF file exists and has non-zero size.
-
 - Checklist for converting a new form
 	1. Create a presentational (read-only) renderer using the editable form layout; accept `payload` prop.
- 2. Extract layoutHints calculation from the editable form and reuse it when building `payload` on save.
- 3. Update the Save/Submit handler to build the canonical payload and call `formStorage.saveForm` + `addFormHistory` + `removeDraft`.
- 4. Add the new presentational renderer to `SavedFormRenderer` so the Saved Forms modal dispatches to it.
- 5. Run the QA checklist above.
 
 If you keep this guide in `requirements-full.md` you'll always have the exact steps available when converting more forms or debugging saved-form fidelity. Follow the contract and the saved forms will render identically across mobile and desktop.
-
-
 creating form saving logic
 so check for the saving part lets discuss,
- there is a formsaves screen that will show all saved forms in the system 
  so i noticed that the export pdf was not working on mobile there was no library that was getting the entire form exactly the way it is with all its contents so i thought why not just make a trick were when you fill in the form and click submit(save) just get all the metadata of the form , then save it , when the user goes to the scrensaves forms and clicks a save form to view it that exact form is recreated on that side too
 
  since this app will have both desktop and mobile app version , so pdf export +print from the saves screen will only happen on desktop but on mobile the user will just be able to view that actuall form the way it was saved .because we noticed on mobile it was not possible to get the form in A4 full view but can only be saved as such so the user can work and save form on mobile and to print it or downlod they have to go to the desktop app and sync, so meaning we have to ensure that each form appears exactly when its saved .check the  foodhandlers daily handwashing Tracking Log sheet , it has a tech that is close but wasnt perfectly implemented , the form was being saved and all the texts and checkboxes but the structure of the layout was differing when it was saved. i hope you get the idea

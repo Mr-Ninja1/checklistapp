@@ -29,6 +29,7 @@ import BakerySanitizingPresentational from '../forms/components/BakerySanitizing
 import BakeryCleaningChecklistPresentational from '../forms/components/BakeryCleaningChecklistPresentational';
 import MixingControlSheetPresentational from '../forms/components/MixingControlSheetPresentational';
 import ProductsNetContentChecklistPresentational from '../forms/components/ProductsNetContentChecklistPresentational';
+import KitchenWeeklyCleaningChecklistPresentational from '../forms/components/KitchenWeeklyCleaningChecklistPresentational';
 import { View, Text, StyleSheet } from 'react-native';
 // Add other form imports as needed
 
@@ -174,6 +175,10 @@ export default function SavedFormRenderer({ savedPayload }) {
   }
   if (/Bakery_CleaningChecklist|Bakery Area Cleaning Checklist|BAKERY AREA CLEANING CHECKLIST/i.test(type)) {
     return <BakeryCleaningChecklistPresentational payload={payload} />;
+  }
+  // Kitchen Weekly Cleaning
+  if (/KitchenWeeklyCleaningChecklist|Kitchen Weekly Cleaning Checklist|Kitchen_WeeklyCleaningChecklist/i.test(type)) {
+    return <KitchenWeeklyCleaningChecklistPresentational payload={payload} />;
   }
   // Mixing Control Sheet
   if (/MixingControlSheet|Mixing Control Sheet|MIXING CONTROL SHEET/i.test(type)) {

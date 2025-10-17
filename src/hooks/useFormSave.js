@@ -19,12 +19,12 @@ export default function useFormSave(a, b = {}) {
     options = b || {};
   } else if (typeof a === 'object' && a !== null) {
     getPayload = a.buildPayload;
-    options = { draftId: a.draftId, clearOnSubmit: a.clearOnSubmit, formType: a.formType };
+    options = { draftId: a.draftId, clearOnSubmit: a.clearOnSubmit, formType: a.formType, waitForSave: a.waitForSave };
   } else {
     throw new Error('useFormSave: invalid arguments');
   }
 
-  const { formType = 'form', draftId } = options;
+  const { formType = 'form', draftId, waitForSave = true } = options;
   const stableDraftId = draftId || `${formType}_draft`;
   const autoSaveTimer = useRef(null);
   const inFlightSave = useRef(false);
@@ -95,19 +95,47 @@ export default function useFormSave(a, b = {}) {
       const payload = getPayload('submitted');
       const id = `${formType}_${Date.now()}`;
 
-      // Start saving but don't block the UI indefinitely. We'll wait a short time
-      // for the save to complete; if it doesn't, proceed and let the save finish
-      // in the background. Attach a finally to clear the inFlight flag when done.
+      // Start saving. Wait a short while for quick saves to finish so the
+      // user sees the saving indicator for slow saves, but avoid blocking the
+      // app for too long. By default we wait for the save to finish; some
+      // forms can opt-out by setting `waitForSave: false` in options.
       inFlightSave.current = true;
       const savePromise = formStorage.saveForm(id, payload)
         .catch(e => { console.error('useFormSave: background save failed', e); })
         .finally(() => { inFlightSave.current = false; });
 
-      // wait up to 800ms for the save to complete to give a snappy submit UX
-      const shortWait = new Promise(r => setTimeout(() => r(null), 800));
-      const saveResult = await Promise.race([savePromise, shortWait]);
-      if (saveResult === null) {
-        console.warn('useFormSave: save did not finish quickly; continuing while saving in background');
+      // Wait briefly for quick saves to finish (1200ms). If the save completes
+      // within this window the UX will feel immediate.
+      const shortWait = new Promise(r => setTimeout(() => r('timeout'), 1200));
+      const saveResult = await Promise.race([
+        savePromise.then(() => 'done').catch(() => 'done'),
+        shortWait
+      ]);
+
+      if (waitForSave) {
+        if (saveResult === 'timeout') {
+          console.warn('useFormSave: save did not finish quickly; will wait up to MAX_SAVE_WAIT_MS for completion');
+        }
+        // Wait for the save to fully settle before proceeding with cleanup,
+        // but only up to a maximum timeout so the UI doesn't get stuck
+        // forever if the storage layer hangs.
+        const MAX_SAVE_WAIT_MS = 10000; // 10s
+        const saveSettled = await Promise.race([
+          savePromise.then(() => 'done').catch(() => 'done'),
+          new Promise(r => setTimeout(() => r('timeout'), MAX_SAVE_WAIT_MS))
+        ]);
+        if (saveSettled === 'timeout') {
+          console.warn('useFormSave: save did not finish within MAX_SAVE_WAIT_MS; proceeding and letting save continue in background');
+        }
+      } else {
+        // Fast-submit mode: we don't await the full save. If the short wait
+        // timed out, clear the saving indicator quickly and let the save
+        // continue in the background. This makes submit feel instant.
+        if (saveResult === 'timeout') {
+          // allow a tiny grace so the user sees the spinner briefly
+          await new Promise(r => setTimeout(r, 250));
+        }
+        // proceed without awaiting savePromise; errors will be logged by the promise
       }
 
       // try to remove stable draft and its history entry; failures here shouldn't block submit success path

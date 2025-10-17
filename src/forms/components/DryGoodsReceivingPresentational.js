@@ -5,6 +5,7 @@ export default function DryGoodsReceivingPresentational({ payload }) {
   const meta = payload?.metadata || {};
   const data = payload?.formData || [];
   const logoUri = payload?.assets?.logoDataUri;
+  const hints = payload?.layoutHints || {};
 
   return (
     <ScrollView horizontal style={{ flex: 1 }} contentContainerStyle={{ minWidth: 1123 }}>
@@ -69,24 +70,24 @@ export default function DryGoodsReceivingPresentational({ payload }) {
         {/* Divider line between grouped header and column header */}
         <View style={{ height: 2, backgroundColor: '#bbb', marginBottom: -2, marginHorizontal: 0 }} />
         {/* Actual column header row */}
-        <View style={styles.tableHeaderRow}>
-          <Text style={[styles.headerCell, styles.nameCol]}>Name of Product</Text>
-          <Text style={[styles.headerCell, styles.supplierCol]}>Supplier</Text>
-          <Text style={[styles.headerCell, styles.cleanCol]}>Clean</Text>
-          <Text style={[styles.headerCell, styles.tempCol]}>Temp</Text>
-          <Text style={[styles.headerCell, styles.stateOfProductCol]}>State of Product</Text>
-          <Text style={[styles.headerCell, styles.expiryDateCol]}>Expiry Date</Text>
-          <Text style={[styles.headerCell, styles.remarksCol]}>Remarks</Text>
+          <View style={styles.tableHeaderRow}>
+          <Text style={[styles.headerCell, styles.nameCol, hints.NAME ? { width: hints.NAME } : {}]}>Name of Product</Text>
+          <Text style={[styles.headerCell, styles.supplierCol, hints.SUPPLIER ? { width: hints.SUPPLIER } : {}]}>Supplier</Text>
+          <Text style={[styles.headerCell, styles.cleanCol, hints.CLEAN ? { width: hints.CLEAN } : {}]}>Clean</Text>
+          <Text style={[styles.headerCell, styles.tempCol, hints.TEMP ? { width: hints.TEMP } : {}]}>Temp</Text>
+          <Text style={[styles.headerCell, styles.stateOfProductCol, hints.STATE ? { width: hints.STATE } : {}]}>State of Product</Text>
+          <Text style={[styles.headerCell, styles.expiryDateCol, hints.EXPIRY ? { width: hints.EXPIRY } : {}]}>Expiry Date</Text>
+          <Text style={[styles.headerCell, styles.remarksCol, hints.REMARKS ? { width: hints.REMARKS } : {}]}>Remarks</Text>
         </View>
             {data.map((row, idx) => (
               <View style={styles.tableRow} key={row.id || idx}>
-                <Text style={[styles.dataCell, styles.nameCol]}>{row.nameOfProduct}</Text>
-                <Text style={[styles.dataCell, styles.supplierCol]}>{row.supplier}</Text>
-                <Text style={[styles.dataCell, styles.cleanCol]}>{row.clean ? '✓' : ''}</Text>
-                <Text style={[styles.dataCell, styles.tempCol]}>{row.temp}</Text>
-                <Text style={[styles.dataCell, styles.stateOfProductCol]}>{row.stateOfProduct}</Text>
-                <Text style={[styles.dataCell, styles.expiryDateCol]}>{row.expiryDate}</Text>
-                <Text style={[styles.dataCell, styles.remarksCol]}>{row.remarks}</Text>
+                <Text style={[styles.dataCell, styles.nameCol, hints.NAME ? { width: hints.NAME } : {}]}>{row.nameOfProduct}</Text>
+                <Text style={[styles.dataCell, styles.supplierCol, hints.SUPPLIER ? { width: hints.SUPPLIER } : {}]}>{row.supplier}</Text>
+                <Text style={[styles.dataCell, styles.cleanCol, hints.CLEAN ? { width: hints.CLEAN } : {}]}>{row.clean ? '✓' : ''}</Text>
+                <Text style={[styles.dataCell, styles.tempCol, hints.TEMP ? { width: hints.TEMP } : {}]}>{row.temp}</Text>
+                <Text style={[styles.dataCell, styles.stateOfProductCol, hints.STATE ? { width: hints.STATE } : {}]}>{row.stateOfProduct}</Text>
+                <Text style={[styles.dataCell, styles.expiryDateCol, hints.EXPIRY ? { width: hints.EXPIRY } : {}]}>{row.expiryDate}</Text>
+                <Text style={[styles.dataCell, styles.remarksCol, hints.REMARKS ? { width: hints.REMARKS } : {}]}>{row.remarks}</Text>
               </View>
             ))}
           </View>

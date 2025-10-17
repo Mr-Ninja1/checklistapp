@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, SafeAreaView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, SafeAreaView, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
+import FormActionBar from '../components/FormActionBar';
+// Note: Delayed focus wrapper removed — using native TextInput for editability
 
 // --- Configuration Constants ---
 
@@ -105,6 +109,7 @@ export default function FoodHandlersDailyShoweringForm() {
   // Initializing log entries state (Data not fully implemented for brevity, but structure is ready)
   const initialLog = Array.from({ length: DATA_ROWS }, () => Array(finalWidths.length).fill(''));
   const [logEntries, setLogEntries] = useState(initialLog);
+  const [logoDataUri, setLogoDataUri] = useState(null);
 
   // useFormSave integration
   const draftId = 'FoodHandlersDailyShowering_draft';
@@ -119,8 +124,9 @@ export default function FoodHandlersDailyShoweringForm() {
     approvedBy,
     verifiedBy,
     logEntries,
-    layoutHints: { largeCol, mediumCol },
-    assets: {},
+    layoutHints: { largeCol, mediumCol, widths: finalWidths },
+    _tableWidth: totalTableWidth,
+    assets: logoDataUri ? { logoDataUri } : {},
   });
 
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
@@ -131,13 +137,40 @@ export default function FoodHandlersDailyShoweringForm() {
     setCompiledBy('Michael Zulu C.');
     setApprovedBy('Hassani Ali');
     setVerifiedBy('');
-  } });
+  }, waitForSave: false });
+
+  // Edit mode toggles whether inputs are editable. Default: read-only so scrolling works everywhere.
+  const [editMode, setEditMode] = useState(false);
+
+  // embed logo as base64 for deterministic presentational rendering
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        if (!asset.localUri) await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
-        <View style={styles.mainContent}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={90} style={{ flex: 1 }}>
+        <ScrollView
+          style={styles.container}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ flexGrow: 1 }}
+          // Let moves (drag gestures) be captured so scrolling can start even when touching inputs
+          onStartShouldSetResponderCapture={() => false}
+          onMoveShouldSetResponderCapture={() => true}
+        >
+          <View style={styles.mainContent}>
           
           {/* Document Header & Info */}
           <View style={styles.docInfoContainer}>
@@ -175,34 +208,74 @@ export default function FoodHandlersDailyShoweringForm() {
             {/* Compiled/Approved Row */}
             <View style={styles.textRow}>
               <Text style={styles.labelText}>Compiled By:</Text>
-              <TextInput style={[styles.valueTextInput, { flex: 1 }]} value={compiledBy} onChangeText={setCompiledBy} />
+              {editMode ? (
+                <TextInput style={[styles.valueTextInput, { flex: 1 }]} editable={editMode} value={compiledBy} onChangeText={setCompiledBy} />
+              ) : (
+                <Text style={[styles.valueTextInput, { flex: 1 }, styles.readOnlyText]}>{compiledBy}</Text>
+              )}
               <Text style={styles.labelText}>Approved By:</Text>
-              <TextInput style={[styles.valueTextInput, { flex: 1 }]} value={approvedBy} onChangeText={setApprovedBy} />
+              {editMode ? (
+                <TextInput style={[styles.valueTextInput, { flex: 1 }]} editable={editMode} value={approvedBy} onChangeText={setApprovedBy} />
+              ) : (
+                <Text style={[styles.valueTextInput, { flex: 1 }, styles.readOnlyText]}>{approvedBy}</Text>
+              )}
             </View>
 
             {/* Week/Month/Year/Verified Row */}
             <View style={styles.textRow}>
               <Text style={styles.labelText}>Week:</Text>
-              <TextInput style={styles.underlineTextInput} value={week} onChangeText={setWeek} />
+              {editMode ? (
+                <TextInput style={styles.underlineTextInput} editable={editMode} value={week} onChangeText={setWeek} />
+              ) : (
+                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{week}</Text>
+              )}
               <Text style={styles.labelText}>Month:</Text>
-              <TextInput style={styles.underlineTextInput} value={month} onChangeText={setMonth} />
+              {editMode ? (
+                <TextInput style={styles.underlineTextInput} editable={editMode} value={month} onChangeText={setMonth} />
+              ) : (
+                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{month}</Text>
+              )}
               <Text style={styles.labelText}>Year:</Text>
-              <TextInput style={styles.underlineTextInput} value={year} onChangeText={setYear} />
+              {editMode ? (
+                <TextInput style={styles.underlineTextInput} editable={editMode} value={year} onChangeText={setYear} />
+              ) : (
+                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{year}</Text>
+              )}
               <Text style={styles.labelText}>Verified By:</Text>
-              <TextInput style={styles.underlineTextInput} value={verifiedBy} onChangeText={setVerifiedBy} />
+              {editMode ? (
+                <TextInput style={styles.underlineTextInput} editable={editMode} value={verifiedBy} onChangeText={setVerifiedBy} />
+              ) : (
+                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{verifiedBy}</Text>
+              )}
             </View>
+          </View>
+          {/* Table Container - Allows horizontal scrolling, now fills screen width */}
+
+          {/* Action buttons (moved to top center) */}
+          <View style={styles.actionBarTop}>
+            <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
           </View>
 
           {/* Table Container - Allows horizontal scrolling, now fills screen width */}
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            onStartShouldSetResponderCapture={() => false}
+            onMoveShouldSetResponderCapture={() => true}
             contentContainerStyle={[
-              styles.horizontalScrollContent, 
+              styles.horizontalScrollContent,
               // Ensure minWidth is set correctly to expand up to screen width if needed
-              { minWidth: Math.max(totalTableWidth, screenWidth - 24) } 
+              { minWidth: Math.max(totalTableWidth, screenWidth - 24) }
             ]}
           >
-            <View style={[styles.tableContainer, { minWidth: totalTableWidth, flex: 1 }]}>
+            <View
+              style={[styles.tableContainer, { minWidth: totalTableWidth, flex: 1 }]}
+              // capture move gestures at the table container level to allow scrolling
+              onStartShouldSetResponderCapture={() => false}
+              onMoveShouldSetResponderCapture={() => true}
+            >
               
               {/* --- HEADER ROWS (Layered) --- */}
               
@@ -292,18 +365,23 @@ export default function FoodHandlersDailyShoweringForm() {
                                   cIdx === finalWidths.length - 1 ? styles.lastCell : styles.rightBorder // Ensure right border is consistently applied
                                 ]}
                               >
-                                <TextInput 
-                                  style={styles.inputField} 
-                                  value={logEntries[rIdx]?.[cIdx]}
-                                  onChangeText={(text) => {
-                                    setLogEntries(prev => {
-                                      const next = prev.map(row => row.slice());
-                                      next[rIdx][cIdx] = text;
-                                      return next;
-                                    });
-                                    scheduleAutoSave();
-                                  }}
-                                />
+                                {editMode ? (
+                                  <TextInput
+                                    style={styles.inputField}
+                                    editable={editMode}
+                                    value={logEntries[rIdx]?.[cIdx]}
+                                    onChangeText={(text) => {
+                                      setLogEntries(prev => {
+                                        const next = prev.map(row => row.slice());
+                                        next[rIdx][cIdx] = text;
+                                        return next;
+                                      });
+                                      scheduleAutoSave();
+                                    }}
+                                  />
+                                ) : (
+                                  <Text style={[styles.inputField, styles.readOnlyCell]}>{logEntries[rIdx]?.[cIdx]}</Text>
+                                )}
                               </View>
                     ))}
                   </View>
@@ -319,16 +397,28 @@ export default function FoodHandlersDailyShoweringForm() {
             </Text>
           </View>
 
-          {/* Action buttons */}
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
-          </View>
-
           <LoadingOverlay visible={isSaving} />
           <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      {/* Floating Edit toggle button */}
+      <TouchableOpacity
+        accessible={true}
+        accessibilityLabel={editMode ? 'Finish editing form' : 'Edit form'}
+        accessibilityRole="button"
+        style={[styles.fabLarge, editMode ? styles.fabActiveLarge : null]}
+        onPress={() => {
+          if (editMode) {
+            // Leaving edit mode: blur keyboard and save draft
+            Keyboard.dismiss();
+            handleSaveDraft();
+          }
+          setEditMode(!editMode);
+        }}
+      >
+        <Text style={styles.fabTextLarge}>{editMode ? 'Done' : 'Edit'}</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -420,4 +510,47 @@ const styles = StyleSheet.create({
   // --- Footer ---
   instructionFooter: { marginTop: 12, padding: 8, backgroundColor: '#f9f9f9' },
   instructionText: { fontSize: 10, lineHeight: 14, color: '#444' },
+  actionBarTop: { alignItems: 'center', marginVertical: 10 },
+  fab: {
+    position: 'absolute',
+    right: 18,
+    top: '48%',
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 24,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    zIndex: 50,
+  },
+  fabActive: { backgroundColor: '#34C759' },
+  fabText: { color: '#fff', fontWeight: '700' },
+  // Large, attention-grabbing floating button styles
+  fabLarge: {
+    position: 'absolute',
+    right: 14,
+    top: '44%',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FF3B30',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    zIndex: 200,
+  },
+  fabActiveLarge: {
+    backgroundColor: '#34C759'
+  },
+  fabTextLarge: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  readOnlyInput: { backgroundColor: 'transparent' },
+  readOnlyCell: { backgroundColor: 'transparent' },
+  readOnlyText: { color: '#000', paddingVertical: 2, textAlign: 'center' },
 });

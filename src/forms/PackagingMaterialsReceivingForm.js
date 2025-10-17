@@ -45,13 +45,22 @@ const PackagingMaterialsReceivingForm = () => {
         title: 'Packaging Materials Receiving Checklist',
         metadata: { ...deliveryDetails, issueDate, versionNo, revNo },
         formData: receivingData,
-        layoutHints: {},
+        layoutHints: {
+            NAME: dailyStyles.nameCol.width,
+            SUPPLIER: dailyStyles.supplierCol.width,
+            CLEAN: dailyStyles.cleanCol.width,
+            TEMP: dailyStyles.tempCol.width,
+            STATE: dailyStyles.stateOfProductCol.width,
+            EXPIRY: dailyStyles.expiryDateCol.width,
+            REMARKS: dailyStyles.remarksCol.width,
+        },
+        _tableWidth: dailyStyles.nameCol.width + dailyStyles.supplierCol.width + dailyStyles.cleanCol.width + dailyStyles.tempCol.width + dailyStyles.stateOfProductCol.width + dailyStyles.expiryDateCol.width + dailyStyles.remarksCol.width,
         assets: { logoDataUri: null },
         savedAt: new Date().toISOString(),
         status,
     });
 
-    const { autoSaveDraft, handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave(buildCanonicalPayload, { formType: 'PackagingMaterialsReceivingForm', draftId: 'PackagingMaterialsReceivingForm_draft' });
+    const { autoSaveDraft, handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave(buildCanonicalPayload, { formType: 'PackagingMaterialsReceivingForm', draftId: 'PackagingMaterialsReceivingForm_draft', clearOnSubmit: () => setReceivingData(createInitialProductData(10)) });
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
@@ -183,9 +192,7 @@ const PackagingMaterialsReceivingForm = () => {
                         <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
                     </View>
                     <View style={{ marginTop: 12 }}>
-                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => {
-                            setReceivingData(createInitialProductData(10));
-                        })} showSavePdf={false} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit()} showSavePdf={false} isSaving={isSaving} />
                     </View>
                     {/* Notification shown after submit (useFormSave sets message) */}
                     <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

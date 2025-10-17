@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -40,8 +42,7 @@ const DryGoodsReceivingForm = () => {
         signature: '',
     });
 
-    // Save status
-    const [isSaving, setIsSaving] = useState(false);
+    // Save status (hook-provided)
 
     // Update delivery details
     const updateDeliveryDetail = (field, value) => {
@@ -90,16 +91,25 @@ const DryGoodsReceivingForm = () => {
                 status,
             },
             formData: receivingData,
-            layoutHints: {},
-            assets: {
-                logoDataUri: getLogoDataUri(),
+            // Provide explicit layout hints so presentational renderer can match widths
+            layoutHints: {
+                NAME: dailyStyles.nameCol.width,
+                SUPPLIER: dailyStyles.supplierCol.width,
+                CLEAN: dailyStyles.cleanCol.width,
+                TEMP: dailyStyles.tempCol.width,
+                STATE: dailyStyles.stateOfProductCol.width,
+                EXPIRY: dailyStyles.expiryDateCol.width,
+                REMARKS: dailyStyles.remarksCol.width,
             },
+            // _tableWidth is used by presentational renderers to set minWidth for horizontal scroll
+            _tableWidth: dailyStyles.nameCol.width + dailyStyles.supplierCol.width + dailyStyles.cleanCol.width + dailyStyles.tempCol.width + dailyStyles.stateOfProductCol.width + dailyStyles.expiryDateCol.width + dailyStyles.remarksCol.width,
+            assets: { logoDataUri: getLogoDataUri() },
             savedAt: new Date().toISOString(),
         };
     };
 
     const getPayload = (status) => buildCanonicalPayload(status);
-    const { isSaving: saving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, autoSaveDraft, handleSaveDraft, handleSubmit } = useFormSave(getPayload, { formType: 'DryGoodsReceivingForm', draftId: 'DryGoodsReceivingForm_draft' });
+    const { isSaving: saving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, autoSaveDraft, handleSaveDraft, handleSubmit } = useFormSave(getPayload, { formType: 'DryGoodsReceivingForm', draftId: 'DryGoodsReceivingForm_draft', clearOnSubmit: () => clearForm(), waitForSave: false });
 
     // clear form wrapper used on submit
     const onClear = () => clearForm();
@@ -188,7 +198,7 @@ const DryGoodsReceivingForm = () => {
                             <Text style={styles.deliveryLabel}>Received By:</Text>
                             <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} onChangeText={t => updateDeliveryDetail('receivedBy', t)} />
                             <Text style={styles.deliveryLabel}>Complex Manager:</Text>
-                            <Text style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={t => updateDeliveryDetail('complexManager', t)} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={t => updateDeliveryDetail('complexManager', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Time of Delivery:</Text>
@@ -241,8 +251,10 @@ const DryGoodsReceivingForm = () => {
                     {/* --- Action buttons --- */}
                     <View style={{ height: 18 }} />
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(onClear)} showSavePdf={false} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit()} showSavePdf={false} isSaving={saving} />
                         </View>
+                        <LoadingOverlay visible={saving} message={'Saving form...'} />
+                        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                 </View>
             </ScrollView>
         </SafeAreaView>

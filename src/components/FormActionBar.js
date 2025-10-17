@@ -1,23 +1,23 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
-function FormActionBarComponent({ onBack, onSaveDraft, onSubmit, showSavePdf = false, onSavePdf }) {
+function FormActionBarComponent({ onBack, onSaveDraft, onSubmit, showSavePdf = false, onSavePdf, isSaving = false }) {
   return (
     <View style={styles.row}>
-      <TouchableOpacity onPress={onBack} style={[styles.button, styles.aux]}>
+      <TouchableOpacity onPress={onBack} style={[styles.button, styles.aux]} disabled={isSaving}>
         <Text style={styles.buttonText}>Back</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onSaveDraft} style={[styles.button, styles.draft]}>
+      <TouchableOpacity onPress={onSaveDraft} style={[styles.button, styles.draft]} disabled={isSaving}>
         <Text style={styles.buttonText}>Save Draft</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onSubmit} style={[styles.button, styles.primary]}>
-        <Text style={styles.buttonText}>Submit</Text>
+      <TouchableOpacity onPress={onSubmit} style={[styles.button, styles.primary]} disabled={isSaving}>
+        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit</Text>}
       </TouchableOpacity>
 
       {showSavePdf && (
-        <TouchableOpacity onPress={onSavePdf} style={[styles.button, styles.secondary]}>
+        <TouchableOpacity onPress={onSavePdf} style={[styles.button, styles.secondary]} disabled={isSaving}>
           <Text style={styles.buttonText}>submit</Text>
         </TouchableOpacity>
       )}
