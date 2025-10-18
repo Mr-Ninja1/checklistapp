@@ -15,6 +15,7 @@ import PastInspectionFormPresentational from '../forms/components/PastInspection
 import EggsReceivingPresentational from '../forms/components/EggsReceivingPresentational';
 import CertificateOfAnalysisPresentational from '../forms/components/CertificateOfAnalysisPresentational';
 import React from 'react';
+import ErrorBoundary from './ErrorBoundary';
 import FoodHandlersPresentational from '../forms/components/FoodHandlersPresentational';
 import ThawingTemperaturePresentational from '../forms/components/ThawingTemperaturePresentational';
 import FOH_DailyCleaningPresentational from '../forms/components/FOH_DailyCleaningPresentational';
@@ -31,6 +32,7 @@ import BakeryCleaningChecklistPresentational from '../forms/components/BakeryCle
 import BakingControlSheetPresentational from '../forms/components/BakingControlSheetPresentational';
 import MixingControlSheetPresentational from '../forms/components/MixingControlSheetPresentational';
 import ProductsNetContentChecklistPresentational from '../forms/components/ProductsNetContentChecklistPresentational';
+import PPEIssuancePresentational from '../forms/components/PPEIssuancePresentational';
 import KitchenWeeklyCleaningChecklistPresentational from '../forms/components/KitchenWeeklyCleaningChecklistPresentational';
 import KitchenDailyCleaningPresentational from '../forms/components/KitchenDailyCleaningPresentational';
 import UnderbarChillerTemperaturePresentational from '../forms/components/UnderbarChillerTemperaturePresentational';
@@ -39,6 +41,7 @@ import CookingTemperaturePresentational from '../forms/components/CookingTempera
 import CoolingTemperaturePresentational from '../forms/components/CoolingTemperaturePresentational';
 import CoolingTemperatureSavedPresentational from '../forms/components/CoolingTemperatureSavedPresentational';
 import { View, Text, StyleSheet } from 'react-native';
+import VisitorsLogBookPresentational from '../forms/components/VisitorsLogBookPresentational';
 // Add other form imports as needed
 
 // SavedFormRenderer renders a saved payload using the same form component (read-only)
@@ -72,9 +75,19 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // include history entry top-level title as a fallback when payload lacks title
   const type = (payload?.formType || payload?.formTypeName || payload?.title || savedPayload?.title || '').toString();
 
+  const wrap = (Comp, props = {}) => (
+    <ErrorBoundary>
+      <Comp {...props} />
+    </ErrorBoundary>
+  );
+
   // Chilled & Frozen Receiving
   if (/ChilledFrozenReceivingForm|Chilled & Frozen Receiving|ChilledFrozenReceiving/i.test(type)) {
-    return <ChilledFrozenReceivingPresentational payload={payload} />;
+    return (
+      <ErrorBoundary>
+        <ChilledFrozenReceivingPresentational payload={payload} />
+      </ErrorBoundary>
+    );
   }
 
   // Dry Goods Receiving
@@ -121,15 +134,15 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   }
   // Bin Liners Changing Log
   if (/BinLinersChangingLog|Bin Liners Changing Log/i.test(type)) {
-    return <BinLinersChangingLogPresentational payload={payload} />;
+  return wrap(BinLinersChangingLogPresentational, { payload });
   }
   // Beverage & Water Receiving
   if (/BeverageReceivingForm|Beverage & Water Receiving|Beverage and Water Receiving/i.test(type)) {
-    return <BeverageReceivingPresentational payload={payload} />;
+  return wrap(BeverageReceivingPresentational, { payload });
   }
   // Product Rejection Form
   if (/ProductRejectionForm/i.test(type)) {
-    return <ProductRejectionPresentational payload={payload} />;
+  return wrap(ProductRejectionPresentational, { payload });
   }
   // Packaging Materials Receiving
   if (/PackagingMaterialsReceivingForm|Packaging Materials Receiving|PackagingMaterialsReceiving/i.test(type)) {
@@ -216,6 +229,26 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
     if (looksLikeProductsNet || /ProductsNetContentChecklist|Products Net Content Checklist/i.test(type) || (payload?.metadata?.subject && /PRODUCTS NET CONTENT CHECKLIST/i.test(payload.metadata.subject))) {
       return <ProductsNetContentChecklistPresentational payload={payload} />;
     }
+
+    // PPE Issuance detection: rows contain many PPE boolean fields like 'apron', 'cap', 'chefHat'
+    const looksLikePPE = first && typeof first === 'object' && (
+      Object.prototype.hasOwnProperty.call(first, 'apron') &&
+      Object.prototype.hasOwnProperty.call(first, 'cap') &&
+      Object.prototype.hasOwnProperty.call(first, 'chefHat')
+    );
+    if (looksLikePPE || /PPEIssuance|Personal Protective Equipment|PPE Issuance/i.test(type)) {
+      return <PPEIssuancePresentational payload={payload} />;
+    }
+    // Visitors Log Book detection (shape-based): rows contain visitor fields like name/address/contact/purpose
+    const looksLikeVisitors = first && typeof first === 'object' && (
+      Object.prototype.hasOwnProperty.call(first, 'name') &&
+      Object.prototype.hasOwnProperty.call(first, 'address') &&
+      Object.prototype.hasOwnProperty.call(first, 'contact') &&
+      Object.prototype.hasOwnProperty.call(first, 'purpose')
+    );
+    if (looksLikeVisitors || /Visitors Log Book|VisitorsLogBook|VISITORS LOG BOOK/i.test(type)) {
+      return <VisitorsLogBookPresentational payload={payload} embedded={embedded} />;
+    }
   } catch (e) {
     // ignore shape detection errors and continue to other matchers
   }
@@ -246,6 +279,10 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // Thawing Temp
   if (/Thawing Temperature Log|ThawingTemperatureLog|Thawing/i.test(type)) {
     return <ThawingTemperaturePresentational payload={payload} />;
+  }
+  // Visitors Log Book
+  if (/Visitors Log Book|VisitorsLogBook|VISITORS LOG BOOK/i.test(type) || /VisitorsLogBook/i.test(type)) {
+    return <VisitorsLogBookPresentational payload={payload} embedded={embedded} />;
   }
   // Mixing Control Sheet
   if (/MixingControlSheet|Mixing Control Sheet|MIXING CONTROL SHEET/i.test(type)) {

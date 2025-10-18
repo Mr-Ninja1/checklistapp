@@ -31,22 +31,33 @@ const ProductsNetContentChecklistPresentational = ({ payload }) => {
   return (
     <ScrollView horizontal contentContainerStyle={{ padding: 12 }}>
       <View style={[styles.container, { width: roughWidth }]}> 
-        <View style={styles.headerBox}>
-          <View style={styles.logoRow}>
+        {/* Top header: bordered bar with logo/company on left and issue date/page on right */}
+        <View style={styles.topHeaderBar}>
+          <View style={styles.topLeft}> 
             {assets.logoDataUri ? (
               <Image source={{ uri: assets.logoDataUri }} style={styles.logo} />
             ) : (
-              // fallback to the local logo used by the editable form
               <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />
             )}
             <View style={styles.brandWrap}>
-              <Text style={styles.brand}>Bravo Brands Limited</Text>
-              <Text style={styles.brandSub}>Food Safety Inspections</Text>
+              <Text style={styles.brand}>BRAVO BRANDS LIMITED</Text>
+              <Text style={styles.brandSub}>Food Safety Management System</Text>
             </View>
           </View>
+          <View style={styles.topRight}>
+            <Text style={styles.issueDate}>Issue Date: {metadata.issueDate || (p.savedAt ? new Date(p.savedAt).toLocaleDateString() : '')}</Text>
+            <Text style={styles.page}>Page 1 of 1</Text>
+          </View>
+        </View>
 
-          <Text style={styles.title}>PRODUCTS NET CONTENT CHECKLIST</Text>
-          <Text style={styles.meta}>Doc No: {metadata.docNo || '-'} • Issue Date: {metadata.issueDate || '-'}</Text>
+        <View style={styles.headerBox}>
+          <Text style={styles.subject}><Text style={{fontWeight:'700'}}>Subject:</Text> PRODUCTS NET CONTENT CHECKLIST</Text>
+          <Text style={styles.savedAt}>Saved: {p.savedAt ? new Date(p.savedAt).toLocaleString() : ''}</Text>
+
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLeft}>Compiled By: {metadata.compiledBy || ''}</Text>
+            <Text style={styles.metaRight}>Approved By: {metadata.approvedBy || ''}</Text>
+          </View>
         </View>
 
         <View style={styles.tableWrap}>
@@ -95,14 +106,23 @@ const ProductsNetContentChecklistPresentational = ({ payload }) => {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: '#fff' },
-  headerBox: { alignItems: 'center', marginBottom: 12 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  logo: { width: 40, height: 40, marginRight: 8 },
+  headerBox: { alignItems: 'flex-start', marginBottom: 12, paddingTop: 8 },
+  topHeaderBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#000', padding: 6, marginBottom: 8 },
+  topLeft: { flexDirection: 'row', alignItems: 'center' },
+  topRight: { alignItems: 'flex-end' },
+  logo: { width: 44, height: 44, marginRight: 10 },
   brandWrap: { flexDirection: 'column' },
-  brand: { fontSize: 16, fontWeight: '800', color: '#185a9d' },
-  brandSub: { fontSize: 12, color: '#43cea2' },
-  title: { fontWeight: '800', fontSize: 16, color: '#222', textAlign: 'center', marginBottom: 4 },
+  brand: { fontSize: 14, fontWeight: '800', color: '#185a9d' },
+  brandSub: { fontSize: 11, color: '#333' },
+  title: { fontWeight: '800', fontSize: 18, color: '#222', textAlign: 'left', marginBottom: 4 },
+  subject: { fontSize: 16, marginBottom: 6 },
+  savedAt: { fontSize: 12, color: '#666', marginBottom: 6 },
   meta: { fontSize: 12, color: '#555', marginBottom: 8 },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 6 },
+  metaLeft: { fontSize: 12 },
+  metaRight: { fontSize: 12 },
+  issueDate: { fontSize: 12 },
+  page: { fontSize: 10, marginTop: 4 },
   tableWrap: { borderWidth: 1, borderColor: '#333', borderRadius: 4, overflow: 'hidden' },
   tableHeader: { flexDirection: 'row', backgroundColor: '#f3f5f7', borderBottomWidth: 1, borderColor: '#333' },
   headerCell: { padding: 8, borderRightWidth: 1, borderRightColor: '#ddd', justifyContent: 'center', alignItems: 'center' },

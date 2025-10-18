@@ -27,6 +27,40 @@ const MixingControlSheetPresentational = ({ payload }) => {
 
   const columns = defaultCols.map(c => ({ ...c, width: layoutHints[c.key] || 120 }));
 
+  const renderCellValue = (val) => {
+    if (val === undefined || val === null) return '';
+    const t = typeof val;
+    if (t === 'string' || t === 'number' || t === 'boolean') return String(val);
+    // If it's a React element it'll be object-like; stringify objects to avoid raw object being rendered
+    try {
+      return JSON.stringify(val);
+    } catch (e) {
+      return String(val);
+    }
+  };
+
+  // Development-time diagnostics: find any non-primitive cell values and warn so we can inspect payloads
+  try {
+    for (let i = 0; i < formData.length; i++) {
+      const row = formData[i] || {};
+      for (let j = 0; j < columns.length; j++) {
+        const key = columns[j].key;
+        const v = row[key];
+        if (v !== undefined && v !== null) {
+          const t = typeof v;
+          if (t !== 'string' && t !== 'number' && t !== 'boolean') {
+            // eslint-disable-next-line no-console
+            console.warn(`MixingPresentational: non-primitive value at row ${i} col ${key}:`, v);
+            // only log the first few
+            if (i > 10) break;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // ignore diagnostic errors
+  }
+
   return (
     <ScrollView horizontal>
       <View style={[styles.container, { width: tableWidth + 24 }]}> {/* add padding */}
@@ -60,7 +94,7 @@ const MixingControlSheetPresentational = ({ payload }) => {
           <View style={styles.tableHeader}>
             {columns.map(col => (
               <View key={col.key} style={[styles.headerCell, { width: col.width }]}>
-                <Text style={styles.headerText}>{col.label}</Text>
+                    <Text style={styles.headerText}>{renderCellValue(col.label)}</Text>
               </View>
             ))}
           </View>
@@ -68,7 +102,7 @@ const MixingControlSheetPresentational = ({ payload }) => {
             <View key={idx} style={styles.row}>
               {columns.map(col => (
                 <View key={col.key} style={[styles.cell, { width: col.width }]}>
-                  <Text style={styles.cellText}>{row[col.key] || ''}</Text>
+                      <Text style={styles.cellText}>{renderCellValue(row[col.key] ?? '')}</Text>
                 </View>
               ))}
             </View>
@@ -76,8 +110,8 @@ const MixingControlSheetPresentational = ({ payload }) => {
         </View>
 
         <View style={styles.verifyRow}>
-          <View style={styles.verifyInput}><Text style={styles.verifyLabel}>VERIFIED BY:</Text><Text style={styles.verifyValue}>{verification.mixerManSign || ''}</Text></View>
-          <View style={styles.verifyInput}><Text style={styles.verifyLabel}>COMPLEX MANAGER SIGN:</Text><Text style={styles.verifyValue}>{verification.complexManagerSign || ''}</Text></View>
+              <View style={styles.verifyInput}><Text style={styles.verifyLabel}>VERIFIED BY:</Text><Text style={styles.verifyValue}>{renderCellValue(verification.mixerManSign || '')}</Text></View>
+              <View style={styles.verifyInput}><Text style={styles.verifyLabel}>COMPLEX MANAGER SIGN:</Text><Text style={styles.verifyValue}>{renderCellValue(verification.complexManagerSign || '')}</Text></View>
         </View>
       </View>
     </ScrollView>

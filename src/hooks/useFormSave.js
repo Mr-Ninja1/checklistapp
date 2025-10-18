@@ -45,6 +45,7 @@ export default function useFormSave(a, b = {}) {
   };
   const autoSaveTimer = useRef(null);
   const inFlightSave = useRef(false);
+  const safetyTimer = useRef(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -94,8 +95,17 @@ export default function useFormSave(a, b = {}) {
   };
 
   const handleSubmit = async (onClear) => {
-    // mark saving and ensure we always clear the saving flag in finally
-    setIsSaving(true);
+  // mark saving and ensure we always clear the saving flag in finally
+  setIsSaving(true);
+  // start a safety timeout to avoid the saving overlay getting stuck if
+  // some storage op hangs or an unexpected code path prevents the finally
+  // block from clearing the flag. We'll clear this timer in the finally block.
+  try { if (safetyTimer.current) clearTimeout(safetyTimer.current); } catch (e) {}
+  safetyTimer.current = setTimeout(() => {
+    console.warn('useFormSave: safety timer clearing isSaving flag after timeout');
+    try { if (mounted.current) setIsSaving(false); } catch (e) { /* ignore */ }
+    safetyTimer.current = null;
+  }, 15000); // 15s safety
     try {
       // wait for any in-flight autosave/save to finish before submitting, but don't wait forever
       const waitForInFlight = async (timeoutMs = 5000) => {
@@ -117,6 +127,7 @@ export default function useFormSave(a, b = {}) {
       // app for too long. By default we wait for the save to finish; some
       // forms can opt-out by setting `waitForSave: false` in options.
       inFlightSave.current = true;
+      // start save
       const savePromise = formStorage.saveForm(id, payload)
         .catch(e => { console.error('useFormSave: background save failed', e); })
         .finally(() => { inFlightSave.current = false; });
@@ -184,8 +195,10 @@ export default function useFormSave(a, b = {}) {
       }
     } finally {
       inFlightSave.current = false;
-      // always clear isSaving after a short grace period to allow notification UI to show
-      setTimeout(() => { if (mounted.current) setIsSaving(false); }, 400);
+      // clear the safety timer if still present
+      try { if (safetyTimer.current) { clearTimeout(safetyTimer.current); safetyTimer.current = null; } } catch (e) {}
+      // clear saving indicator promptly so LoadingOverlay doesn't get stuck
+      if (mounted.current) setIsSaving(false);
     }
   };
 
@@ -195,6 +208,7 @@ export default function useFormSave(a, b = {}) {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
       autoSaveTimer.current = null;
       inFlightSave.current = false;
+      try { if (safetyTimer.current) { clearTimeout(safetyTimer.current); safetyTimer.current = null; } } catch (e) {}
     };
   }, []);
 

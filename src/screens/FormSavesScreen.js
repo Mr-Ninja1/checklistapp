@@ -171,7 +171,7 @@ export default function FormSavesScreen() {
                             }
                           }}
                       >
-                        <Text style={styles.cardTitle}>{form.title || 'Food Handlers Handwashing Log'}</Text>
+                        <Text style={styles.cardTitle}>{form.title || (form.meta?.formType === 'PPEIssuance' ? 'Personal Protective Equipment (PPE Issuance)' : 'Food Handlers Handwashing Log')}</Text>
                         <Text style={styles.cardMeta}>Shift: {form.shift} | Location: {form.location}</Text>
                         <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : ''}</Text>
                         <Text style={styles.cardMeta}>Handlers: {form.handlers ? form.handlers.length : 0}</Text>
@@ -227,7 +227,7 @@ export default function FormSavesScreen() {
                         }
                       }}
                   >
-                    <Text style={styles.cardTitle}>{form.title || form.pdfPath?.split('/').pop() || 'Saved PDF'}</Text>
+                    <Text style={styles.cardTitle}>{form.title || (form.meta?.formType === 'PPEIssuance' ? 'Personal Protective Equipment (PPE Issuance)' : form.pdfPath?.split('/').pop() || 'Saved PDF')}</Text>
                     <Text style={styles.cardMeta}>PDF: {form.pdfPath?.split('/').pop()}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(form, idx)}>

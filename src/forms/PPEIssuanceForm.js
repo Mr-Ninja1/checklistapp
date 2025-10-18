@@ -1,5 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
+import useFormSave from '../hooks/useFormSave';
+import NotificationModal from '../components/NotificationModal';
+import LoadingOverlay from '../components/LoadingOverlay';
+import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +32,7 @@ const initialPPEData = Array.from({ length: 13 }, (_, i) => ({
 // --- Main Form Component ---
 const PPEIssuanceForm = () => {
     const [data, setData] = useState(initialPPEData);
+    const [logoDataUri, setLogoDataUri] = useState(null);
     // compute issue date once
     const issueDate = useMemo(() => {
         const d = new Date();
@@ -99,6 +107,40 @@ const PPEIssuanceForm = () => {
         </View>
     );
 
+        // preload logo for saved payloads
+        useEffect(() => {
+            let mounted = true;
+            (async () => {
+                try {
+                    const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+                    await asset.downloadAsync();
+                    if (asset.localUri && mounted) {
+                        const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+                        if (b64) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+                    }
+                } catch (e) { /* ignore */ }
+            })();
+            return () => { mounted = false; };
+        }, []);
+
+        // build payload for save/submit - include layoutHints and assets
+        const columnFlex = [1,3,2,1,1,1,1,1,1,1,1,1,2,2,2];
+        const buildPayload = (status = 'draft') => ({
+            formType: 'PPEIssuanceForm',
+            templateVersion: '01',
+            title: 'PPE Issuance',
+            metadata: { subject: 'Personal Protective Equipment', issueDate },
+            formData: data,
+            layoutHints: { id: 1, name: 3, jobTitle: 2, apron: 1, cap: 1, chefHat: 1, trousers: 1, safetyBoots: 1, shirt: 1, golfTShirt: 1, workSuit: 1, chefCoat: 1, staffNrc: 2, staffSign: 2, supSign: 2 },
+            _tableWidth: columnFlex.reduce((s, v) => s + v, 0),
+            assets: logoDataUri ? { logoDataUri } : {},
+            savedAt: new Date().toISOString(),
+            status,
+        });
+
+    // wire save hook
+    const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PPEIssuance_draft', clearOnSubmit: () => { setData(initialPPEData); } });
+
     return (
         <SafeAreaView style={styles.safeArea}>
             {/* ScrollView allows the content, especially the wide table, to be visible */}
@@ -120,7 +162,7 @@ const PPEIssuanceForm = () => {
                         <Text style={styles.pageNumber}>Page 1 of 1</Text>
                     </View>
 
-                    <Text style={styles.subjectText}>
+                    <Text style={[styles.subjectText, { fontSize: 16, fontWeight: '800' }]}>
                         <Text style={styles.boldText}>Subject:</Text> Personal Protective Equipment
                     </Text>
 
@@ -160,19 +202,49 @@ const PPEIssuanceForm = () => {
                     </View>
 
                     {/* --- TABLE ROWS (using FlatList) --- */}
-                    <FlatList
-                        data={data}
-                        renderItem={renderItem}
-                        keyExtractor={item => item.id}
-                        scrollEnabled={false} 
-                    />
+                                    <FlatList
+                                        data={data}
+                                        renderItem={renderItem}
+                                        keyExtractor={item => item.id}
+                                        scrollEnabled={false} 
+                                    />
 
-                    {/* --- FOOTER SIGNATURES --- */}
-                    <View style={styles.footerSignatures}>
-                        <Text style={styles.footerText}>HSEQ MANAGER..................................</Text>
-                        <Text style={styles.footerText}>COMPLEX MANAGER..................................</Text>
-                        <Text style={styles.footerText}>FINANCIAL CONTROLLER..................................</Text>
-                    </View>
+                                    {/* Save / Submit buttons wired to useFormSave */}
+                                                                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
+                                                                            <TouchableOpacity
+                                                                                style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
+                                                                                onPress={async () => { try { await handleSaveDraft(); } catch(e){console.warn(e);} }}
+                                                                                disabled={isSaving}
+                                                                            >
+                                                                                <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
+                                                                            </TouchableOpacity>
+
+                                                                            <TouchableOpacity
+                                                                                style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
+                                                                                                                        onPress={async () => {
+                                                                                                                            try {
+                                                                                                                                await handleSubmit();
+                                                                                        // Register history record in background
+                                                                                        addFormHistory({ title: 'PPE Issuance', date: issueDate, savedAt: Date.now(), meta: { metadata: { issueDate }, formData: data } })
+                                                                                            .catch(e => console.warn('addFormHistory failed', e));
+                                                                                    } catch (e) {
+                                                                                        console.warn('submit failed', e);
+                                                                                    }
+                                                                                }}
+                                                                                disabled={isSaving}
+                                                                            >
+                                                                                <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
+                                                                            </TouchableOpacity>
+                                                                        </View>
+
+                                    {/* --- FOOTER SIGNATURES --- */}
+                                    <View style={styles.footerSignatures}>
+                                        <Text style={styles.footerText}>HSEQ MANAGER..................................</Text>
+                                        <Text style={styles.footerText}>COMPLEX MANAGER..................................</Text>
+                                        <Text style={styles.footerText}>FINANCIAL CONTROLLER..................................</Text>
+                                    </View>
+                                                                <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+                                                                <LoadingOverlay visible={isSaving} />
                 </View>
             </ScrollView>
         </SafeAreaView>

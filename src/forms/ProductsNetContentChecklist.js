@@ -119,6 +119,9 @@ export default function ProductsNetContentChecklist() {
   const handleSubmitLocal = async () => {
     setBusy(true);
     try {
+      // debug: invoking handleSubmit
+      // eslint-disable-next-line no-console
+      console.log('ProductsNetContentChecklist: submit button pressed');
       await handleSubmit();
       // Register history in background; don't await so a slow history write doesn't block the UI
       addFormHistory({ title: 'Products Net Content Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } })
@@ -142,7 +145,7 @@ export default function ProductsNetContentChecklist() {
               <Text style={styles.brandSub}>Food Safety Inspections</Text>
             </View>
           </View>
-          <Text style={styles.title}>PRODUCTS NET CONTENT CHECKLIST</Text>
+          <Text style={[styles.title, { fontSize: 20 } ]}>PRODUCTS NET CONTENT CHECKLIST</Text>
           <Text style={styles.meta}>Doc No: {metadata.docNo} • Issue Date: {metadata.issueDate}</Text>
         </View>
 
@@ -187,10 +190,10 @@ export default function ProductsNetContentChecklist() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}><Text style={styles.btnText}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmitLocal} disabled={busy || isSaving}><Text style={styles.btnText}>{(busy || isSaving) ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSubmitLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
         </View>
-        <LoadingOverlay visible={isSaving || busy} />
+  <LoadingOverlay visible={isSaving || busy} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
       </ScrollView>
