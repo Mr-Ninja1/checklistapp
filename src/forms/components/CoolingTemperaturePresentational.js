@@ -2,15 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import { getDraft, setDraft, removeDraft } from '../../utils/formDrafts';
+import { addFormHistory } from '../../utils/formHistory';
 
 
-const DRAFT_KEY = 'cooking_temperature_log_draft';
-const MAX_ROWS = 15;
+const DRAFT_KEY = 'cooling_temperature_log_draft';
+const MAX_ROWS = 12; // Matching the visible rows in the image
 
 const emptyRow = {
     foodItem: '',
+    timeIntoUnit: '', // New column
     // record 1
     time1: '', temp1: '', sign1: '',
     // record 2
@@ -22,22 +23,23 @@ const emptyRow = {
 
 const initialRows = Array.from({ length: MAX_ROWS }, () => ({ ...emptyRow }));
 
-// Updated metadata to reflect the form's header details
+// Updated metadata to reflect the form's header details from the image
 const initialMeta = {
-    subject: 'COOKING TEMPERATURE LOG',
-    docNo: 'BBN-SHEQ-RIV-SUP-0.0.10a',
-    issueDate: '', // Will be set on load
-    revisionDate: 'N/A',
-    compiledBy: 'Michael C. Zulu',
-    approvedBy: 'Hassani Ali',
-    versionNo: '01',
-    revNo: '00',
-    chefSignature: '',
-    correctiveAction: '',
-    complexManagerSignature: '',
+    subject: 'TEMPERATURE RECORD FOR COOLING', // Updated
+    docNo: 'BBN-SHEQ-TRC-1.1', // Matched image
+    issueDate: '', // will default to today if not provided
+    date: '',
+    revisionDate: 'N/A', // Matched image
+    compiledBy: 'MICHAEL ZULU C.', // Matched image
+    approvedBy: 'Hassani Ali', // Matched image
+    versionNo: '01', // Matched image
+    revNo: '00', // Matched image
+    chefSignature: '', // Re-added for the footer
+    correctiveAction: '', // Re-added for the footer
+    complexManagerSignature: '', // Re-added for the footer
 };
 
-export default function CookingTemperatureLog() {
+export default function CoolingTemperatureLog() {
     const [rows, setRows] = useState(initialRows);
     const [meta, setMeta] = useState(initialMeta);
     const [busy, setBusy] = useState(false);
@@ -61,18 +63,29 @@ export default function CookingTemperatureLog() {
                 const d = await getDraft(DRAFT_KEY);
                 if (d && mounted) {
                     if (d.rows) setRows(d.rows);
-                    if (d.meta) setMeta(d.meta);
-                }
-                // Always ensure issue date is current if not loaded from draft
-                if (mounted && (!d || !d.meta.issueDate)) {
-                    setMeta(prev => ({ ...prev, issueDate: getTodayDate() }));
+                    if (d.meta) {
+                        // treat the static template example date as a placeholder and replace it with today
+                        const exampleDates = ['31/08/25', '31/08/2025'];
+                        const draftIssue = d.meta.issueDate || d.meta.date;
+                        if (!draftIssue || exampleDates.includes(draftIssue)) {
+                            const today = getTodayDate();
+                            setMeta(prev => ({ ...initialMeta, ...d.meta, issueDate: today, date: d.meta.date || today }));
+                        } else {
+                            setMeta(prev => ({ ...initialMeta, ...d.meta }));
+                        }
+                    }
+                } else if (mounted) {
+                    // no draft: default both date fields to today
+                    const today = getTodayDate();
+                    setMeta(prev => ({ ...prev, issueDate: today, date: today }));
                 }
             } catch (e) { console.warn('load draft', e); }
         })();
         // embed logo as base64 for deterministic saved payload rendering
         (async () => {
             try {
-                const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+                // NOTE: Replace this with the actual path to your logo.jpeg if this component is used in a real project
+                const asset = Asset.fromModule(require('../../assets/logo.jpeg'));
                 if (!asset.localUri) await asset.downloadAsync();
                 const uri = asset.localUri || asset.uri;
                 const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
@@ -93,31 +106,44 @@ export default function CookingTemperatureLog() {
     const setMetaField = (k, v) => setMeta(prev => ({ ...prev, [k]: v }));
 
     const handleSubmit = async () => {
-        // Save all rows (including empty) so presentational matches exact editable form
         const logData = rows.map((r, i) => ({ index: i + 1, ...r }));
 
         setBusy(true);
         try {
+            // ensure metadata contains company name for saved rendering
+            const normalizedMeta = { companyName: 'BRAVO BRANDS LIMITED', ...meta };
+
+            // compute numeric WIDTHS from COL_FLEX relative flex values and desired table width
+            const TABLE_WIDTH = 1000;
+            const flexMap = COL_FLEX || {};
+            const flexTotal = Object.values(flexMap).reduce((s, v) => s + (Number(v) || 0), 0) || 1;
+            const WIDTHS = Object.keys(flexMap).reduce((acc, k) => {
+                acc[k] = Math.round((TABLE_WIDTH * (Number(flexMap[k]) || 0)) / flexTotal);
+                return acc;
+            }, {});
+
             const payload = {
-                formType: 'CookingTemperatureLog',
+                formType: 'CoolingTemperatureLog',
                 templateVersion: 'v1.0',
-                title: 'Cooking Temperature Log',
-                date: meta.issueDate || new Date().toLocaleDateString(),
-                metadata: meta,
+                title: 'Temperature Record for Cooling (Cooling Temperature Log)',
+                date: normalizedMeta.issueDate || getTodayDate(),
+                metadata: normalizedMeta,
                 formData: logData,
-                layoutHints: { COL_FLEX },
-                _tableWidth: 1000,
+                // include both the original flex map and computed absolute widths for renderers
+                layoutHints: { COL_FLEX: flexMap, WIDTHS },
+                _tableWidth: TABLE_WIDTH,
                 assets: logoDataUri ? { logoDataUri } : {},
                 savedAt: Date.now(),
             };
 
+            // save: pass payload so addFormHistory preserves it for SavedFormRenderer
             await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
             await removeDraft(DRAFT_KEY);
             // Reset form
             setRows(initialRows);
+            // Reset meta to initial state (fixed values from image) but clear signatures
             setMeta(prev => ({
                 ...initialMeta,
-                issueDate: getTodayDate(),
                 chefSignature: '',
                 correctiveAction: '',
                 complexManagerSignature: ''
@@ -136,14 +162,15 @@ export default function CookingTemperatureLog() {
         setBusy(false);
     };
 
-    // Flex values for column widths (Total Flex: 14.1)
+    // Flex values for column widths 
     const COL_FLEX = {
         INDEX: 0.6,
-        FOOD_ITEM: 3.0,
-        TIME_TEMP_SIGN: 1.0, // Each T/T/S column
+        FOOD_ITEM: 2.5, 
+        TIME_INTO_UNIT: 2.5, 
+        TIME_TEMP_SIGN: 1.0, // Each T/T/S column (9 total)
         STAFF_NAME: 1.5,
     };
-
+    
     return (
         <View style={styles.container}>
             <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 180 }] }>
@@ -152,48 +179,97 @@ export default function CookingTemperatureLog() {
                 <View style={styles.metaContainer}>
                     <View style={styles.metaHeaderBox}>
                         <View style={styles.brandRow}>
-                            <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
+                            <Image 
+                                source={require('../../assets/logo.jpeg')} 
+                                style={styles.logoImage} 
+                                resizeMode="contain" 
+                            />
                             <View style={styles.brandTextWrap}>
-                                <Text style={styles.brandTitle}>BRAVO BRANDS LIMITED</Text>
+                                <Text style={styles.brandTitle}>[BRAVO BRANDS LIMITED]</Text>
                                 <Text style={styles.brandSubtitle}>Food Safety Management System</Text>
                             </View>
                         </View>
                         <View style={styles.docInfoGrid}>
-                            <Text style={styles.docInfoLabel}>Issue Date:</Text>
-                            <Text style={styles.docInfoValue}>{meta.issueDate}</Text>
+                            <Text style={[styles.docInfoLabel, styles.docInfoHalf]}>Doc No: </Text>
+                            <Text style={[styles.docInfoValue, styles.docInfoHalf]}>{meta.docNo}</Text>
+                            
+                                <Text style={[styles.docInfoLabel, styles.docInfoHalf]}>Issue Date: </Text>
+                                <Text style={[styles.docInfoValue, styles.docInfoHalf]}>{meta.issueDate}</Text>
+
+                            <Text style={[styles.docInfoLabel, styles.docInfoHalf, styles.noBorderBottom]}>Revision Date: </Text>
+                            <Text style={[styles.docInfoValue, styles.docInfoHalf, styles.noBorderBottom]}>{meta.revisionDate}</Text>
+                        </View>
+                        <View style={styles.pageInfoBox}>
+                             <Text style={styles.pageInfoText}>Page 1 of 1</Text>
                         </View>
                     </View>
-                    <View style={styles.metaBottomRow}>
-                        <Text style={styles.metaBottomItem}><Text style={styles.metaBold}>SUBJECT:</Text> {meta.subject}</Text>
-                        <Text style={styles.metaBottomItem}><Text style={styles.metaBold}>Compiled By:</Text> {meta.compiledBy}</Text>
-                        <Text style={styles.metaBottomItem}><Text style={styles.metaBold}>Approved By:</Text> {meta.approvedBy}</Text>
+
+                    <View style={styles.metaSubjectRow}>
+                        <Text style={styles.metaSubjectText}>Project:</Text>
+                        <Text style={styles.metaSubjectValue}>{meta.subject}</Text>
+                        
+                        <Text style={styles.metaVersionText}>Version No.</Text>
+                        <Text style={styles.metaVersionValue}>{meta.versionNo}</Text>
+
+                        <Text style={styles.metaRevText}>Rev no:</Text>
+                        <Text style={styles.metaRevValue}>{meta.revNo}</Text>
                     </View>
+                    
+                    <View style={styles.metaCompiledRow}>
+                        <View style={[styles.metaRowItem, styles.borderRight, { flex: 1.5 }]}>
+                            <Text style={styles.metaCompiledLabel}>Compiled By:</Text>
+                            <Text style={styles.metaCompiledValue}>{meta.compiledBy}</Text>
+                        </View>
+                        <View style={[styles.metaRowItem, styles.borderRight, { flex: 1.5 }]}>
+                            <Text style={styles.metaCompiledLabel}>Approved By:</Text>
+                            <Text style={styles.metaCompiledValue}>{meta.approvedBy}</Text>
+                        </View>
+                        <View style={{ flex: 1 }} />
+                    </View>
+
                 </View>
 
                 {/* --- 2. Table Block --- */}
                 <View style={styles.tableWrap}>
-                    <Text style={styles.tableTitle}>COOKING TEMPERATURE LOG</Text>
+                    <Text style={styles.tableTitle}>COOLING TEMPERATURE LOG</Text>
 
                     {/* Header Row 1: Probe Thermometer / Date */}
                     <View style={styles.logHeaderRow1}>
-                        <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>PROBE THERMOMETER TEMPERATURE LOG FOR COOKED FOOD</Text>
-                        <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>DATE: {meta.issueDate}</Text>
+                        {/* Updated text as per user request */}
+                        <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>PROBE THERMOMETER TEMPERATURE LOG FOR COOLING FOOD</Text> 
+                        <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={[styles.logHeaderRow1Text, { fontSize: 12 }]}>DATE</Text>
+                            <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>{meta.date || meta.issueDate}</Text>
+                        </View>
                     </View>
                     
-                    {/* Header Row 2: Group Labels (FOOD ITEM, 1ST RECORD, 2ND RECORD, 3RD RECORD) */}
+                    {/* Header Row 2: Group Labels (COOLING, FOOD ITEM, TIME INTO UNIT, 1ST RECORD, etc.) */}
                     <View style={[styles.tableHeaderRow, styles.groupHeader]}>
+                        
                         <View style={[styles.hCell, styles.borderRight, { flex: COL_FLEX.INDEX }]} />
                         
-                        {/* Food Item / Instruction Column */}
-                        <View style={{ flex: COL_FLEX.FOOD_ITEM, borderRightWidth: 1, borderColor: '#333', justifyContent: 'center' }}>
+                        {/* Cooling Instruction Column Span */}
+                        <View style={{ flex: COL_FLEX.FOOD_ITEM + COL_FLEX.TIME_INTO_UNIT, borderRightWidth: 1, borderColor: '#333', justifyContent: 'center' }}>
                             <View style={styles.instructionBox}>
+                                {/* Updated instruction text as per user request */}
                                 <Text style={[styles.hText, styles.instructionText]}>
-                                    COOKING (≥ 75°C)
+                                    COOLING (10 °C within 2hours)
                                 </Text>
                             </View>
-                            <View style={{ paddingVertical: 4 }}>
-                                <Text style={[styles.hText, { fontSize: 16 }]}>FOOD ITEM</Text>
+                            
+                            <View style={{ flexDirection: 'row', borderTopWidth: 1, borderColor: '#333' }}>
+                                {/* Food Item Column */}
+                                <View style={[styles.hCell, styles.borderRight, { flex: COL_FLEX.FOOD_ITEM / (COL_FLEX.FOOD_ITEM + COL_FLEX.TIME_INTO_UNIT) }]}>
+                                    <Text style={[styles.hText, { fontSize: 10 }]}>FOOD ITEM</Text>
+                                </View>
+                                {/* Time Into Unit Column (New) */}
+                                <View style={[styles.hCell, { flex: COL_FLEX.TIME_INTO_UNIT / (COL_FLEX.FOOD_ITEM + COL_FLEX.TIME_INTO_UNIT) }]}>
+                                    <Text style={[styles.hText, { fontSize: 8 }]}>
+                                        Time into {'\n'}Fridge/Display{'\n'}Chiller/Deep{'\n'}Freezer/Chiller{'\n'}Room/Freezer Room
+                                    </Text>
+                                </View>
                             </View>
+
                         </View>
 
                         {/* Record Group Spans */}
@@ -209,7 +285,7 @@ export default function CookingTemperatureLog() {
                     {/* Header Row 3: Detail Labels (#, TIME, TEMP, SIGN) */}
                     <View style={[styles.tableHeaderRow, styles.detailHeader]}>
                         <View style={[styles.hCell, styles.borderRight, { flex: COL_FLEX.INDEX }]}><Text style={styles.hText}>#</Text></View>
-                        <View style={[styles.hCell, styles.borderRight, { flex: COL_FLEX.FOOD_ITEM }]} />
+                        <View style={[styles.hCell, styles.borderRight, { flex: COL_FLEX.FOOD_ITEM + COL_FLEX.TIME_INTO_UNIT }]} />
                         
                         {/* T/T/S columns */}
                         {[...Array(3)].map((_, i) => (
@@ -226,10 +302,16 @@ export default function CookingTemperatureLog() {
                     {/* Data Rows */}
                     {rows.map((row, ri) => (
                         <View key={ri} style={styles.row}>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.INDEX }]}><Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '700' }}>{ri + 1}</Text></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.INDEX }]}><Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '700' }}>{ri + 1}</Text></View>
                             
+                            {/* Food Item */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.FOOD_ITEM }]}>
-                                <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Chicken Fillet" />
+                                <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Soup" />
+                            </View>
+
+                            {/* Time Into Unit (New) */}
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_INTO_UNIT }]}>
+                                <TextInput style={styles.input} value={row.timeIntoUnit} onChangeText={v => setCell(ri, 'timeIntoUnit', v)} placeholder="HH:MM" />
                             </View>
 
                             {/* 1st Record */}
@@ -255,27 +337,27 @@ export default function CookingTemperatureLog() {
                     ))}
                 </View>
 
-                {/* --- 3. Footer Section --- */}
+                {/* --- 3. Footer Section (Re-added) --- */}
                 <View style={styles.footerSection}>
                     <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 16 }}>CHEF Signature:</Text>
+                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
                         <TextInput style={[styles.signatureInput, { fontSize: 14 }]} value={meta.chefSignature} onChangeText={v => setMetaField('chefSignature', v)} placeholder="" />
                     </View>
 
                     <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 16 }}>Corrective Action:</Text>
-                        <TextInput style={[styles.textarea, { fontSize: 14 }]} value={meta.correctiveAction} onChangeText={v => setMetaField('correctiveAction', v)} placeholder="Document corrective action" multiline numberOfLines={4} />
+                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Corrective Action:</Text>
+                        <TextInput style={[styles.textarea, { fontSize: 14 }]} value={meta.correctiveAction} onChangeText={v => setMetaField('correctiveAction', v)} placeholder="Document corrective action" multiline numberOfLines={3} />
                     </View>
 
                     <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 16 }}>COMPLEX Manager Signature:</Text>
+                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>COMPLEX Manager Signature:</Text>
                         <TextInput style={[styles.signatureInput, { fontSize: 14 }]} value={meta.complexManagerSignature} onChangeText={v => setMetaField('complexManagerSignature', v)} placeholder="" />
                     </View>
 
-                    {/* Verified by line (visual label as in the template image) */}
+                    {/* Verified by line (visual label as in the original template) */}
                     <View style={{ paddingHorizontal: 4, marginTop: 6 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '700' }}>Verified by:</Text>
-                        <Text style={{ marginTop: 8, fontSize: 14 }}>Complex Manager: ......................................................</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '700' }}>Verified by:</Text>
+                        <Text style={{ marginTop: 8, fontSize: 12 }}>Complex Manager: ......................................................</Text>
                     </View>
                 </View>
 
@@ -294,7 +376,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f7fbfc' },
     content: { padding: 12 },
     
-    // --- Metadata Styles ---
+    // --- Metadata Styles (Adjusted to closely match the image structure) ---
     metaContainer: {
         borderWidth: 2,
         borderColor: '#333',
@@ -309,33 +391,23 @@ const styles = StyleSheet.create({
         borderColor: '#333'
     },
     brandRow: { flexDirection: 'row', alignItems: 'center', width: '50%' },
-    logoPlaceholder: { 
-        width: 48, 
-        height: 48, 
-        borderRadius: 8, 
-        marginRight: 8, 
-        backgroundColor: '#fff', 
-        borderWidth: 1,
-        borderColor: '#ccc',
-        justifyContent: 'center', 
-        alignItems: 'center' 
-    },
-    logoText: { fontSize: 24, fontWeight: '900', color: '#185a9d' },
-    brandTextWrap: { flexDirection: 'column', flexShrink: 1 },
-    brandTitle: { fontSize: 10, fontWeight: '700', color: '#333' },
-    brandSubtitle: { fontSize: 8, color: '#444', fontWeight: '500' },
     logoImage: { width: 56, height: 56, marginRight: 8 },
 
+    brandTextWrap: { flexDirection: 'column', flexShrink: 1, justifyContent: 'center' },
+    brandTitle: { fontSize: 12, fontWeight: '700', color: '#333' },
+    brandSubtitle: { fontSize: 10, color: '#444', fontWeight: '500' },
+
     docInfoGrid: {
-        width: '50%',
+        width: '40%',
         flexDirection: 'row',
         flexWrap: 'wrap',
         borderWidth: 1,
         borderColor: '#333',
-        fontSize: 8,
+        fontSize: 10,
+        alignSelf: 'flex-start',
     },
+    docInfoHalf: { width: '50%' },
     docInfoLabel: { 
-        width: '50%', 
         padding: 2, 
         fontWeight: '700', 
         borderRightWidth: 1, 
@@ -344,26 +416,56 @@ const styles = StyleSheet.create({
         textAlign: 'left'
     },
     docInfoValue: { 
-        width: '50%', 
         padding: 2, 
         fontWeight: '400', 
         borderBottomWidth: 1, 
         borderColor: '#333', 
         textAlign: 'left'
     },
-    metaBottomRow: {
+    noBorderBottom: { borderBottomWidth: 0 },
+    
+    pageInfoBox: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        padding: 4,
+        borderLeftWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#333',
+        height: 58, 
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+    },
+    pageInfoText: {
+        fontSize: 10,
+        fontWeight: '700',
+    },
+
+    metaSubjectRow: {
         flexDirection: 'row',
-        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: '#333',
+        alignItems: 'center',
+    },
+    metaSubjectText: { fontWeight: '700', fontSize: 10, padding: 4, flex: 0.5 },
+    metaSubjectValue: { fontSize: 10, padding: 4, flex: 4, borderRightWidth: 1, borderColor: '#333' },
+    metaVersionText: { fontWeight: '700', fontSize: 10, padding: 4, flex: 1.2 },
+    metaVersionValue: { fontSize: 10, padding: 4, flex: 1, borderRightWidth: 1, borderColor: '#333' },
+    metaRevText: { fontWeight: '700', fontSize: 10, padding: 4, flex: 0.8 },
+    metaRevValue: { fontSize: 10, padding: 4, flex: 0.8 },
+    
+    metaCompiledRow: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+    },
+    metaRowItem: {
+        padding: 4, 
+        borderRightWidth: 1,
         borderColor: '#333',
     },
-    metaBottomItem: {
-        flex: 1, 
-        padding: 4, 
-        fontSize: 8, 
-        borderLeftWidth: 1, 
-        borderColor: '#333'
-    },
-    metaBold: { fontWeight: '700', textTransform: 'uppercase' },
+    metaCompiledLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+    metaCompiledValue: { fontSize: 12, fontWeight: '500', marginTop: 2, textTransform: 'uppercase' },
+
 
     // --- Table Styles ---
     tableWrap: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#333', overflow: 'hidden' },
@@ -385,7 +487,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#f9f9f9',
     },
     logHeaderRow1Text: {
-        fontSize: 14,
+        fontSize: 10,
         fontWeight: '700',
     },
     tableHeaderRow: { 
@@ -403,13 +505,10 @@ const styles = StyleSheet.create({
     },
     instructionBox: {
         padding: 4, 
-        borderBottomWidth: 1, 
-        borderBottomColor: '#333', 
-        backgroundColor: '#e8e8e8',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     instructionText: {
-        textAlign: 'left', 
+        textAlign: 'center', 
         fontWeight: 'bold', 
         fontSize: 9, 
         textTransform: 'none'
@@ -422,7 +521,7 @@ const styles = StyleSheet.create({
     },
     hText: { 
         fontWeight: '800', 
-        fontSize: 8, // Smaller font for detail header
+        fontSize: 8, 
         textAlign: 'center',
         textTransform: 'uppercase',
     },
@@ -436,21 +535,23 @@ const styles = StyleSheet.create({
         minHeight: 38 
     },
     cell: { 
-        padding: 1, // Reduced padding
+        padding: 1, 
         justifyContent: 'center', 
     },
     input: { 
         padding: 2, 
-        fontSize: 10, // Smaller font for input
+        fontSize: 10, 
         textAlign: 'center', 
         minHeight: 36,
         color: '#444',
     },
     
-    // --- Footer Styles ---
+    // --- Footer Styles (Re-added) ---
     footerSection: { marginTop: 12, marginBottom: 12, paddingHorizontal: 4 },
     signatureInput: { borderBottomWidth: 1, borderColor: '#333', padding: 6, minHeight: 36, fontSize: 12 },
     textarea: { borderWidth: 1, borderColor: '#ccc', padding: 8, borderRadius: 6, textAlignVertical: 'top', fontSize: 12 },
+
+    // --- Button Styles ---
     buttonRow: { 
         flexDirection: 'row', 
         justifyContent: 'flex-end', 

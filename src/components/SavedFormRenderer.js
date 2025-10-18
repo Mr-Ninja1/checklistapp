@@ -16,6 +16,7 @@ import EggsReceivingPresentational from '../forms/components/EggsReceivingPresen
 import CertificateOfAnalysisPresentational from '../forms/components/CertificateOfAnalysisPresentational';
 import React from 'react';
 import FoodHandlersPresentational from '../forms/components/FoodHandlersPresentational';
+import ThawingTemperaturePresentational from '../forms/components/ThawingTemperaturePresentational';
 import FOH_DailyCleaningPresentational from '../forms/components/FOH_DailyCleaningPresentational';
 import FOH_FrontOfHouseCleaningPresentational from '../forms/components/FOH_FrontOfHouseCleaningPresentational';
 import DisplayChillerShelfLifeInspectionPresentational from '../forms/components/DisplayChillerShelfLifeInspectionPresentational';
@@ -30,6 +31,12 @@ import BakeryCleaningChecklistPresentational from '../forms/components/BakeryCle
 import MixingControlSheetPresentational from '../forms/components/MixingControlSheetPresentational';
 import ProductsNetContentChecklistPresentational from '../forms/components/ProductsNetContentChecklistPresentational';
 import KitchenWeeklyCleaningChecklistPresentational from '../forms/components/KitchenWeeklyCleaningChecklistPresentational';
+import KitchenDailyCleaningPresentational from '../forms/components/KitchenDailyCleaningPresentational';
+import UnderbarChillerTemperaturePresentational from '../forms/components/UnderbarChillerTemperaturePresentational';
+import HotHoldingTemperaturePresentational from '../forms/components/HotHoldingTemperaturePresentational';
+import CookingTemperaturePresentational from '../forms/components/CookingTemperaturePresentational';
+import CoolingTemperaturePresentational from '../forms/components/CoolingTemperaturePresentational';
+import CoolingTemperatureSavedPresentational from '../forms/components/CoolingTemperatureSavedPresentational';
 import { View, Text, StyleSheet } from 'react-native';
 // Add other form imports as needed
 
@@ -41,19 +48,17 @@ export default function SavedFormRenderer({ savedPayload }) {
   // - formStorage.saveForm writes { payload, savedAt }
   // - the history entry used by FormSavesScreen may pass an object with meta or filePath
   // Normalize a canonical payload variable that the presentational renderers expect.
+  // Normalize payload robustly: callers sometimes pass a history entry, a meta wrapper, or the
+  // canonical payload directly. Try several common shapes and fall back to the object itself.
   let payload = null;
-  // If the caller passed a history entry with a meta pointer, try to load the stored payload
   try {
-    // If the object is the wrapped file content
-    if (savedPayload.payload) payload = savedPayload.payload;
-    else if (savedPayload.meta && savedPayload.meta.filePath && savedPayload.meta.formId) {
-      // savedPayload looks like a history entry — load the file synchronously is not possible here,
-      // but the ViewDocumentModal passes the full wrapped file when available. For safety, prefer
-      // payload in savedPayload.meta.payload, then savedPayload.meta.form, else try savedPayload.form.
-      payload = savedPayload.payload || savedPayload.meta.payload || savedPayload.form || savedPayload;
-    } else {
-      payload = savedPayload;
-    }
+    const meta = savedPayload?.meta || null;
+    // common shapes:
+    // - { payload: { ... } }
+    // - { meta: { payload: { ... } } }
+    // - { meta: { formData: [...] , metadata: {...} } }
+    // - the canonical payload directly
+    payload = savedPayload.payload || meta?.payload || meta || savedPayload;
   } catch (e) {
     payload = savedPayload;
   }
@@ -179,6 +184,30 @@ export default function SavedFormRenderer({ savedPayload }) {
   // Kitchen Weekly Cleaning
   if (/KitchenWeeklyCleaningChecklist|Kitchen Weekly Cleaning Checklist|Kitchen_WeeklyCleaningChecklist/i.test(type)) {
     return <KitchenWeeklyCleaningChecklistPresentational payload={payload} />;
+  }
+  // Kitchen Daily Cleaning
+  if (/Kitchen Daily Cleaning|Kitchen_DailyCleaningForm|Kitchen Daily Cleaning & Sanitizing/i.test(type)) {
+    return <KitchenDailyCleaningPresentational payload={payload} />;
+  }
+  // Underbar chiller
+  if (/Underbar Chiller Temperature Log|UnderbarChillerTemperatureLog/i.test(type)) {
+    return <UnderbarChillerTemperaturePresentational payload={payload} />;
+  }
+  // Cooking Temp
+  if (/Cooking Temperature Log|CookingTemperatureLog|COOKING TEMPERATURE LOG/i.test(type)) {
+    return <CookingTemperaturePresentational payload={payload} />;
+  }
+  // Cooling Temp (saved view uses the read-only presentational)
+  if (/Cooling Temperature Log|CoolingTemperatureLog/i.test(type)) {
+    return <CoolingTemperatureSavedPresentational payload={payload} />;
+  }
+  // Hot Holding Temp
+  if (/Hot Holding Temperature Log|HotHoldingTemperatureLog|Hot Holding Temp Log/i.test(type)) {
+    return <HotHoldingTemperaturePresentational payload={payload} />;
+  }
+  // Thawing Temp
+  if (/Thawing Temperature Log|ThawingTemperatureLog|Thawing/i.test(type)) {
+    return <ThawingTemperaturePresentational payload={payload} />;
   }
   // Mixing Control Sheet
   if (/MixingControlSheet|Mixing Control Sheet|MIXING CONTROL SHEET/i.test(type)) {

@@ -53,7 +53,9 @@ export async function addFormHistory(entry) {
     pdfPath: entry.pdfPath || null,
     savedAt: entry.savedAt || Date.now(),
     // allow callers to store arbitrary metadata too
-    meta: entry.meta || null,
+    // Preserve any payload provided by the caller so SavedFormRenderer can access it later.
+    // Common callers pass either `payload` directly or wrap it under `meta.payload`.
+    meta: entry.meta || (entry.payload ? { payload: entry.payload } : null),
   };
 
   // limit history size

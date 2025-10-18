@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -59,6 +60,7 @@ export default function Kitchen_DailyCleaningForm() {
   // Determine current shift automatically from system time
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
   const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+  const [logoDataUri, setLogoDataUri] = useState(null);
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
@@ -134,6 +136,21 @@ export default function Kitchen_DailyCleaningForm() {
   const TIME_SLOTS_WIDTH = COL_WIDTHS.TIME_SLOT * TIME_SLOTS.length;
   const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIPMENT + COL_WIDTHS.PPM + TIME_SLOTS_WIDTH + COL_WIDTHS.STAFF_NAME + COL_WIDTHS.SIGNATURE + COL_WIDTHS.SLIP_NAME + COL_WIDTHS.SUP_SIGN;
 
+  // embed logo as base64 for deterministic saved payload rendering
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        if (!asset.localUri) await asset.downloadAsync();
+        const uri = asset.localUri || asset.uri;
+        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   const renderRow = (row) => (
     <View key={row.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(56) }]}>
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
@@ -152,7 +169,22 @@ export default function Kitchen_DailyCleaningForm() {
   const handleSave = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Kitchen Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
+      // build canonical payload
+      const payload = {
+        // use a human-friendly formType that matches SavedFormRenderer's detection
+        formType: 'Kitchen Daily Cleaning',
+        templateVersion: 'v1.0',
+        // card title exactly as printed on the card
+        title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen)',
+        date: metadata.date,
+        metadata,
+        formData,
+        layoutHints: { ...COL_WIDTHS },
+        _tableWidth: TOTAL_TABLE_WIDTH,
+        assets: logoDataUri ? { logoDataUri } : {},
+        savedAt: Date.now(),
+      };
+      await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
       await removeDraft(draftKey);
       alert('Submitted and saved to history');
       if (navigation && navigation.navigate) navigation.navigate('Home');
@@ -189,7 +221,7 @@ export default function Kitchen_DailyCleaningForm() {
       <View style={styles.headerTop}>
         <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>
-        <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>KITCHEN DAILY CLEANING & SANITIZING LOG SHEET</Text>
+        <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET (KITCHEN)</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={handleBack} style={{ marginRight: 8, padding: 8, backgroundColor: '#eee', borderRadius: 6 }}><Text>Back</Text></TouchableOpacity>
           <TouchableOpacity onPress={handleSaveDraft} style={{ marginRight: 8, padding: 8, backgroundColor: '#f0ad4e', borderRadius: 6 }}><Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text></TouchableOpacity>

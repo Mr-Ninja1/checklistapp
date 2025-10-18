@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 
 const DRAFT_KEY = 'thawing_temperature_log_draft';
 const MAX_ROWS = 20;
@@ -27,6 +29,7 @@ const initialMeta = {
 export default function ThawingTemperatureLog() {
     const [rows, setRows] = useState(initialRows);
     const [meta, setMeta] = useState(initialMeta);
+    const [logoDataUri, setLogoDataUri] = useState(null);
     const [busy, setBusy] = useState(false);
     const saveTimer = useRef(null);
 
@@ -52,6 +55,16 @@ export default function ThawingTemperatureLog() {
                 }
             } catch (e) { console.warn('load draft', e); }
         })();
+        // embed logo as base64 for deterministic saved payload rendering
+        (async () => {
+            try {
+                const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+                if (!asset.localUri) await asset.downloadAsync();
+                const uri = asset.localUri || asset.uri;
+                const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+                if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+            } catch (e) { /* ignore */ }
+        })();
         return () => { mounted = false; };
     }, []);
 
@@ -65,25 +78,59 @@ export default function ThawingTemperatureLog() {
     const setMetaField = (k,v) => setMeta(prev => ({ ...prev, [k]: v }));
 
     const handleSubmit = async () => {
-        const logData = rows.filter(r => r.foodItem && r.foodItem.trim() !== '');
-        if (logData.length === 0) { Alert.alert('Cannot Submit','Please enter at least one food item before submitting.'); return; }
+        // save all rows (including empty) so presentational matches editable form
+        const logData = rows.map((r, i) => ({ index: i + 1, ...r }));
         setBusy(true);
         try {
-            await addFormHistory({ title: 'Thawing Temperature Log', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { ...meta, rows: logData } });
+            const normalizedMeta = { companyName: 'BRAVO BRANDS LIMITED', ...meta };
+            // Use a slightly narrower TABLE_WIDTH optimized for A4 landscape printing (approx 1000px -> 900px)
+            const TABLE_WIDTH = 900;
+            const flexMap = COL_FLEX || {};
+            const flexTotal = Object.values(flexMap).reduce((s,v)=>s+(Number(v)||0),0) || 1;
+            // Compute column pixel widths expected by presentational renderer.
+            // Presentational expects WIDTHS keys: INDEX, FOOD_ITEM, TIME, TEMP, SIGN, STAFF_NAME
+            const widthFor = k => Math.round((TABLE_WIDTH * (Number(flexMap[k]) || 0)) / flexTotal);
+            const WIDTHS = {
+                INDEX: widthFor('INDEX'),
+                FOOD_ITEM: widthFor('FOOD_ITEM'),
+                // TIME_TEMP_SIGN represents the flex for each of TIME/TEMP/SIGN columns
+                TIME: widthFor('TIME_TEMP_SIGN'),
+                TEMP: widthFor('TIME_TEMP_SIGN'),
+                SIGN: widthFor('TIME_TEMP_SIGN'),
+                STAFF_NAME: widthFor('STAFF_NAME'),
+            };
+
+            const payload = {
+                formType: 'ThawingTemperatureLog',
+                templateVersion: 'v1.0',
+                title: 'Thawing Temperature Log',
+                date: normalizedMeta.issueDate || getTodayDate(),
+                metadata: normalizedMeta,
+                formData: logData,
+                layoutHints: { COL_FLEX: flexMap, WIDTHS },
+                _tableWidth: TABLE_WIDTH,
+                assets: logoDataUri ? { logoDataUri } : {},
+                savedAt: Date.now(),
+            };
+
+            await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
             await removeDraft(DRAFT_KEY);
             setRows(initialRows);
             setMeta(prev => ({ ...initialMeta, issueDate: getTodayDate(), complexManagerSignature: '' }));
+            Alert.alert('Saved', 'Form saved');
         } catch (e) { console.warn('submit error', e); Alert.alert('Error','Failed to submit log.'); }
         setBusy(false);
     };
 
     const handleSaveDraft = async () => { setBusy(true); try { await setDraft(DRAFT_KEY, { rows, meta }); } catch (e) { console.warn('save draft', e); } setBusy(false); };
 
-    const COL_FLEX = { INDEX: 0.6, FOOD_ITEM: 3.0, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 1.5 };
+    // Reduce the INDEX and FOOD_ITEM relative widths so the table fits better on A4 landscape
+    // Give more relative weight to STAFF_NAME so long names fit when saved
+    const COL_FLEX = { INDEX: 0.45, FOOD_ITEM: 1.5, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 2.5 };
 
     return (
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={styles.content}>
+            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 220 }]}> 
                 <View style={styles.metaContainer}>
                     <View style={styles.metaHeaderBox}>
                         <View style={styles.brandRow}>

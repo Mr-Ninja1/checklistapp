@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 
@@ -69,14 +71,69 @@ export default function HotHoldingTemperatureLog() {
     const setMetaField = (k, v) => setMeta(prev => ({ ...prev, [k]: v }));
 
     const handleSubmit = async () => {
-        const logData = rows.filter(r => r.foodItem && r.foodItem.trim() !== '');
-        if (logData.length === 0) { Alert.alert('Cannot Submit', 'Please enter at least one food item before submitting the log.'); return; }
+        const nonEmpty = rows.filter(r => r.foodItem && r.foodItem.trim() !== '');
+        if (nonEmpty.length === 0) { Alert.alert('Cannot Submit', 'Please enter at least one food item before submitting the log.'); return; }
         setBusy(true);
         try {
-            await addFormHistory({ title: 'Hot Holding Temperature Log', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { ...meta, rows: logData } });
+            // Build canonical payload
+            const TABLE_WIDTH = 900; // A4-like width used for deterministic saved renderings
+            const COL_FLEX = { INDEX: 0.6, FOOD_ITEM: 2.5, TIME_INTO_HOLD: 1.5, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 2.0 };
+            const totalFlex = COL_FLEX.INDEX + COL_FLEX.FOOD_ITEM + COL_FLEX.TIME_INTO_HOLD + (COL_FLEX.TIME_TEMP_SIGN * 9) + COL_FLEX.STAFF_NAME;
+            const baseUnit = TABLE_WIDTH / totalFlex;
+            const widths = {
+                INDEX: Math.round(baseUnit * COL_FLEX.INDEX),
+                FOOD_ITEM: Math.round(baseUnit * COL_FLEX.FOOD_ITEM),
+                TIME_INTO_HOLD: Math.round(baseUnit * COL_FLEX.TIME_INTO_HOLD),
+                // time/temp/sign for 3 records
+                TIME1: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                TEMP1: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                SIGN1: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                TIME2: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                TEMP2: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                SIGN2: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                TIME3: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                TEMP3: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                SIGN3: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
+                STAFF_NAME: Math.round(baseUnit * COL_FLEX.STAFF_NAME),
+            };
+
+            // Fix rounding delta by adding leftover to STAFF_NAME
+            const allocated = Object.values(widths).reduce((s, v) => s + v, 0);
+            const delta = TABLE_WIDTH - allocated;
+            if (delta > 0) widths.STAFF_NAME += delta;
+
+            // Embed logo as base64 data uri (deterministic rendering)
+            let logoDataUri = null;
+            try {
+                const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+                await asset.downloadAsync();
+                const b64 = await FileSystem.readAsStringAsync(asset.localUri || asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+                logoDataUri = `data:image/jpeg;base64,${b64}`;
+            } catch (e) { console.warn('logo embed failed', e); }
+
+            const payload = {
+                formType: 'HotHoldingTemperatureLog',
+                templateVersion: '1.0',
+                title: 'Hot Holding Temperature Log',
+                date: meta.issueDate || getTodayDate(),
+                metadata: {
+                    companyName: 'BRAVO BRANDS LIMITED',
+                    compiledBy: meta.compiledBy,
+                    approvedBy: meta.approvedBy,
+                },
+                // Save all rows (including empty ones) so presentational rendering matches the editor
+                formData: rows,
+                layoutHints: { COL_FLEX, WIDTHS: widths },
+                _tableWidth: TABLE_WIDTH,
+                assets: { logoDataUri },
+                savedAt: Date.now(),
+            };
+
+            await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
             await removeDraft(DRAFT_KEY);
             setRows(initialRows);
             setMeta(prev => ({ ...initialMeta, issueDate: getTodayDate(), chefSignature: '', correctiveAction: '', complexManagerSignature: '' }));
+            Alert.alert('Saved', 'Form saved');
         } catch (e) { console.warn('submit error', e); Alert.alert('Error', 'Failed to submit log. Please try again.'); }
         setBusy(false);
     };
@@ -213,7 +270,7 @@ export default function HotHoldingTemperatureLog() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f7fbfc' },
-    content: { padding: 12 },
+    content: { padding: 12, paddingBottom: 220 },
     metaContainer: { borderWidth: 2, borderColor: '#333', marginBottom: 12, backgroundColor: '#fff' },
     metaHeaderBox: { flexDirection: 'row', justifyContent: 'space-between', padding: 4, borderBottomWidth: 1, borderColor: '#333' },
     brandRow: { flexDirection: 'row', alignItems: 'center', width: '50%' },

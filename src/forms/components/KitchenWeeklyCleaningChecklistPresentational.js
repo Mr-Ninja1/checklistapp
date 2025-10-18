@@ -35,7 +35,7 @@ export default function KitchenWeeklyCleaningChecklistPresentational({ payload }
 
         <ScrollView horizontal contentContainerStyle={{ minWidth: _tableWidth || 800 }}>
           <View style={styles.table}>
-            <View style={[styles.headerRow, { backgroundColor: '#4B5563' }]}>
+            <View style={[styles.headerRow, { backgroundColor: '#f3f5f7' }]}>
               <View style={[styles.headerCell, { width: COL.AREA || 300 }]}><Text style={styles.headerText}>Area to be cleaned</Text></View>
               <View style={[styles.headerCell, { width: COL.FREQ || 150 }]}><Text style={styles.headerText}>Frequency</Text></View>
               {WEEK_DAYS.map(d => (
@@ -87,16 +87,16 @@ const styles = StyleSheet.create({
   companyText: { fontSize: 16, fontWeight: '800', color: '#374151', marginLeft: 8 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, width: '100%' },
   metaText: { fontSize: 12, color: '#444' },
-  table: { borderWidth: 1, borderColor: '#4B5563' },
+  table: { borderWidth: 1, borderColor: '#d1d5db' },
   headerRow: { flexDirection: 'row' },
-  headerCell: { padding: 6, borderRightWidth: 1, borderRightColor: '#4B5563', alignItems: 'center', justifyContent: 'center' },
-  headerGroup: { flexDirection: 'row', borderRightWidth: 1, borderRightColor: '#4B5563' },
-  headerText: { color: '#fff', fontWeight: '700' },
-  row: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#4B5563', minHeight: 40, backgroundColor: '#fff' },
-  cell: { padding: 6, borderRightWidth: 1, borderRightColor: '#4B5563', justifyContent: 'center' },
+  headerCell: { padding: 6, borderRightWidth: 1, borderRightColor: '#e6e6e6', alignItems: 'center', justifyContent: 'center' },
+  headerGroup: { flexDirection: 'row', borderRightWidth: 1, borderRightColor: '#e6e6e6' },
+  headerText: { color: '#111827', fontWeight: '700' },
+  row: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#e6e6e6', minHeight: 40, backgroundColor: '#fff' },
+  cell: { padding: 6, borderRightWidth: 1, borderRightColor: '#e6e6e6', justifyContent: 'center' },
   areaText: { fontSize: 12, color: '#374151' },
   freqText: { fontSize: 12, color: '#6B7280' },
-  dayGroup: { flexDirection: 'row', borderRightWidth: 1, borderRightColor: '#4B5563' },
+  dayGroup: { flexDirection: 'row', borderRightWidth: 1, borderRightColor: '#e6e6e6' },
   footerRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between' },
   footerText: { fontSize: 12, fontWeight: '700' }
 });

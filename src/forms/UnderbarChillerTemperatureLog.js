@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
-// MOCK UTILITIES for standalone environment (These will be provided externally in the platform)
-const getDraft = async (key) => { return null; };
-const setDraft = async (key, data) => { console.log(`[DRAFT SAVED] ${key}:`, data); };
-const removeDraft = async (key) => { console.log(`[DRAFT CLEARED] ${key}`); };
-const addFormHistory = async (data) => { console.log(`[SUBMITTED]`, data); Alert.alert("Success", "Log successfully submitted and saved to history!"); };
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { addFormHistory } from '../utils/formHistory';
 
 const DRAFT_KEY = 'underbar_chiller_temperature_log_draft';
 const MAX_DAYS = 31;
@@ -43,6 +42,7 @@ export default function UnderbarChillerTemperatureLog() {
   const [rows, setRows] = useState(initialRows);
   const [meta, setMeta] = useState(initialMeta);
   const [busy, setBusy] = useState(false);
+  const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
 
   const getTodayDate = () => {
@@ -73,6 +73,14 @@ export default function UnderbarChillerTemperatureLog() {
           const currentMonthName = monthNames[now.getMonth()];
           setMeta(prev => ({ ...prev, month: (prev.month && prev.month.trim() !== '') ? prev.month : currentMonthName }));
         }
+        // embed logo
+        try {
+          const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+          if (!asset.localUri) await asset.downloadAsync();
+          const uri = asset.localUri || asset.uri;
+          const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+          if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+        } catch (e) { /* ignore */ }
       } catch (e) { console.warn('load draft', e); }
     })();
     return () => { mounted = false; };
@@ -89,24 +97,28 @@ export default function UnderbarChillerTemperatureLog() {
   const setMetaField = (k, v) => setMeta(prev => ({ ...prev, [k]: v }));
 
   const handleSubmit = async () => {
-    const logData = rows.map((r, i) => ({ day: i + 1, ...r })).filter(r =>
-      (r.tempMorning && r.tempMorning.toString().trim() !== '') || (r.tempAfternoon && r.tempAfternoon.toString().trim() !== '') || (r.tempEvening && r.tempEvening.toString().trim() !== '')
-    );
+    // Always save all rows (including empty) so presentational render matches the exact form
+    const logData = rows.map((r, i) => ({ day: i + 1, ...r }));
 
-    if (meta.month.trim() === '' || meta.location.trim() === '' || logData.length === 0) {
-      Alert.alert('Cannot Submit', 'Please fill in the Month, Location, and at least one temperature record before submitting.');
-      return;
-    }
+    // Allow submitting even when metadata or log rows are empty (testing mode)
 
     setBusy(true);
     try {
-      await addFormHistory({
+      const payload = {
+        formType: 'UnderbarChillerTemperatureLog',
+        templateVersion: 'v1.0',
         title: 'Underbar Chiller Temperature Log',
-        month: meta.month,
-        year: meta.year,
+        date: meta.issueDate || new Date().toLocaleDateString(),
+        metadata: meta,
+        formData: logData,
+        layoutHints: { COL_FLEX, GROUP_FLEX },
+        _tableWidth: 800,
+        assets: logoDataUri ? { logoDataUri } : {},
         savedAt: Date.now(),
-        meta: { ...meta, rows: logData }
-      });
+      };
+  await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
+  // Show confirmation that form was saved
+  try { Alert.alert('Saved', 'Form saved'); } catch (e) { /* ignore */ }
       await removeDraft(DRAFT_KEY);
       // Reset form
       setRows(initialRows);
@@ -148,13 +160,13 @@ export default function UnderbarChillerTemperatureLog() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+  <ScrollView contentContainerStyle={styles.content}>
 
         {/* --- 1. Header (Metadata Block) --- */}
         <View style={styles.metaContainer}>
           <View style={styles.metaHeaderBox}>
             <View style={styles.brandRow}>
-              {/* Try to load local logo asset; if not present, fallback to placeholder */}
+              {/* Logo and company */}
               {
                 (() => {
                   try {
@@ -168,6 +180,16 @@ export default function UnderbarChillerTemperatureLog() {
               <View style={styles.brandTextWrap}>
                 <Text style={styles.companyName}>{meta.companyName || 'Bravo'}</Text>
                 <Text style={styles.brandSubtitle}>Food Safety Management System</Text>
+              </View>
+
+              {/* Top action buttons placed inline with logo */}
+              <View style={styles.headerButtons}>
+                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
+                  <Text style={styles.headerBtnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
+                  <Text style={styles.headerBtnText}>{busy ? 'Submitting...' : 'Submit'}</Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -239,7 +261,6 @@ export default function UnderbarChillerTemperatureLog() {
               <Text style={styles.hText}>Sup Name and Signature</Text>
             </View>
           </View>
-
           {/* Header Row 2: Detail Labels (Temp, Staff Sign) */}
           <View style={[styles.tableHeaderRow, styles.detailHeader]}>
             <View style={[styles.hCell, styles.borderRight, { flex: COL_FLEX.DATE }]} />
@@ -307,13 +328,9 @@ export default function UnderbarChillerTemperatureLog() {
           </View>
         </View>
 
-        {/* --- 6. Action Buttons --- */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
-        </View>
-
+        {/* add extra bottom padding so content isn't hidden behind the footer */}
       </ScrollView>
+
     </View>
   );
 }
@@ -345,6 +362,9 @@ const styles = StyleSheet.create({
   brandTitle: { fontSize: 12, fontWeight: '700', color: '#333' },
   companyName: { fontSize: 16, fontWeight: '800', color: '#185a9d', marginRight: 12 },
   brandSubtitle: { fontSize: 10, color: '#444', fontWeight: '500' },
+  headerButtons: { flexDirection: 'row', marginLeft: 'auto', alignItems: 'center' },
+  headerBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginLeft: 8, elevation: 2 },
+  headerBtnText: { color: '#fff', fontWeight: '700' },
   docInfoGrid: { width: '40%', flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, borderColor: '#333', fontSize: 8 },
   docInfoLabel: { width: '50%', padding: 2, fontWeight: '700', borderRightWidth: 1, borderBottomWidth: 1, borderColor: '#333', textAlign: 'left' },
   docInfoValue: { width: '50%', padding: 2, fontWeight: '400', borderBottomWidth: 1, borderColor: '#333', textAlign: 'left' },
