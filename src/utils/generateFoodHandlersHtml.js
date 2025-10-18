@@ -32,8 +32,10 @@ export default function generateFoodHandlersHtml(formData = {}, options = {}) {
   table { border-collapse: collapse; width: 100%; margin-top: 6mm; table-layout: fixed; font-size: 9pt; }
   th, td { border: 1pt solid #444; padding: 3pt 4pt; font-size: 9pt; }
       th { background: #f6f9fb; font-weight: 800; color: #0B4F8C; }
-      .checkbox { display:inline-block; width: 14pt; height: 14pt; border: 1.2pt solid #444; vertical-align: middle; margin-right: 4pt; }
-      .checked { background: #0B4F8C; }
+  .checkbox { display:inline-block; width: 14pt; height: 14pt; border: 1.2pt solid #444; vertical-align: middle; margin-right: 4pt; box-sizing: border-box; position: relative; }
+  /* For printing, avoid light-on-dark ticks; use dark tick glyph and keep background white so it prints reliably */
+  .checked { background: #fff; }
+  .checked:after { content: '✓'; position: absolute; left: 1pt; top: -1pt; font-size: 11pt; line-height: 14pt; color: #000; font-weight: 800; }
   /* Footer is fixed to bottom inside A4 so it doesn't push content to another page */
   .footer { position: absolute; bottom: 6mm; left: 6mm; right: 6mm; font-size: 9pt; color: #0B4F8C; text-align:center; }
   /* Reduce table header/footer spacing to help fit everything on one page */
@@ -72,6 +74,7 @@ export default function generateFoodHandlersHtml(formData = {}, options = {}) {
   const rowsHtml = handlers.map((row, idx) => {
     const checksHtml = timeSlots.map(ts => {
       const checked = row.checks && row.checks[ts];
+      // Use the checked class which provides a visible black tick via :after pseudo-element
       return `<td style="text-align:center">${checked ? '<span class="checkbox checked"></span>' : '<span class="checkbox"></span>'}</td>`;
     }).join('');
 

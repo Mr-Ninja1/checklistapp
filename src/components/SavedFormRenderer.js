@@ -41,7 +41,7 @@ import { View, Text, StyleSheet } from 'react-native';
 // Add other form imports as needed
 
 // SavedFormRenderer renders a saved payload using the same form component (read-only)
-export default function SavedFormRenderer({ savedPayload }) {
+export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   if (!savedPayload) return null;
 
   // The Saved Forms history entries sometimes wrap the payload in different shapes
@@ -64,7 +64,8 @@ export default function SavedFormRenderer({ savedPayload }) {
   }
 
   // Detect common form types and render the appropriate presentational component
-  const type = (payload?.formType || payload?.formTypeName || payload?.title || '').toString();
+  // include history entry top-level title as a fallback when payload lacks title
+  const type = (payload?.formType || payload?.formTypeName || payload?.title || savedPayload?.title || '').toString();
 
   // Chilled & Frozen Receiving
   if (/ChilledFrozenReceivingForm|Chilled & Frozen Receiving|ChilledFrozenReceiving/i.test(type)) {
@@ -176,7 +177,7 @@ export default function SavedFormRenderer({ savedPayload }) {
 
   // Bakery forms
   if (/Bakery_SanitizingLog|Sanitizing Log|Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery/i.test(type)) {
-    return <BakerySanitizingPresentational payload={payload} />;
+    return <BakerySanitizingPresentational payload={payload} embedded={embedded} />;
   }
   if (/Bakery_CleaningChecklist|Bakery Area Cleaning Checklist|BAKERY AREA CLEANING CHECKLIST/i.test(type)) {
     return <BakeryCleaningChecklistPresentational payload={payload} />;

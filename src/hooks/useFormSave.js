@@ -26,6 +26,23 @@ export default function useFormSave(a, b = {}) {
 
   const { formType = 'form', draftId, waitForSave = true } = options;
   const stableDraftId = draftId || `${formType}_draft`;
+  // Helper: call the provided buildPayload/getPayload safely and catch runtime errors
+  const safeGetPayload = (status = 'draft') => {
+    try {
+      // getPayload may be the buildPayload function or a wrapper
+      return typeof getPayload === 'function' ? getPayload(status) : {};
+    } catch (err) {
+      // Log a helpful message with form context for debugging in dev
+      console.error(`useFormSave: buildPayload threw for formType='${formType}' status='${status}'`, err);
+      // Surface a friendly notification to the caller via the hook state if mounted
+      if (mounted.current) {
+        setNotificationMessage(`Save failed: form serializer error`);
+        setShowNotification(true);
+      }
+      // Return a minimal safe payload to avoid crashes in storage layer
+      return { formType, title: formType, date: new Date().toLocaleDateString(), metadata: {}, formData: [], layoutHints: {}, savedAt: Date.now() };
+    }
+  };
   const autoSaveTimer = useRef(null);
   const inFlightSave = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -42,7 +59,7 @@ export default function useFormSave(a, b = {}) {
       if (inFlightSave.current) return; // avoid overlapping saves
       inFlightSave.current = true;
       try {
-        const payload = getPayload('draft');
+        const payload = safeGetPayload('draft');
         // Use saveDraft for autosave so we do not add a history entry on every keystroke
         if (formStorage.saveDraft) await formStorage.saveDraft(stableDraftId, payload);
         else await formStorage.saveForm(stableDraftId, payload);
@@ -65,7 +82,7 @@ export default function useFormSave(a, b = {}) {
     if (inFlightSave.current) return; // avoid overlapping
     inFlightSave.current = true;
     try {
-      const payload = getPayload('draft');
+      const payload = safeGetPayload('draft');
       const id = `${formType}_${Date.now()}`;
       await formStorage.saveForm(id, payload);
       // Intentionally silent for drafts/autosave: do not set isSaving or showNotification.
@@ -92,7 +109,7 @@ export default function useFormSave(a, b = {}) {
         }
       };
       await waitForInFlight(5000);
-      const payload = getPayload('submitted');
+  const payload = safeGetPayload('submitted');
       const id = `${formType}_${Date.now()}`;
 
       // Start saving. Wait a short while for quick saves to finish so the

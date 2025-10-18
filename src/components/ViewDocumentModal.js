@@ -37,11 +37,9 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
           {/* Vertical scroll for modal content; enable nested scrolling so inner horizontal scrolls work */}
           <ScrollView style={{ maxHeight: '92%' }} contentContainerStyle={{ paddingBottom: 12 }} nestedScrollEnabled={true}>
             <View ref={formRef} collapsable={false}>
-              {/* Allow horizontal scrolling inside the modal for wide tables */}
-              <ScrollView horizontal={true} nestedScrollEnabled={true} contentContainerStyle={{ flexGrow: 1 }}>
-                {/* Render saved form via SavedFormRenderer (new unified renderer) */}
-                <SavedFormRenderer savedPayload={form} />
-              </ScrollView>
+              {/* Render the saved form directly; the presentational renderer handles its own horizontal scrolling
+                  (so we avoid wrapping another horizontal ScrollView which would steal gestures). */}
+              <SavedFormRenderer savedPayload={form} embedded={true} />
             </View>
           </ScrollView>
 

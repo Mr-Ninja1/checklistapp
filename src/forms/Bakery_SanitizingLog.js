@@ -4,6 +4,8 @@ import useResponsive from '../utils/responsive';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import useFormSave from '../hooks/useFormSave';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import { addFormHistory } from '../utils/formHistory';
 
 // TIME SLOTS (AM shift) from cat.md
@@ -31,6 +33,7 @@ export default function Bakery_SanitizingLog() {
   const resp = useResponsive();
   const { width: vw, s, ms } = resp;
   const [formData, setFormData] = useState(makeInitial());
+  const [logoDataUri, setLogoDataUri] = useState(null);
   const now = new Date();
   const sysDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
@@ -40,14 +43,57 @@ export default function Bakery_SanitizingLog() {
   const draftKey = 'bakery_sanitizing_log';
   const saveTimer = useRef(null);
   const navigation = (typeof require('@react-navigation/native') !== 'undefined') ? require('@react-navigation/native').useNavigation() : null;
-  // useFormSave integration
-  const buildPayload = () => ({
-    formType: 'Bakery_SanitizingLog',
-    templateVersion: 'v1',
-    title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery',
-    metadata,
-    formData,
-  });
+  // preload logo as base64 (best-effort) so saved payloads can embed branding
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          try {
+            const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+            if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+          } catch (e) {
+            // ignore embedding failures
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // useFormSave integration (include layoutHints and assets)
+  const buildPayload = (status = 'draft') => {
+    // compute layout hints similar to the editable layout
+    const COL_WIDTHS = {
+      EQUIP: Math.max(120, Math.round(vw * 0.22)),
+      PPM: Math.max(60, Math.round(vw * 0.12)),
+      TIME: Math.max(44, Math.round(vw * 0.04)),
+      STAFF: Math.max(90, Math.round(vw * 0.12)),
+      SIGN: Math.max(90, Math.round(vw * 0.12)),
+      SUP: Math.max(100, Math.round(vw * 0.14)),
+    };
+  const totalTime = (TIME_SLOTS || []).length * COL_WIDTHS.TIME;
+    const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIP + COL_WIDTHS.PPM + totalTime + COL_WIDTHS.STAFF + COL_WIDTHS.SIGN + COL_WIDTHS.SUP + (COL_WIDTHS.SUP || 0);
+
+    return {
+      formType: 'Bakery_SanitizingLog',
+      templateVersion: 'v1',
+      title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery',
+      date: metadata.date,
+      metadata,
+      timeSlots: TIME_SLOTS,
+      formData,
+      layoutHints: COL_WIDTHS,
+      _tableWidth: TOTAL_TABLE_WIDTH,
+      assets: logoDataUri ? { logoDataUri } : undefined,
+      savedAt: Date.now(),
+      status,
+    };
+  };
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: draftKey, clearOnSubmit: () => {
     setFormData(makeInitial()); setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
   } });

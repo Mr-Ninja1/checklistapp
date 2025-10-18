@@ -155,9 +155,10 @@ export default function FormSavesScreen() {
                               // 3) If still not found, fall back to history entry fields
                               if (!payload) payload = form;
 
-                              // Ensure savedAt/pdfPath remain available for the modal
+                              // Ensure savedAt/pdfPath/title remain available for the modal
                               payload.pdfPath = form.pdfPath;
                               payload.savedAt = form.savedAt;
+                              payload.title = payload.title || form.title || form.pdfPath?.split('/')?.pop();
                               if (payload.meta) delete payload.meta;
 
                               // opened saved form
