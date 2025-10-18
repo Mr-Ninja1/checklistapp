@@ -13,12 +13,18 @@ async function saveForm(formId, payload) {
     await FileSystem.writeAsStringAsync(filePath, JSON.stringify(wrapped));
 
     // Register a lightweight history entry so the saved form appears in the saved list
+    // Register a lightweight history entry so the saved form appears in the saved list.
+    // Make history registration fire-and-forget so slow history writes don't block the
+    // primary save operation (this avoids long submit hangs when history or I/O is slow).
     try {
-      // include a small snapshot of the payload inside the history meta so the Saved Forms
-      // screen can render the presentational quickly even if the file can't be loaded later.
-      await addFormHistory({ title: payload.title || payload.formType || 'Saved Form', date: payload.date || null, shift: payload.shift || null, savedAt: Date.now(), meta: { formId, filePath, payload } });
+      const historyEntry = { title: payload.title || payload.formType || 'Saved Form', date: payload.date || null, shift: payload.shift || null, savedAt: Date.now(), meta: { formId, filePath, payload } };
+      // don't await - run in background and log any failures
+      addFormHistory(historyEntry).catch(e => {
+        console.warn('formStorage: addFormHistory failed', e);
+      });
     } catch (e) {
-      console.warn('formStorage: addFormHistory failed', e);
+      // In the unlikely event constructing the history entry throws, log and continue
+      console.warn('formStorage: failed to schedule addFormHistory', e);
     }
 
     return { filePath };

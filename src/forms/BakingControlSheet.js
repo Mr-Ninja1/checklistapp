@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
@@ -31,6 +33,7 @@ const initialMetadata = {
 export default function BakingControlSheet({ navigation }) {
   const [formData, setFormData] = useState(initialLogState);
   const [metadata, setMetadata] = useState(initialMetadata);
+  const [logoDataUri, setLogoDataUri] = useState(null);
 
   const buildPayload = (status = 'draft') => ({
     formType: 'BakingControlSheet',
@@ -38,8 +41,9 @@ export default function BakingControlSheet({ navigation }) {
     title: 'Baking Control Sheet',
     metadata,
     formData,
-    layoutHints: {},
-    assets: {},
+    layoutHints: columnHeaders.reduce((acc, c) => ({ ...acc, [c.key]: c.width }), {}),
+    _tableWidth: columnHeaders.reduce((s,c) => s + c.width, 0),
+    assets: logoDataUri ? { logoDataUri } : {},
     savedAt: new Date().toISOString(),
     status,
   });
@@ -70,6 +74,15 @@ export default function BakingControlSheet({ navigation }) {
           setMetadata(prev => ({ ...prev, issueDate: `${dd}/${mm}/${yyyy}` }));
         }
       } catch (e) { console.warn('load draft failed', e); }
+      // preload logo as base64 for saved payloads (best-effort)
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+          if (b64) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+        }
+      } catch (e) { /* ignore */ }
     })();
     return () => { mounted = false; };
   }, []);
@@ -114,7 +127,7 @@ export default function BakingControlSheet({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={{ ...styles.content, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         <View style={styles.headerBox}>
               <View style={styles.headerTop}>
                 <View style={styles.logoWrap}>

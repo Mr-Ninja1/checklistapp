@@ -13,6 +13,7 @@ import {
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import { getDraft } from '../utils/formDrafts';
 
 // --- STUBBED ASYNC STORAGE AND API UTILITIES ---
 // NOTE: Since this environment cannot access native AsyncStorage, these functions
@@ -92,7 +93,7 @@ export default function BakeryCleaningChecklist() {
     const [metadata, setMetadata] = useState({ location: '', week: '', month: issueMonth, year: issueYear });
     const [verification, setVerification] = useState({ hseqManager: '', complexManager: '' });
     const [busy, setBusy] = useState(false);
-    const saveTimer = useRef(null);
+    
     // useFormSave integration
     const buildPayload = () => ({
         formType: 'BakeryCleaningChecklist',
@@ -101,8 +102,12 @@ export default function BakeryCleaningChecklist() {
         metadata,
         verification,
         formData,
+        // layout hints help presentational renderer to size columns when showing saved forms
+        layoutHints: COL_WIDTHS,
+        _tableWidth: TABLE_WIDTH,
+        savedAt: Date.now(),
     });
-    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, formType: 'Bakery_CleaningChecklist', clearOnSubmit: () => {
         setFormData(initialCleaningState); setMetadata({ location: '', week: '', month: issueMonth, year: issueYear }); setVerification({ hseqManager: '', complexManager: '' });
     } });
 
@@ -228,6 +233,28 @@ export default function BakeryCleaningChecklist() {
             ))}
         </View>
     );
+
+    // Load draft on mount (if available)
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getDraft(DRAFT_KEY);
+                if (!d || !mounted) return;
+                if (d.formData) setFormData(d.formData);
+                if (d.metadata) setMetadata(d.metadata);
+                if (d.verification) setVerification(d.verification);
+            } catch (e) {
+                // ignore load errors
+            }
+        })();
+        return () => { mounted = false; };
+    }, []);
+
+    // Schedule autosave when form data or metadata changes
+    useEffect(() => {
+        try { scheduleAutoSave(700); } catch (e) { /* ignore */ }
+    }, [formData, metadata, verification]);
 
     return (
         <View style={styles.container}>
@@ -355,7 +382,14 @@ export default function BakeryCleaningChecklist() {
                             )}
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={async () => { await handleSubmit(() => handleSubmitLocal()); }}
+                            onPress={async () => {
+                                setBusy(true);
+                                try {
+                                    // useFormSave will persist the canonical payload; afterwards run local history/notification
+                                    await handleSubmit();
+                                    await handleSubmitLocal();
+                                } finally { setBusy(false); }
+                            }}
                             style={[styles.button, styles.submitButton]}
                             disabled={busy}
                         >

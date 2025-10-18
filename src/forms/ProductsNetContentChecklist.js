@@ -3,6 +3,8 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image 
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 
@@ -63,13 +65,39 @@ export default function ProductsNetContentChecklist() {
           setFormData(prev => prev.map(item => ({ ...item, date: item.date || todayStr })));
         }
       } catch (e) { console.warn('load draft failed', e); }
+      // preload logo as base64 for saved payloads
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+          if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+        }
+      } catch (e) { /* ignore */ }
     })();
     return () => { mounted = false; };
   }, []);
 
   // autosave handled by useFormSave scheduleAutoSave
 
-  const buildPayload = (status = 'draft') => ({ formType: 'ProductsNetContentChecklist', templateVersion: '01', title: 'Products Net Content Checklist', metadata, formData, verification, status });
+  const [logoDataUri, setLogoDataUri] = useState(null);
+
+  // payload includes layout hints and preloaded logo for faithful saved render
+  const columnFlex = [3,1,2,1,1,1,1,1];
+  const buildPayload = (status = 'draft') => ({
+    formType: 'ProductsNetContentChecklist',
+    templateVersion: '01',
+    title: 'Products Net Content Checklist',
+    metadata,
+    formData,
+    verification,
+    layoutHints: { name: 3, date: 1, expectedWeight: 2, weight1: 1, weight2: 1, weight3: 1, weight4: 1, weight5: 1 },
+    _tableWidth: columnFlex.reduce((s, v) => s + v, 0),
+    assets: logoDataUri ? { logoDataUri } : {},
+    savedAt: new Date().toISOString(),
+    status,
+  });
+
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setVerification({ supervisorSign: '', hseqManagerSign: '', complexManagerSign: '' }); } });
 
   const handleEntryChange = useCallback((index, field, value) => {
@@ -92,14 +120,19 @@ export default function ProductsNetContentChecklist() {
     setBusy(true);
     try {
       await handleSubmit();
-      await addFormHistory({ title: 'Products Net Content Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } });
-    } catch (e) { console.warn('submit failed', e); }
-    setBusy(false);
+      // Register history in background; don't await so a slow history write doesn't block the UI
+      addFormHistory({ title: 'Products Net Content Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } })
+        .catch(e => console.warn('addFormHistory failed', e));
+    } catch (e) {
+      console.warn('submit failed', e);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={{ ...styles.content, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
 
         <View style={styles.headerBox}>
           <View style={styles.logoRow}>
@@ -127,21 +160,13 @@ export default function ProductsNetContentChecklist() {
 
           {formData.map((item, idx) => (
             <View key={idx} style={styles.row}>
-              <View style={[styles.cell, { flex: 3 }]}>{
-                item.name && String(item.name).trim() ? (
-                  <Text style={styles.staticText}>{item.name}</Text>
-                ) : (
-                  <TextInput style={styles.input} value={item.name} onChangeText={v => handleEntryChange(idx, 'name', v)} placeholder="Product name" />
-                )
-              }</View>
+              <View style={[styles.cell, { flex: 3 }]}>
+                <TextInput style={styles.input} value={String(item.name || '')} onChangeText={v => handleEntryChange(idx, 'name', v)} placeholder="Product name" />
+              </View>
               <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.date} onChangeText={v => handleEntryChange(idx, 'date', v)} placeholder="DD/MM/YYYY" /></View>
-              <View style={[styles.cell, { flex: 2 }]}>{
-                item.expectedWeight && String(item.expectedWeight).trim() ? (
-                  <Text style={styles.staticText}>{item.expectedWeight}</Text>
-                ) : (
-                  <TextInput style={styles.input} value={item.expectedWeight} onChangeText={v => handleEntryChange(idx, 'expectedWeight', v)} placeholder="expected g" />
-                )
-              }</View>
+              <View style={[styles.cell, { flex: 2 }]}> 
+                <TextInput style={styles.input} value={String(item.expectedWeight || '')} onChangeText={v => handleEntryChange(idx, 'expectedWeight', v)} placeholder="expected g" />
+              </View>
               <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight1} onChangeText={v => handleEntryChange(idx, 'weight1', v)} keyboardType="numeric" /></View>
               <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight2} onChangeText={v => handleEntryChange(idx, 'weight2', v)} keyboardType="numeric" /></View>
               <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight3} onChangeText={v => handleEntryChange(idx, 'weight3', v)} keyboardType="numeric" /></View>

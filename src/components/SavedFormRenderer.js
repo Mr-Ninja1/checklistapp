@@ -28,6 +28,7 @@ import CustomerSatisfactionPresentational from '../forms/components/CustomerSati
 import CustomerSatisfactionQuestionnairePresentational from '../forms/components/CustomerSatisfactionQuestionnairePresentational';
 import BakerySanitizingPresentational from '../forms/components/BakerySanitizingPresentational';
 import BakeryCleaningChecklistPresentational from '../forms/components/BakeryCleaningChecklistPresentational';
+import BakingControlSheetPresentational from '../forms/components/BakingControlSheetPresentational';
 import MixingControlSheetPresentational from '../forms/components/MixingControlSheetPresentational';
 import ProductsNetContentChecklistPresentational from '../forms/components/ProductsNetContentChecklistPresentational';
 import KitchenWeeklyCleaningChecklistPresentational from '../forms/components/KitchenWeeklyCleaningChecklistPresentational';
@@ -59,6 +60,10 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
     // - { meta: { formData: [...] , metadata: {...} } }
     // - the canonical payload directly
     payload = savedPayload.payload || meta?.payload || meta || savedPayload;
+    // Ensure payload is an object — some history entries may be a plain string/title.
+    if (typeof payload !== 'object' || payload === null) {
+      payload = { title: String(payload) };
+    }
   } catch (e) {
     payload = savedPayload;
   }
@@ -179,8 +184,40 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   if (/Bakery_SanitizingLog|Sanitizing Log|Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery/i.test(type)) {
     return <BakerySanitizingPresentational payload={payload} embedded={embedded} />;
   }
-  if (/Bakery_CleaningChecklist|Bakery Area Cleaning Checklist|BAKERY AREA CLEANING CHECKLIST/i.test(type)) {
+  if (/Bakery_CleaningChecklist|Bakery Area Cleaning Checklist|BAKERY AREA CLEANING CHECKLIST|BakeryCleaningChecklist/i.test(type)) {
     return <BakeryCleaningChecklistPresentational payload={payload} />;
+  }
+
+  // Fallback detection: some saved entries may not include the exact formType/title
+  // but will contain a formData array where each item has a `days` map (Sun..Sat).
+  // Detect that shape and render the bakery cleaning presentational.
+  try {
+    const first = Array.isArray(payload?.formData) && payload.formData.length ? payload.formData[0] : null;
+    const hasDaysMap = first && typeof first.days === 'object' && first.days !== null && ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].every(d => Object.prototype.hasOwnProperty.call(first.days, d));
+    if (hasDaysMap || /\bbakery\b/i.test(type)) {
+      return <BakeryCleaningChecklistPresentational payload={payload} />;
+    }
+    // Mixing Control Sheet shape detection: some history entries may not include
+    // the canonical formType/title but will include formData rows with mixing fields.
+    const looksLikeMixing = first && typeof first === 'object' && (
+      Object.prototype.hasOwnProperty.call(first, 'prodDate') &&
+      Object.prototype.hasOwnProperty.call(first, 'prodName') &&
+      Object.prototype.hasOwnProperty.call(first, 'batchNo') &&
+      Object.prototype.hasOwnProperty.call(first, 'ingredients')
+    );
+    if (looksLikeMixing || /MixingControlSheet|Mixing Control Sheet/i.test(type)) {
+      return <MixingControlSheetPresentational payload={payload} />;
+    }
+    // Products Net Content Checklist detection: shape-based fallback for history entries
+    const looksLikeProductsNet = first && typeof first === 'object' && (
+      Object.prototype.hasOwnProperty.call(first, 'name') &&
+      Object.prototype.hasOwnProperty.call(first, 'expectedWeight')
+    );
+    if (looksLikeProductsNet || /ProductsNetContentChecklist|Products Net Content Checklist/i.test(type) || (payload?.metadata?.subject && /PRODUCTS NET CONTENT CHECKLIST/i.test(payload.metadata.subject))) {
+      return <ProductsNetContentChecklistPresentational payload={payload} />;
+    }
+  } catch (e) {
+    // ignore shape detection errors and continue to other matchers
   }
   // Kitchen Weekly Cleaning
   if (/KitchenWeeklyCleaningChecklist|Kitchen Weekly Cleaning Checklist|Kitchen_WeeklyCleaningChecklist/i.test(type)) {
@@ -213,6 +250,10 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // Mixing Control Sheet
   if (/MixingControlSheet|Mixing Control Sheet|MIXING CONTROL SHEET/i.test(type)) {
     return <MixingControlSheetPresentational payload={payload} />;
+  }
+  // Baking Control Sheet
+  if (/BakingControlSheet|Baking Control Sheet|BAKING CONTROL SHEET/i.test(type)) {
+    return <BakingControlSheetPresentational payload={payload} />;
   }
   // Products Net Content Checklist
   if (/ProductsNetContentChecklist|Products Net Content Checklist|PRODUCTS NET CONTENT CHECKLIST/i.test(type)) {

@@ -31,6 +31,9 @@ All forms save using this object structure:
 - For every form, create a presentational renderer (e.g. BinLinersChangingLogPresentational.js) that displays the saved payload exactly as the editable form, including all tables, branding, and layout.
 - Use the embedded logoDataUri for branding.
 - All tables must have fixed column widths and visible borders for pixel-perfect reproduction.
+ 
+Reminder: saved-presentational parity
+- When implementing saving logic, ensure the saved presentational renderer reproduces the editable form exactly: include the logo, company name, all metadata fields, every table column and sub-column, checkmarks and any 'cleaned by' text/initials. Use `layoutHints` and `_tableWidth` from the payload to size columns and prefer `assets.logoDataUri` for exact branding. This is required for every form so saved forms and exported PDFs match the editable UI pixel-for-pixel.
 
 ## SavedFormRenderer Dispatch
 - SavedFormRenderer.js must detect the form type and dispatch to the correct presentational renderer.
