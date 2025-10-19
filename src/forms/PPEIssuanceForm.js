@@ -128,7 +128,7 @@ const PPEIssuanceForm = () => {
         const buildPayload = (status = 'draft') => ({
             formType: 'PPEIssuanceForm',
             templateVersion: '01',
-            title: 'PPE Issuance',
+            title: 'Personal  Protective Equipment Log',
             metadata: { subject: 'Personal Protective Equipment', issueDate },
             formData: data,
             layoutHints: { id: 1, name: 3, jobTitle: 2, apron: 1, cap: 1, chefHat: 1, trousers: 1, safetyBoots: 1, shirt: 1, golfTShirt: 1, workSuit: 1, chefCoat: 1, staffNrc: 2, staffSign: 2, supSign: 2 },
@@ -225,7 +225,7 @@ const PPEIssuanceForm = () => {
                                                                                                                             try {
                                                                                                                                 await handleSubmit();
                                                                                         // Register history record in background
-                                                                                        addFormHistory({ title: 'PPE Issuance', date: issueDate, savedAt: Date.now(), meta: { metadata: { issueDate }, formData: data } })
+                                                                                        addFormHistory({ title: 'Personal  Protective Equipment Log', date: issueDate, savedAt: Date.now(), meta: { metadata: { issueDate }, formData: data } })
                                                                                             .catch(e => console.warn('addFormHistory failed', e));
                                                                                     } catch (e) {
                                                                                         console.warn('submit failed', e);

@@ -84,8 +84,10 @@ export default function useFormSave(a, b = {}) {
     inFlightSave.current = true;
     try {
       const payload = safeGetPayload('draft');
-      const id = `${formType}_${Date.now()}`;
-      await formStorage.saveForm(id, payload);
+      // Save drafts to the stable draft location so they don't add history entries
+      const stableId = stableDraftId || `${formType}_draft`;
+      if (formStorage.saveDraft) await formStorage.saveDraft(stableId, payload);
+      else await formStorage.saveForm(stableId, payload);
       // Intentionally silent for drafts/autosave: do not set isSaving or showNotification.
     } catch (e) {
       console.error('useFormSave handleSaveDraft failed', e);
@@ -179,8 +181,8 @@ export default function useFormSave(a, b = {}) {
       }
 
       // clear form via provided callback if available
-      if (typeof options.clearOnSubmit === 'function') {
-        try { options.clearOnSubmit(); } catch (e) { console.warn('clearOnSubmit failed', e); }
+      if (typeof onClear === 'function') {
+        try { onClear(); } catch (e) { console.warn('onClear failed', e); }
       }
 
       if (mounted.current) {

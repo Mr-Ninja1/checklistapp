@@ -9,9 +9,11 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Dimensions,
 } from 'react-native';
 
 import useFormSave from '../hooks/useFormSave';
+import { removeDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -60,33 +62,38 @@ const Checkbox = ({ checked, onPress }) => (
   </TouchableOpacity>
 );
 
+// CleaningCell used across many cleaning checklist forms — encapsulates the per-day cell
+const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canInteract }) => {
+  return (
+    <View key={day} style={[styles.dayGroupCell, { width: colWidths.DAY_GROUP_WIDTH }]}>
+      <View style={[styles.cell, styles.centerContent, { width: colWidths.CHECK, borderRightWidth: 0, paddingHorizontal: 0 }]}>
+        <Checkbox checked={item.checks[day].checked} onPress={() => canInteract && handleCellChange(item.id, day, 'checked')} />
+      </View>
+      <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
+        <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} />
+      </View>
+    </View>
+  );
+});
+
 
 
 export default function WelfareFacilitiesChecklist() {
+  const currentYear = new Date().getFullYear().toString();
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '' });
+  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '' });
   const [busy, setBusy] = useState(false);
 
-  // load any existing draft from unified formStorage
+  // Intentionally do NOT load drafts for this form to avoid repopulation
+  // after submit. Initialize metadata with current month/year.
   useEffect(() => {
     let mounted = true;
-    (async () => {
-      try {
-        const wrapped = await formStorage.loadForm(DRAFT_KEY);
-        const payload = wrapped?.payload || null;
-        if (payload && mounted) {
-          if (payload.formData) setFormData(payload.formData);
-          if (payload.metadata) setMetadata(prev => ({ ...prev, ...payload.metadata }));
-        } else if (mounted) {
-          const today = new Date();
-          const month = today.toLocaleString('default', { month: 'long' });
-          const year = today.getFullYear();
-          setMetadata(prev => ({ ...prev, month, year, issueDate: today.toLocaleDateString() }));
-        }
-      } catch (e) {
-        // ignore load errors
-      }
-    })();
+    if (mounted) {
+      const today = new Date();
+      const month = today.toLocaleString('default', { month: 'long' });
+      setMetadata(prev => ({ ...prev, month, year: currentYear, issueDate: today.toLocaleDateString() }));
+    }
     return () => { mounted = false; };
   }, []);
 
@@ -104,18 +111,10 @@ export default function WelfareFacilitiesChecklist() {
   });
 
   const draftId = DRAFT_KEY;
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-    // persist a history entry (uses current state), then clear UI state
-    try {
-      addFormHistory({ title: 'Welfare Facilities Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-    } catch (e) { /* ignore history failures */ }
-    // clear form state
-    setFormData(initialCleaningState);
-    setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '' });
-  }});
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, waitForSave: true });
 
   const handleCellChange = (id, day, type, value) => {
-    setFormData(prev => prev.map(item => {
+  setFormData(prev => prev.map(item => {
       if (item.id === id) {
         const newChecks = { ...item.checks };
         if (type === 'checked') {
@@ -129,21 +128,27 @@ export default function WelfareFacilitiesChecklist() {
       }
       return item;
     }));
-    // schedule unified autosave
-    try { scheduleAutoSave(); } catch (e) { /* ignore if hook not ready */ }
+    // autosave intentionally disabled for this form to avoid races
   };
 
   const handleMetadataChange = (k, v) => {
     setMetadata(prev => ({ ...prev, [k]: v }));
-    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
   };
 
   // Use the hook's handleSaveDraft and handleSubmit. We'll still show alerts/indicators
   const handleSubmitLocal = async () => {
     setBusy(true);
     try {
-      await handleSubmit();
-      Alert.alert('Success', 'Checklist submitted');
+      await handleSubmit(() => {
+        setFormData(initialCleaningState);
+        setMetadata({ location: '', week: '', month: new Date().toLocaleString('default', { month: 'long' }), year: currentYear, hseqManager: '' });
+      });
+      // Aggressively delete any drafts that may exist: legacy key and
+      // the default stable draft used by the save hook (if any).
+      try { await formStorage.deleteForm(DRAFT_KEY); } catch (e) { /* ignore */ }
+      try { await formStorage.deleteForm('WelfareFacilities_CleaningChecklist_draft'); } catch (e) { /* ignore */ }
+      try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
+      try { await removeDraft('WelfareFacilities_CleaningChecklist_draft'); } catch (e) { /* ignore */ }
     } catch (e) {
       Alert.alert('Error', 'Submission failed');
     } finally { setBusy(false); }
@@ -153,7 +158,6 @@ export default function WelfareFacilitiesChecklist() {
     setBusy(true);
     try {
       await handleSaveDraft();
-      Alert.alert('Success', 'Draft saved');
     } catch (e) {
       Alert.alert('Error', 'Failed to save draft');
     } finally { setBusy(false); }
@@ -162,6 +166,7 @@ export default function WelfareFacilitiesChecklist() {
   // Widen day group and cleaned-by widths to accommodate names when printing on A4 landscape
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 160, CHECK: 48, CLEANED_BY: 110 }), []);
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
+  const windowHeight = Dimensions.get('window').height;
 
   const renderRow = rowItem => {
     // If this is an area header, render a special header row that displays the area name and empty cells
@@ -215,7 +220,7 @@ export default function WelfareFacilitiesChecklist() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }]}>
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
@@ -284,7 +289,8 @@ export default function WelfareFacilitiesChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraftLocal} onSubmit={handleSubmitLocal} showSavePdf={false} />
+            {/* Disable Save Draft action for this form to avoid draft recreation */}
+            <FormActionBar onBack={() => {}} onSaveDraft={null} onSubmit={handleSubmitLocal} showSavePdf={false} />
           </View>
           <LoadingOverlay visible={isSaving} />
           <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

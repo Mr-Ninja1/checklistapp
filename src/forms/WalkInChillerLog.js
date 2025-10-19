@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
+import useFormSave from '../hooks/useFormSave';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
 
 const DRAFT_KEY = 'walkin_chiller_log_draft';
 const TOTAL_DAYS = 31;
@@ -78,6 +78,24 @@ export default function WalkInChillerLog() {
   const COL_WIDTHS = useMemo(() => ({ DATE: 80, RECORD_SLOT_WIDTH: 300, ACTION: 360, SIGNATURE: 200 }), []);
   const TABLE_MIN_WIDTH = COL_WIDTHS.DATE + (TIME_SLOTS.length * COL_WIDTHS.RECORD_SLOT_WIDTH) + COL_WIDTHS.ACTION + COL_WIDTHS.SIGNATURE;
 
+  // Build canonical payload used by useFormSave
+  const buildPayload = (status = 'submitted') => ({
+    formType: 'WalkInChillerLog',
+    templateVersion: '01',
+    title: 'WALK-IN CHILLER TEMPERATURE CHECKLIST',
+    date: metadata.issueDate || new Date().toLocaleDateString(),
+    metadata,
+    formData,
+    layoutHints: { DATE: COL_WIDTHS.DATE, RECORD_SLOT_WIDTH: COL_WIDTHS.RECORD_SLOT_WIDTH, ACTION: COL_WIDTHS.ACTION, SIGNATURE: COL_WIDTHS.SIGNATURE },
+    _tableWidth: TABLE_MIN_WIDTH,
+    assets: {},
+    savedAt: Date.now(),
+    status,
+  });
+
+  // useFormSave must be called at top-level of component (not inside handlers)
+  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setMetadata(prev => ({ ...initialMetadata, docNo: prev.docNo, issueDate: prev.issueDate })); }, waitForSave: true });
+
   const handleRecordChange = useCallback((day, slotName, field, value) => {
     setFormData(prev => prev.map(item => item.day === day ? ({ ...item, [slotName]: { ...item[slotName], [field]: value } }) : item));
   }, [setFormData]);
@@ -90,21 +108,27 @@ export default function WalkInChillerLog() {
 
   const handleSaveDraft = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Success', 'Draft saved'); }
-    catch (e) { Alert.alert('Error', 'Failed to save draft'); }
-    finally { setBusy(false); }
+    try {
+      // prefer hook's saveDraft for consistency, but fall back to setDraft
+      if (typeof hookSaveDraft === 'function') await hookSaveDraft();
+      else await setDraft(DRAFT_KEY, { formData, metadata });
+      Alert.alert('Success', 'Draft saved');
+    } catch (e) {
+      console.warn('save draft failed', e);
+      Alert.alert('Error', 'Failed to save draft');
+    } finally { setBusy(false); }
   };
 
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'WALK-IN CHILLER TEMPERATURE CHECKLIST', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
+      await hookSubmit();
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
       Alert.alert('Success', 'Log submitted');
-      setFormData(initialLogState);
-      setMetadata(prev => ({ ...initialMetadata, docNo: prev.docNo, issueDate: prev.issueDate }));
-    } catch (e) { Alert.alert('Error', 'Submission failed'); }
-    finally { setBusy(false); }
+    } catch (e) {
+      console.warn('submit failed', e);
+      Alert.alert('Error', 'Submission failed');
+    } finally { setBusy(false); }
   };
 
   const renderRow = (item) => (

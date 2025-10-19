@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Activi
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
 
 const DRAFT_KEY = 'dry_storage_checklist_draft';
 
@@ -53,15 +54,54 @@ export default function DryStorageChecklist() {
   const [metadata, setMetadata] = useState(initialMetadata);
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
+  // wire up canonical save hook
+  const buildPayload = (status = 'draft') => {
+    const COL_WIDTHS = { AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40 };
+    const cleanedByWidth = COL_WIDTHS.DAY_GROUP_WIDTH - COL_WIDTHS.CHECK;
+    const tableWidth = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
+    const layoutHints = { area: COL_WIDTHS.AREA, frequency: COL_WIDTHS.FREQUENCY, dayGroup: COL_WIDTHS.DAY_GROUP_WIDTH, checkWidth: COL_WIDTHS.CHECK, cleanedByWidth };
+    return {
+      formType: 'DryStorageArea_CleaningChecklist',
+      templateVersion: '01',
+      title: 'DRY STORAGE AREA CLEANING CHECKLIST',
+      date: metadata.issueDate || new Date().toLocaleDateString(),
+      metadata,
+      formData,
+      layoutHints,
+      _tableWidth: tableWidth,
+      assets: {},
+      savedAt: Date.now(),
+      status,
+    };
+  };
+
+  const { handleSaveDraft, handleSubmit: hookSubmit, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialCleaningState); setMetadata(prev => ({ ...prev, week: '', month: '', year: '', hseqManager: '' })); } });
+  // keep legacy variable name for scheduleAutoSave use below
+  const scheduleAutoSave = scheduleAutoSaveFromHook;
 
   useEffect(() => {
     (async () => {
       const d = await getDraft(DRAFT_KEY);
+      const now = new Date();
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const month = monthNames[now.getMonth()];
+      const year = String(now.getFullYear());
+      const nowStr = now.toLocaleString(); // includes date and time based on locale
       if (d) {
         if (d.formData) setFormData(d.formData);
-        if (d.metadata) setMetadata(d.metadata);
+        if (d.metadata) {
+          // preserve draft values but fill missing month/year/issueDate from system
+          setMetadata(prev => ({
+            ...d.metadata,
+            month: d.metadata.month && d.metadata.month.trim() ? d.metadata.month : month,
+            year: d.metadata.year && d.metadata.year.trim() ? d.metadata.year : year,
+            issueDate: d.metadata.issueDate && d.metadata.issueDate.trim() ? d.metadata.issueDate : nowStr,
+          }));
+        } else {
+          setMetadata(prev => ({ ...prev, issueDate: nowStr, month, year }));
+        }
       } else {
-        setMetadata(prev => ({ ...prev, issueDate: new Date().toLocaleDateString() }));
+        setMetadata(prev => ({ ...prev, issueDate: nowStr, month, year }));
       }
     })();
   }, []);
@@ -69,6 +109,8 @@ export default function DryStorageChecklist() {
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
+    // also schedule the unified hook autosave for canonical storage
+    try { scheduleAutoSave(); } catch (e) {}
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [formData, metadata]);
 
@@ -91,23 +133,28 @@ export default function DryStorageChecklist() {
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
+  // replace the old save/submit handlers with unify hook handlers
   const handleSubmit = async () => {
-    setBusy(true);
     try {
-      await addFormHistory({ title: 'Dry Storage Area Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
+      await hookSubmit();
+      // show confirmation similar to previous behavior
       Alert.alert('Success', 'Checklist submitted');
-      setFormData(initialCleaningState);
-      setMetadata(prev => ({ ...prev, week: '', month: '', year: '', hseqManager: '' }));
-    } catch (e) { Alert.alert('Error', 'Submission failed'); }
-    finally { setBusy(false); }
+      // remove local draft copy
+      try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.warn('submit failed', e);
+      Alert.alert('Error', 'Submission failed');
+    }
   };
 
-  const handleSaveDraft = async () => {
-    setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Success', 'Draft saved'); }
-    catch (e) { Alert.alert('Error', 'Failed to save draft'); }
-    finally { setBusy(false); }
+  const handleSaveDraftLocal = async () => {
+    try {
+      await handleSaveDraft();
+      Alert.alert('Success', 'Draft saved');
+    } catch (e) {
+      console.warn('save draft failed', e);
+      Alert.alert('Error', 'Failed to save draft');
+    }
   };
 
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40 }), []);
@@ -203,8 +250,8 @@ export default function DryStorageChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={handleSaveDraftLocal} style={[styles.button, styles.draftButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
         </View>
       </ScrollView>

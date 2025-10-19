@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, Dimensions } from 'react-native';
 
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 
 const DRAFT_KEY = 'cleaning_equipment_checklist_draft';
 
@@ -48,27 +52,45 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
 
 export default function CleaningEquipmentChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState(initialMetadata);
+  const currentYear = new Date().getFullYear().toString();
+  const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+  const [metadata, setMetadata] = useState({ ...initialMetadata, month: currentMonth });
   const [busy, setBusy] = useState(false);
-  const saveTimer = useRef(null);
+  const [logoDataUri, setLogoDataUri] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
     (async () => {
-      const d = await getDraft(DRAFT_KEY);
-      if (d) {
-        if (d.formData) setFormData(d.formData);
-        if (d.metadata) setMetadata(d.metadata);
-      } else {
-        setMetadata(prev => ({ ...prev, issueDate: new Date().toLocaleDateString() }));
-      }
+      try {
+        const d = await getDraft(DRAFT_KEY);
+        if (d && mounted) {
+          if (d.formData) setFormData(d.formData);
+          if (d.metadata) {
+            const merged = { ...d.metadata };
+            if (!merged.year || String(merged.year).trim() === '') merged.year = currentYear;
+            if (!merged.month || String(merged.month).trim() === '') merged.month = currentMonth;
+            setMetadata(merged);
+          }
+        } else if (mounted) {
+          setMetadata(prev => ({ ...prev, issueDate: new Date().toLocaleDateString(), year: currentYear, month: currentMonth }));
+        }
+      } catch (e) { console.warn('load draft failed', e); }
     })();
+    // preload logo as base64 for embedding into saved payloads (best-effort)
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 }).catch(() => null);
+          if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+        }
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata]);
+  // Autosave is handled via the canonical hook (scheduleAutoSave) called on edits.
 
   const handleCellChange = useCallback((id, day, type, value) => {
     setFormData(prev => prev.map(item => {
@@ -85,27 +107,61 @@ export default function CleaningEquipmentChecklist() {
       }
       return item;
     }));
+    try { scheduleAutoSave(); } catch (e) { /* ignore if hook not ready */ }
   }, []);
 
-  const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
+  const handleMetadataChange = (k, v) => {
+    setMetadata(prev => ({ ...prev, [k]: v }));
+    try { scheduleAutoSave(); } catch (e) { /* ignore if hook not ready */ }
+  };
+
+  // Build canonical payload used by the shared save hook
+  const buildPayload = (status = 'draft') => {
+    const COL_WIDTHS_LOCAL = { AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 };
+    const tableWidth = COL_WIDTHS_LOCAL.AREA + COL_WIDTHS_LOCAL.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS_LOCAL.DAY_GROUP_WIDTH);
+    const layoutHints = { area: COL_WIDTHS_LOCAL.AREA, frequency: COL_WIDTHS_LOCAL.FREQUENCY, dayGroup: COL_WIDTHS_LOCAL.DAY_GROUP_WIDTH, checkWidth: COL_WIDTHS_LOCAL.CHECK, cleanedByWidth: COL_WIDTHS_LOCAL.CLEANED_BY };
+    // ensure month is present on saved payloads
+    const metaForPayload = { ...metadata };
+    if (!metaForPayload.month || String(metaForPayload.month).trim() === '') metaForPayload.month = currentMonth;
+
+    return {
+      formType: 'CleaningEquipment_CleaningChecklist',
+      templateVersion: '01',
+      title: 'CLEANING EQUIPMENT CHECKLIST',
+      date: new Date().toLocaleDateString(),
+      metadata: metaForPayload,
+      formData,
+      layoutHints,
+      _tableWidth: tableWidth,
+      assets: logoDataUri ? { logoDataUri } : {},
+      savedAt: Date.now(),
+      status,
+    };
+  };
+
+  // centralized save hook — keeps behavior consistent with other forms
+  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+    setFormData(initialCleaningState);
+    setMetadata(prev => ({ ...prev, week: '', month: currentMonth, year: currentYear, hseqManager: '' }));
+  }, waitForSave: true });
 
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Cleaning Equipment Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Success', 'Checklist submitted');
-      setFormData(initialCleaningState);
-      setMetadata(prev => ({ ...prev, week: '', month: '', year: '', hseqManager: '' }));
-    } catch (e) { Alert.alert('Error', 'Submission failed'); }
-    finally { setBusy(false); }
+      await hookSubmit();
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+    } catch (e) {
+      Alert.alert('Error', 'Submission failed');
+    } finally { setBusy(false); }
   };
 
   const handleSaveDraft = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Success', 'Draft saved'); }
-    catch (e) { Alert.alert('Error', 'Failed to save draft'); }
-    finally { setBusy(false); }
+    try {
+      await hookSaveDraft();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save draft');
+    } finally { setBusy(false); }
   };
 
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 }), []);
@@ -131,9 +187,11 @@ export default function CleaningEquipmentChecklist() {
     );
   };
 
+  const windowHeight = Dimensions.get('window').height;
+
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }] }>
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
@@ -204,6 +262,8 @@ export default function CleaningEquipmentChecklist() {
             <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
+          <LoadingOverlay visible={isSaving} />
+          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
       </ScrollView>
     </View>

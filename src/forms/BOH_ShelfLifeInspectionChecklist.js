@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
+import useFormSave from '../hooks/useFormSave';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+// history registration is handled by the save hook via formStorage.saveForm
 
 const DRAFT_KEY = 'boh_shelf_life_inspection_draft';
 
@@ -37,7 +40,6 @@ const initialMetadata = {
 const initialVerification = {
   hseqManagerSign: '',
   complexManagerSign: '',
-  baristaSign: '',
 };
 
 export default function BOH_ShelfLifeInspectionChecklist() {
@@ -45,7 +47,6 @@ export default function BOH_ShelfLifeInspectionChecklist() {
   const [metadata, setMetadata] = useState(initialMetadata);
   const [verification, setVerification] = useState(initialVerification);
   const [busy, setBusy] = useState(false);
-  const saveTimer = useRef(null);
   const { width: windowWidth } = useWindowDimensions();
 
   useEffect(() => {
@@ -70,37 +71,55 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata, verification }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata, verification]);
+  // autosave is scheduled via the save hook when fields change
 
   const handleEntryChange = useCallback((index, field, value) => {
     setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
   }, []);
 
   const handleVerificationChange = (key, value) => {
     setVerification(prev => ({ ...prev, [key]: value }));
+    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
   };
 
   const handleMetadataChange = (key, value) => {
     setMetadata(prev => ({ ...prev, [key]: value }));
+    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
   };
+
+  // build canonical payload for storage
+  const buildPayload = (status = 'draft') => ({
+    formType: 'BOH_ShelfLifeInspectionChecklist',
+    templateVersion: '01',
+    title: 'BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST',
+    date: new Date().toLocaleDateString(),
+    metadata,
+    formData,
+    verification,
+    layoutHints: {},
+    savedAt: Date.now(),
+    status,
+  });
+
+  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+    setFormData(initialLogState);
+    setVerification(initialVerification);
+    setMetadata(initialMetadata);
+  }, waitForSave: true });
 
   const handleSaveDraft = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata, verification }); } catch (e) { console.warn('save draft failed', e); }
+    try { await hookSaveDraft(); } catch (e) { console.warn('save draft failed', e); }
     setBusy(false);
   };
 
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'BOH Products Shelf-Life Inspection Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } });
-      await removeDraft(DRAFT_KEY);
-      setFormData(initialLogState);
-      setVerification(initialVerification);
+      await hookSubmit();
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      // clearing of state handled by clearOnSubmit passed to the hook
     } catch (e) { console.warn('submit failed', e); }
     setBusy(false);
   };
@@ -155,38 +174,47 @@ export default function BOH_ShelfLifeInspectionChecklist() {
           <View style={styles.logoWrap}><Image source={require('../assets/logo.jpeg')} style={styles.logo} /><Text style={styles.brand}>Bravo Brands Limited</Text></View>
           <Text style={styles.title}>BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST</Text>
           <Text style={styles.frequency}>FREQUENCY: {metadata.frequency}</Text>
+          <View style={styles.headerRight}>
+            <Text style={styles.issueDate}>Issue Date: {metadata.dateOfIssue || metadata.date}</Text>
+          </View>
         </View>
 
-        <View style={[styles.tableWrap, { width: tableAvailableWidth }]}> 
-          <View style={styles.tableHeader}>
-            {columnHeaders.map(col => (
-              <View key={col.key} style={[styles.headerCell, { width: colPixel(col.flex || 1) }]}>
-                <Text style={styles.headerText}>{col.label}</Text>
-              </View>
-            ))}
+    <ScrollView horizontal contentContainerStyle={{ minWidth: tableAvailableWidth }}>
+          <View style={[styles.tableWrap, { width: tableAvailableWidth }]}> 
+            <View style={styles.tableHeader}>
+              {columnHeaders.map(col => (
+                <View key={col.key} style={[styles.headerCell, { width: colPixel(col.flex || 1) }]}>
+                  <Text style={styles.headerText}>{col.label}</Text>
+                </View>
+              ))}
+            </View>
+            {formData.map(renderRow)}
           </View>
-          {formData.map(renderRow)}
-        </View>
+        </ScrollView>
 
-        <View style={styles.verifyFooter}>
-          <View style={styles.verifyCol}>
-            <Text style={styles.verifyLabel}>Verified By:</Text>
-            <TextInput value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} style={styles.verifyInput} placeholder="HSEQ Manager Sign" />
-            <TextInput value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} style={styles.verifyInput} placeholder="Complex Manager Sign" />
-            <Text style={styles.metaText}>DOC NO: {metadata.docNo}</Text>
-            <View style={styles.metaRow}><Text style={styles.metaText}>DATE:</Text><TextInput value={metadata.date} onChangeText={v => handleMetadataChange('date', v)} style={styles.metaInput} placeholder="DD/MM/YYYY" /></View>
-          </View>
-          <View style={styles.verifyCol}>
-            <TextInput value={verification.baristaSign} onChangeText={v => handleVerificationChange('baristaSign', v)} style={styles.verifyInput} placeholder="Barista Sign" />
-            <Text style={styles.metaText}>COMPILED BY: {metadata.compiledBy}</Text>
-            <Text style={styles.metaText}>DATE OF ISSUE: {metadata.dateOfIssue}</Text>
-          </View>
+        {/* Verification footer removed per UI update; Issue Date moved to header */}
+
+        {/* Re-add signature inputs (kept for printing/saved view) */}
+        <View style={styles.verificationBox}>
+          <Text style={styles.verLabel}>HSEQ Manager (Verified by)</Text>
+          <TextInput value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} style={styles.signatureInput} placeholder="HSEQ Manager name/sign" />
+
+          <Text style={styles.verLabel}>Complex Manager</Text>
+          <TextInput value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} style={styles.signatureInput} placeholder="Complex Manager name/sign" />
         </View>
 
         <View style={styles.buttonRow}>
           <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
         </View>
+        <LoadingOverlay visible={isSaving || busy} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => {
+          setShowNotification(false);
+          // on OK we also clear inputs (useful when trying the Welfare form later)
+          setFormData(initialLogState);
+          setVerification(initialVerification);
+          setMetadata(initialMetadata);
+        }} />
       </ScrollView>
     </View>
   );
@@ -194,8 +222,10 @@ export default function BOH_ShelfLifeInspectionChecklist() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f7f9' },
-  content: { padding: 12 },
+  content: { padding: 12, paddingBottom: 160 },
   headerBox: { alignItems: 'center', marginBottom: 12 },
+  headerRight: { position: 'absolute', right: 12, top: 12 },
+  issueDate: { fontSize: 12, color: '#374151', fontWeight: '700' },
   logoWrap: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   logo: { width: 40, height: 40, marginRight: 8 },
   brand: { fontWeight: '700', fontSize: 16, color: '#185a9d' },
@@ -209,13 +239,7 @@ const styles = StyleSheet.create({
   cell: { paddingVertical: 8, paddingHorizontal: 6, borderRightWidth: 1, borderRightColor: '#333', justifyContent: 'center' },
   staticText: { fontWeight: '600', fontSize: 12, color: '#444' },
   input: { padding: 8, fontSize: 12, textAlign: 'left', minHeight: 48, lineHeight: 18 },
-  verifyFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 8 },
-  verifyCol: { flex: 1, marginRight: 12 },
-  verifyLabel: { fontSize: 13, fontWeight: '700', marginBottom: 4 },
-  verifyInput: { borderWidth: 1, borderColor: '#ccc', padding: 6, borderRadius: 6, minHeight: 36, marginBottom: 8 },
   metaText: { fontSize: 12, color: '#333', marginBottom: 2 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  metaInput: { borderWidth: 1, borderColor: '#ccc', padding: 4, borderRadius: 6, minWidth: 80 },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 },
   btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 },
   btnText: { color: '#fff', fontWeight: '700' },

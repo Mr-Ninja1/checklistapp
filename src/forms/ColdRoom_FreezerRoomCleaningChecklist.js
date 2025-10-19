@@ -9,10 +9,15 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Dimensions,
 } from 'react-native';
 
+import useFormSave from '../hooks/useFormSave';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const DRAFT_KEY = 'coldroom_freezer_room_cleaning_checklist_draft';
 
@@ -50,8 +55,10 @@ const Checkbox = ({ checked, onPress }) => (
 
 export default function ColdRoomFreezerChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '' });
+  const currentYear = new Date().getFullYear().toString();
+  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '' });
   const [busy, setBusy] = useState(false);
+  const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
 
   useEffect(() => {
@@ -61,9 +68,28 @@ export default function ColdRoomFreezerChecklist() {
         const d = await getDraft(DRAFT_KEY);
         if (d && mounted) {
           if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
+          if (d.metadata) {
+            // ensure year defaults to current if missing in draft
+            const merged = { ...d.metadata };
+            if (!merged.year || String(merged.year).trim() === '') merged.year = currentYear;
+            setMetadata(merged);
+          }
+        } else if (mounted) {
+          // no draft: ensure year is set
+          setMetadata(prev => ({ ...prev, year: currentYear }));
         }
       } catch (e) { console.warn('load draft failed', e); }
+    })();
+    // preload logo as base64 for embedding into saved payloads (best-effort)
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
+        await asset.downloadAsync();
+        if (asset.localUri) {
+          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 }).catch(() => null);
+          if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
+        }
+      } catch (e) { /* ignore */ }
     })();
     return () => { mounted = false; };
   }, []);
@@ -93,27 +119,57 @@ export default function ColdRoomFreezerChecklist() {
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
+  // Build canonical payload used by the shared save hook
+  const buildPayload = (status = 'draft') => {
+    const COL_WIDTHS_LOCAL = { AREA: 300, FREQUENCY: 150, DAY_GROUP_WIDTH: 150, CHECK: 60, CLEANED_BY: 90 };
+    const tableWidth = COL_WIDTHS_LOCAL.AREA + COL_WIDTHS_LOCAL.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS_LOCAL.DAY_GROUP_WIDTH);
+    const layoutHints = { area: COL_WIDTHS_LOCAL.AREA, frequency: COL_WIDTHS_LOCAL.FREQUENCY, dayGroup: COL_WIDTHS_LOCAL.DAY_GROUP_WIDTH, checkWidth: COL_WIDTHS_LOCAL.CHECK, cleanedByWidth: COL_WIDTHS_LOCAL.CLEANED_BY };
+    return {
+      formType: 'ColdRoom_FreezerRoomCleaningChecklist',
+      templateVersion: '01',
+      title: 'COLD ROOM & FREEZER ROOM CLEANING CHECKLIST',
+      date: new Date().toLocaleDateString(),
+      metadata,
+      formData,
+      layoutHints,
+      _tableWidth: tableWidth,
+      assets: logoDataUri ? { logoDataUri } : {},
+      savedAt: Date.now(),
+      status,
+    };
+  };
+
+  // use centralized save hook so behavior matches other forms (history, drafts, safety timers)
+  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+    // reset UI state once submit completes; preserve auto year
+    setFormData(initialCleaningState);
+    setMetadata({ location: '', week: '', month: '', year: currentYear, hseqManager: '' });
+  }, waitForSave: true });
+
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Cold Room / Freezer Room Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Success', 'Checklist submitted');
-      setFormData(initialCleaningState);
-      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '' });
-    } catch (e) { Alert.alert('Error', 'Submission failed'); }
-    finally { setBusy(false); }
+      await hookSubmit();
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+    } catch (e) {
+      console.warn('submit failed', e);
+      Alert.alert('Error', 'Submission failed');
+    } finally { setBusy(false); }
   };
 
   const handleSaveDraft = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Success', 'Draft saved'); }
-    catch (e) { Alert.alert('Error', 'Failed to save draft'); }
-    finally { setBusy(false); }
+    try {
+      await hookSaveDraft();
+    } catch (e) {
+      console.warn('save draft failed', e);
+      Alert.alert('Error', 'Failed to save draft');
+    } finally { setBusy(false); }
   };
 
   const COL_WIDTHS = useMemo(() => ({ AREA: 300, FREQUENCY: 150, DAY_GROUP_WIDTH: 150, CHECK: 60, CLEANED_BY: 90 }), []);
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
+  const windowHeight = Dimensions.get('window').height;
 
   const renderRow = item => (
     <View key={item.id} style={styles.row}>
@@ -138,7 +194,7 @@ export default function ColdRoomFreezerChecklist() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }]}>
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
@@ -209,6 +265,8 @@ export default function ColdRoomFreezerChecklist() {
             <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
+          <LoadingOverlay visible={isSaving} />
+          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
       </ScrollView>
     </View>
@@ -217,6 +275,7 @@ export default function ColdRoomFreezerChecklist() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
+  // paddingBottom is increased dynamically at render-time to ensure full scroll depth
   scrollContent: { padding: 8 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1, elevation: 4 },
   header: { borderBottomColor: '#1F2937', borderBottomWidth: 1, paddingBottom: 10, marginBottom: 10 },

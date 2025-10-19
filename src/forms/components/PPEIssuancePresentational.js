@@ -32,7 +32,7 @@ const PPEIssuancePresentational = ({ payload }) => {
 
         {/* Centered form title and subject (matches editable form layout) */}
         <View style={styles.centerTitleWrap}>
-          <Text style={styles.centeredTitle}>{p.title || 'PPE Issuance'}</Text>
+          <Text style={styles.centeredTitle}>{p.title || 'Personal  Protective Equipment Log'}</Text>
           <Text style={styles.subjectText}><Text style={styles.boldText}>Subject:</Text> {metadata.subject || 'Personal Protective Equipment'}</Text>
         </View>
 

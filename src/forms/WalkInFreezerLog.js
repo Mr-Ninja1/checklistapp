@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
+import LoadingOverlay from '../components/LoadingOverlay';
+import NotificationModal from '../components/NotificationModal';
 
 const DRAFT_KEY = 'walkin_freezer_log_draft';
 const TOTAL_DAYS = 31;
@@ -54,12 +56,6 @@ const useFormState = (initialState, initialMeta) => {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata]);
-
   return { formData, setFormData, metadata, setMetadata, busy, setBusy };
 };
 
@@ -80,17 +76,43 @@ export default function WalkInFreezerLog() {
 
   const handleRecordChange = useCallback((day, slotName, field, value) => {
     setFormData(prev => prev.map(item => item.day === day ? ({ ...item, [slotName]: { ...item[slotName], [field]: value } }) : item));
+    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
   }, [setFormData]);
 
   const handleDailyChange = useCallback((day, field, value) => {
     setFormData(prev => prev.map(item => item.day === day ? ({ ...item, [field]: value }) : item));
+    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
   }, [setFormData]);
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
+  
+  // Call autosave when metadata changes
+  const handleMetadataChangeWithAuto = (k, v) => {
+    handleMetadataChange(k, v);
+    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
+  };
+
+  // Build payload for saving
+  const buildPayload = (status = 'draft') => ({
+    formType: 'WalkInFreezerLog',
+    templateVersion: '01',
+    title: 'WALK-IN FREEZER TEMPERATURE LOG SHEET',
+    date: new Date().toLocaleDateString(),
+    metadata,
+    formData,
+    layoutHints: {},
+    savedAt: Date.now(),
+    status,
+  });
+
+  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+    setFormData(initialLogState);
+    setMetadata(prev => ({ ...initialMetadata, issueDate: prev.issueDate }));
+  }, waitForSave: true });
 
   const handleSaveDraft = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Success', 'Draft saved'); }
+    try { await hookSaveDraft(); /* silent */ }
     catch (e) { Alert.alert('Error', 'Failed to save draft'); }
     finally { setBusy(false); }
   };
@@ -98,11 +120,9 @@ export default function WalkInFreezerLog() {
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Walk-In Freezer Log', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Success', 'Log submitted');
-      setFormData(initialLogState);
-      setMetadata(prev => ({ ...initialMetadata, docNo: prev.docNo, issueDate: prev.issueDate }));
+      await hookSubmit();
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      // success handled by NotificationModal from the hook
     } catch (e) { Alert.alert('Error', 'Submission failed'); }
     finally { setBusy(false); }
   };
@@ -142,12 +162,12 @@ export default function WalkInFreezerLog() {
 
             <Text style={styles.subject}>WALK-IN FREEZER TEMPERATURE LOG SHEET</Text>
             <View style={styles.metaRowSmall}>
-              <TextInput value={metadata.month} onChangeText={t => handleMetadataChange('month', t)} placeholder="Month" style={styles.metaInput} />
+              <TextInput value={metadata.month} onChangeText={t => handleMetadataChangeWithAuto('month', t)} placeholder="Month" style={styles.metaInput} />
               {/* Year is automatically populated and not editable */}
               <View style={{ flex: 1, minWidth: 80, marginRight: 8 }}>
                 <Text style={styles.metaStatic}>{metadata.year}</Text>
               </View>
-              <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} placeholder="Location" style={styles.metaInput} />
+              <TextInput value={metadata.location} onChangeText={t => handleMetadataChangeWithAuto('location', t)} placeholder="Location" style={styles.metaInput} />
             </View>
             <Text style={styles.instruction}>Instruction: The temperature of the Walk-in Freezer should be less than -12° C</Text>
           </View>
@@ -170,15 +190,23 @@ export default function WalkInFreezerLog() {
             </View>
           </ScrollView>
 
-          <View style={styles.footerSign}>
-            <TextInput value={metadata.hseqManagerSign} onChangeText={t => handleMetadataChange('hseqManagerSign', t)} placeholder="Verified by: HSEQ Manager Sign" style={styles.signInput} />
-            <TextInput value={metadata.complexManagerSign} onChangeText={t => handleMetadataChange('complexManagerSign', t)} placeholder="Complex Manager Sign" style={styles.signInput} />
+          <View style={styles.footerSignRow}>
+            <View style={styles.footerSignField}>
+              <Text style={styles.signLabel}>Verified by: HSEQ Manager</Text>
+              <TextInput value={metadata.hseqManagerSign} onChangeText={t => handleMetadataChangeWithAuto('hseqManagerSign', t)} placeholder="Verified by: HSEQ Manager Sign" style={styles.signDisplay} />
+            </View>
+            <View style={styles.footerSignField}>
+              <Text style={styles.signLabel}>Complex Manager</Text>
+              <TextInput value={metadata.complexManagerSign} onChangeText={t => handleMetadataChangeWithAuto('complexManagerSign', t)} placeholder="Complex Manager Sign" style={styles.signDisplay} />
+            </View>
           </View>
 
           <View style={styles.buttonRow}>
             <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Log</Text>}</TouchableOpacity>
           </View>
+          <LoadingOverlay visible={isSaving} />
+          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
       </ScrollView>
     </View>
@@ -187,7 +215,7 @@ export default function WalkInFreezerLog() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
-  scrollContent: { padding: 8 },
+  scrollContent: { padding: 8, paddingBottom: 120 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1 },
   header: { marginBottom: 8 },
   subject: { fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
@@ -216,8 +244,10 @@ const styles = StyleSheet.create({
   slotInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, marginHorizontal: 6, borderRadius: 4, textAlign: 'center', fontSize: 14 },
   actionInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, fontSize: 14 },
   signatureInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, textAlign: 'center', fontSize: 14 },
-  footerSign: { marginTop: 12 },
-  signInput: { borderBottomWidth: 1, borderBottomColor: '#9CA3AF', paddingVertical: 6, marginBottom: 8 },
+  footerSignRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'space-between' },
+  footerSignField: { flex: 1, marginRight: 8 },
+  signLabel: { fontSize: 12, color: '#374151', marginBottom: 6, fontWeight: '700' },
+  signDisplay: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, fontSize: 14, minHeight: 42 },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
   button: { width: 140, marginLeft: 12, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   draftButton: { backgroundColor: '#F59E0B' },

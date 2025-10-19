@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import NotificationModal from '../components/NotificationModal';
@@ -316,6 +316,9 @@ export default function VisitorsLogBook() {
     setSite(''); setSection(''); setMonth(''); setYear(''); setSiteManager(''); setVerifiedManager('');
     setHealthAnswers(initialHealthAnswers);
   } });
+
+  // Compute a local issueDate for display (canonical issueDate will be set at save time)
+  const issueDate = useMemo(() => formatIssueDate(), []);
 
   return (
     <SafeAreaView style={styles.safeArea}>

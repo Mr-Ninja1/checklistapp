@@ -186,7 +186,7 @@ export default function FOH_DailyCleaningForm() {
       const payload = {
         formType: 'FOH_DailyCleaning',
         templateVersion: 'v1.0',
-        title: 'FOH Daily Cleaning',
+        title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH',
         date: metadata.date,
         metadata,
         timeSlots: TIME_SLOTS,
@@ -206,7 +206,7 @@ export default function FOH_DailyCleaningForm() {
         } catch (e) {}
       } catch (e) {
         // fallback to older history if storage fails
-        await addFormHistory({ title: 'FOH Daily Cleaning', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
+        await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
       }
 
       try { await removeDraft(draftKey); } catch (e) {}

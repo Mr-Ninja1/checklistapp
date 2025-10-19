@@ -13,6 +13,7 @@ import {
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import useFormSave from '../hooks/useFormSave';
 
 const DRAFT_KEY = 'scullery_area_cleaning_checklist_draft';
 
@@ -67,15 +68,52 @@ export default function SculleryAreaChecklist() {
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
 
+  // build canonical payload for saving
+  const buildPayload = (status = 'draft') => {
+    const COL_WIDTHS = { AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 };
+    const tableWidth = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
+    const layoutHints = { area: COL_WIDTHS.AREA, frequency: COL_WIDTHS.FREQUENCY, dayGroup: COL_WIDTHS.DAY_GROUP_WIDTH, checkWidth: COL_WIDTHS.CHECK, cleanedByWidth: COL_WIDTHS.CLEANED_BY };
+    return {
+      formType: 'SculleryArea_CleaningChecklist',
+      templateVersion: '01',
+      title: 'SCULLERY AREA CLEANING CHECKLIST',
+      date: metadata.issueDate || new Date().toLocaleDateString(),
+      metadata,
+      formData,
+      layoutHints,
+      _tableWidth: tableWidth,
+      assets: {},
+      savedAt: Date.now(),
+      status,
+    };
+  };
+
+  // hook: use canonical save helper (fast submit)
+  const { handleSaveDraft: handleSaveDraftHook, handleSubmit: hookSubmit, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialCleaningState); setMetadata({ location: 'SCULLERY', week: '', month: '', year: '', hseqManager: '' }); }, waitForSave: false });
+  const scheduleAutoSave = scheduleAutoSaveFromHook;
+
   useEffect(() => {
     (async () => {
       const d = await getDraft(DRAFT_KEY);
+      const now = new Date();
+      const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const month = monthNames[now.getMonth()];
+      const year = String(now.getFullYear());
+      const nowStr = now.toLocaleString();
       if (d) {
         if (d.formData) setFormData(d.formData);
-        if (d.metadata) setMetadata(d.metadata);
+        if (d.metadata) {
+          setMetadata(prev => ({
+            ...d.metadata,
+            month: d.metadata.month && d.metadata.month.trim() ? d.metadata.month : month,
+            year: d.metadata.year && d.metadata.year.trim() ? d.metadata.year : year,
+            issueDate: d.metadata.issueDate && d.metadata.issueDate.trim() ? d.metadata.issueDate : nowStr,
+          }));
+        } else {
+          setMetadata(prev => ({ ...prev, issueDate: nowStr, month, year }));
+        }
       } else {
-        const today = new Date();
-        setMetadata(prev => ({ ...prev, issueDate: today.toLocaleDateString() }));
+        setMetadata(prev => ({ ...prev, issueDate: nowStr, month, year }));
       }
     })();
   }, []);
@@ -83,6 +121,8 @@ export default function SculleryAreaChecklist() {
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
+    // schedule canonical autosave as well
+    try { scheduleAutoSave(); } catch (e) {}
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [formData, metadata]);
 
@@ -109,22 +149,24 @@ export default function SculleryAreaChecklist() {
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
   const handleSubmit = async () => {
-    setBusy(true);
     try {
-      await addFormHistory({ title: 'Scullery Area Cleaning Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      await removeDraft(DRAFT_KEY);
+      await hookSubmit();
       Alert.alert('Success', 'Checklist submitted');
-      setFormData(initialCleaningState);
-      setMetadata({ location: 'SCULLERY', week: '', month: '', year: '', hseqManager: '' });
-    } catch (e) { Alert.alert('Error', 'Submission failed'); }
-    finally { setBusy(false); }
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+    } catch (e) {
+      console.warn('submit failed', e);
+      Alert.alert('Error', 'Submission failed');
+    }
   };
 
-  const handleSaveDraft = async () => {
-    setBusy(true);
-    try { await setDraft(DRAFT_KEY, { formData, metadata }); Alert.alert('Success', 'Draft saved'); }
-    catch (e) { Alert.alert('Error', 'Failed to save draft'); }
-    finally { setBusy(false); }
+  const handleSaveDraftLocal = async () => {
+    try {
+      await handleSaveDraftHook();
+      Alert.alert('Success', 'Draft saved');
+    } catch (e) {
+      console.warn('save draft failed', e);
+      Alert.alert('Error', 'Failed to save draft');
+    }
   };
 
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 }), []);
@@ -220,8 +262,8 @@ export default function SculleryAreaChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={handleSaveDraftLocal} style={[styles.button, styles.draftButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
         </View>
       </ScrollView>

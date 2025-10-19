@@ -1,5 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
+import useFormSave from '../hooks/useFormSave';
+import { addFormHistory } from '../utils/formHistory';
+import NotificationModal from '../components/NotificationModal';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 const { width } = Dimensions.get('window');
 
@@ -42,15 +46,14 @@ const initialHygieneData = Array.from({ length: 13 }, (_, i) => ({
 const PersonalHygieneChecklist = () => {
     const [data, setData] = useState(initialHygieneData);
 
-    // Compute issue date for the header
-    const issueDate = useMemo(() => {
-        const d = new Date();
+    // Compute issue date helper (we will set the canonical issueDate at save time)
+    const formatIssueDate = (d = new Date()) => {
         const dd = String(d.getDate()).padStart(2, '0');
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yyyy = d.getFullYear();
-        // Matching the format from the PPE image header example
-        return `${dd}/${mm}/${yyyy}`; 
-    }, []);
+        return `${dd}/${mm}/${yyyy}`;
+    };
+    const issueDate = useMemo(() => formatIssueDate(), []);
 
     // Helper to update text fields in row
     const updateField = (id, key, value) => {
@@ -65,6 +68,19 @@ const PersonalHygieneChecklist = () => {
             )
         );
     };
+
+    // Build payload to save
+    const buildPayload = (status = 'draft') => ({
+        formType: 'PersonalHygieneChecklist',
+        title: 'Personal Hygiene Checklist',
+        metadata: { issueDate: formatIssueDate(), compiledBy: 'Michael Zulu C.' },
+        formData: data,
+        layoutHints: { columnWidths },
+        savedAt: new Date().toISOString(),
+        status,
+    });
+
+    const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PersonalHygieneChecklist_draft', clearOnSubmit: () => setData(initialHygieneData) });
 
     // --- Table Row Renderer for FlatList ---
     const renderItem = ({ item }) => (
@@ -117,8 +133,16 @@ const PersonalHygieneChecklist = () => {
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <ScrollView horizontal={true} contentContainerStyle={styles.scrollViewContent}>
-                <View style={styles.container}>
+            {/* Outer vertical scroll allows full page vertical scrolling; inner horizontal ScrollView handles wide table */}
+            <ScrollView
+                contentContainerStyle={styles.scrollViewContent}
+                style={{ flex: 1 }}
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+            >
+                <View>
+                  <ScrollView horizontal={true} contentContainerStyle={{ minWidth: totalWidth + 20 }} nestedScrollEnabled={true}>
+                    <View style={styles.container}>
                     {/* --- HEADER SECTION --- */}
                     <View style={styles.header}>
                 <View style={styles.logoAndTitle}>
@@ -183,7 +207,8 @@ const PersonalHygieneChecklist = () => {
                         data={data}
                         renderItem={renderItem}
                         keyExtractor={item => item.id}
-                        scrollEnabled={false} 
+                        scrollEnabled={true}
+                        style={{ maxHeight: 600 }}
                     />
 
                     {/* --- FOOTER SIGNATURES --- */}
@@ -191,8 +216,50 @@ const PersonalHygieneChecklist = () => {
                         {/* Only HSEQ SIGN is visible in the hygiene checklist image */}
                         <Text style={styles.footerText}>HSEQ SIGN:..................................</Text>
                     </View>
+                    
+                    {/* Save / Submit buttons (non-intrusive) */}
+                    <View style={{ padding: 8, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                        <TouchableOpacity onPress={() => handleSaveDraft && handleSaveDraft()} style={{ backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }}>
+                            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={async () => {
+                            try {
+                                await handleSubmit();
+                                // register history snapshot so SavedFormRenderer can render immediately
+                                try {
+                                    const snapshot = buildPayload('submitted');
+                                    addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } })
+                                      .catch(e => console.warn('addFormHistory failed', e));
+                                } catch (e) { console.warn('failed to register history snapshot', e); }
+                            } catch (e) { console.warn('submit failed', e); }
+                        }} style={{ backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }}>
+                            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+                        </TouchableOpacity>
+                    </View>
+                                        </View>
+                                    </ScrollView>
+                                </View>
+                        </ScrollView>
+            {/* Fixed footer with actions */}
+            <View style={{ padding: 10, borderTopWidth: 1, borderColor: '#eee', backgroundColor: '#fff' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                    <TouchableOpacity onPress={() => handleSaveDraft && handleSaveDraft()} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }}>
+                        <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={async () => {
+                        try {
+                            await handleSubmit();
+                            const snapshot = buildPayload('submitted');
+                            addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e));
+                        } catch (e) { console.warn('submit failed', e); }
+                    }} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }}>
+                        <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+                    </TouchableOpacity>
                 </View>
-            </ScrollView>
+            </View>
+            {/* Notifications and loading overlay */}
+            <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+            <LoadingOverlay visible={isSaving} />
         </SafeAreaView>
     );
 };
@@ -217,7 +284,10 @@ const styles = StyleSheet.create({
     },
     scrollViewContent: {
         // Set the minimum width to the calculated total table width plus padding
-        minWidth: totalWidth + 20, 
+        minWidth: totalWidth + 20,
+        // Increase vertical depth so forms can scroll further (long forms)
+        minHeight: 1200,
+        paddingBottom: 400,
     },
     container: {
         flex: 1,

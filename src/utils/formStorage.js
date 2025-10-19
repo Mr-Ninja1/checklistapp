@@ -18,10 +18,14 @@ async function saveForm(formId, payload) {
     // primary save operation (this avoids long submit hangs when history or I/O is slow).
     try {
       const historyEntry = { title: payload.title || payload.formType || 'Saved Form', date: payload.date || null, shift: payload.shift || null, savedAt: Date.now(), meta: { formId, filePath, payload } };
-      // don't await - run in background and log any failures
-      addFormHistory(historyEntry).catch(e => {
+      // Await history registration so callers that wait for the save will see the
+      // new entry present in the history index immediately. Failures are logged
+      // but won't prevent the save from returning.
+      try {
+        await addFormHistory(historyEntry);
+      } catch (e) {
         console.warn('formStorage: addFormHistory failed', e);
-      });
+      }
     } catch (e) {
       // In the unlikely event constructing the history entry throws, log and continue
       console.warn('formStorage: failed to schedule addFormHistory', e);

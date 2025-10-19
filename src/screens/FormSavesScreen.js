@@ -162,7 +162,8 @@ export default function FormSavesScreen() {
                               if (payload.meta) delete payload.meta;
 
                               // opened saved form
-
+                              // Debug: log detected type and payload keys so SavedFormRenderer mismatch can be diagnosed
+                              try { console.warn('Opening saved form payload type=', (payload?.formType || payload?.title), 'keys=', Object.keys(payload || {}).join(',')); } catch (e) {}
                               setSelectedForm(payload);
                               setModalVisible(true);
                             } catch (e) {
@@ -171,7 +172,7 @@ export default function FormSavesScreen() {
                             }
                           }}
                       >
-                        <Text style={styles.cardTitle}>{form.title || (form.meta?.formType === 'PPEIssuance' ? 'Personal Protective Equipment (PPE Issuance)' : 'Food Handlers Handwashing Log')}</Text>
+                        <Text style={styles.cardTitle}>{form.title || 'Food Handlers Handwashing Log'}</Text>
                         <Text style={styles.cardMeta}>Shift: {form.shift} | Location: {form.location}</Text>
                         <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : ''}</Text>
                         <Text style={styles.cardMeta}>Handlers: {form.handlers ? form.handlers.length : 0}</Text>
@@ -218,16 +219,16 @@ export default function FormSavesScreen() {
                           if (payload.meta) delete payload.meta;
 
                               // opened saved form
-
-                          setSelectedForm(payload);
-                          setModalVisible(true);
+                              try { console.warn('Opening saved form payload type=', (payload?.formType || payload?.title), 'keys=', Object.keys(payload || {}).join(',')); } catch (e) {}
+                              setSelectedForm(payload);
+                              setModalVisible(true);
                         } catch (e) {
                           console.warn('failed loading saved payload', e);
                           Alert.alert('Open failed', 'Unable to load saved form payload.');
                         }
                       }}
                   >
-                    <Text style={styles.cardTitle}>{form.title || (form.meta?.formType === 'PPEIssuance' ? 'Personal Protective Equipment (PPE Issuance)' : form.pdfPath?.split('/').pop() || 'Saved PDF')}</Text>
+                    <Text style={styles.cardTitle}>{form.title || form.pdfPath?.split('/').pop() || 'Saved PDF'}</Text>
                     <Text style={styles.cardMeta}>PDF: {form.pdfPath?.split('/').pop()}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(form, idx)}>

@@ -15,12 +15,12 @@ import PastInspectionFormPresentational from '../forms/components/PastInspection
 import EggsReceivingPresentational from '../forms/components/EggsReceivingPresentational';
 import CertificateOfAnalysisPresentational from '../forms/components/CertificateOfAnalysisPresentational';
 import React from 'react';
-import ErrorBoundary from './ErrorBoundary';
 import FoodHandlersPresentational from '../forms/components/FoodHandlersPresentational';
 import ThawingTemperaturePresentational from '../forms/components/ThawingTemperaturePresentational';
 import FOH_DailyCleaningPresentational from '../forms/components/FOH_DailyCleaningPresentational';
 import FOH_FrontOfHouseCleaningPresentational from '../forms/components/FOH_FrontOfHouseCleaningPresentational';
 import DisplayChillerShelfLifeInspectionPresentational from '../forms/components/DisplayChillerShelfLifeInspectionPresentational';
+import BOH_ShelfLifeInspectionPresentational from '../forms/components/BOH_ShelfLifeInspectionPresentational';
 import PreShiftMeetingAttendancePresentational from '../forms/components/PreShiftMeetingAttendancePresentational';
 import TrainingAttendanceRegisterPresentational from '../forms/components/TrainingAttendanceRegisterPresentational';
 import ProcessQualityOutOfControlPresentational from '../forms/components/ProcessQualityOutOfControlPresentational';
@@ -40,8 +40,16 @@ import HotHoldingTemperaturePresentational from '../forms/components/HotHoldingT
 import CookingTemperaturePresentational from '../forms/components/CookingTemperaturePresentational';
 import CoolingTemperaturePresentational from '../forms/components/CoolingTemperaturePresentational';
 import CoolingTemperatureSavedPresentational from '../forms/components/CoolingTemperatureSavedPresentational';
+import DryStorageArea_CleaningChecklistPresentational from '../forms/components/DryStorageArea_CleaningChecklistPresentational';
+import SculleryArea_CleaningChecklistPresentational from '../forms/components/SculleryArea_CleaningChecklistPresentational';
+import ColdRoom_FreezerRoomCleaningChecklistPresentational from '../forms/components/ColdRoom_FreezerRoomCleaningChecklistPresentational';
+import WalkInChillerLogPresentational from '../forms/components/WalkInChillerLogPresentational';
+import WalkInFreezerLogPresentational from '../forms/components/WalkInFreezerLogPresentational';
+import CleaningEquipment_CleaningChecklistPresentational from '../forms/components/CleaningEquipment_CleaningChecklistPresentational';
 import { View, Text, StyleSheet } from 'react-native';
 import VisitorsLogBookPresentational from '../forms/components/VisitorsLogBookPresentational';
+import PersonalHygieneChecklistPresentational from '../forms/components/PersonalHygieneChecklistPresentational';
+import BravoHealthStatusCheckPresentational from '../forms/components/BravoHealthStatusCheckPresentational';
 // Add other form imports as needed
 
 // SavedFormRenderer renders a saved payload using the same form component (read-only)
@@ -75,19 +83,9 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // include history entry top-level title as a fallback when payload lacks title
   const type = (payload?.formType || payload?.formTypeName || payload?.title || savedPayload?.title || '').toString();
 
-  const wrap = (Comp, props = {}) => (
-    <ErrorBoundary>
-      <Comp {...props} />
-    </ErrorBoundary>
-  );
-
   // Chilled & Frozen Receiving
   if (/ChilledFrozenReceivingForm|Chilled & Frozen Receiving|ChilledFrozenReceiving/i.test(type)) {
-    return (
-      <ErrorBoundary>
-        <ChilledFrozenReceivingPresentational payload={payload} />
-      </ErrorBoundary>
-    );
+    return <ChilledFrozenReceivingPresentational payload={payload} />;
   }
 
   // Dry Goods Receiving
@@ -110,8 +108,8 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
     );
   }
 
-  // FOH Daily Cleaning
-  if (/FOH_DailyCleaning|FOH Daily Cleaning|FOH_FrontOfHouseCleaning|FRONT OF HOUSE|FOH/i.test(type)) {
+  // FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH
+  if (/FOH_DailyCleaning|FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH|FOH_FrontOfHouseCleaning|FRONT OF HOUSE|FOH/i.test(type)) {
     return (
       <View>
         {/* Prefer the specific front-of-house renderer when type matches */}
@@ -132,17 +130,25 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
       </View>
     );
   }
+  // BOH Products Shelf-Life
+  if (/BOH_ShelfLifeInspectionChecklist|BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST|BOH Products Shelf-Life/i.test(type)) {
+    return (
+      <View>
+        <BOH_ShelfLifeInspectionPresentational payload={payload} />
+      </View>
+    );
+  }
   // Bin Liners Changing Log
   if (/BinLinersChangingLog|Bin Liners Changing Log/i.test(type)) {
-  return wrap(BinLinersChangingLogPresentational, { payload });
+    return <BinLinersChangingLogPresentational payload={payload} />;
   }
   // Beverage & Water Receiving
   if (/BeverageReceivingForm|Beverage & Water Receiving|Beverage and Water Receiving/i.test(type)) {
-  return wrap(BeverageReceivingPresentational, { payload });
+    return <BeverageReceivingPresentational payload={payload} />;
   }
   // Product Rejection Form
   if (/ProductRejectionForm/i.test(type)) {
-  return wrap(ProductRejectionPresentational, { payload });
+    return <ProductRejectionPresentational payload={payload} />;
   }
   // Packaging Materials Receiving
   if (/PackagingMaterialsReceivingForm|Packaging Materials Receiving|PackagingMaterialsReceiving/i.test(type)) {
@@ -180,6 +186,11 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   if (/WelfareFacilities_CleaningChecklist|Welfare Facilities Cleaning Checklist|Welfare Facilities/i.test(type)) {
     return <WelfareFacilitiesPresentational payload={payload} />;
   }
+
+  // Cleaning Equipment Checklist
+  if (/CleaningEquipment_CleaningChecklist|Cleaning Equipment Checklist|CLEANING EQUIPMENT CHECKLIST/i.test(type)) {
+    return <CleaningEquipment_CleaningChecklistPresentational payload={payload} />;
+  }
   // Food Handlers Daily Showering Log (reuse if type matches)
   if (/FoodHandlersDailyShowering|Daily Showering|FOOD HANDLERS DAILY SHOWERING/i.test(type)) {
     return <FoodHandlersDailyShoweringPresentational payload={payload} />;
@@ -206,6 +217,15 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // Detect that shape and render the bakery cleaning presentational.
   try {
     const first = Array.isArray(payload?.formData) && payload.formData.length ? payload.formData[0] : null;
+    // Cold Room shape detection: rows contain a `checks` object keyed by days (Sun..Sat)
+    // Accept both 'Thu' and 'Thurs' variants for Thursday since some forms use 'Thurs'.
+    const looksLikeColdRoom = first && typeof first === 'object' && first.checks && typeof first.checks === 'object' && (
+      ['Sun','Mon','Tue','Wed','Fri','Sat'].every(d => Object.prototype.hasOwnProperty.call(first.checks, d)) &&
+      (Object.prototype.hasOwnProperty.call(first.checks, 'Thu') || Object.prototype.hasOwnProperty.call(first.checks, 'Thurs'))
+    );
+    if (looksLikeColdRoom || /ColdRoom|Cold Room|Freezer Room/i.test(type)) {
+      return <ColdRoom_FreezerRoomCleaningChecklistPresentational payload={payload} />;
+    }
     const hasDaysMap = first && typeof first.days === 'object' && first.days !== null && ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].every(d => Object.prototype.hasOwnProperty.call(first.days, d));
     if (hasDaysMap || /\bbakery\b/i.test(type)) {
       return <BakeryCleaningChecklistPresentational payload={payload} />;
@@ -230,13 +250,13 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
       return <ProductsNetContentChecklistPresentational payload={payload} />;
     }
 
-    // PPE Issuance detection: rows contain many PPE boolean fields like 'apron', 'cap', 'chefHat'
+    // Personal  Protective Equipment Log detection: rows contain many PPE boolean fields like 'apron', 'cap', 'chefHat'
     const looksLikePPE = first && typeof first === 'object' && (
       Object.prototype.hasOwnProperty.call(first, 'apron') &&
       Object.prototype.hasOwnProperty.call(first, 'cap') &&
       Object.prototype.hasOwnProperty.call(first, 'chefHat')
     );
-    if (looksLikePPE || /PPEIssuance|Personal Protective Equipment|PPE Issuance/i.test(type)) {
+    if (looksLikePPE || /PPEIssuance|Personal Protective Equipment|Personal  Protective Equipment Log/i.test(type)) {
       return <PPEIssuancePresentational payload={payload} />;
     }
     // Visitors Log Book detection (shape-based): rows contain visitor fields like name/address/contact/purpose
@@ -255,6 +275,18 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // Kitchen Weekly Cleaning
   if (/KitchenWeeklyCleaningChecklist|Kitchen Weekly Cleaning Checklist|Kitchen_WeeklyCleaningChecklist/i.test(type)) {
     return <KitchenWeeklyCleaningChecklistPresentational payload={payload} />;
+  }
+  // Dry Storage Area Cleaning
+  if (/DryStorageArea_CleaningChecklist|Dry Storage Area Cleaning Checklist|DRY STORAGE AREA CLEANING CHECKLIST/i.test(type)) {
+    return <DryStorageArea_CleaningChecklistPresentational payload={payload} />;
+  }
+  // Scullery Area Cleaning
+  if (/SculleryArea_CleaningChecklist|Scullery Area Cleaning Checklist|SCULLERY AREA CLEANING CHECKLIST/i.test(type)) {
+    return <SculleryArea_CleaningChecklistPresentational payload={payload} />;
+  }
+  // Cold Room / Freezer Room Cleaning (support variants with '/', '&' or no separator)
+  if (/ColdRoom_FreezerRoomCleaningChecklist|Cold\s*Room[\s\/&]+Freezer\s*Room\s*Cleaning\s*Checklist|COLD\s*ROOM[\s\/&]+FREEZER\s*ROOM\s*CLEANING\s*CHECKLIST/i.test(type)) {
+    return <ColdRoom_FreezerRoomCleaningChecklistPresentational payload={payload} />;
   }
   // Kitchen Daily Cleaning
   if (/Kitchen Daily Cleaning|Kitchen_DailyCleaningForm|Kitchen Daily Cleaning & Sanitizing/i.test(type)) {
@@ -284,6 +316,22 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   if (/Visitors Log Book|VisitorsLogBook|VISITORS LOG BOOK/i.test(type) || /VisitorsLogBook/i.test(type)) {
     return <VisitorsLogBookPresentational payload={payload} embedded={embedded} />;
   }
+  // Bravo Health Status Check
+  if (/BravoHealthStatusCheck|BRAVO BRANDS HEALTH STATUS CHECK|Health Status Check|Bravo Brands Health/i.test(type)) {
+    return <BravoHealthStatusCheckPresentational payload={payload} />;
+  }
+  // Walk-in chiller saved view
+  if (/WalkInChillerLog|WALK-IN CHILLER TEMPERATURE CHECKLIST|Walk-In Chiller|WalkInChiller/i.test(type)) {
+    return <WalkInChillerLogPresentational payload={payload} />;
+  }
+  // Walk-in freezer saved view
+  if (/WalkInFreezerLog|WALK-IN FREEZER TEMPERATURE CHECKLIST|Walk-In Freezer|WalkInFreezer/i.test(type)) {
+    return <WalkInFreezerLogPresentational payload={payload} />;
+  }
+  // Personal Hygiene Checklist
+  if (/PersonalHygieneChecklist|Personal Hygiene Checklist|Personnel Hygiene Checklist/i.test(type) || /PersonalHygieneChecklist/i.test(type)) {
+    return <PersonalHygieneChecklistPresentational payload={payload} embedded={embedded} />;
+  }
   // Mixing Control Sheet
   if (/MixingControlSheet|Mixing Control Sheet|MIXING CONTROL SHEET/i.test(type)) {
     return <MixingControlSheetPresentational payload={payload} />;
@@ -309,12 +357,57 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
     return <TrainingAttendanceRegisterPresentational payload={payload} />;
   }
   // For all other forms, show a minimal message
-  return (
-    <View style={{ padding: 24 }}>
+  const safeRender = (Comp, props = {}) => {
+    try {
+      if (!Comp) {
+        console.warn('SavedFormRenderer: component is undefined for props', props);
+        return (
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: '#b00', fontWeight: '700' }}>Form renderer unavailable</Text>
+            <Text style={{ marginTop: 6 }}>This form type is not supported by the current build.</Text>
+          </View>
+        );
+      }
+      // Accept function/class components or forwardRef objects (check for $$typeof)
+      const isFn = typeof Comp === 'function';
+      const isObj = typeof Comp === 'object' && Comp !== null && (Comp.$$typeof || Comp.render);
+      if (isFn || isObj) {
+        return <Comp {...props} />;
+      }
+      console.warn('SavedFormRenderer: invalid component type', Comp);
+      return (
+        <View style={{ padding: 16 }}>
+          <Text style={{ color: '#b00', fontWeight: '700' }}>Form renderer error</Text>
+          <Text style={{ marginTop: 6 }}>Unable to render this saved form — component import is invalid.</Text>
+        </View>
+      );
+    } catch (err) {
+      console.warn('SavedFormRenderer: render error', err);
+      return (
+        <View style={{ padding: 16 }}>
+          <Text style={{ color: '#b00', fontWeight: '700' }}>Form renderer crashed</Text>
+          <Text style={{ marginTop: 6 }}>{String(err)}</Text>
+        </View>
+      );
+    }
+  };
+
+  // Fallback message: include lightweight debug info so developers can see the
+  // detected "type" string and a preview of the payload keys / first row.
+  return safeRender(View, { style: { padding: 24 }, children: (
+    <>
       <Text style={{ color: '#b00', fontWeight: 'bold', fontSize: 16 }}>Unsupported saved form type.</Text>
       <Text style={{ marginTop: 8, color: '#444' }}>This saved form does not match the Food Handlers layout. Please update the app to support this form type.</Text>
-    </View>
-  );
+      <View style={{ marginTop: 12 }}>
+        <Text style={{ fontWeight: '700' }}>Detected type:</Text>
+        <Text>{type}</Text>
+        <Text style={{ fontWeight: '700', marginTop: 8 }}>Payload keys:</Text>
+        <Text>{Object.keys(payload || {}).join(', ')}</Text>
+        <Text style={{ fontWeight: '700', marginTop: 8 }}>First row sample:</Text>
+        <Text>{JSON.stringify(Array.isArray(payload?.formData) && payload.formData.length ? payload.formData[0] : null)}</Text>
+      </View>
+    </>
+  ) });
 }
 
 const styles = StyleSheet.create({
