@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
-import { addFormHistory } from '../utils/formHistory';
+// history registration is handled by the save hook via formStorage.saveForm
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import FormActionBar from '../components/FormActionBar';
 
 const DRAFT_KEY = 'mixing_control_sheet_draft';
 
@@ -110,8 +111,8 @@ export default function MixingControlSheet() {
   const handleSubmitLocal = async () => {
     setBusy(true);
     try {
+      // useFormSave handles final save and history registration
       await handleSubmit();
-      await addFormHistory({ title: 'Mixing Control Sheet', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } });
     } catch (e) { console.warn('submit failed', e); }
     finally { setBusy(false); }
   };
@@ -130,6 +131,8 @@ export default function MixingControlSheet() {
     { key: 'mixerManSign', label: 'MIXER MAN SIGN', width: 140 },
     { key: 'supSign', label: 'SUP SIGN', width: 140 },
   ], []);
+
+  const tableWidth = useMemo(() => columnHeaders.reduce((s, c) => s + (c.width || 120), 0), [columnHeaders]);
 
   const renderRow = (item, index) => (
     <View key={index} style={styles.row}>
@@ -189,25 +192,24 @@ export default function MixingControlSheet() {
           </View>
         </View>
 
-        <View style={styles.tableWrap}>
-          <View style={styles.tableHeader}>
-            {columnHeaders.map(col => (
-              <View key={col.key} style={[styles.headerCell, { width: col.width }]}>
-                <Text style={styles.headerText}>{col.label}</Text>
+        <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>
+            <View style={[styles.tableWrap, { width: Math.max(tableWidth, 800) }]}> 
+              <View style={styles.tableHeader}>
+                {columnHeaders.map(col => (
+                  <View key={col.key} style={[styles.headerCell, { width: col.width }]}>
+                    <Text style={styles.headerText}>{col.label}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-          {formData.map(renderRow)}
-        </View>
+              {formData.map(renderRow)}
+            </View>
+          </ScrollView>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}>
-            <Text style={styles.btnText}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmitLocal} disabled={busy || isSaving}>
-            <Text style={styles.btnText}>{(busy || isSaving) ? 'Submitting...' : 'Submit Log'}</Text>
-          </TouchableOpacity>
-        </View>
+                        <FormActionBar
+          onSaveDraft={handleSaveDraftLocal}
+          onSubmit={handleSubmitLocal}
+          showSavePdf={false}
+        />
         <LoadingOverlay visible={isSaving || busy} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
