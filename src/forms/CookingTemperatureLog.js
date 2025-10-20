@@ -3,7 +3,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image,
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-import { addFormHistory } from '../utils/formHistory';
+import formStorage from '../utils/formStorage';
 
 
 const DRAFT_KEY = 'cooking_temperature_log_draft';
@@ -58,15 +58,15 @@ export default function CookingTemperatureLog() {
         let mounted = true;
         (async () => {
             try {
-                const d = await getDraft(DRAFT_KEY);
-                if (d && mounted) {
-                    if (d.rows) setRows(d.rows);
-                    if (d.meta) setMeta(d.meta);
-                }
-                // Always ensure issue date is current if not loaded from draft
-                if (mounted && (!d || !d.meta.issueDate)) {
-                    setMeta(prev => ({ ...prev, issueDate: getTodayDate() }));
-                }
+                        const d = await getDraft(DRAFT_KEY);
+                        if (d && mounted) {
+                            if (d.rows) setRows(d.rows);
+                            // Merge draft meta but always set issueDate to today's date so form shows current date
+                            setMeta(prev => ({ ...(d.meta || prev), issueDate: getTodayDate() }));
+                        } else if (mounted) {
+                            // No draft: set today's date
+                            setMeta(prev => ({ ...prev, issueDate: getTodayDate() }));
+                        }
             } catch (e) { console.warn('load draft', e); }
         })();
         // embed logo as base64 for deterministic saved payload rendering
@@ -111,8 +111,9 @@ export default function CookingTemperatureLog() {
                 savedAt: Date.now(),
             };
 
-            await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
-            await removeDraft(DRAFT_KEY);
+            const formId = `CookingTemperatureLog_${Date.now()}`;
+            await formStorage.saveForm(formId, payload);
+            try { await removeDraft(DRAFT_KEY); } catch (e) {}
             // Reset form
             setRows(initialRows);
             setMeta(prev => ({

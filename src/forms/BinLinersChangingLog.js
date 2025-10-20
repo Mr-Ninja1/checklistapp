@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
@@ -6,6 +6,7 @@ import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import FormActionBar from '../components/FormActionBar';
 
 export default function BinLinersChangingLog() {
   const DRAFT_KEY = 'bin_liners_changing_log';
@@ -21,6 +22,7 @@ export default function BinLinersChangingLog() {
   const [logEntries, setLogEntries] = useState(initialLog);
   const [verifiedBy, setVerifiedBy] = useState('');
   const [hseqManager, setHseqManager] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Issue date set to system date (dd/mm/yyyy)
   const issueDate = (() => {
@@ -40,7 +42,7 @@ export default function BinLinersChangingLog() {
   );
 
   // Load draft on mount
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     (async () => {
       try {
@@ -56,7 +58,7 @@ export default function BinLinersChangingLog() {
   }, []);
 
   // Auto-save draft on change
-  React.useEffect(() => {
+  useEffect(() => {
     const t = setTimeout(() => setDraft(DRAFT_KEY, { logEntries, verifiedBy, hseqManager }), 700);
     return () => clearTimeout(t);
   }, [logEntries, verifiedBy, hseqManager]);
@@ -69,6 +71,8 @@ export default function BinLinersChangingLog() {
   };
 
   const handleSubmit = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       // try to embed logo as base64
       let logoDataUri = null;
@@ -93,9 +97,8 @@ export default function BinLinersChangingLog() {
         assets: logoDataUri ? { logoDataUri } : undefined,
         savedAt: Date.now(),
       };
-      const formId = `BinLinersChangingLog_${Date.now()}`;
-      await formStorage.saveForm(formId, payload);
-      try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } }); } catch (e) {}
+  const formId = `BinLinersChangingLog_${Date.now()}`;
+  await formStorage.saveForm(formId, payload);
       try { await removeDraft(DRAFT_KEY); } catch (e) {}
       setLogEntries(initialLog);
       setVerifiedBy('');
@@ -103,6 +106,8 @@ export default function BinLinersChangingLog() {
       Alert.alert('Saved', 'Form saved to history');
     } catch (e) {
       Alert.alert('Error', 'Failed to save form');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -210,15 +215,10 @@ export default function BinLinersChangingLog() {
           </View>
         </View>
 
-        {/* Action buttons - Save Draft & Submit */}
+        {/* Shared action bar */}
         <View style={{ height: 18 }} />
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
-          </TouchableOpacity>
+        <View style={{ marginTop: 6 }}>
+          <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
         </View>
 
       </ScrollView>

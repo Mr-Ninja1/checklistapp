@@ -73,9 +73,8 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         savedAt: Date.now(),
       };
 
-      const formId = `DisplayChillerShelfLifeInspection_${Date.now()}`;
-      await formStorage.saveForm(formId, payload);
-      try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } }); } catch (e) {}
+  const formId = `DisplayChillerShelfLifeInspection_${Date.now()}`;
+  await formStorage.saveForm(formId, payload);
       try { await removeDraft(draftKey); } catch (e) {}
       Alert.alert('Saved', 'Form saved to history');
       setRows(createRowsFromItems(checklistItems));

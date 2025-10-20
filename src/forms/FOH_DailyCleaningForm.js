@@ -200,13 +200,9 @@ export default function FOH_DailyCleaningForm() {
       const formId = `FOH_DailyCleaning_${Date.now()}`;
       try {
         await formStorage.saveForm(formId, payload);
-        // ensure history entry points to formId (some environments may fail to register inside formStorage)
-        try {
-          await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId, filePath: null } });
-        } catch (e) {}
       } catch (e) {
         // fallback to older history if storage fails
-        await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } });
+        try { await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
       }
 
       try { await removeDraft(draftKey); } catch (e) {}

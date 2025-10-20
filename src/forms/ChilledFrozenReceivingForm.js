@@ -4,6 +4,7 @@ import NotificationModal from '../components/NotificationModal';
 import useFormSave from '../hooks/useFormSave';
 import { addFormHistory, removeFormHistory } from '../utils/formHistory';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import FormActionBar from '../components/FormActionBar';
 
 const { width } = Dimensions.get('window');
 
@@ -248,22 +249,13 @@ const ChilledFrozenReceivingForm = () => {
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
                         <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
                     </View>
-                    {/* Save Draft & Submit Buttons */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 32, gap: 24 }}>
-                        <TouchableOpacity
-                            style={{ backgroundColor: '#007A33', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8, minWidth: 120 }}
-                            onPress={handleSaveDraft}
-                            disabled={saving}
-                        >
-                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>Save Draft</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={{ backgroundColor: '#b00', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8, minWidth: 120 }}
-                            onPress={() => handleSubmit()}
-                            disabled={saving}
-                        >
-                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>Submit</Text>
-                        </TouchableOpacity>
+                    {/* Shared action bar: Save Draft / Submit */}
+                    <View style={{ marginTop: 24 }}>
+                        <FormActionBar
+                            onSaveDraft={handleSaveDraft}
+                            onSubmit={() => handleSubmit()}
+                            isSaving={saving}
+                        />
                     </View>
                 </View>
             </ScrollView>

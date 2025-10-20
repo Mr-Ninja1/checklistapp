@@ -123,9 +123,6 @@ export default function ProductsNetContentChecklist() {
       // eslint-disable-next-line no-console
       console.log('ProductsNetContentChecklist: submit button pressed');
       await handleSubmit();
-      // Register history in background; don't await so a slow history write doesn't block the UI
-      addFormHistory({ title: 'Products Net Content Checklist', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData, verification } })
-        .catch(e => console.warn('addFormHistory failed', e));
     } catch (e) {
       console.warn('submit failed', e);
     } finally {

@@ -108,6 +108,8 @@ export default function BakingControlSheet({ navigation }) {
     { key: 'supervisorSign', label: 'SUPERVISOR SIGN', width: 160 },
   ], []);
 
+  const tableWidth = useMemo(() => columnHeaders.reduce((s, c) => s + (c.width || 120), 0), [columnHeaders]);
+
   const renderRow = (item, index) => (
     <View key={index} style={styles.row}>
       {columnHeaders.map(col => (
@@ -153,16 +155,18 @@ export default function BakingControlSheet({ navigation }) {
           <Text style={styles.noteText}>This form should be completed daily by both Baker Man and Supervisor. File this form as evidence of performing the controls.</Text>
         </View>
 
-        <View style={styles.tableWrap}>
-          <View style={styles.tableHeader}>
-            {columnHeaders.map(col => (
-              <View key={col.key} style={[styles.headerCell, { width: col.width }]}>
-                <Text style={styles.headerText}>{col.label}</Text>
-              </View>
-            ))}
+        <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>
+          <View style={[styles.tableWrap, { width: Math.max(tableWidth, 800) }]}> 
+            <View style={styles.tableHeader}>
+              {columnHeaders.map(col => (
+                <View key={col.key} style={[styles.headerCell, { width: col.width }]}>
+                  <Text style={styles.headerText}>{col.label}</Text>
+                </View>
+              ))}
+            </View>
+            {formData.map(renderRow)}
           </View>
-          {formData.map(renderRow)}
-        </View>
+        </ScrollView>
 
                         <FormActionBar
           onSaveDraft={handleSaveDraft}

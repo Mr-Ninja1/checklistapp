@@ -241,6 +241,23 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
     if (looksLikeMixing || /MixingControlSheet|Mixing Control Sheet/i.test(type)) {
       return <MixingControlSheetPresentational payload={payload} />;
     }
+    // Bakery Sanitizing Log detection: rows have name, ppm and a `times` map (e.g. '06:00AM': true)
+    const looksLikeBakerySanitizing = first && typeof first === 'object' && (
+      Object.prototype.hasOwnProperty.call(first, 'name') &&
+      Object.prototype.hasOwnProperty.call(first, 'ppm') &&
+      Object.prototype.hasOwnProperty.call(first, 'times')
+    );
+    if (looksLikeBakerySanitizing || /Bakery_SanitizingLog|Sanitizing Log|Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery/i.test(type)) {
+      // If the canonical timeSlots/header info is missing, infer from the first row's times keys
+      try {
+        if ((!payload.timeSlots || !payload.timeSlots.length) && first && first.times && typeof first.times === 'object') {
+          payload.timeSlots = Object.keys(first.times);
+        }
+      } catch (e) {
+        // ignore inference errors
+      }
+      return <BakerySanitizingPresentational payload={payload} embedded={embedded} />;
+    }
     // Products Net Content Checklist detection: shape-based fallback for history entries
     const looksLikeProductsNet = first && typeof first === 'object' && (
       Object.prototype.hasOwnProperty.call(first, 'name') &&

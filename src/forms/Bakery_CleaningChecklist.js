@@ -385,9 +385,9 @@ export default function BakeryCleaningChecklist() {
                             onPress={async () => {
                                 setBusy(true);
                                 try {
-                                    // useFormSave will persist the canonical payload; afterwards run local history/notification
+                                    // useFormSave will persist the canonical payload (and register history).
                                     await handleSubmit();
-                                    await handleSubmitLocal();
+                                    Alert.alert('Success', 'Checklist Submitted successfully!');
                                 } finally { setBusy(false); }
                             }}
                             style={[styles.button, styles.submitButton]}

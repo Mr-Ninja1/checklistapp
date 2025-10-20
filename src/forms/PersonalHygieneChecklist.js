@@ -225,12 +225,6 @@ const PersonalHygieneChecklist = () => {
                         <TouchableOpacity onPress={async () => {
                             try {
                                 await handleSubmit();
-                                // register history snapshot so SavedFormRenderer can render immediately
-                                try {
-                                    const snapshot = buildPayload('submitted');
-                                    addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } })
-                                      .catch(e => console.warn('addFormHistory failed', e));
-                                } catch (e) { console.warn('failed to register history snapshot', e); }
                             } catch (e) { console.warn('submit failed', e); }
                         }} style={{ backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }}>
                             <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>

@@ -1,24 +1,41 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
 function FormActionBarComponent({ onBack, onSaveDraft, onSubmit, showSavePdf = false, onSavePdf, isSaving = false }) {
+  // local guard for double clicks in case a form does not pass an isSaving prop
+  const [localSaving, setLocalSaving] = useState(false);
+
+  const busy = Boolean(isSaving) || localSaving;
+
+  const wrap = useCallback(async (fn) => {
+    if (!fn) return;
+    if (busy) return;
+    try {
+      setLocalSaving(true);
+      // Ensure we await even if fn is not async
+      await Promise.resolve(fn());
+    } finally {
+      setLocalSaving(false);
+    }
+  }, [busy]);
+
   return (
     <View style={styles.row}>
-      <TouchableOpacity onPress={onBack} style={[styles.button, styles.aux]} disabled={isSaving}>
+      <TouchableOpacity onPress={() => { if (!busy && onBack) onBack(); }} style={[styles.button, styles.aux]} disabled={busy}>
         <Text style={styles.buttonText}>Back</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onSaveDraft} style={[styles.button, styles.draft]} disabled={isSaving}>
-        <Text style={styles.buttonText}>Save Draft</Text>
+      <TouchableOpacity onPress={() => wrap(onSaveDraft)} style={[styles.button, styles.draft]} disabled={busy || !onSaveDraft}>
+        {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onSubmit} style={[styles.button, styles.primary]} disabled={isSaving}>
-        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit</Text>}
+      <TouchableOpacity onPress={() => wrap(onSubmit)} style={[styles.button, styles.primary]} disabled={busy || !onSubmit}>
+        {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit</Text>}
       </TouchableOpacity>
 
       {showSavePdf && (
-        <TouchableOpacity onPress={onSavePdf} style={[styles.button, styles.secondary]} disabled={isSaving}>
-          <Text style={styles.buttonText}>submit</Text>
+        <TouchableOpacity onPress={() => wrap(onSavePdf)} style={[styles.button, styles.secondary]} disabled={busy || !onSavePdf}>
+          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save PDF</Text>}
         </TouchableOpacity>
       )}
     </View>

@@ -224,13 +224,10 @@ const PPEIssuanceForm = () => {
                                                                                                                         onPress={async () => {
                                                                                                                             try {
                                                                                                                                 await handleSubmit();
-                                                                                        // Register history record in background
-                                                                                        addFormHistory({ title: 'Personal  Protective Equipment Log', date: issueDate, savedAt: Date.now(), meta: { metadata: { issueDate }, formData: data } })
-                                                                                            .catch(e => console.warn('addFormHistory failed', e));
-                                                                                    } catch (e) {
-                                                                                        console.warn('submit failed', e);
-                                                                                    }
-                                                                                }}
+                                                                                                                            } catch (e) {
+                                                                                                                                console.warn('submit failed', e);
+                                                                                                                            }
+                                                                                                                        }}
                                                                                 disabled={isSaving}
                                                                             >
                                                                                 <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>

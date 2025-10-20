@@ -134,10 +134,6 @@ export default function CustomerSatisfactionQuestionnaire() {
     const anyRated = Array.isArray(state.sections) && state.sections.some(s => s.questions && s.questions.some(q => q.rating && String(q.rating).trim() !== ''));
     if (!anyRated) { Alert.alert('Empty', 'Please rate at least one question before submitting.'); return; }
     await handleSubmit();
-    try {
-      // add history snapshot so Saved Forms can render presentational even if file load later fails
-      await addFormHistory({ title: state.subject, date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { payload: buildPayload('final') } });
-    } catch (e) { /* ignore */ }
   };
 
   // embed logo as base64 for deterministic rendering of saved presentational views

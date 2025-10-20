@@ -48,10 +48,11 @@ export default function CookingTemperaturePresentational({ payload }) {
           <Text style={styles.probeDateSmall}>DATE: {metadata.date || ''}</Text>
         </View>
 
-        {/* Table */}
-        <View style={[styles.table, { minWidth: _tableWidth || 900 }]}> 
-          {/* Title */}
-          <Text style={styles.tableTitle}>COOKING TEMPERATURE LOG</Text>
+        {/* Table (horizontally scrollable) */}
+        <ScrollView horizontal contentContainerStyle={{}} showsHorizontalScrollIndicator={true}>
+          <View style={[styles.table, { minWidth: _tableWidth || 900 }]}> 
+            {/* Title */}
+            <Text style={styles.tableTitle}>COOKING TEMPERATURE LOG</Text>
 
           {/* Header group row */}
           <View style={[styles.tableGroupHeader]}>
@@ -101,7 +102,8 @@ export default function CookingTemperaturePresentational({ payload }) {
             </View>
           ))}
 
-        </View>
+          </View>
+        </ScrollView>
 
         {/* --- Footer Section: Chef / Corrective Action / Verified By (HSEQ & Complex Manager) --- */}
         <View style={styles.footerSection}>

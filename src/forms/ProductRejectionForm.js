@@ -70,9 +70,8 @@ export default function ProductRejectionForm() {
         assets: logoDataUri ? { logoDataUri } : undefined,
         savedAt: Date.now(),
       };
-      const formId = `ProductRejectionForm_${Date.now()}`;
-      await formStorage.saveForm(formId, payload);
-      try { await addFormHistory({ title: payload.title, date: '', savedAt: payload.savedAt, meta: { formId } }); } catch (e) {}
+  const formId = `ProductRejectionForm_${Date.now()}`;
+  await formStorage.saveForm(formId, payload);
       try { await removeDraft(draftKey); } catch (e) {}
       setRejectionEntries(initialRejectionLog);
       setStoreOfficer('');

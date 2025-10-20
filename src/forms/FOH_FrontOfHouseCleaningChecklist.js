@@ -147,10 +147,9 @@ export default function FrontOfHouseChecklist() {
       const formId = `FOH_FrontOfHouseCleaning_${Date.now()}`;
       try {
         await formStorage.saveForm(formId, payload);
-        await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { formId } });
       } catch (e) {
         // fallback
-        await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), meta: { metadata, formData } });
+        try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
       }
 
       await removeDraft(DRAFT_KEY);

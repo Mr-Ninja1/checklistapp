@@ -42,8 +42,9 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
           <View style={styles.compiledBoxThin}><Text style={styles.compiledLabelSmall}>APPROVED BY: {metadata.approvedBy || ''}</Text></View>
         </View>
 
-        <View style={[styles.table, { minWidth: tableWidth }]}> 
-          <Text style={styles.tableTitle}>COOLING TEMPERATURE LOG</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+          <View style={[styles.table, { minWidth: tableWidth }]}> 
+            <Text style={styles.tableTitle}>COOLING TEMPERATURE LOG</Text>
 
           <View style={[styles.tableHeaderRow, styles.groupHeader]}>
             <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
@@ -102,7 +103,8 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
             </View>
           ))}
 
-        </View>
+          </View>
+        </ScrollView>
 
         {/* Footer */}
         <View style={styles.footerSection}>

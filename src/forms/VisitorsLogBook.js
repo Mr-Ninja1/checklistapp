@@ -347,15 +347,6 @@ export default function VisitorsLogBook() {
             onPress={async () => {
               try {
                 await handleSubmit();
-                try {
-                  const payloadSnapshot = buildPayload('submitted');
-                  // Register a history snapshot that includes the full payload so the saved form
-                  // can be rendered identically by SavedFormRenderer even before file load.
-                  addFormHistory({ title: payloadSnapshot.title || 'Visitors Log Book', date: payloadSnapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: payloadSnapshot } })
-                    .catch(e => console.warn('addFormHistory failed', e));
-                } catch (e) {
-                  console.warn('Failed to build payload snapshot for history', e);
-                }
               } catch (e) { console.warn('submit failed', e); }
             }}
             disabled={isSaving}

@@ -3,10 +3,10 @@ import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Image 
 import useResponsive from '../utils/responsive';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import FormActionBar from '../components/FormActionBar';
 import useFormSave from '../hooks/useFormSave';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
-import { addFormHistory } from '../utils/formHistory';
 
 // TIME SLOTS (AM shift) from cat.md
 const TIME_SLOTS = [
@@ -111,16 +111,28 @@ export default function Bakery_SanitizingLog() {
   const handleInput = (id, field, v) => setFormData(prev => prev.map(r => r.id === id ? { ...r, [field]: v } : r));
   const handleMeta = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
-  const handleSave = async () => {
+  // Use the canonical handleSubmit from useFormSave so saved payloads are full
+  // canonical payloads (including formType, layoutHints, assets, formData) and
+  // are persisted under a formId that SavedFormRenderer can load later.
+  const handleSaveLocal = async () => {
+    if (busy || isSaving) return;
     setBusy(true);
     try {
-      await addFormHistory({ title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery', date: metadata.date || new Date().toLocaleDateString(), savedAt: Date.now(), meta: { metadata, formData } });
-      // after successful submit, clear stable draft via hook's clearOnSubmit
-      if (navigation && navigation.navigate) navigation.navigate('Home');
-    } catch (e) { alert('Failed to submit'); }
-    finally { setBusy(false); }
+      await handleSubmit(() => {
+        // clearOnSubmit provided to useFormSave will reset form state; navigate home
+        if (navigation && navigation.navigate) navigation.navigate('Home');
+      });
+    } catch (e) {
+      alert('Failed to submit');
+    } finally {
+      setBusy(false);
+    }
   };
-  const handleBack = () => { setBusy(true); setTimeout(()=>{ if (navigation && navigation.navigate) navigation.navigate('Home'); setBusy(false); }, 150); };
+  const handleBack = () => {
+    if (busy || isSaving) return;
+    setBusy(true);
+    setTimeout(()=>{ if (navigation && navigation.navigate) navigation.navigate('Home'); setBusy(false); }, 150);
+  };
 
   return (
     <ScrollView style={[styles.container, { padding: s(12) }]} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
@@ -132,9 +144,7 @@ export default function Bakery_SanitizingLog() {
         </View>
         <Text style={[styles.title, { fontSize: ms(16), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET - BAKERY</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity onPress={handleBack} style={styles.ghostBtn}><Text>Back</Text></TouchableOpacity>
-          <TouchableOpacity onPress={async () => { try { await handleSaveDraft(); alert('Draft saved'); } catch (e) { alert('Failed to save draft'); } }} style={styles.warnBtn}><Text style={{ color: '#fff' }}>Save Draft</Text></TouchableOpacity>
-          <TouchableOpacity onPress={async () => { try { await handleSubmit(() => handleSave()); } catch (e) { /* handle error */ } }} style={styles.primaryBtn}><Text style={{ color: '#fff' }}>Submit</Text></TouchableOpacity>
+          <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSaveLocal} isSaving={busy || isSaving} />
         </View>
       </View>
 

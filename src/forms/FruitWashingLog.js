@@ -26,7 +26,7 @@ const initialLogEntry = {
 const initialLogState = Array.from({ length: MAX_ENTRIES }, () => ({ ...initialLogEntry }));
 
 const initialMetadata = {
-  subject: 'FRUIT, VEGETABLE AND EGG WASHING & SANITIZING LOG',
+  subject: 'FRUIT AND VEGETABLE WASHING & SANITIZING LOG',
   docNo: 'BBN-SHEQ-P-26.19b',
   issueDate: '',
   reviewDate: 'N/A',
@@ -89,7 +89,7 @@ export default function FruitWashingLog() {
   const buildPayload = () => ({
     formType: 'FruitWashingLog',
     templateVersion: 'v1.0',
-    title: 'Fruit, Vegetable and Egg Washing & Sanitizing Log',
+    title: 'FRUIT AND VEGETABLE Washing & Sanitizing Log',
     metadata,
     formData,
     // layout hints used by presentational renderers to keep column widths consistent
@@ -131,8 +131,6 @@ export default function FruitWashingLog() {
   const submitAndRecord = async () => {
     try {
       await handleSubmit();
-      // include a snapshot of the canonical payload so Saved Forms can render presentational reliably
-      await addFormHistory({ title: 'Fruit, Vegetable and Egg Washing & Sanitizing Log', date: new Date().toLocaleDateString(), savedAt: Date.now(), meta: { payload: buildPayload('final') } });
       try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
     } catch (e) {
       console.warn('submit failed', e);
