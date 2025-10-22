@@ -85,52 +85,68 @@ const PersonalHygieneChecklist = () => {
     const renderItem = ({ item }) => (
         <View style={styles.tableRow} key={item.id}>
             {/* DATE (Input) */}
-            <TextInput
-                style={[styles.inputCell, styles.dateCol]}
-                value={item.date}
-                editable={editMode}
-                onChangeText={editMode ? (t) => updateField(item.id, 'date', t) : undefined}
-                placeholder="D/M/Y"
-            />
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.dateCol]}
+                    value={item.date}
+                    editable={true}
+                    onChangeText={(t) => updateField(item.id, 'date', t)}
+                    placeholder="D/M/Y"
+                />
+            ) : (
+                <Text style={[styles.cell, styles.dateCol]}>{item.date}</Text>
+            )}
             
             {/* NAME (Input) */}
-            <TextInput
-                style={[styles.inputCell, styles.nameCol]}
-                value={item.name}
-                editable={editMode}
-                onChangeText={editMode ? (t) => updateField(item.id, 'name', t) : undefined}
-                placeholder="Name"
-            />
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.nameCol]}
+                    value={item.name}
+                    editable={true}
+                    onChangeText={(t) => updateField(item.id, 'name', t)}
+                    placeholder="Name"
+                />
+            ) : (
+                <Text style={[styles.cell, styles.nameCol]}>{item.name}</Text>
+            )}
             
             {/* Hygiene Checkboxes (10 columns) */}
-            <ChecklistToggle isChecked={item.hairCover} editable={editMode} onToggle={() => toggleCheck(item.id, 'hairCover')} />
-            <ChecklistToggle isChecked={item.shortNails} editable={editMode} onToggle={() => toggleCheck(item.id, 'shortNails')} />
-            <ChecklistToggle isChecked={item.workSuit} editable={editMode} onToggle={() => toggleCheck(item.id, 'workSuit')} />
-            <ChecklistToggle isChecked={item.jewellery} editable={editMode} onToggle={() => toggleCheck(item.id, 'jewellery')} />
-            <ChecklistToggle isChecked={item.lipstick} editable={editMode} onToggle={() => toggleCheck(item.id, 'lipstick')} />
-            <ChecklistToggle isChecked={item.persistentDiarrhoea} editable={editMode} onToggle={() => toggleCheck(item.id, 'persistentDiarrhoea')} />
-            <ChecklistToggle isChecked={item.persistentCough} editable={editMode} onToggle={() => toggleCheck(item.id, 'persistentCough')} />
-            <ChecklistToggle isChecked={item.runningNose} editable={editMode} onToggle={() => toggleCheck(item.id, 'runningNose')} />
-            <ChecklistToggle isChecked={item.skinInfection} editable={editMode} onToggle={() => toggleCheck(item.id, 'skinInfection')} />
-            <ChecklistToggle isChecked={item.openWound} editable={editMode} onToggle={() => toggleCheck(item.id, 'openWound')} /> 
+            <ChecklistToggle isChecked={item.hairCover} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'hairCover') : undefined} />
+            <ChecklistToggle isChecked={item.shortNails} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'shortNails') : undefined} />
+            <ChecklistToggle isChecked={item.workSuit} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'workSuit') : undefined} />
+            <ChecklistToggle isChecked={item.jewellery} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'jewellery') : undefined} />
+            <ChecklistToggle isChecked={item.lipstick} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'lipstick') : undefined} />
+            <ChecklistToggle isChecked={item.persistentDiarrhoea} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'persistentDiarrhoea') : undefined} />
+            <ChecklistToggle isChecked={item.persistentCough} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'persistentCough') : undefined} />
+            <ChecklistToggle isChecked={item.runningNose} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'runningNose') : undefined} />
+            <ChecklistToggle isChecked={item.skinInfection} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'skinInfection') : undefined} />
+            <ChecklistToggle isChecked={item.openWound} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'openWound') : undefined} /> 
 
             {/* COMMENT (Input) */}
-            <TextInput
-                style={[styles.inputCell, styles.commentCol]}
-                value={item.comment}
-                editable={editMode}
-                onChangeText={editMode ? (t) => updateField(item.id, 'comment', t) : undefined}
-                placeholder="Comment"
-            />
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.commentCol]}
+                    value={item.comment}
+                    editable={true}
+                    onChangeText={(t) => updateField(item.id, 'comment', t)}
+                    placeholder="Comment"
+                />
+            ) : (
+                <Text style={[styles.cell, styles.commentCol]}>{item.comment}</Text>
+            )}
             
             {/* CHECKED BY? (Input) */}
-            <TextInput
-                style={[styles.inputCell, styles.checkedByCol, styles.lastCol]}
-                value={item.checkedBy}
-                editable={editMode}
-                onChangeText={editMode ? (t) => updateField(item.id, 'checkedBy', t) : undefined}
-                placeholder="Checked By?"
-            />
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.checkedByCol, styles.lastCol]}
+                    value={item.checkedBy}
+                    editable={true}
+                    onChangeText={(t) => updateField(item.id, 'checkedBy', t)}
+                    placeholder="Checked By?"
+                />
+            ) : (
+                <Text style={[styles.cell, styles.checkedByCol, styles.lastCol]}>{item.checkedBy}</Text>
+            )}
         </View>
     );
 
@@ -223,11 +239,11 @@ const PersonalHygieneChecklist = () => {
                     
                     {/* Save / Submit buttons (non-intrusive) */}
                     <View style={{ padding: 8, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                        <TouchableOpacity onPress={editMode ? () => handleSaveDraft && handleSaveDraft() : undefined} style={{ backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }} disabled={!editMode}>
-                            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+                        <TouchableOpacity onPress={(!editMode || isSaving) ? undefined : () => handleSaveDraft && handleSaveDraft()} style={{ backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }} disabled={!editMode || isSaving}>
+                            <Text style={{ color: '#fff', fontWeight: '700' }}>{isSaving ? 'Saving...' : 'Save Draft'}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={editMode ? async () => { try { await handleSubmit(); } catch (e) { console.warn('submit failed', e); } } : undefined} style={{ backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }} disabled={!editMode}>
-                            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+                        <TouchableOpacity onPress={(!editMode || isSaving) ? undefined : async () => { try { await handleSubmit(); } catch (e) { console.warn('submit failed', e); } }} style={{ backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }} disabled={!editMode || isSaving}>
+                            <Text style={{ color: '#fff', fontWeight: '700' }}>{isSaving ? 'Submitting...' : 'Submit'}</Text>
                         </TouchableOpacity>
                     </View>
                                         </View>

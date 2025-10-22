@@ -150,29 +150,53 @@ export default function ProductRejectionForm() {
                 {rejectionEntries.map((entry, idx) => (
               <View key={idx} style={styles.tableRow}>
                 <View style={styles.colSn}><Text style={styles.cellText}>{idx + 1}.</Text></View>
-                <View style={styles.colName}><TextInput style={styles.cellInput} value={entry.name} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'name', t)} /></View>
-                <View style={styles.colSupplier}><TextInput style={styles.cellInput} value={entry.supplier} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'supplier', t)} /></View>
-                <View style={styles.colInvoice}><TextInput style={styles.cellInput} value={entry.invoice} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'invoice', t)} /></View>
-                <View style={styles.colBatch}><TextInput style={styles.cellInput} value={entry.batch} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'batch', t)} /></View>
-                <View style={styles.colExpiry}><TextInput style={styles.cellInput} value={entry.expiry} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'expiry', t)} placeholder="DD/MM/YYYY" /></View>
-                <View style={styles.colReason}><TextInput style={styles.cellInput} value={entry.reason} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'reason', t)} /></View>
+                <View style={styles.colName}>{editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.name} editable={true} onChangeText={t => updateRejectionEntry(idx, 'name', t)} />
+                  ) : (
+                    <Text style={styles.cellText}>{entry.name}</Text>
+                  )}</View>
+                <View style={styles.colSupplier}>{editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.supplier} editable={true} onChangeText={t => updateRejectionEntry(idx, 'supplier', t)} />
+                  ) : (
+                    <Text style={styles.cellText}>{entry.supplier}</Text>
+                  )}</View>
+                <View style={styles.colInvoice}>{editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.invoice} editable={true} onChangeText={t => updateRejectionEntry(idx, 'invoice', t)} />
+                  ) : (
+                    <Text style={styles.cellText}>{entry.invoice}</Text>
+                  )}</View>
+                <View style={styles.colBatch}>{editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.batch} editable={true} onChangeText={t => updateRejectionEntry(idx, 'batch', t)} />
+                  ) : (
+                    <Text style={styles.cellText}>{entry.batch}</Text>
+                  )}</View>
+                <View style={styles.colExpiry}>{editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.expiry} editable={true} onChangeText={t => updateRejectionEntry(idx, 'expiry', t)} placeholder="DD/MM/YYYY" />
+                  ) : (
+                    <Text style={styles.cellText}>{entry.expiry}</Text>
+                  )}</View>
+                <View style={styles.colReason}>{editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.reason} editable={true} onChangeText={t => updateRejectionEntry(idx, 'reason', t)} />
+                  ) : (
+                    <Text style={styles.cellText}>{entry.reason}</Text>
+                  )}</View>
               </View>
             ))}
           </View>
         </View>
         <View style={styles.signatures}> 
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Name & signature of stores Officer:</Text><TextInput style={styles.sigInput} value={storeOfficer} onChangeText={setStoreOfficer} /></View>
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Verified by complex manager (Name & signature):</Text><TextInput style={styles.sigInput} value={complexManager} onChangeText={setComplexManager} /></View>
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Approved by (Finance and stock controller):</Text><TextInput style={styles.sigInput} value={financeStockController} onChangeText={setFinanceStockController} /></View>
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Rejected product collected by (Name & signature):</Text><TextInput style={styles.sigInput} value={rejectedProductCollector} onChangeText={setRejectedProductCollector} /></View>
+          <View style={styles.sigRow}><Text style={styles.sigLabel}>Name & signature of stores Officer:</Text>{editMode ? <TextInput style={styles.sigInput} value={storeOfficer} onChangeText={setStoreOfficer} /> : <Text style={styles.sigInput}>{storeOfficer}</Text>}</View>
+          <View style={styles.sigRow}><Text style={styles.sigLabel}>Verified by complex manager (Name & signature):</Text>{editMode ? <TextInput style={styles.sigInput} value={complexManager} onChangeText={setComplexManager} /> : <Text style={styles.sigInput}>{complexManager}</Text>}</View>
+          <View style={styles.sigRow}><Text style={styles.sigLabel}>Approved by (Finance and stock controller):</Text>{editMode ? <TextInput style={styles.sigInput} value={financeStockController} onChangeText={setFinanceStockController} /> : <Text style={styles.sigInput}>{financeStockController}</Text>}</View>
+          <View style={styles.sigRow}><Text style={styles.sigLabel}>Rejected product collected by (Name & signature):</Text>{editMode ? <TextInput style={styles.sigInput} value={rejectedProductCollector} onChangeText={setRejectedProductCollector} /> : <Text style={styles.sigInput}>{rejectedProductCollector}</Text>}</View>
         </View>
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+          <TouchableOpacity onPress={(!editMode) ? undefined : handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+          <TouchableOpacity onPress={(!editMode) ? undefined : handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
           </TouchableOpacity>
         </View>

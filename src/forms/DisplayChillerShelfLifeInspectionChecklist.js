@@ -33,9 +33,12 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
   const draftKey = 'display_chiller_shelf_life';
   const [rows, setRows] = useState(() => createRowsFromItems(checklistItems));
   const [editMode, setEditMode] = useState(false);
+  const [busy, setBusy] = useState(false);
   const today = new Date();
-  const defaultDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
+  const defaultDate = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth() + 1).padStart(2,'0')}/${today.getFullYear()}`;
   const [issueDate, setIssueDate] = useState(defaultDate);
+  const [verifiedBy, setVerifiedBy] = useState('');
+  const [baristaSign, setBaristaSign] = useState('');
 
   React.useEffect(() => {
     let mounted = true;
@@ -45,6 +48,8 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         if (d && mounted) {
           if (d.rows) setRows(d.rows);
           if (d.issueDate) setIssueDate(d.issueDate);
+          if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
+          if (d.baristaSign) setBaristaSign(d.baristaSign);
         }
       } catch (e) {}
     })();
@@ -52,9 +57,9 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
   }, []);
 
   React.useEffect(() => {
-    const t = setTimeout(() => setDraft(draftKey, { rows, issueDate }), 700);
+    const t = setTimeout(() => setDraft(draftKey, { rows, issueDate, verifiedBy, baristaSign }), 700);
     return () => clearTimeout(t);
-  }, [rows, issueDate]);
+  }, [rows, issueDate, verifiedBy, baristaSign]);
 
   const updateField = (id, field, value) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
@@ -64,12 +69,14 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
     setBusy(true);
     try {
       const rowsWithId = rows.map((r, i) => ({ id: r.id || `${i+1}`, ...r }));
-      const payload = {
+        const payload = {
         formType: 'DisplayChillerShelfLifeInspection',
         templateVersion: 'v1.0',
         title: 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST',
         frequency: 'DAILY',
         date: issueDate,
+        verifiedBy,
+        baristaSign,
         formData: rowsWithId,
         layoutHints: { itemCol: 420, dateCol: 100, timeCol: 100, usedByCol: 120, staffCol: 220, qtyCol: 80, signCol: 80 },
         _tableWidth: 420 + 100 + 100 + 120 + 220 + 80 + 80,
@@ -80,8 +87,10 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
   await formStorage.saveForm(formId, payload);
       try { await removeDraft(draftKey); } catch (e) {}
       Alert.alert('Saved', 'Form saved to history');
-      setRows(createRowsFromItems(checklistItems));
+        setRows(createRowsFromItems(checklistItems));
       setIssueDate(defaultDate);
+      setVerifiedBy('');
+      setBaristaSign('');
     } catch (e) {
       console.warn('Save failed', e);
       Alert.alert('Error', 'Failed to save form');
@@ -133,7 +142,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
 
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={saveDraftLocal}>
-      <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 160 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 160, paddingRight: 110 }} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -147,7 +156,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
           </View>
         </View>
 
-        <View style={styles.tableContainer}>
+  <View style={[styles.tableContainer, { paddingRight: 8 }] }>
           <View style={styles.headerRow}>
             <Text style={[styles.headerCell, styles.itemCol]}>ITEMS</Text>
             <Text style={[styles.headerCell, styles.dateCol]}>DATE IN</Text>
@@ -158,15 +167,26 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
             <Text style={[styles.headerCell, styles.signCol]}>SIGN</Text>
           </View>
 
-          <ScrollView horizontal nestedScrollEnabled={true} directionalLockEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1 }}>
+          <ScrollView horizontal nestedScrollEnabled={true} directionalLockEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1, paddingRight: 100 }}>
             <View style={{ width: 420 + 100 + 100 + 120 + 220 + 80 + 80 }}>
               <FlatList data={rows} renderItem={renderRow} keyExtractor={r => r.id} scrollEnabled={false} />
             </View>
           </ScrollView>
         </View>
 
-        <View style={{ height: 30 }} />
-        <Text style={{ fontSize: 12, color: '#333' }}>DATE: ______________________    VERIFIED BY: ______________________    BARISTA SIGN: ______________________</Text>
+        <View style={{ height: 12 }} />
+        {editMode ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700' }}>DATE:</Text>
+            <TextInput style={{ borderBottomWidth: 1, minWidth: 120, paddingVertical: 4 }} value={issueDate} onChangeText={setIssueDate} />
+            <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 12 }}>VERIFIED BY:</Text>
+            <TextInput style={{ borderBottomWidth: 1, minWidth: 140, paddingVertical: 4 }} value={verifiedBy} onChangeText={setVerifiedBy} />
+            <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 12 }}>BARISTA SIGN:</Text>
+            <TextInput style={{ borderBottomWidth: 1, minWidth: 140, paddingVertical: 4 }} value={baristaSign} onChangeText={setBaristaSign} />
+          </View>
+        ) : (
+          <Text style={{ fontSize: 12, color: '#333' }}>DATE: {issueDate}    VERIFIED BY: {verifiedBy || '______________________'}    BARISTA SIGN: {baristaSign || '____________________'}</Text>
+        )}
 
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />

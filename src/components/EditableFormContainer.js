@@ -33,7 +33,26 @@ export default function EditableFormContainer({ children, editMode, setEditMode,
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={isEditing ? 'Finish editing form' : 'Edit form'}
-        style={{ position: 'absolute', right: 14, top: '44%', width: 72, height: 72, borderRadius: 36, backgroundColor: isEditing ? '#34C759' : '#FF3B30', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}
+        // pin to middle-right so it remains fixed and reachable regardless of content scroll
+        style={{
+          position: 'absolute',
+          right: 14,
+          top: '50%',
+          marginTop: -36,
+          width: 72,
+          height: 72,
+          borderRadius: 36,
+          backgroundColor: isEditing ? '#34C759' : '#FF3B30',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 200,
+          elevation: 12, // Android: lift above other content
+          shadowColor: '#000', // iOS shadow
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+          overflow: 'hidden',
+        }}
         onPress={() => {
           if (isEditing) {
             Keyboard.dismiss();

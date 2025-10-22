@@ -170,11 +170,11 @@ export default function KitchenWeeklyCleaningChecklist() {
       {WEEK_DAYS.map(day => (
         <View key={day} style={[styles.dayGroup, { width: COL_WIDTHS.DAY_GROUP }]}>
           <View style={[styles.cell, { width: COL_WIDTHS.CHECK, justifyContent: 'center' }]}>
-            <Checkbox checked={item.checks[day].checked} onPress={() => handleCellChange(item.id, day, 'checked')} />
+            <Checkbox checked={item.checks[day].checked} onPress={editMode ? () => handleCellChange(item.id, day, 'checked') : undefined} />
           </View>
           <View style={[styles.cell, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563' }]}>
             {editMode ? (
-              <TextInput style={styles.cellInput} value={item.checks[day].cleanedBy} editable={editMode} onChangeText={(t) => { if (!editMode) return; handleCellChange(item.id, day, 'cleanedBy', t); }} placeholder="Name" maxLength={15} />
+              <TextInput style={styles.cellInput} value={item.checks[day].cleanedBy} editable={true} onChangeText={(t) => { handleCellChange(item.id, day, 'cleanedBy', t); }} placeholder="Name" maxLength={15} />
             ) : (
               <Text style={styles.readOnlyCell}>{item.checks[day].cleanedBy}</Text>
             )}
@@ -204,30 +204,30 @@ export default function KitchenWeeklyCleaningChecklist() {
           <View style={styles.metadataRow}>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>LOCATION:</Text>
-              <TextInput value={metadata.location} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('location',t); }} style={styles.metaInput} />
+              {editMode ? <TextInput value={metadata.location} editable={true} onChangeText={(t)=>{ handleMetadataChange('location',t); }} style={styles.metaInput} /> : <Text style={styles.readOnlyMeta}>{metadata.location}</Text>}
             </View>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>WEEK:</Text>
-              <TextInput value={metadata.week} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('week',t); }} style={styles.metaInput} placeholder="Week No." />
+              {editMode ? <TextInput value={metadata.week} editable={true} onChangeText={(t)=>{ handleMetadataChange('week',t); }} style={styles.metaInput} placeholder="Week No." /> : <Text style={styles.readOnlyMeta}>{metadata.week}</Text>}
             </View>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>MONTH:</Text>
-              <TextInput value={metadata.month} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('month',t); }} style={styles.metaInput} />
+              {editMode ? <TextInput value={metadata.month} editable={true} onChangeText={(t)=>{ handleMetadataChange('month',t); }} style={styles.metaInput} /> : <Text style={styles.readOnlyMeta}>{metadata.month}</Text>}
             </View>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>YEAR:</Text>
-              <TextInput value={metadata.year} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('year',t); }} style={styles.metaInput} placeholder="YYYY" />
+              {editMode ? <TextInput value={metadata.year} editable={true} onChangeText={(t)=>{ handleMetadataChange('year',t); }} style={styles.metaInput} placeholder="YYYY" /> : <Text style={styles.readOnlyMeta}>{metadata.year}</Text>}
             </View>
           </View>
 
           <View style={styles.verificationRow}>
             <View style={styles.verCell}>
               <Text style={styles.verLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('hseqManager',t); }} style={styles.verInput} />
+              {editMode ? <TextInput value={metadata.hseqManager} editable={true} onChangeText={(t)=>{ handleMetadataChange('hseqManager',t); }} style={styles.verInput} /> : <Text style={styles.readOnlyMeta}>{metadata.hseqManager}</Text>}
             </View>
             <View style={styles.verCell}>
               <Text style={styles.verLabel}>Complex Manager:</Text>
-              <TextInput value={metadata.complexManager} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('complexManager',t); }} style={styles.verInput} />
+              {editMode ? <TextInput value={metadata.complexManager} editable={true} onChangeText={(t)=>{ handleMetadataChange('complexManager',t); }} style={styles.verInput} /> : <Text style={styles.readOnlyMeta}>{metadata.complexManager}</Text>}
             </View>
           </View>
 

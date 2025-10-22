@@ -150,8 +150,9 @@ export default function ThawingTemperaturePresentational({ payload }) {
           {/* Date removed: issue date already displayed in the header block */}
         </View>
 
-        <View style={[styles.table, { minWidth: _tableWidth || 1000 }]}> 
-          <Text style={styles.tableTitle}>THAWING TEMPERATURE LOG</Text>
+        <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: _tableWidth || 1000 }}>
+          <View style={[styles.table, { minWidth: _tableWidth || 1000 }]}> 
+            <Text style={styles.tableTitle}>THAWING TEMPERATURE LOG</Text>
 
           <View style={[styles.tableGroupHeader]}>
             <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
@@ -198,7 +199,8 @@ export default function ThawingTemperaturePresentational({ payload }) {
             </View>
           ))}
 
-        </View>
+          </View>
+        </ScrollView>
 
         {/* Footer: Chef signature, corrective action and verified-by lines */}
         <View style={styles.footerSection}>

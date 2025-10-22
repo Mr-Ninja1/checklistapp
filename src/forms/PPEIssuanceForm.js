@@ -63,54 +63,74 @@ const PPEIssuanceForm = () => {
         <View style={styles.tableRow} key={item.id}>
             <Text style={[styles.cell, styles.noCol]}>{item.id}</Text>
             {/* These are placeholders for input fields in a real app, kept as Text to match the table structure */}
-            <TextInput
-                style={[styles.inputCell, styles.nameCol]}
-                value={item.name}
-                onChangeText={(t) => updateField(item.id, 'name', t)}
-                placeholder="Name"
-                editable={editMode}
-            />
-            <TextInput
-                style={[styles.inputCell, styles.jobTitleCol]}
-                value={item.jobTitle}
-                onChangeText={(t) => updateField(item.id, 'jobTitle', t)}
-                placeholder="Job Title"
-                editable={editMode}
-            />
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.nameCol]}
+                    value={item.name}
+                    onChangeText={(t) => updateField(item.id, 'name', t)}
+                    placeholder="Name"
+                    editable={true}
+                />
+            ) : (
+                <Text style={[styles.cell, styles.nameCol]}>{item.name}</Text>
+            )}
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.jobTitleCol]}
+                    value={item.jobTitle}
+                    onChangeText={(t) => updateField(item.id, 'jobTitle', t)}
+                    placeholder="Job Title"
+                    editable={true}
+                />
+            ) : (
+                <Text style={[styles.cell, styles.jobTitleCol]}>{item.jobTitle}</Text>
+            )}
             
             {/* PPE Checkboxes */}
-            <PPECheckbox isChecked={item.apron} onToggle={() => togglePPE(item.id, 'apron')} editable={editMode} />
-            <PPECheckbox isChecked={item.cap} onToggle={() => togglePPE(item.id, 'cap')} editable={editMode} />
-            <PPECheckbox isChecked={item.chefHat} onToggle={() => togglePPE(item.id, 'chefHat')} editable={editMode} />
-            <PPECheckbox isChecked={item.trousers} onToggle={() => togglePPE(item.id, 'trousers')} editable={editMode} />
-            <PPECheckbox isChecked={item.safetyBoots} onToggle={() => togglePPE(item.id, 'safetyBoots')} editable={editMode} />
-            <PPECheckbox isChecked={item.shirt} onToggle={() => togglePPE(item.id, 'shirt')} editable={editMode} />
-            <PPECheckbox isChecked={item.golfTShirt} onToggle={() => togglePPE(item.id, 'golfTShirt')} editable={editMode} />
-            <PPECheckbox isChecked={item.workSuit} onToggle={() => togglePPE(item.id, 'workSuit')} editable={editMode} />
-            <PPECheckbox isChecked={item.chefCoat} onToggle={() => togglePPE(item.id, 'chefCoat')} editable={editMode} />
+            <PPECheckbox isChecked={item.apron} onToggle={editMode ? () => togglePPE(item.id, 'apron') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.cap} onToggle={editMode ? () => togglePPE(item.id, 'cap') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.chefHat} onToggle={editMode ? () => togglePPE(item.id, 'chefHat') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.trousers} onToggle={editMode ? () => togglePPE(item.id, 'trousers') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.safetyBoots} onToggle={editMode ? () => togglePPE(item.id, 'safetyBoots') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.shirt} onToggle={editMode ? () => togglePPE(item.id, 'shirt') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.golfTShirt} onToggle={editMode ? () => togglePPE(item.id, 'golfTShirt') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.workSuit} onToggle={editMode ? () => togglePPE(item.id, 'workSuit') : undefined} editable={editMode} />
+            <PPECheckbox isChecked={item.chefCoat} onToggle={editMode ? () => togglePPE(item.id, 'chefCoat') : undefined} editable={editMode} />
             
             {/* Signature/ID Columns (editable) */}
-            <TextInput
-                style={[styles.inputCell, styles.signCol]}
-                value={item.staffNrc}
-                onChangeText={(t) => updateField(item.id, 'staffNrc', t)}
-                placeholder="Staff NRC"
-                editable={editMode}
-            />
-            <TextInput
-                style={[styles.inputCell, styles.signCol]}
-                value={item.staffSign}
-                onChangeText={(t) => updateField(item.id, 'staffSign', t)}
-                placeholder="Staff Sign"
-                editable={editMode}
-            />
-            <TextInput
-                style={[styles.inputCell, styles.supSignCol]}
-                value={item.supSign}
-                onChangeText={(t) => updateField(item.id, 'supSign', t)}
-                placeholder="Sup Sign"
-                editable={editMode}
-            />
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.signCol]}
+                    value={item.staffNrc}
+                    onChangeText={(t) => updateField(item.id, 'staffNrc', t)}
+                    placeholder="Staff NRC"
+                    editable={true}
+                />
+            ) : (
+                <Text style={[styles.cell, styles.signCol]}>{item.staffNrc}</Text>
+            )}
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.signCol]}
+                    value={item.staffSign}
+                    onChangeText={(t) => updateField(item.id, 'staffSign', t)}
+                    placeholder="Staff Sign"
+                    editable={true}
+                />
+            ) : (
+                <Text style={[styles.cell, styles.signCol]}>{item.staffSign}</Text>
+            )}
+            {editMode ? (
+                <TextInput
+                    style={[styles.inputCell, styles.supSignCol]}
+                    value={item.supSign}
+                    onChangeText={(t) => updateField(item.id, 'supSign', t)}
+                    placeholder="Sup Sign"
+                    editable={true}
+                />
+            ) : (
+                <Text style={[styles.cell, styles.supSignCol]}>{item.supSign}</Text>
+            )}
         </View>
     );
 
@@ -219,21 +239,21 @@ const PPEIssuanceForm = () => {
                                     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
                                         <TouchableOpacity
                                             style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
-                                            onPress={editMode ? async () => { try { await handleSaveDraft(); } catch(e){console.warn(e);} } : undefined}
+                                            onPress={(!editMode || isSaving) ? undefined : async () => { try { await handleSaveDraft(); } catch(e){console.warn(e);} }}
                                             disabled={!editMode || isSaving}
                                         >
-                                            <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
+                                            <Text style={{ fontWeight: '700', fontSize: 16 }}>{isSaving ? 'Saving...' : 'Save Draft'}</Text>
                                         </TouchableOpacity>
 
                                         <TouchableOpacity
                                             style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
-                                            onPress={editMode ? async () => {
+                                            onPress={(!editMode || isSaving) ? undefined : async () => {
                                                 try {
                                                     await handleSubmit();
                                                 } catch (e) {
                                                     console.warn('submit failed', e);
                                                 }
-                                            } : undefined}
+                                            }}
                                             disabled={!editMode || isSaving}
                                         >
                                             <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>

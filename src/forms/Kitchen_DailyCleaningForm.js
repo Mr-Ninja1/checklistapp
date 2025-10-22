@@ -218,8 +218,8 @@ export default function Kitchen_DailyCleaningForm() {
   };
 
   return (
-    <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} alwaysBounceVertical>
-      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} alwaysBounceVertical>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerTop}>
         <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
@@ -273,12 +273,11 @@ export default function Kitchen_DailyCleaningForm() {
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save Draft</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#185a9d', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Submit</Text>
-          </TouchableOpacity>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Submit</Text></TouchableOpacity>
         </View>
       </View>
-      </EditableFormContainer>
-    </ScrollView>
+      </ScrollView>
+    </EditableFormContainer>
   );
 }
 

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 
 export default function DisplayChillerShelfLifeInspectionPresentational({ payload }) {
   if (!payload) return null;
-  const { title = 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST', frequency = 'DAILY', formData = [], layoutHints = {}, assets = {} } = payload;
+  const { title = 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST', frequency = 'DAILY', formData = [], layoutHints = {}, assets = {}, date = '', verifiedBy = '', baristaSign = '' } = payload;
 
   const tableW = payload._tableWidth || 1000;
 
@@ -21,32 +21,34 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
       </View>
       <View style={styles.titleRow}><Text style={styles.title}>{title}</Text><Text style={styles.frequency}>FREQUENCY: {frequency}</Text></View>
 
-      <View style={[styles.tableContainer, { minWidth: tableW }]}>
-        <View style={styles.thead}>
-          <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
-          <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
-          <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
-          <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
-          <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
-          <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
-          <Text style={[styles.th, { width: 80 }]}>SIGN</Text>
-        </View>
-
-        {formData.map((r, idx) => (
-          <View key={r.id || idx} style={styles.trow}>
-            <Text style={[styles.td, { width: 420 }]}>{r.item}</Text>
-            <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
-            <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
-            <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
-            <Text style={[styles.td, { width: 220 }]}>{r.staffName}</Text>
-            <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
-            <Text style={[styles.td, { width: 80 }]}>{r.sign}</Text>
+      <ScrollView horizontal={true} nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: tableW }}>
+        <View style={[styles.tableContainer, { minWidth: tableW }]}> 
+          <View style={styles.thead}>
+            <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
+            <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
+            <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
+            <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
+            <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
+            <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
+            <Text style={[styles.th, { width: 80 }]}>SIGN</Text>
           </View>
-        ))}
-      </View>
 
-      <View style={{ height: 12 }} />
-      <Text style={styles.footer}>DATE: ______________________    VERIFIED BY: ______________________    BARISTA SIGN: ______________________</Text>
+          {formData.map((r, idx) => (
+            <View key={r.id || idx} style={styles.trow}>
+              <Text style={[styles.td, { width: 420 }]}>{r.item}</Text>
+              <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
+              <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
+              <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
+              <Text style={[styles.td, { width: 220 }]}>{r.staffName}</Text>
+              <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
+              <Text style={[styles.td, { width: 80 }]}>{r.sign}</Text>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+  <View style={{ height: 12 }} />
+  <Text style={styles.footer}>DATE: {date || '______________________'}    VERIFIED BY: {verifiedBy || '______________________'}    BARISTA SIGN: {baristaSign || '______________________'}</Text>
     </ScrollView>
   );
 }

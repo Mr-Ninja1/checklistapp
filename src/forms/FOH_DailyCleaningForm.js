@@ -244,7 +244,7 @@ export default function FOH_DailyCleaningForm() {
       </View>
       <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text></View>
 
-  <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} />
+       {/* Duplicate FormActionBar removed */}
 
       <View style={styles.metadataContainer}>
         {/* First row: Date | Location | Shift */}
