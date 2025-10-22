@@ -44,6 +44,25 @@ export async function addFormHistory(entry) {
   if (!entry || typeof entry !== 'object') return;
 
   // normalize entry fields
+  // derive a lightweight category for easier grouping/search in the history UI
+  const deriveCategory = (title = '', payload = {}) => {
+    const t = (title || '').toString();
+    const p = JSON.stringify(payload || {}).toLowerCase();
+    // kitchen-related
+    if (/kitchen|food contact|thaw|cook|hot holding|underbar|prep|sanitiz/i.test(t) || /kitchen|thaw|cooking|hotholding|underbar/.test(p)) return 'kitchen';
+    // front-of-house
+    if (/front of house|foh|display chiller|front/i.test(t) || /foh|frontofhouse|displaychiller/.test(p)) return 'foh';
+    // bakery
+    if (/bakery|baking|baker/i.test(t) || /bakery|baking/.test(p)) return 'bakery';
+    // production/receiving
+    if (/receiv|receiving|certificate|packag|veg|fruit|egg|beverage|dry goods|chemicals/i.test(t) || /receiv|vegetables|fruits|eggs|beverage|certificateofanalysis/.test(p)) return 'production';
+    // back-of-house / storage
+    if (/boh|cold room|freezer|walk-in|scullery|storage|welfare/i.test(t) || /coldroom|freezer|scullery|walkin/.test(p)) return 'boh';
+    // health / personnel
+    if (/health|hygiene|handwash|handwashing|shower|training|attendance/i.test(t) || /health|hygiene|handwash/.test(p)) return 'personnel';
+    return 'uncategorized';
+  };
+
   const normalized = {
     title: entry.title || entry.pdfPath?.split('/')?.pop() || 'Saved Form',
     date: entry.date || null,
@@ -56,6 +75,8 @@ export async function addFormHistory(entry) {
     // Preserve any payload provided by the caller so SavedFormRenderer can access it later.
     // Common callers pass either `payload` directly or wrap it under `meta.payload`.
     meta: entry.meta || (entry.payload ? { payload: entry.payload } : null),
+    // category is a lightweight hint used by the FormSaves UI to group and filter
+    category: entry.category || deriveCategory(entry.title || (entry.payload && entry.payload.title) || '', entry.payload || (entry.meta && entry.meta.payload) || {}),
   };
 
   // limit history size
