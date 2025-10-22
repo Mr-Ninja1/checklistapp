@@ -219,17 +219,13 @@ export default function Kitchen_DailyCleaningForm() {
 
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
-      <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} alwaysBounceVertical>
+      <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: s(180) }} alwaysBounceVertical>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerTop}>
         <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>
         <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET (KITCHEN)</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={handleBack} style={{ marginRight: 8, padding: 8, backgroundColor: '#eee', borderRadius: 6 }}><Text>Back</Text></TouchableOpacity>
-          <TouchableOpacity onPress={handleSaveDraft} style={{ marginRight: 8, padding: 8, backgroundColor: '#f0ad4e', borderRadius: 6 }}><Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text></TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} style={{ padding: 8, backgroundColor: '#185a9d', borderRadius: 6 }}><Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text></TouchableOpacity>
-        </View>
+        {/* top action buttons removed to avoid duplication; bottom action bar remains */}
       </View>
 
       <View style={styles.metadataContainer}>

@@ -330,22 +330,21 @@ export default function HomeScreen() {
       >
         {getFilteredForms(activeCategory).map((form, idx) => (
           <View key={`form-card-${form.id}-${idx}-${form.title}` }>
-            <TouchableOpacity
+              <TouchableOpacity
               key={`form-touchable-${form.id}-${idx}-${form.title}`}
               disabled={!(form.route || form.isHandwashingLog)}
               onPress={() => {
                 // show spinner and navigate
                 setLoadingMsg(`Opening ${form.title}...`);
                 setLoadingCard(true);
-                setTimeout(() => {
-                  if (form.route) {
-                    navigation.navigate(form.route);
-                  } else if (form.isHandwashingLog) {
-                    navigation.navigate('FoodHandlersHandwashingForm');
-                  }
-                  // hide after short delay to let navigation settle
-                  setTimeout(() => setLoadingCard(false), 350);
-                }, 250);
+                // navigate immediately (remove artificial delay that made opening feel slow)
+                if (form.route) {
+                  navigation.navigate(form.route);
+                } else if (form.isHandwashingLog) {
+                  navigation.navigate('FoodHandlersHandwashingForm');
+                }
+                // hide after short delay to let navigation settle
+                setTimeout(() => setLoadingCard(false), 350);
               }}
               style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6 }]}
             >
