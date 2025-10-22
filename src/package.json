@@ -32,7 +32,8 @@
     "react-native-uuid": "^2.0.3",
     "react-native-view-shot": "^4.0.3",
     "react-native-web": "^0.21.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "jpegjs": "npm:jpeg-js@^0.4.4"
   },
   "private": true,
   "devDependencies": {
