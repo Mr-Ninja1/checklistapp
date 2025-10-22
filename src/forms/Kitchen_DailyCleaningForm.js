@@ -7,6 +7,7 @@ import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { useEffect, useRef } from 'react';
 import LoadingOverlay from '../components/LoadingOverlay';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 // TIME SLOTS and equipment list: match the scanned kitchen form (AM shift 06:00-16:00)
 const TIME_SLOTS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
@@ -61,6 +62,7 @@ export default function Kitchen_DailyCleaningForm() {
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
   const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
   const [logoDataUri, setLogoDataUri] = useState(null);
+  const [editMode, setEditMode] = useState(false);
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
@@ -217,6 +219,7 @@ export default function Kitchen_DailyCleaningForm() {
 
   return (
     <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }} alwaysBounceVertical>
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerTop}>
         <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
@@ -274,6 +277,7 @@ export default function Kitchen_DailyCleaningForm() {
           </TouchableOpacity>
         </View>
       </View>
+      </EditableFormContainer>
     </ScrollView>
   );
 }

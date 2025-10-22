@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
+import EditableFormContainer from '../components/EditableFormContainer';
 import NotificationModal from '../components/NotificationModal';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { addFormHistory } from '../utils/formHistory';
@@ -13,12 +14,13 @@ const Cell = ({ children, style, multiLine = false }) => (
   </View>
 );
 
-const InputCell = ({ value, onChangeText, style, placeholder = '' }) => (
+const InputCell = ({ value, onChangeText, style, placeholder = '', editable = true }) => (
   <View style={[styles.cell, style]}>
     <TextInput
       style={styles.cellInput}
       value={value}
-      onChangeText={onChangeText}
+      editable={editable}
+      onChangeText={editable ? onChangeText : undefined}
       placeholder={placeholder}
       placeholderTextColor="#aaa"
     />
@@ -215,7 +217,7 @@ const InstructionAndNoteBlock = React.memo(() => (
     </>
 ));
 
-const VisitorsTable = React.memo(({ visitorEntries, updateVisitorEntry }) => (
+const VisitorsTable = React.memo(({ visitorEntries, updateVisitorEntry, editable = true }) => (
     <View style={styles.tableContainer}>
       <View style={styles.tableHeaderRow}>
         <Cell style={styles.colName}><Text style={styles.colHeaderText}>NAME OF VISITOR</Text></Cell>
@@ -227,15 +229,15 @@ const VisitorsTable = React.memo(({ visitorEntries, updateVisitorEntry }) => (
         <Cell style={styles.colAuth}><Text style={styles.colHeaderText}>AUTHORISE BY</Text></Cell>
       </View>
 
-      {visitorEntries.map((entry, idx) => (
+          {visitorEntries.map((entry, idx) => (
         <View key={idx} style={styles.tableRow}>
-          <InputCell style={styles.colName} value={entry.name} onChangeText={t => updateVisitorEntry(idx, 'name', t)} />
-          <InputCell style={styles.colAddress} value={entry.address} onChangeText={t => updateVisitorEntry(idx, 'address', t)} />
-          <InputCell style={styles.colContact} value={entry.contact} onChangeText={t => updateVisitorEntry(idx, 'contact', t)} />
-          <InputCell style={styles.colPurpose} value={entry.purpose} onChangeText={t => updateVisitorEntry(idx, 'purpose', t)} />
-          <InputCell style={styles.colTime} value={entry.timeIn} onChangeText={t => updateVisitorEntry(idx, 'timeIn', t)} />
-          <InputCell style={styles.colTime} value={entry.timeOut} onChangeText={t => updateVisitorEntry(idx, 'timeOut', t)} />
-          <InputCell style={styles.colAuth} value={entry.authority} onChangeText={t => updateVisitorEntry(idx, 'authority', t)} />
+          <InputCell style={styles.colName} value={entry.name} editable={editable} onChangeText={t => updateVisitorEntry(idx, 'name', t)} />
+          <InputCell style={styles.colAddress} value={entry.address} editable={editable} onChangeText={t => updateVisitorEntry(idx, 'address', t)} />
+          <InputCell style={styles.colContact} value={entry.contact} editable={editable} onChangeText={t => updateVisitorEntry(idx, 'contact', t)} />
+          <InputCell style={styles.colPurpose} value={entry.purpose} editable={editable} onChangeText={t => updateVisitorEntry(idx, 'purpose', t)} />
+          <InputCell style={styles.colTime} value={entry.timeIn} editable={editable} onChangeText={t => updateVisitorEntry(idx, 'timeIn', t)} />
+          <InputCell style={styles.colTime} value={entry.timeOut} editable={editable} onChangeText={t => updateVisitorEntry(idx, 'timeOut', t)} />
+          <InputCell style={styles.colAuth} value={entry.authority} editable={editable} onChangeText={t => updateVisitorEntry(idx, 'authority', t)} />
         </View>
       ))}
     </View>
@@ -277,6 +279,7 @@ export default function VisitorsLogBook() {
     otherInfectious: '',
   };
   const [healthAnswers, setHealthAnswers] = useState(initialHealthAnswers);
+  const [editMode, setEditMode] = useState(false);
 
   // issue date will be generated at save time to ensure it always reflects current system date
   const formatIssueDate = () => {
@@ -321,43 +324,41 @@ export default function VisitorsLogBook() {
   const issueDate = useMemo(() => formatIssueDate(), []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.mainScrollContent}>
-        <View style={styles.bravoTitle}><Text style={styles.bravoTitleText}>BRAVO BRANDS VISITORS LOG BOOK</Text></View>
-        <Header docRef={docRef} issueDate={issueDate} />
-        <SiteDateBlock site={site} setSite={setSite} section={section} setSection={setSection} month={month} setMonth={setMonth} year={year} setYear={setYear} />
-        <ManagerSignatureBlock siteManager={siteManager} setSiteManager={setSiteManager} verifiedManager={verifiedManager} setVerifiedManager={setVerifiedManager} />
-        {/* Health checks as a bordered table */}
-        <View style={styles.healthTable}>
-          <HealthCheckBlock healthAnswers={healthAnswers} updateHealthAnswer={updateHealthAnswer} />
-        </View>
-        <InstructionAndNoteBlock />
-        <VisitorsTable visitorEntries={visitorEntries} updateVisitorEntry={updateVisitorEntry} />
-        
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
-          <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: '#f6c342' }]}
-            onPress={handleSaveDraft}
-            disabled={isSaving}
-          >
-            <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: '#3b82f6' }]}
-            onPress={async () => {
-              try {
-                await handleSubmit();
-              } catch (e) { console.warn('submit failed', e); }
-            }}
-            disabled={isSaving}
-          >
-            <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
-          </TouchableOpacity>
-        </View>
-        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-        <LoadingOverlay visible={isSaving} />
-      </ScrollView>
-    </SafeAreaView>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.mainScrollContent}>
+          <View style={styles.bravoTitle}><Text style={styles.bravoTitleText}>BRAVO BRANDS VISITORS LOG BOOK</Text></View>
+          <Header docRef={docRef} issueDate={issueDate} />
+          <SiteDateBlock site={site} setSite={setSite} section={section} setSection={setSection} month={month} setMonth={setMonth} year={year} setYear={setYear} />
+          <ManagerSignatureBlock siteManager={siteManager} setSiteManager={setSiteManager} verifiedManager={verifiedManager} setVerifiedManager={setVerifiedManager} />
+          {/* Health checks as a bordered table */}
+          <View style={styles.healthTable}>
+            <HealthCheckBlock healthAnswers={healthAnswers} updateHealthAnswer={updateHealthAnswer} />
+          </View>
+          <InstructionAndNoteBlock />
+          <VisitorsTable visitorEntries={visitorEntries} updateVisitorEntry={(idx, field, value) => updateVisitorEntry(idx, field, value)} editable={editMode} />
+          
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: '#f6c342' }]}
+              onPress={editMode ? handleSaveDraft : undefined}
+              disabled={!editMode || isSaving}
+            >
+              <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: '#3b82f6' }]}
+              onPress={editMode ? async () => { try { await handleSubmit(); } catch (e) { console.warn('submit failed', e); } } : undefined}
+              disabled={!editMode || isSaving}
+            >
+              <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
+            </TouchableOpacity>
+          </View>
+          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+          <LoadingOverlay visible={isSaving} />
+        </ScrollView>
+      </SafeAreaView>
+    </EditableFormContainer>
   );
 }
 

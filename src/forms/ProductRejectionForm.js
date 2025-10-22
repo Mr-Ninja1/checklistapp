@@ -6,6 +6,7 @@ import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 export default function ProductRejectionForm() {
   const draftKey = 'product_rejection_form';
@@ -15,6 +16,7 @@ export default function ProductRejectionForm() {
   const [complexManager, setComplexManager] = useState('');
   const [financeStockController, setFinanceStockController] = useState('');
   const [rejectedProductCollector, setRejectedProductCollector] = useState('');
+  const [editMode, setEditMode] = useState(false);
 
   // Load draft on mount
   React.useEffect(() => {
@@ -111,6 +113,7 @@ export default function ProductRejectionForm() {
   return (
     <SafeAreaView style={styles.safeArea}>
   <ScrollView contentContainerStyle={[styles.mainScrollContent, { paddingBottom: 200 }]}> 
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
         {/* ...existing code... */}
         <View style={styles.headerBlock}>
           <View style={styles.headerLeft}>{logo()}<Text style={styles.companyName}>BRAVO BRANDS LIMITED</Text></View>
@@ -144,15 +147,15 @@ export default function ProductRejectionForm() {
               <View style={styles.colExpiry}><Text style={styles.colHeader}>Expiry Date</Text></View>
               <View style={styles.colReason}><Text style={styles.colHeader}>Reason for rejecting the product</Text></View>
             </View>
-            {rejectionEntries.map((entry, idx) => (
+                {rejectionEntries.map((entry, idx) => (
               <View key={idx} style={styles.tableRow}>
                 <View style={styles.colSn}><Text style={styles.cellText}>{idx + 1}.</Text></View>
-                <View style={styles.colName}><TextInput style={styles.cellInput} value={entry.name} onChangeText={t => updateRejectionEntry(idx, 'name', t)} /></View>
-                <View style={styles.colSupplier}><TextInput style={styles.cellInput} value={entry.supplier} onChangeText={t => updateRejectionEntry(idx, 'supplier', t)} /></View>
-                <View style={styles.colInvoice}><TextInput style={styles.cellInput} value={entry.invoice} onChangeText={t => updateRejectionEntry(idx, 'invoice', t)} /></View>
-                <View style={styles.colBatch}><TextInput style={styles.cellInput} value={entry.batch} onChangeText={t => updateRejectionEntry(idx, 'batch', t)} /></View>
-                <View style={styles.colExpiry}><TextInput style={styles.cellInput} value={entry.expiry} onChangeText={t => updateRejectionEntry(idx, 'expiry', t)} placeholder="DD/MM/YYYY" /></View>
-                <View style={styles.colReason}><TextInput style={styles.cellInput} value={entry.reason} onChangeText={t => updateRejectionEntry(idx, 'reason', t)} /></View>
+                <View style={styles.colName}><TextInput style={styles.cellInput} value={entry.name} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'name', t)} /></View>
+                <View style={styles.colSupplier}><TextInput style={styles.cellInput} value={entry.supplier} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'supplier', t)} /></View>
+                <View style={styles.colInvoice}><TextInput style={styles.cellInput} value={entry.invoice} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'invoice', t)} /></View>
+                <View style={styles.colBatch}><TextInput style={styles.cellInput} value={entry.batch} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'batch', t)} /></View>
+                <View style={styles.colExpiry}><TextInput style={styles.cellInput} value={entry.expiry} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'expiry', t)} placeholder="DD/MM/YYYY" /></View>
+                <View style={styles.colReason}><TextInput style={styles.cellInput} value={entry.reason} editable={editMode} onChangeText={t => updateRejectionEntry(idx, 'reason', t)} /></View>
               </View>
             ))}
           </View>
@@ -173,6 +176,7 @@ export default function ProductRejectionForm() {
             <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
           </TouchableOpacity>
         </View>
+    </EditableFormContainer>
       </ScrollView>
     </SafeAreaView>
   );

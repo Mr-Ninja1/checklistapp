@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import FormActionBar from '../components/FormActionBar';
@@ -34,6 +35,7 @@ export default function BakingControlSheet({ navigation }) {
   const [formData, setFormData] = useState(initialLogState);
   const [metadata, setMetadata] = useState(initialMetadata);
   const [logoDataUri, setLogoDataUri] = useState(null);
+  const [editMode, setEditMode] = React.useState(false);
 
   const buildPayload = (status = 'draft') => ({
     formType: 'BakingControlSheet',
@@ -121,14 +123,15 @@ export default function BakingControlSheet({ navigation }) {
             multiline={true}
             numberOfLines={2}
             textAlignVertical="top"
+            editable={editMode}
           />
         </View>
       ))}
     </View>
   );
-
   return (
-    <View style={styles.container}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <View style={styles.container}>
       <ScrollView contentContainerStyle={{ ...styles.content, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         <View style={styles.headerBox}>
               <View style={styles.headerTop}>
@@ -176,7 +179,8 @@ export default function BakingControlSheet({ navigation }) {
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
-    </View>
+      </View>
+    </EditableFormContainer>
   );
 }
 

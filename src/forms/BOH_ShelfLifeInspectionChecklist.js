@@ -4,6 +4,7 @@ import { getDraft, removeDraft } from '../utils/formDrafts';
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 // history registration is handled by the save hook via formStorage.saveForm
 
 const DRAFT_KEY = 'boh_shelf_life_inspection_draft';
@@ -47,6 +48,7 @@ export default function BOH_ShelfLifeInspectionChecklist() {
   const [metadata, setMetadata] = useState(initialMetadata);
   const [verification, setVerification] = useState(initialVerification);
   const [busy, setBusy] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
 
   useEffect(() => {
@@ -167,9 +169,10 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     </View>
   );
 
-  return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+        return (
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerBox}>
           <View style={styles.logoWrap}><Image source={require('../assets/logo.jpeg')} style={styles.logo} /><Text style={styles.brand}>Bravo Brands Limited</Text></View>
           <Text style={styles.title}>BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST</Text>
@@ -179,7 +182,7 @@ export default function BOH_ShelfLifeInspectionChecklist() {
           </View>
         </View>
 
-    <ScrollView horizontal contentContainerStyle={{ minWidth: tableAvailableWidth }}>
+  <ScrollView horizontal contentContainerStyle={{ minWidth: tableAvailableWidth }}>
           <View style={[styles.tableWrap, { width: tableAvailableWidth }]}> 
             <View style={styles.tableHeader}>
               {columnHeaders.map(col => (
@@ -197,15 +200,15 @@ export default function BOH_ShelfLifeInspectionChecklist() {
         {/* Re-add signature inputs (kept for printing/saved view) */}
         <View style={styles.verificationBox}>
           <Text style={styles.verLabel}>HSEQ Manager (Verified by)</Text>
-          <TextInput value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} style={styles.signatureInput} placeholder="HSEQ Manager name/sign" />
+          <TextInput value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} style={styles.signatureInput} placeholder="HSEQ Manager name/sign" editable={editMode} />
 
           <Text style={styles.verLabel}>Complex Manager</Text>
-          <TextInput value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} style={styles.signatureInput} placeholder="Complex Manager name/sign" />
+          <TextInput value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} style={styles.signatureInput} placeholder="Complex Manager name/sign" editable={editMode} />
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={!editMode || busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={!editMode || busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
         </View>
         <LoadingOverlay visible={isSaving || busy} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => {
@@ -215,8 +218,9 @@ export default function BOH_ShelfLifeInspectionChecklist() {
           setVerification(initialVerification);
           setMetadata(initialMetadata);
         }} />
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </EditableFormContainer>
   );
 }
 

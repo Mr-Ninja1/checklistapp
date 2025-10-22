@@ -4,6 +4,7 @@ import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import FormActionBar from '../components/FormActionBar';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -21,6 +22,7 @@ export default function FoodSamplesCollectionLog() {
   const [site, setSite] = useState('');
   const [location, setLocation] = useState('');
   const [supervisor, setSupervisor] = useState('');
+  const [editMode, setEditMode] = useState(false);
 
   // useFormSave integration
   const draftId = 'FoodSamplesCollectionLog_draft';
@@ -87,7 +89,8 @@ export default function FoodSamplesCollectionLog() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.mainScrollContent}>
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+        <ScrollView contentContainerStyle={styles.mainScrollContent}>
         
         {/* Header Block */}
         <View style={styles.headerWrap}>
@@ -114,12 +117,33 @@ export default function FoodSamplesCollectionLog() {
 
         {/* Site & Location */}
         <View style={styles.siteRow}>
-          <View style={styles.siteItem}><Text style={styles.smallLabel}>Site:</Text><TextInput style={styles.siteInput} value={site} onChangeText={setSite} /></View>
-          <View style={styles.siteItem}><Text style={styles.smallLabel}>Location:</Text><TextInput style={styles.siteInput} value={location} onChangeText={setLocation} /></View>
+          <View style={styles.siteItem}>
+            <Text style={styles.smallLabel}>Site:</Text>
+            {editMode ? (
+              <TextInput style={styles.siteInput} value={site} onChangeText={setSite} editable={true} />
+            ) : (
+              <Text style={styles.siteInput}>{site}</Text>
+            )}
+          </View>
+          <View style={styles.siteItem}>
+            <Text style={styles.smallLabel}>Location:</Text>
+            {editMode ? (
+              <TextInput style={styles.siteInput} value={location} onChangeText={setLocation} editable={true} />
+            ) : (
+              <Text style={styles.siteInput}>{location}</Text>
+            )}
+          </View>
         </View>
 
         {/* Supervisor Signature */}
-        <View style={styles.supervisorRow}><Text style={styles.smallLabel}>Name \& Sign of Supervisor:</Text><TextInput style={styles.siteInput} value={supervisor} onChangeText={setSupervisor} /></View>
+  <View style={styles.supervisorRow}>
+    <Text style={styles.smallLabel}>Name \& Sign of Supervisor:</Text>
+    {editMode ? (
+      <TextInput style={styles.siteInput} value={supervisor} onChangeText={setSupervisor} editable={true} />
+    ) : (
+      <Text style={styles.siteInput}>{supervisor}</Text>
+    )}
+  </View>
 
         {/* Food Samples Table */}
         <View style={{ width: '100%' }}>
@@ -135,23 +159,54 @@ export default function FoodSamplesCollectionLog() {
             </View>
 
             {/* Table Rows */}
-            {logEntries.map((entry, idx) => (
+                {logEntries.map((entry, idx) => (
               <View key={entry.id} style={styles.tableRow}>
-                <View style={styles.colName}><TextInput style={styles.cellInput} value={entry.name} onChangeText={t => updateLogEntry(idx, 'name', t)} /></View>
+                <View style={styles.colName}>
+                  {editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.name} onChangeText={t => updateLogEntry(idx, 'name', t)} editable={true} />
+                  ) : (
+                    <Text style={styles.readOnlyCell}>{entry.name}</Text>
+                  )}
+                </View>
                 {/* NEW COLUMN INPUT */}
-                <View style={styles.colPrepMethod}><TextInput style={styles.cellInput} value={entry.preparationMethod} onChangeText={t => updateLogEntry(idx, 'preparationMethod', t)} /></View>
-                <View style={styles.colDateCollected}><TextInput style={styles.cellInput} value={entry.dateCollected} onChangeText={t => updateLogEntry(idx, 'dateCollected', t)} placeholder="DD/MM/YYYY" /></View>
-                <View style={styles.colTimeCollected}><TextInput style={styles.cellInput} value={entry.timeCollected} onChangeText={t => updateLogEntry(idx, 'timeCollected', t)} placeholder="HH:MM" /></View>
-                <View style={styles.colDateDisposal}><TextInput style={styles.cellInput} value={entry.dateDisposal} onChangeText={t => updateLogEntry(idx, 'dateDisposal', t)} placeholder="DD/MM/YYYY" /></View>
+                <View style={styles.colPrepMethod}>
+                  {editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.preparationMethod} onChangeText={t => updateLogEntry(idx, 'preparationMethod', t)} editable={true} />
+                  ) : (
+                    <Text style={styles.readOnlyCell}>{entry.preparationMethod}</Text>
+                  )}
+                </View>
+                <View style={styles.colDateCollected}>
+                  {editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.dateCollected} onChangeText={t => updateLogEntry(idx, 'dateCollected', t)} placeholder="DD/MM/YYYY" editable={true} />
+                  ) : (
+                    <Text style={styles.readOnlyCell}>{entry.dateCollected}</Text>
+                  )}
+                </View>
+                <View style={styles.colTimeCollected}>
+                  {editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.timeCollected} onChangeText={t => updateLogEntry(idx, 'timeCollected', t)} placeholder="HH:MM" editable={true} />
+                  ) : (
+                    <Text style={styles.readOnlyCell}>{entry.timeCollected}</Text>
+                  )}
+                </View>
+                <View style={styles.colDateDisposal}>
+                  {editMode ? (
+                    <TextInput style={styles.cellInput} value={entry.dateDisposal} onChangeText={t => updateLogEntry(idx, 'dateDisposal', t)} placeholder="DD/MM/YYYY" editable={true} />
+                  ) : (
+                    <Text style={styles.readOnlyCell}>{entry.dateDisposal}</Text>
+                  )}
+                </View>
               </View>
             ))}
           </View>
         </View>
-        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
+  <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || isSaving) return; handleSubmit(); }} showSavePdf={false} />
 
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-      </ScrollView>
+        </ScrollView>
+      </EditableFormContainer>
     </SafeAreaView>
   );
 }

@@ -257,6 +257,54 @@ await addFormHistory({ title: payload.title, date: payload.date, savedAt: payloa
 	1. Create a presentational (read-only) renderer using the editable form layout; accept `payload` prop.
 
 If you keep this guide in `requirements-full.md` you'll always have the exact steps available when converting more forms or debugging saved-form fidelity. Follow the contract and the saved forms will render identically across mobile and desktop.
+
+## Editable forms: read-only / edit toggle, scrolling and keyboard-avoidance (pattern)
+
+When a form contains many input fields and wide tables it should support two modes:
+
+- Read-only view: fast, frictionless scrolling (no keyboard) so users can inspect the whole form and Saved-form presentational render matches exact layout.
+- Edit mode: inputs become editable, keyboard opens, and the view is adjusted to keep the focused input visible.
+
+Why this pattern
+- Many mobile platforms prevent parent ScrollViews from receiving drag gestures when a TextInput is focused or when the initial touch lands on an input. That breaks the UX of scrolling long/wide forms. Rendering a read-only view (Text instead of TextInput) and toggling to edit mode (TextInput) solves this.
+
+Contract (UI behavior)
+1. Default view is read-only. Touch-drag anywhere on the form should scroll (vertical/horizontal). No keyboard should appear.
+2. A prominent Edit toggle (FAB or top action) switches the screen into edit mode.
+3. In edit mode TextInputs are used; the keyboard appears when a TextInput is focused.
+4. Use a KeyboardAvoidingView to ensure the focused field is visible while keyboard is open.
+5. Leaving edit mode should dismiss the keyboard (Keyboard.dismiss()) and save a draft or submit as required.
+
+Implementation checklist (developer steps)
+1. Wrap the entire screen in a KeyboardAvoidingView (behavior:'padding' for iOS, 'height' for Android). Use a small keyboardVerticalOffset tuned to your header/navigation height (e.g., 80–100).
+2. Use a vertical ScrollView with these props:
+	- keyboardShouldPersistTaps="handled"
+	- keyboardDismissMode="on-drag"
+	- contentContainerStyle={{ flexGrow: 1 }}
+	- onStartShouldSetResponderCapture={() => false}
+	- onMoveShouldSetResponderCapture={() => true}
+	These settings let parent scroll capture move gestures when starting on an input.
+3. For wide tables, use an inner horizontal ScrollView with nestedScrollEnabled={true} and keyboard props similar to above.
+4. Maintain an `editMode` boolean state. When false, render readonly Text for all cells and header fields. When true, render TextInput components (editable) bound to state.
+5. Provide a floating Edit / Done toggle (FAB) that:
+	- When entering edit mode optionally focuses the first input (optional).
+	- When leaving edit mode calls Keyboard.dismiss() and triggers handleSaveDraft() or handleSubmit() as appropriate.
+6. For autosave use the existing `useFormSave` hook; call scheduleAutoSave() from input handlers in edit mode.
+7. For accessibility, give the Edit FAB an accessibleLabel and accessibilityRole="button".
+
+Small reusable component (recommended)
+Create a small wrapper component `EditableFormContainer` that encapsulates the KeyboardAvoidingView + ScrollView + FAB + common props (onSaveDraft, editMode, setEditMode). Reuse this across forms to keep behavior consistent.
+
+Focus & edge-case notes
+- On Android `KeyboardAvoidingView` has limitations; consider `react-native-keyboard-aware-scroll-view` for more complex screens.
+- If a form still hides a focused input, programmatically scroll to the input's y-position when it receives focus.
+- Nested horizontal+vertical scrolling can be tricky on older Android builds; test `nestedScrollEnabled` and consider touch-interrupt heuristics if needed.
+
+Example usage (high level)
+- Wrap form content inside `<EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>...form...</EditableFormContainer>`
+- Inside the table cells: `{ editMode ? <TextInput ... /> : <Text ... /> }`
+
+Add this section to the developer guide so every form that contains a large table or many inputs follows the same accessibility and UX contract.
 creating form saving logic
 so check for the saving part lets discuss,
  so i noticed that the export pdf was not working on mobile there was no library that was getting the entire form exactly the way it is with all its contents so i thought why not just make a trick were when you fill in the form and click submit(save) just get all the metadata of the form , then save it , when the user goes to the scrensaves forms and clicks a save form to view it that exact form is recreated on that side too

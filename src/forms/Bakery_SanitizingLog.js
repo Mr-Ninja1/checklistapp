@@ -7,6 +7,7 @@ import FormActionBar from '../components/FormActionBar';
 import useFormSave from '../hooks/useFormSave';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 // TIME SLOTS (AM shift) from cat.md
 const TIME_SLOTS = [
@@ -40,6 +41,7 @@ export default function Bakery_SanitizingLog() {
   const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
   const [busy, setBusy] = useState(false);
   const [loadingDraft, setLoadingDraft] = useState(true);
+  const [editMode, setEditMode] = React.useState(false);
   const draftKey = 'bakery_sanitizing_log';
   const saveTimer = useRef(null);
   const navigation = (typeof require('@react-navigation/native') !== 'undefined') ? require('@react-navigation/native').useNavigation() : null;
@@ -135,7 +137,8 @@ export default function Bakery_SanitizingLog() {
   };
 
   return (
-    <ScrollView style={[styles.container, { padding: s(12) }]} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <ScrollView style={[styles.container, { padding: s(12) }]} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerRow}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -152,7 +155,7 @@ export default function Bakery_SanitizingLog() {
         {Object.keys(metadata).map(k => (
           <View key={k} style={styles.metaItem}>
             <Text style={styles.metaLabel}>{k.charAt(0).toUpperCase()+k.slice(1)}:</Text>
-            <TextInput value={metadata[k]} onChangeText={(t)=>handleMeta(k,t)} style={styles.metaInput} />
+            <TextInput value={metadata[k]} onChangeText={(t)=>handleMeta(k,t)} style={styles.metaInput} editable={editMode} />
           </View>
         ))}
         <Text style={styles.tick}>✓ TICK AFTER CLEANING</Text>
@@ -173,7 +176,7 @@ export default function Bakery_SanitizingLog() {
           {formData.map(row => (
             <View key={row.id} style={[styles.row, { minWidth: 900 }]}>
               <View style={[styles.cell, { width: COL_WIDTHS.EQUIP }]}><Text style={styles.cellText}>{row.name}</Text></View>
-              <View style={[styles.cell, { width: COL_WIDTHS.PPM }]}><TextInput value={row.ppm} onChangeText={(t)=>handleInput(row.id,'ppm',t)} style={styles.smallInput} keyboardType="numeric" /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.PPM }]}><TextInput value={row.ppm} onChangeText={(t)=>handleInput(row.id,'ppm',t)} style={styles.smallInput} keyboardType="numeric" editable={editMode} /></View>
               <View style={{ flexDirection: 'row', width: COL_WIDTHS.TIME * TIME_SLOTS.length }}>{TIME_SLOTS.map(t => (
                 <View key={t} style={[styles.cell, { width: COL_WIDTHS.TIME }]}>
                   <TouchableOpacity onPress={()=>handleToggle(row.id,t)} style={styles.boxTouchable} accessible accessibilityRole="checkbox" accessibilityState={{ checked: !!row.times[t] }} activeOpacity={0.7}>
@@ -181,10 +184,10 @@ export default function Bakery_SanitizingLog() {
                   </TouchableOpacity>
                 </View>
               ))}</View>
-              <View style={[styles.cell, { width: COL_WIDTHS.STAFF }]}><TextInput value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} style={styles.smallInput} /></View>
-              <View style={[styles.cell, { width: COL_WIDTHS.SIGN }]}><TextInput value={row.staffSign} onChangeText={(t)=>handleInput(row.id,'staffSign',t)} style={styles.smallInput} /></View>
-              <View style={[styles.cell, { width: COL_WIDTHS.SUP }]}><TextInput value={row.supName} onChangeText={(t)=>handleInput(row.id,'supName',t)} style={styles.smallInput} /></View>
-              <View style={[styles.cell, { width: COL_WIDTHS.SUP }]}><TextInput value={row.supSign} onChangeText={(t)=>handleInput(row.id,'supSign',t)} style={styles.smallInput} /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.STAFF }]}><TextInput value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} style={styles.smallInput} editable={editMode} /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.SIGN }]}><TextInput value={row.staffSign} onChangeText={(t)=>handleInput(row.id,'staffSign',t)} style={styles.smallInput} editable={editMode} /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.SUP }]}><TextInput value={row.supName} onChangeText={(t)=>handleInput(row.id,'supName',t)} style={styles.smallInput} editable={editMode} /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.SUP }]}><TextInput value={row.supSign} onChangeText={(t)=>handleInput(row.id,'supSign',t)} style={styles.smallInput} editable={editMode} /></View>
             </View>
           ))}
         </View>
@@ -193,7 +196,8 @@ export default function Bakery_SanitizingLog() {
       <Text style={styles.footer}>Instruction: All food handlers are required to clean and sanitize equipment after use.</Text>
       <LoadingOverlay visible={isSaving || busy} message={(isSaving||busy) ? 'Saving...' : ''} />
       <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-    </ScrollView>
+      </ScrollView>
+    </EditableFormContainer>
   );
 }
 

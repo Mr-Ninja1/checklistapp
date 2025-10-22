@@ -4,6 +4,7 @@ import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -43,6 +44,7 @@ const DryGoodsReceivingForm = () => {
     });
 
     // Save status (hook-provided)
+    const [editMode, setEditMode] = useState(false);
 
     // Update delivery details
     const updateDeliveryDetail = (field, value) => {
@@ -59,15 +61,45 @@ const DryGoodsReceivingForm = () => {
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.nameOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
-            <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
-                <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
-            </TouchableOpacity>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.nameOfProduct} editable onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.nameCol]}>{item.nameOfProduct}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} editable onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{item.supplier}</Text>
+            )}
+            {editMode ? (
+                <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </TouchableOpacity>
+            ) : (
+                <View style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </View>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} editable onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{item.temp}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} editable onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{item.stateOfProduct}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} editable onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{item.expiryDate}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} editable onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{item.remarks}</Text>
+            )}
         </View>
     );
 
@@ -130,14 +162,15 @@ const DryGoodsReceivingForm = () => {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]}
-                keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled={true}
-            >
-                <View style={styles.container}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <SafeAreaView style={styles.safeArea}>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled={true}
+                >
+                    <View style={styles.container}>
                     {/* ...existing code... */}
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
@@ -249,15 +282,16 @@ const DryGoodsReceivingForm = () => {
                         <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
                     </View>
                     {/* --- Action buttons --- */}
-                    <View style={{ height: 18 }} />
+                        <View style={{ height: 18 }} />
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit()} showSavePdf={false} isSaving={saving} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || saving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || saving) return; handleSubmit(); }} showSavePdf={false} isSaving={saving} />
                         </View>
                         <LoadingOverlay visible={saving} message={'Saving form...'} />
                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+                    </View>
+                </ScrollView>
+            </SafeAreaView>
+        </EditableFormContainer>
     );
 };
 

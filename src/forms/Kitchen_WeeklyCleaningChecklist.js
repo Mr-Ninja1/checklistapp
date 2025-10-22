@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Activi
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import useFormSave from '../hooks/useFormSave';
+import EditableFormContainer from '../components/EditableFormContainer';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { useNavigation } from '@react-navigation/native';
@@ -72,6 +73,7 @@ export default function KitchenWeeklyCleaningChecklist() {
   const saveTimer = useRef(null);
   
   const [logoDataUri, setLogoDataUri] = useState(null);
+  const [editMode, setEditMode] = useState(false);
   // companyName defaults to 'Bravo' (read-only display)
 
   useEffect(() => {
@@ -171,7 +173,11 @@ export default function KitchenWeeklyCleaningChecklist() {
             <Checkbox checked={item.checks[day].checked} onPress={() => handleCellChange(item.id, day, 'checked')} />
           </View>
           <View style={[styles.cell, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563' }]}>
-            <TextInput style={styles.cellInput} value={item.checks[day].cleanedBy} onChangeText={(t) => handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" maxLength={15} />
+            {editMode ? (
+              <TextInput style={styles.cellInput} value={item.checks[day].cleanedBy} editable={editMode} onChangeText={(t) => { if (!editMode) return; handleCellChange(item.id, day, 'cleanedBy', t); }} placeholder="Name" maxLength={15} />
+            ) : (
+              <Text style={styles.readOnlyCell}>{item.checks[day].cleanedBy}</Text>
+            )}
           </View>
         </View>
       ))}
@@ -179,8 +185,9 @@ export default function KitchenWeeklyCleaningChecklist() {
   );
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headerTopRow}>
             <View style={styles.headerLeft}>
@@ -197,30 +204,30 @@ export default function KitchenWeeklyCleaningChecklist() {
           <View style={styles.metadataRow}>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>LOCATION:</Text>
-              <TextInput value={metadata.location} onChangeText={(t)=>handleMetadataChange('location',t)} style={styles.metaInput} />
+              <TextInput value={metadata.location} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('location',t); }} style={styles.metaInput} />
             </View>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>WEEK:</Text>
-              <TextInput value={metadata.week} onChangeText={(t)=>handleMetadataChange('week',t)} style={styles.metaInput} placeholder="Week No." />
+              <TextInput value={metadata.week} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('week',t); }} style={styles.metaInput} placeholder="Week No." />
             </View>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>MONTH:</Text>
-              <TextInput value={metadata.month} onChangeText={(t)=>handleMetadataChange('month',t)} style={styles.metaInput} />
+              <TextInput value={metadata.month} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('month',t); }} style={styles.metaInput} />
             </View>
             <View style={styles.metaField}>
               <Text style={styles.metaLabel}>YEAR:</Text>
-              <TextInput value={metadata.year} onChangeText={(t)=>handleMetadataChange('year',t)} style={styles.metaInput} placeholder="YYYY" />
+              <TextInput value={metadata.year} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('year',t); }} style={styles.metaInput} placeholder="YYYY" />
             </View>
           </View>
 
           <View style={styles.verificationRow}>
             <View style={styles.verCell}>
               <Text style={styles.verLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={(t)=>handleMetadataChange('hseqManager',t)} style={styles.verInput} />
+              <TextInput value={metadata.hseqManager} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('hseqManager',t); }} style={styles.verInput} />
             </View>
             <View style={styles.verCell}>
               <Text style={styles.verLabel}>Complex Manager:</Text>
-              <TextInput value={metadata.complexManager} onChangeText={(t)=>handleMetadataChange('complexManager',t)} style={styles.verInput} />
+              <TextInput value={metadata.complexManager} editable={editMode} onChangeText={(t)=>{ if (!editMode) return; handleMetadataChange('complexManager',t); }} style={styles.verInput} />
             </View>
           </View>
 
@@ -237,20 +244,21 @@ export default function KitchenWeeklyCleaningChecklist() {
                 ))}
               </View>
 
-              {formData.map(renderRow)}
+            {formData.map(renderRow)}
             </View>
           </ScrollView>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
+            <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={[styles.button, styles.draftButton]} disabled={!editMode || isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
+            <TouchableOpacity onPress={editMode ? () => handleSubmit() : undefined} style={[styles.button, styles.submitButton]} disabled={!editMode || isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
-      <LoadingOverlay visible={isSaving} />
-      <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-    </View>
+        </ScrollView>
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+      </View>
+    </EditableFormContainer>
   );
 }
 
@@ -297,4 +305,6 @@ const styles = StyleSheet.create({
   draftButton: { backgroundColor: '#FBBF24' },
   submitButton: { backgroundColor: '#4F46E5' },
   buttonText: { color: '#fff', fontWeight: '700' },
+  readOnlyCell: { paddingVertical: 6, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, color: '#374151' },
+  readOnlyMeta: { paddingVertical: 4, paddingHorizontal: 2, fontSize: 12, color: '#374151' },
 });

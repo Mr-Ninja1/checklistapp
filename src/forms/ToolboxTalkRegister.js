@@ -4,6 +4,7 @@ import formStorage from '../utils/formStorage';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
 
 /**
@@ -36,6 +37,8 @@ export default function ToolboxTalkRegister() {
     for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' }; 
     return state;
   });
+
+  const [editMode, setEditMode] = useState(false);
 
   // Function to handle updating attendee cell data
   const updateCell = (side, idx, field, value) => {
@@ -102,6 +105,7 @@ export default function ToolboxTalkRegister() {
 
   // --- Component Rendering ---
   return (
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.mainScrollContent}> 
 
@@ -148,11 +152,12 @@ export default function ToolboxTalkRegister() {
           {/* Row 1: AGENDA, PRESENTER, DATE (using underline inputs) */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>AGENDA/TOPIC:</Text>
-            <TextInput 
+                <TextInput 
               style={[styles.infoFill, styles.inputUnderline, { flex: 2.5 }]} 
               value={agenda} 
-              onChangeText={setAgenda} 
+                  onChangeText={setAgenda} 
               placeholder="e.g., Working at Heights Safety" 
+                  editable={editMode}
             />
             
             <Text style={[styles.infoLabel, { marginLeft: 16 }]}>PRESENTER:</Text>
@@ -161,6 +166,7 @@ export default function ToolboxTalkRegister() {
               value={presenter} 
               onChangeText={setPresenter} 
               placeholder="Safety Officer" 
+              editable={editMode}
             />
             
             <Text style={[styles.infoLabel, { marginLeft: 16 }]}>DATE:</Text>
@@ -169,6 +175,7 @@ export default function ToolboxTalkRegister() {
               value={dateVal} 
               onChangeText={setDateVal} 
               placeholder="DD/MM/YYYY" 
+              editable={editMode}
             />
           </View>
 
@@ -188,6 +195,7 @@ export default function ToolboxTalkRegister() {
                     return c; 
                   })} 
                   placeholder="" 
+                  editable={editMode}
                 />
               </View>
             ))}
@@ -218,15 +226,15 @@ export default function ToolboxTalkRegister() {
               <View key={`row-${n}`} style={styles.tableRow}>
                 {/* Left Table Data (Rows 1-10) */}
                 <View style={styles.colSn}><Text style={styles.cellText}>{n}.</Text></View>
-                <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n]?.name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" /></View>
-                <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n]?.job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" /></View>
-                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n]?.sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" /></View>
+                <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n]?.name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n]?.job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n]?.sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" editable={editMode} /></View>
 
                 {/* Right Table Data (Rows 11-20) - separated by a gap */}
                 <View style={[styles.colSn, { marginLeft: 8 }]}><Text style={styles.cellText}>{n + 10}.</Text></View>
-                <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.name} onChangeText={(t) => updateCell('right', n + 10, 'name', t)} placeholder="" /></View>
-                <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.job} onChangeText={(t) => updateCell('right', n + 10, 'job', t)} placeholder="" /></View>
-                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.sign} onChangeText={(t) => updateCell('right', n + 10, 'sign', t)} placeholder="" /></View>
+                <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.name} onChangeText={(t) => updateCell('right', n + 10, 'name', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.job} onChangeText={(t) => updateCell('right', n + 10, 'job', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.sign} onChangeText={(t) => updateCell('right', n + 10, 'sign', t)} placeholder="" editable={editMode} /></View>
               </View>
             ))}
           </View>
@@ -235,7 +243,7 @@ export default function ToolboxTalkRegister() {
 
         {/* Action bar + overlays */}
         <View style={styles.buttonRow}>
-          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
+          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
         </View>
 
         <LoadingOverlay visible={isSaving} />
@@ -243,6 +251,7 @@ export default function ToolboxTalkRegister() {
 
       </ScrollView>
     </SafeAreaView>
+  </EditableFormContainer>
   );
 }
 

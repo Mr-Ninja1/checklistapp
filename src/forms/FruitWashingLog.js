@@ -5,6 +5,7 @@ import { addFormHistory } from '../utils/formHistory';
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -26,7 +27,7 @@ const initialLogEntry = {
 const initialLogState = Array.from({ length: MAX_ENTRIES }, () => ({ ...initialLogEntry }));
 
 const initialMetadata = {
-  subject: 'FRUIT AND VEGETABLE WASHING & SANITIZING LOG',
+  subject: 'FRUIT ,VEGETABLE & EGG WASHING + SANITIZING LOG',
   docNo: 'BBN-SHEQ-P-26.19b',
   issueDate: '',
   reviewDate: 'N/A',
@@ -46,6 +47,7 @@ export default function FruitWashingLog() {
   const [metadata, setMetadata] = useState(initialMetadata);
   // verification is nested on metadata.verification per template
   const [busy, setBusy] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
 
@@ -89,7 +91,7 @@ export default function FruitWashingLog() {
   const buildPayload = () => ({
     formType: 'FruitWashingLog',
     templateVersion: 'v1.0',
-    title: 'FRUIT AND VEGETABLE Washing & Sanitizing Log',
+    title: 'FRUIT ,VEGETABLE & EGG WASHING + SANITIZING LOG',
     metadata,
     formData,
     // layout hints used by presentational renderers to keep column widths consistent
@@ -138,11 +140,12 @@ export default function FruitWashingLog() {
   };
 
   // UI: render buttons and overlays
+  const saveDraftLocal = async () => { await handleSaveDraft(); };
 
   return (
-    <View style={styles.container}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={saveDraftLocal}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerBox}>
+  <View style={styles.headerBox}>
           <View style={styles.brandRow}>
             <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
             <View style={styles.brandTextWrap}>
@@ -157,7 +160,11 @@ export default function FruitWashingLog() {
         {/* Site input */}
         <View style={styles.siteRow}>
           <Text style={styles.siteLabel}>SITE:</Text>
-          <TextInput style={styles.siteInput} value={metadata.site} onChangeText={v => handleMetaChange('site', v)} placeholder="Site name" />
+          {editMode ? (
+            <TextInput style={styles.siteInput} value={metadata.site} onChangeText={v => handleMetaChange('site', v)} placeholder="Site name" editable={true} />
+          ) : (
+            <Text style={styles.readOnlyCell}>{metadata.site}</Text>
+          )}
         </View>
 
         <View style={styles.tableWrap}>
@@ -175,15 +182,15 @@ export default function FruitWashingLog() {
 
           {formData.map((item, idx) => (
             <View key={idx} style={styles.row}>
-              <View style={[styles.cell, { flex: 1.5 }]}><TextInput style={styles.input} value={item.date} onChangeText={v => handleEntryChange(idx, 'date', v)} placeholder="YYYY-MM-DD" /></View>
-              <View style={[styles.cell, { flex: 2 }]}><TextInput style={styles.input} value={item.productWashed} onChangeText={v => handleEntryChange(idx, 'productWashed', v)} placeholder="Product" /></View>
-              <View style={[styles.cell, { flex: 2 }]}><TextInput style={styles.input} value={item.sanitizerName} onChangeText={v => handleEntryChange(idx, 'sanitizerName', v)} placeholder="Sanitizer" /></View>
-              <View style={[styles.cell, { flex: 2.5 }]}><TextInput style={styles.input} value={item.sanitizerConcentration} onChangeText={v => handleEntryChange(idx, 'sanitizerConcentration', v)} placeholder="Conc." /></View>
-              <View style={[styles.cell, { flex: 2 }]}><TextInput style={styles.input} value={item.disinfectionStartTime} onChangeText={v => handleEntryChange(idx, 'disinfectionStartTime', v)} placeholder="HH:MM" /></View>
-              <View style={[styles.cell, { flex: 2 }]}><TextInput style={styles.input} value={item.disinfectionEndTime} onChangeText={v => handleEntryChange(idx, 'disinfectionEndTime', v)} placeholder="HH:MM" /></View>
-              <View style={[styles.cell, { flex: 1.5 }]}><TextInput style={styles.input} value={item.rinsingDone} onChangeText={v => handleEntryChange(idx, 'rinsingDone', v)} placeholder="Y/N" /></View>
-              <View style={[styles.cell, { flex: 2 }]}><TextInput style={styles.input} value={item.personWashing} onChangeText={v => handleEntryChange(idx, 'personWashing', v)} placeholder="Name" /></View>
-              <View style={[styles.cell, { flex: 1.5, borderRightWidth: 0 }]}><TextInput style={styles.input} value={item.supSign} onChangeText={v => handleEntryChange(idx, 'supSign', v)} placeholder="Sign" /></View>
+              <View style={[styles.cell, { flex: 1.5 }]}>{editMode ? <TextInput style={styles.input} value={item.date} onChangeText={v => handleEntryChange(idx, 'date', v)} placeholder="YYYY-MM-DD" editable={true} /> : <Text style={styles.readOnlyCell}>{item.date}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.productWashed} onChangeText={v => handleEntryChange(idx, 'productWashed', v)} placeholder="Product" editable={true} /> : <Text style={styles.readOnlyCell}>{item.productWashed}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.sanitizerName} onChangeText={v => handleEntryChange(idx, 'sanitizerName', v)} placeholder="Sanitizer" editable={true} /> : <Text style={styles.readOnlyCell}>{item.sanitizerName}</Text>}</View>
+              <View style={[styles.cell, { flex: 2.5 }]}>{editMode ? <TextInput style={styles.input} value={item.sanitizerConcentration} onChangeText={v => handleEntryChange(idx, 'sanitizerConcentration', v)} placeholder="Conc." editable={true} /> : <Text style={styles.readOnlyCell}>{item.sanitizerConcentration}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.disinfectionStartTime} onChangeText={v => handleEntryChange(idx, 'disinfectionStartTime', v)} placeholder="HH:MM" editable={true} /> : <Text style={styles.readOnlyCell}>{item.disinfectionStartTime}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.disinfectionEndTime} onChangeText={v => handleEntryChange(idx, 'disinfectionEndTime', v)} placeholder="HH:MM" editable={true} /> : <Text style={styles.readOnlyCell}>{item.disinfectionEndTime}</Text>}</View>
+              <View style={[styles.cell, { flex: 1.5 }]}>{editMode ? <TextInput style={styles.input} value={item.rinsingDone} onChangeText={v => handleEntryChange(idx, 'rinsingDone', v)} placeholder="Y/N" editable={true} /> : <Text style={styles.readOnlyCell}>{item.rinsingDone}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.personWashing} onChangeText={v => handleEntryChange(idx, 'personWashing', v)} placeholder="Name" editable={true} /> : <Text style={styles.readOnlyCell}>{item.personWashing}</Text>}</View>
+              <View style={[styles.cell, { flex: 1.5, borderRightWidth: 0 }]}>{editMode ? <TextInput style={styles.input} value={item.supSign} onChangeText={v => handleEntryChange(idx, 'supSign', v)} placeholder="Sign" editable={true} /> : <Text style={styles.readOnlyCell}>{item.supSign}</Text>}</View>
             </View>
           ))}
 
@@ -206,13 +213,13 @@ export default function FruitWashingLog() {
         </View>
 
         <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={submitAndRecord} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+         <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} disabled={!editMode || isSaving}><Text style={styles.btnText}>{!editMode ? 'Edit to Save' : (isSaving ? 'Saving...' : 'Save Draft')}</Text></TouchableOpacity>
+         <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={() => { if (!editMode || isSaving) return; submitAndRecord(); }} disabled={!editMode || isSaving}><Text style={styles.btnText}>{!editMode ? 'Edit to Submit' : (isSaving ? 'Submitting...' : 'Submit Log')}</Text></TouchableOpacity>
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
-    </View>
+    </EditableFormContainer>
   );
 }
 

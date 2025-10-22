@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image 
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -100,6 +101,9 @@ export default function ProductsNetContentChecklist() {
 
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setVerification({ supervisorSign: '', hseqManagerSign: '', complexManagerSign: '' }); } });
 
+  // edit mode: default read-only for smooth scrolling; toggle to edit to enable inputs
+  const [editMode, setEditMode] = React.useState(false);
+
   const handleEntryChange = useCallback((index, field, value) => {
     setFormData(prev => {
       const newData = prev.map((item, i) => i === index ? { ...item, [field]: value } : item);
@@ -119,22 +123,23 @@ export default function ProductsNetContentChecklist() {
   const handleSubmitLocal = async () => {
     setBusy(true);
     try {
-      // debug: invoking handleSubmit
-      // eslint-disable-next-line no-console
       console.log('ProductsNetContentChecklist: submit button pressed');
       await handleSubmit();
     } catch (e) {
       console.warn('submit failed', e);
     } finally {
       setBusy(false);
+      // exit edit mode after submit to return to read-only scrolling view
+      setEditMode(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraftLocal}>
+      <View style={styles.container}>
       <ScrollView contentContainerStyle={{ ...styles.content, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
 
-        <View style={styles.headerBox}>
+  <View style={styles.headerBox}>
           <View style={styles.logoRow}>
             <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
             <View style={styles.brandWrap}>
@@ -143,7 +148,11 @@ export default function ProductsNetContentChecklist() {
             </View>
           </View>
           <Text style={[styles.title, { fontSize: 20 } ]}>PRODUCTS NET CONTENT CHECKLIST</Text>
-          <Text style={styles.meta}>Doc No: {metadata.docNo} • Issue Date: {metadata.issueDate}</Text>
+          {editMode ? (
+            <TextInput style={[styles.valueTextInput, { flex: 1 }]} value={metadata.issueDate} onChangeText={v => setMetadata(prev => ({ ...prev, issueDate: v }))} />
+          ) : (
+            <Text style={styles.meta}>Doc No: {metadata.docNo} • Issue Date: {metadata.issueDate}</Text>
+          )}
         </View>
 
         <View style={styles.tableWrap}>
@@ -161,17 +170,61 @@ export default function ProductsNetContentChecklist() {
           {formData.map((item, idx) => (
             <View key={idx} style={styles.row}>
               <View style={[styles.cell, { flex: 3 }]}>
-                <TextInput style={styles.input} value={String(item.name || '')} onChangeText={v => handleEntryChange(idx, 'name', v)} placeholder="Product name" />
+                {editMode ? (
+                  <TextInput style={styles.input} value={String(item.name || '')} onChangeText={v => handleEntryChange(idx, 'name', v)} placeholder="Product name" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{String(item.name || '')}</Text>
+                )}
               </View>
-              <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.date} onChangeText={v => handleEntryChange(idx, 'date', v)} placeholder="DD/MM/YYYY" /></View>
+              <View style={[styles.cell, { flex: 1 }]}>
+                {editMode ? (
+                  <TextInput style={styles.input} value={item.date} onChangeText={v => handleEntryChange(idx, 'date', v)} placeholder="DD/MM/YYYY" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{item.date}</Text>
+                )}
+              </View>
               <View style={[styles.cell, { flex: 2 }]}> 
-                <TextInput style={styles.input} value={String(item.expectedWeight || '')} onChangeText={v => handleEntryChange(idx, 'expectedWeight', v)} placeholder="expected g" />
+                {editMode ? (
+                  <TextInput style={styles.input} value={String(item.expectedWeight || '')} onChangeText={v => handleEntryChange(idx, 'expectedWeight', v)} placeholder="expected g" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{String(item.expectedWeight || '')}</Text>
+                )}
               </View>
-              <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight1} onChangeText={v => handleEntryChange(idx, 'weight1', v)} keyboardType="numeric" /></View>
-              <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight2} onChangeText={v => handleEntryChange(idx, 'weight2', v)} keyboardType="numeric" /></View>
-              <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight3} onChangeText={v => handleEntryChange(idx, 'weight3', v)} keyboardType="numeric" /></View>
-              <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight4} onChangeText={v => handleEntryChange(idx, 'weight4', v)} keyboardType="numeric" /></View>
-              <View style={[styles.cell, { flex: 1 }]}><TextInput style={styles.input} value={item.weight5} onChangeText={v => handleEntryChange(idx, 'weight5', v)} keyboardType="numeric" /></View>
+              <View style={[styles.cell, { flex: 1 }]}>
+                {editMode ? (
+                  <TextInput style={styles.input} value={item.weight1} onChangeText={v => handleEntryChange(idx, 'weight1', v)} keyboardType="numeric" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{item.weight1}</Text>
+                )}
+              </View>
+              <View style={[styles.cell, { flex: 1 }]}>
+                {editMode ? (
+                  <TextInput style={styles.input} value={item.weight2} onChangeText={v => handleEntryChange(idx, 'weight2', v)} keyboardType="numeric" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{item.weight2}</Text>
+                )}
+              </View>
+              <View style={[styles.cell, { flex: 1 }]}>
+                {editMode ? (
+                  <TextInput style={styles.input} value={item.weight3} onChangeText={v => handleEntryChange(idx, 'weight3', v)} keyboardType="numeric" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{item.weight3}</Text>
+                )}
+              </View>
+              <View style={[styles.cell, { flex: 1 }]}>
+                {editMode ? (
+                  <TextInput style={styles.input} value={item.weight4} onChangeText={v => handleEntryChange(idx, 'weight4', v)} keyboardType="numeric" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{item.weight4}</Text>
+                )}
+              </View>
+              <View style={[styles.cell, { flex: 1 }]}>
+                {editMode ? (
+                  <TextInput style={styles.input} value={item.weight5} onChangeText={v => handleEntryChange(idx, 'weight5', v)} keyboardType="numeric" />
+                ) : (
+                  <Text style={styles.readOnlyText}>{item.weight5}</Text>
+                )}
+              </View>
             </View>
           ))}
 
@@ -180,9 +233,21 @@ export default function ProductsNetContentChecklist() {
         <View style={styles.verifyFooter}>
           <View style={styles.verifyCol}><Text style={styles.verifyLabel}>Verified By</Text></View>
           <View style={styles.verifyCol}>
-            <TextInput style={styles.verifyInput} value={verification.supervisorSign} onChangeText={v => handleVerificationChange('supervisorSign', v)} placeholder="Supervisor" />
-            <TextInput style={styles.verifyInput} value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} placeholder="HSEQ Manager" />
-            <TextInput style={styles.verifyInput} value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} placeholder="Complex Manager" />
+            {editMode ? (
+              <TextInput style={styles.verifyInput} value={verification.supervisorSign} onChangeText={v => handleVerificationChange('supervisorSign', v)} placeholder="Supervisor" />
+            ) : (
+              <Text style={styles.readOnlyText}>{verification.supervisorSign}</Text>
+            )}
+            {editMode ? (
+              <TextInput style={styles.verifyInput} value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} placeholder="HSEQ Manager" />
+            ) : (
+              <Text style={styles.readOnlyText}>{verification.hseqManagerSign}</Text>
+            )}
+            {editMode ? (
+              <TextInput style={styles.verifyInput} value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} placeholder="Complex Manager" />
+            ) : (
+              <Text style={styles.readOnlyText}>{verification.complexManagerSign}</Text>
+            )}
           </View>
         </View>
 
@@ -194,7 +259,8 @@ export default function ProductsNetContentChecklist() {
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
       </ScrollView>
-    </View>
+      </View>
+    </EditableFormContainer>
   );
 }
 
@@ -224,4 +290,5 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 },
   btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 },
   btnText: { color: '#fff', fontWeight: '700' },
+  readOnlyText: { fontSize: 12, textAlign: 'center', minHeight: 36, color: '#222', paddingVertical: 6 },
 });

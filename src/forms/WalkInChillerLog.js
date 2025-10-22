@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
 import useFormSave from '../hooks/useFormSave';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 
 const DRAFT_KEY = 'walkin_chiller_log_draft';
@@ -63,11 +64,21 @@ const useFormState = (initialState, initialMeta) => {
   return { formData, setFormData, metadata, setMetadata, busy, setBusy };
 };
 
-const Slot = React.memo(({ value, onChange }) => (
+const Slot = React.memo(({ value, onChange, editable }) => (
   <View style={styles.slotRow}>
-    <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
-    <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
-    <TextInput value={value.sign} onChangeText={t => onChange('sign', t)} placeholder="Initials" style={[styles.slotInput, { flex: 1 }]} />
+    {editable ? (
+      <>
+        <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
+        <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
+        <TextInput value={value.sign} onChangeText={t => onChange('sign', t)} placeholder="Initials" style={[styles.slotInput, { flex: 1 }]} />
+      </>
+    ) : (
+      <>
+        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.temp}</Text>
+        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.time}</Text>
+        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.sign}</Text>
+      </>
+    )}
   </View>
 ));
 
@@ -95,6 +106,8 @@ export default function WalkInChillerLog() {
 
   // useFormSave must be called at top-level of component (not inside handlers)
   const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setMetadata(prev => ({ ...initialMetadata, docNo: prev.docNo, issueDate: prev.issueDate })); }, waitForSave: true });
+
+  const [editMode, setEditMode] = useState(false);
 
   const handleRecordChange = useCallback((day, slotName, field, value) => {
     setFormData(prev => prev.map(item => item.day === day ? ({ ...item, [slotName]: { ...item[slotName], [field]: value } }) : item));
@@ -136,21 +149,30 @@ export default function WalkInChillerLog() {
       <View style={[styles.cell, { width: COL_WIDTHS.DATE }]}><Text style={styles.cellText}>{item.day}</Text></View>
       {TIME_SLOTS.map(slot => (
         <View key={`${item.day}-${slot}`} style={[styles.recordSlot, { width: COL_WIDTHS.RECORD_SLOT_WIDTH }]}>
-          <Slot value={item[slot]} onChange={(field, val) => handleRecordChange(item.day, slot, field, val)} />
+          <Slot value={item[slot]} onChange={(field, val) => handleRecordChange(item.day, slot, field, val)} editable={editMode} />
         </View>
       ))}
       <View style={[styles.cell, { width: COL_WIDTHS.ACTION }]}>
-        <TextInput value={item.correctiveAction} onChangeText={t => handleDailyChange(item.day, 'correctiveAction', t)} placeholder="Action taken..." style={styles.actionInput} />
+        {editMode ? (
+          <TextInput value={item.correctiveAction} onChangeText={t => handleDailyChange(item.day, 'correctiveAction', t)} placeholder="Action taken..." style={styles.actionInput} />
+        ) : (
+          <Text style={styles.slotReadText}>{item.correctiveAction}</Text>
+        )}
       </View>
       <View style={[styles.cell, { width: COL_WIDTHS.SIGNATURE }]}>
-        <TextInput value={item.supNameSign} onChangeText={t => handleDailyChange(item.day, 'supNameSign', t)} placeholder="Name & Sign" style={styles.signatureInput} />
+        {editMode ? (
+          <TextInput value={item.supNameSign} onChangeText={t => handleDailyChange(item.day, 'supNameSign', t)} placeholder="Name & Sign" style={styles.signatureInput} />
+        ) : (
+          <Text style={styles.slotReadText}>{item.supNameSign}</Text>
+        )}
       </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} horizontal={false}>
+  <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={hookSaveDraft}>
+  <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast" horizontal={false}>
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
@@ -166,16 +188,24 @@ export default function WalkInChillerLog() {
 
             <Text style={styles.subject}>WALK-IN CHILLER TEMPERATURE CHECKLIST</Text>
             <View style={styles.metaRowSmall}>
-              <TextInput value={metadata.month} onChangeText={t => handleMetadataChange('month', t)} placeholder="Month" style={styles.metaInput} />
+              {editMode ? (
+                <TextInput value={metadata.month} onChangeText={t => handleMetadataChange('month', t)} placeholder="Month" style={styles.metaInput} />
+              ) : (
+                <Text style={styles.metaStatic}>{metadata.month}</Text>
+              )}
               <View style={{ flex: 1, minWidth: 80, marginRight: 8 }}>
                 <Text style={styles.metaStatic}>{metadata.year}</Text>
               </View>
-              <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} placeholder="Location" style={styles.metaInput} />
+              {editMode ? (
+                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} placeholder="Location" style={styles.metaInput} />
+              ) : (
+                <Text style={styles.metaStatic}>{metadata.location}</Text>
+              )}
             </View>
             <Text style={styles.instruction}>Instruction: The temperature of the Walk-in Chiller should be between 0° C and 4° C</Text>
           </View>
 
-          <ScrollView horizontal style={styles.tableScroll}>
+          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled directionalLockEnabled onStartShouldSetResponderCapture={() => true}>
             <View style={{ minWidth: TABLE_MIN_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.DATE }]}><Text style={styles.headerText}>Date</Text></View>
@@ -194,8 +224,16 @@ export default function WalkInChillerLog() {
           </ScrollView>
 
           <View style={styles.footerSign}>
-            <TextInput value={metadata.hseqManagerSign} onChangeText={t => handleMetadataChange('hseqManagerSign', t)} placeholder="Verified by: HSEQ Manager Sign" style={styles.signInput} />
-            <TextInput value={metadata.complexManagerSign} onChangeText={t => handleMetadataChange('complexManagerSign', t)} placeholder="Complex Manager Sign" style={styles.signInput} />
+            {editMode ? (
+              <TextInput value={metadata.hseqManagerSign} onChangeText={t => handleMetadataChange('hseqManagerSign', t)} placeholder="Verified by: HSEQ Manager Sign" style={styles.signInput} />
+            ) : (
+              <Text style={styles.slotReadText}>{metadata.hseqManagerSign}</Text>
+            )}
+            {editMode ? (
+              <TextInput value={metadata.complexManagerSign} onChangeText={t => handleMetadataChange('complexManagerSign', t)} placeholder="Complex Manager Sign" style={styles.signInput} />
+            ) : (
+              <Text style={styles.slotReadText}>{metadata.complexManagerSign}</Text>
+            )}
           </View>
 
           <View style={styles.buttonRow}>
@@ -204,6 +242,7 @@ export default function WalkInChillerLog() {
           </View>
         </View>
       </ScrollView>
+      </EditableFormContainer>
     </View>
   );
 }
@@ -241,6 +280,7 @@ const styles = StyleSheet.create({
   signatureInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, textAlign: 'center', fontSize: 14 },
   footerSign: { marginTop: 12 },
   signInput: { borderBottomWidth: 1, borderBottomColor: '#9CA3AF', paddingVertical: 6, marginBottom: 8 },
+  slotReadText: { paddingVertical: 10, paddingHorizontal: 6, textAlign: 'center', fontSize: 14, color: '#111827' },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
   button: { width: 140, marginLeft: 12, paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   draftButton: { backgroundColor: '#F59E0B' },

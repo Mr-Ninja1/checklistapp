@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -54,6 +55,8 @@ const EggsReceivingForm = () => {
 
     let scheduleAutoSave = (delay = 1500) => { /* will be injected by hook */ };
 
+    const [editMode, setEditMode] = useState(false);
+
     const toggleClean = (id) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, clean: !item.clean } : item));
     };
@@ -91,17 +94,58 @@ const EggsReceivingForm = () => {
     scheduleAutoSave = _scheduleAutoSave;
 
     useEffect(() => { if (showNotification) { Alert.alert(notificationMessage || 'Saved'); setShowNotification(false); } }, [showNotification]);
+    // Wrap save/submit so they only run when editMode is active and not already saving
+    const onSaveDraftPress = () => {
+        if (!editMode || isSaving) return;
+        handleSaveDraft();
+    };
+
+    const onSubmitPress = () => {
+        if (!editMode || isSaving) return;
+        handleSubmit();
+    };
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.categoryCol]} value={item.categoryOfEggs} onChangeText={(t) => updateReceivingField(item.id, 'categoryOfEggs', t)} placeholder="Large/Medium/Small" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
-            <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
-                <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
-            </TouchableOpacity>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.categoryCol]} value={item.categoryOfEggs} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'categoryOfEggs', t)} placeholder="Large/Medium/Small" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.categoryCol]}>{item.categoryOfEggs}</Text>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{item.supplier}</Text>
+            )}
+
+            {editMode ? (
+                <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </TouchableOpacity>
+            ) : (
+                <View style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </View>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{item.stateOfProduct}</Text>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{item.expiryDate}</Text>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{item.remarks}</Text>
+            )}
         </View>
     );
 
@@ -115,7 +159,7 @@ const EggsReceivingForm = () => {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
             {/* The outer ScrollView handles all vertical scrolling */}
             <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]} keyboardShouldPersistTaps="handled">
                 
@@ -230,7 +274,7 @@ const EggsReceivingForm = () => {
                         {/* Form action buttons should appear below the form content so they are
                             reachable on mobile screens and do not interfere with the table layout. */}
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={onSaveDraftPress} onSubmit={onSubmitPress} showSavePdf={false} />
                         </View>
 
                         <View style={styles.verificationFooter}>
@@ -241,7 +285,7 @@ const EggsReceivingForm = () => {
                     </View>
                 </ScrollView>
             </ScrollView>
-        </SafeAreaView>
+        </EditableFormContainer>
     );
 };
 

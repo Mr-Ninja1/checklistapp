@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, Image } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 import formStorage from '../utils/formStorage';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
@@ -36,6 +37,7 @@ export default function TrainingAttendanceRegister() {
   });
 
   const [logoDataUri, setLogoDataUri] = useState(null);
+  const [editMode, setEditMode] = useState(false);
 
   // load logo as base64 data URI for embedding in saved payloads
   useEffect(() => {
@@ -123,14 +125,13 @@ export default function TrainingAttendanceRegister() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
       {/* Main ScrollView for vertical scrolling of the entire page. Use keyboardShouldPersistTaps and
           nestedScrollEnabled to avoid the common 'freeze' when interacting with inputs inside lists. */}
       <ScrollView contentContainerStyle={styles.mainScrollContent} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
 
         {/* TOP HEADER BLOCK - Structured to match the printed form */}
-        <View style={styles.topHeader}>
-          
+  <View style={styles.topHeader}>
           {/* LEFT COLUMN: Logo and System Info */}
           <View style={styles.headerLeft}>
             {logo()}
@@ -174,11 +175,12 @@ export default function TrainingAttendanceRegister() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>SUBJECT:</Text>
             <TextInput 
-              style={[styles.infoFill, styles.inputUnderline, { flex: 2.5 }]} 
-              value={subject} 
-              onChangeText={setSubject} 
-              placeholder="..." 
-            />
+                style={[styles.infoFill, styles.inputUnderline, { flex: 2.5 }]} 
+                value={subject} 
+                onChangeText={setSubject} 
+                placeholder="..." 
+                editable={editMode}
+              />
             
             <Text style={[styles.infoLabel, { marginLeft: 16 }]}>PRESENTER:</Text>
             <TextInput 
@@ -186,6 +188,7 @@ export default function TrainingAttendanceRegister() {
               value={presenter} 
               onChangeText={setPresenter} 
               placeholder="..." 
+              editable={editMode}
             />
             
             <Text style={[styles.infoLabel, { marginLeft: 16 }]}>DATE:</Text>
@@ -203,16 +206,17 @@ export default function TrainingAttendanceRegister() {
             {topics.map((topic, index) => (
               <View key={index} style={styles.topicLine}>
                 <Text style={styles.dot}>{index + 1}.</Text>
-                <TextInput 
-                  style={[styles.topicInput, styles.inputUnderline]} 
-                  value={topic} 
-                  onChangeText={t => setTopics(prev => { 
-                    const c = [...prev]; 
-                    c[index] = t; 
-                    return c; 
-                  })} 
-                  placeholder="" 
-                />
+                  <TextInput 
+                    style={[styles.topicInput, styles.inputUnderline]} 
+                    value={topic} 
+                    onChangeText={t => setTopics(prev => { 
+                      const c = [...prev]; 
+                      c[index] = t; 
+                      return c; 
+                    })} 
+                    placeholder="" 
+                    editable={editMode}
+                  />
               </View>
             ))}
           </View>
@@ -246,17 +250,17 @@ export default function TrainingAttendanceRegister() {
               <View key={`row-${n}`} style={styles.tableRow}>
                 {/* Left Table Data (Rows 1-9) */}
                 <View style={styles.colSn}><Text style={styles.cellText}>{n}.</Text></View>
-                <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n].name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" /></View>
-                <View style={styles.colNrc}><TextInput style={styles.cellInput} value={cells.left[n].nrc} onChangeText={(t) => updateCell('left', n, 'nrc', t)} placeholder="" /></View>
-                <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n].job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" /></View>
-                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n].sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" /></View>
+                  <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n].name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" editable={editMode} /></View>
+                  <View style={styles.colNrc}><TextInput style={styles.cellInput} value={cells.left[n].nrc} onChangeText={(t) => updateCell('left', n, 'nrc', t)} placeholder="" editable={editMode} /></View>
+                  <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n].job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" editable={editMode} /></View>
+                  <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n].sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" editable={editMode} /></View>
 
                 {/* Right Table Data (Rows 10-18) - separated by a gap */}
                 <View style={[styles.colSn, { marginLeft: 8 }]}><Text style={styles.cellText}>{n + 9}.</Text></View>
-                <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 9].name} onChangeText={(t) => updateCell('right', n + 9, 'name', t)} placeholder="" /></View>
-                <View style={styles.colNrc}><TextInput style={styles.cellInput} value={cells.right[n + 9].nrc} onChangeText={(t) => updateCell('right', n + 9, 'nrc', t)} placeholder="" /></View>
-                <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 9].job} onChangeText={(t) => updateCell('right', n + 9, 'job', t)} placeholder="" /></View>
-                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 9].sign} onChangeText={(t) => updateCell('right', n + 9, 'sign', t)} placeholder="" /></View>
+                <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 9].name} onChangeText={(t) => updateCell('right', n + 9, 'name', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colNrc}><TextInput style={styles.cellInput} value={cells.right[n + 9].nrc} onChangeText={(t) => updateCell('right', n + 9, 'nrc', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 9].job} onChangeText={(t) => updateCell('right', n + 9, 'job', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 9].sign} onChangeText={(t) => updateCell('right', n + 9, 'sign', t)} placeholder="" editable={editMode} /></View>
               </View>
             ))}
           </View>
@@ -266,18 +270,18 @@ export default function TrainingAttendanceRegister() {
         {/* Action bar + overlays */}
         <View style={{ height: 18 }} />
         <View style={{ marginTop: 8, paddingHorizontal: 8 }}>
-          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } }} showSavePdf={false} />
+          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } } : undefined} showSavePdf={false} />
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
-    </SafeAreaView>
+    </EditableFormContainer>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  mainScrollContent: { padding: 16, paddingBottom: 120 },
+  
 
   // 1. TOP HEADER BLOCK STYLES
   topHeader: { 

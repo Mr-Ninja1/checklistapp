@@ -11,6 +11,7 @@ import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { useNavigation } from '@react-navigation/native';
 import LoadingOverlay from '../components/LoadingOverlay';
 import FormActionBar from '../components/FormActionBar';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 // --- DATA STRUCTURE ---
 const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
@@ -74,6 +75,7 @@ export default function FOH_DailyCleaningForm() {
   const sysDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
   const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+  const [editMode, setEditMode] = useState(false);
 
   const handleMetadataChange = (key, value) => setMetadata(prev => ({ ...prev, [key]: value }));
 
@@ -150,17 +152,17 @@ export default function FOH_DailyCleaningForm() {
     <View key={item.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(44) }]}> 
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.dataText, { fontSize: ms(12) }]}>{item.name}</Text></DataCell>
       <DataCell width={COL_WIDTHS.PPM}>
-        <TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'ppm', text)} value={item.ppm} keyboardType="numeric" placeholder="0" />
+        <TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'ppm', text)} value={item.ppm} keyboardType="numeric" placeholder="0" editable={editMode} />
       </DataCell>
       <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>
         {TIME_SLOTS.map(time => (
           <DataCell key={time} width={COL_WIDTHS.TIME_SLOT}>
-            <Checkbox checked={item.times[time]} onPress={() => handleTimeCheck(item.id, time)} />
+            <Checkbox checked={item.times[time]} onPress={editMode ? () => handleTimeCheck(item.id, time) : undefined} />
           </DataCell>
         ))}
       </View>
-      <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffName', text)} value={item.staffName} /></DataCell>
-      <DataCell width={COL_WIDTHS.SIGNATURE}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffSign', text)} value={item.staffSign} /></DataCell>
+  <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffName', text)} value={item.staffName} editable={editMode} /></DataCell>
+  <DataCell width={COL_WIDTHS.SIGNATURE}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffSign', text)} value={item.staffSign} editable={editMode} /></DataCell>
       <DataCell width={COL_WIDTHS.SUP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'SUPName', text)} value={item.SUPName} /></DataCell>
       <DataCell width={COL_WIDTHS.SUP_SIGN}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'supSign', text)} value={item.supSign} /></DataCell>
     </View>
@@ -232,6 +234,7 @@ export default function FOH_DailyCleaningForm() {
   const needsHorizontal = TOTAL_TABLE_WIDTH > availableWidth;
 
   return (
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
     <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 140 }}>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       {/* Header: logo + company name at top-left, title centered below */}
@@ -241,7 +244,7 @@ export default function FOH_DailyCleaningForm() {
       </View>
       <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text></View>
 
-      <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} />
+  <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} />
 
       <View style={styles.metadataContainer}>
         {/* First row: Date | Location | Shift */}
@@ -313,6 +316,7 @@ export default function FOH_DailyCleaningForm() {
 
       <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} />
     </ScrollView>
+    </EditableFormContainer>
   );
 }
 

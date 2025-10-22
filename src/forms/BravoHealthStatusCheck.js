@@ -5,6 +5,7 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { addFormHistory } from '../utils/formHistory';
 
 const { width, height: windowHeight } = Dimensions.get('window');
@@ -46,6 +47,7 @@ const HealthStatusCheck = () => {
     const [weeklyData, setWeeklyData] = useState(createInitialWeeklyData(10));
     const [localSaving, setLocalSaving] = useState(false);
     const [forceHideOverlay, setForceHideOverlay] = useState(false);
+    const [editMode, setEditMode] = useState(false);
     const [site, setSite] = useState('');
     const [week, setWeek] = useState('');
     const [month, setMonth] = useState('');
@@ -136,7 +138,7 @@ const HealthStatusCheck = () => {
             <View style={{ width: fitWidth }}>
                 <FitCheckToggle
                     isChecked={item.weeklyChecks[day].fit}
-                    onToggle={() => toggleFitStatus(item.id, day)}
+                    onToggle={editMode ? () => toggleFitStatus(item.id, day) : undefined}
                 />
             </View>
             <View style={{ width: commentWidth }}>
@@ -144,6 +146,7 @@ const HealthStatusCheck = () => {
                     style={dailyStyles.commentInput}
                     value={item.weeklyChecks[day].comment}
                     onChangeText={(t) => updateDailyStatus(item.id, day, 'comment', t)}
+                    editable={editMode}
                 />
             </View>
         </React.Fragment>
@@ -197,23 +200,22 @@ const HealthStatusCheck = () => {
     scheduleAutoSave = scheduleAutoSaveFromHook;
 
     return (
-        <SafeAreaView style={[styles.safeArea, { position: 'relative' }] }>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollViewContent}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <View style={styles.scrollViewContent}>
                 <View style={styles.container}>
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndTitle}>
                             <Image source={require('../assets/logo.jpeg')} style={styles.logoImageLeft} />
-                            <View>
-                                <Text style={styles.logoText}>Bravo</Text>
-                                <Text style={styles.documentTitle}>FOOD PRODUCTION AND SERVICE PERSONNEL</Text>
-                                <Text style={styles.documentTitleSub}>Food Safety Management System</Text>
-                            </View>
                         </View>
-                        <View style={styles.docDetails}>
+                        <View style={{ flex: 1, paddingLeft: 8 }}>
+                            <Text style={styles.documentTitle}>BRAVO BRANDS HEALTH STATUS CHECK</Text>
+                            <Text style={styles.documentTitleSub}>Food Safety Management System</Text>
+                        </View>
+                    </View>
+                    <View style={styles.docDetails}>
                             <Text style={styles.detailText}>Doc Ref: BBN-SHEQ-P-R-72</Text>
                             <Text style={styles.detailText}>Issue Date: {issueDate}</Text>
                         </View>
-                    </View>
                     <Text style={styles.subjectText}>
                         <Text style={styles.boldText}>BRAVO BRANDS HEALTH STATUS CHECK</Text>
                     </Text>
@@ -223,7 +225,7 @@ const HealthStatusCheck = () => {
                         <View style={styles.detailRow}>
                             <View style={styles.detailBox}>
                                 <Text style={styles.detailLabel}>SITE</Text>
-                                <TextInput style={styles.detailInput} placeholder="Enter Site" value={site} onChangeText={t => { setSite(t); try { scheduleAutoSave(); } catch (e) {} }} />
+                                <TextInput style={styles.detailInput} placeholder="Enter Site" value={site} onChangeText={t => { setSite(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
                             </View>
                             <View style={styles.detailBox}>
                                 <Text style={styles.detailLabel}>WEEK</Text>
@@ -241,15 +243,15 @@ const HealthStatusCheck = () => {
                         <View style={styles.detailRow}>
                             <View style={[styles.detailBox, styles.wideBox]}>
                                 <Text style={styles.detailLabel}>Supervisor Name & Sign</Text>
-                                <TextInput style={styles.detailInput} placeholder="Name & Sign" value={supervisorName} onChangeText={t => { setSupervisorName(t); try { scheduleAutoSave(); } catch (e) {} }} />
+                                <TextInput style={styles.detailInput} placeholder="Name & Sign" value={supervisorName} onChangeText={t => { setSupervisorName(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
                             </View>
                             <View style={[styles.detailBox, styles.wideBox]}>
                                 <Text style={styles.detailLabel}>Complex Manager Name &</Text>
-                                <TextInput style={styles.detailInput} placeholder="Name & Sign" value={complexManagerSign} onChangeText={t => { setComplexManagerSign(t); try { scheduleAutoSave(); } catch (e) {} }} />
+                                <TextInput style={styles.detailInput} placeholder="Name & Sign" value={complexManagerSign} onChangeText={t => { setComplexManagerSign(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
                             </View>
                             <View style={[styles.detailBox, styles.wideBox]}>
                                 <Text style={styles.detailLabel}>HSEQ Manager Sign</Text>
-                                <TextInput style={styles.detailInput} placeholder="Sign" value={hseqManagerSign} onChangeText={t => { setHseqManagerSign(t); try { scheduleAutoSave(); } catch (e) {} }} />
+                                <TextInput style={styles.detailInput} placeholder="Sign" value={hseqManagerSign} onChangeText={t => { setHseqManagerSign(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
                             </View>
                         </View>
                     </View>
@@ -350,19 +352,20 @@ const HealthStatusCheck = () => {
 
                     <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                     <LoadingOverlay visible={isSaving || localSaving} />
+                    </View>
                 </View>
-            </ScrollView>
 
-            {/* Sticky footer removed - buttons are inline under the signatures */}
-    </SafeAreaView>
+        {/* Sticky footer removed - buttons are inline under the signatures */}
+    </EditableFormContainer>
     );
 };
 
 // --- GENERAL STYLES ---
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#fff' },
-    scrollViewContent: { padding: 10, paddingBottom: Math.max(600, Math.round(windowHeight * 1.6)) },
-    container: { flex: 1, backgroundColor: '#fff', minWidth: width * 1.5, minHeight: Math.max(1600, Math.round(windowHeight * 1.6)) },
+    // Reduced bottom padding and minHeight for better on-screen layout
+    scrollViewContent: { padding: 10, paddingBottom: Math.max(140, Math.round(windowHeight * 0.25)) },
+    container: { flex: 1, backgroundColor: '#fff', minWidth: Math.max(width, tableWidthConst), minHeight: Math.max(800, windowHeight) },
     boldText: { fontWeight: 'bold' },
     docHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', borderWidth: 1, borderColor: '#000', padding: 5, marginBottom: 5 },
     documentTitle: { fontWeight: 'bold', fontSize: 14, flex: 2 },

@@ -4,6 +4,7 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../../utils/formDrafts';
 import { addFormHistory } from '../../utils/formHistory';
+import EditableFormContainer from '../../components/EditableFormContainer';
 
 
 const DRAFT_KEY = 'cooling_temperature_log_draft';
@@ -45,6 +46,7 @@ export default function CoolingTemperatureLog() {
     const [busy, setBusy] = useState(false);
     const [logoDataUri, setLogoDataUri] = useState(null);
     const saveTimer = useRef(null);
+    const [editMode, setEditMode] = useState(false);
 
     // Helper to format date
     const getTodayDate = () => {
@@ -172,8 +174,9 @@ export default function CoolingTemperatureLog() {
     };
     
     return (
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 180 }] }>
+            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 180, flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
                 
                 {/* --- 1. Document Header (Metadata Block) --- */}
                 <View style={styles.metaContainer}>
@@ -306,32 +309,40 @@ export default function CoolingTemperatureLog() {
                             
                             {/* Food Item */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.FOOD_ITEM }]}>
-                                <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Soup" />
+                                {editMode ? (
+                                    <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Soup" />
+                                ) : (
+                                    <Text style={styles.readOnlyCell}>{row.foodItem}</Text>
+                                )}
                             </View>
 
                             {/* Time Into Unit (New) */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_INTO_UNIT }]}>
-                                <TextInput style={styles.input} value={row.timeIntoUnit} onChangeText={v => setCell(ri, 'timeIntoUnit', v)} placeholder="HH:MM" />
+                                {editMode ? (
+                                    <TextInput style={styles.input} value={row.timeIntoUnit} onChangeText={v => setCell(ri, 'timeIntoUnit', v)} placeholder="HH:MM" />
+                                ) : (
+                                    <Text style={styles.readOnlyCell}>{row.timeIntoUnit}</Text>
+                                )}
                             </View>
 
                             {/* 1st Record */}
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign1}</Text>}</View>
 
                             {/* 2nd Record */}
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign2}</Text>}</View>
 
                             {/* 3rd Record */}
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign3}</Text>}</View>
 
                             {/* Staff Name */}
                             <View style={[styles.cell, { flex: COL_FLEX.STAFF_NAME }]}>
-                                <TextInput style={styles.input} value={row.staffName} onChangeText={v => setCell(ri, 'staffName', v)} placeholder="Name" />
+                                {editMode ? <TextInput style={styles.input} value={row.staffName} onChangeText={v => setCell(ri, 'staffName', v)} placeholder="Name" /> : <Text style={styles.readOnlyCell}>{row.staffName}</Text>}
                             </View>
                         </View>
                     ))}
@@ -363,12 +374,13 @@ export default function CoolingTemperatureLog() {
 
                 {/* --- 4. Action Buttons --- */}
                 <View style={styles.buttonRow}>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy || !editMode}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy || !editMode}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
                 </View>
 
             </ScrollView>
         </View>
+        </EditableFormContainer>
     );
 }
 
@@ -545,6 +557,7 @@ const styles = StyleSheet.create({
         minHeight: 36,
         color: '#444',
     },
+    readOnlyCell: { paddingVertical: 6, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, color: '#333' },
     
     // --- Footer Styles (Re-added) ---
     footerSection: { marginTop: 12, marginBottom: 12, paddingHorizontal: 4 },

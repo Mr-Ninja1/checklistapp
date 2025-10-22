@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet 
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
 // history registration is handled by the save hook via formStorage.saveForm
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -43,6 +44,7 @@ export default function MixingControlSheet() {
   const [verification, setVerification] = useState({ mixerManSign: '', complexManagerSign: '' });
   const [logoDataUri, setLogoDataUri] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [editMode, setEditMode] = React.useState(false);
   const saveTimer = useRef(null);
 
   // load existing stable draft (if any) using formStorage (payload wrapper)
@@ -145,6 +147,7 @@ export default function MixingControlSheet() {
             multiline={true}
             numberOfLines={2}
             textAlignVertical="top"
+            editable={editMode}
           />
         </View>
       ))}
@@ -152,7 +155,8 @@ export default function MixingControlSheet() {
   );
 
   return (
-    <View style={styles.container}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraftLocal}>
+      <View style={styles.container}>
       <ScrollView contentContainerStyle={{ ...styles.content, paddingBottom: 140 }}>
         <View style={styles.headerBox}>
           <View style={styles.headerTop}>
@@ -213,7 +217,8 @@ export default function MixingControlSheet() {
         <LoadingOverlay visible={isSaving || busy} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>
-    </View>
+      </View>
+    </EditableFormContainer>
   );
 }
 

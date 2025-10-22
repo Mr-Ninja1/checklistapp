@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import useFormSave from '../hooks/useFormSave';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Alert } from 'react-native';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -29,6 +30,7 @@ const VegetablesFruitsReceivingForm = () => {
     const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
     const defaultIssueDate = `${pad(today.getDate())}/${pad(today.getMonth() + 1)}/${today.getFullYear()}`;
     const [issueDate, setIssueDate] = useState(defaultIssueDate);
+    const [editMode, setEditMode] = useState(false);
     // docRef/version/rev removed per request
 
     const updateReceivingField = (id, field, value) => {
@@ -87,27 +89,57 @@ const VegetablesFruitsReceivingForm = () => {
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.typeOfVegFruit} onChangeText={(t) => updateReceivingField(item.id, 'typeOfVegFruit', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
-            <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
-                <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
-            </TouchableOpacity>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.typeOfVegFruit} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'typeOfVegFruit', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.nameCol]}>{item.typeOfVegFruit}</Text>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{item.supplier}</Text>
+            )}
+
+            {editMode ? (
+                <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </TouchableOpacity>
+            ) : (
+                <View style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </View>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{item.temp}</Text>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{item.stateOfProduct}</Text>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{item.expiryDate}</Text>
+            )}
+
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{item.remarks}</Text>
+            )}
         </View>
     );
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-                    <ScrollView
-                        style={{ flex: 1 }}
-                        contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]}
-                        keyboardShouldPersistTaps="handled"
-                        nestedScrollEnabled={true}
-                    >
-                <View style={styles.container}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <View style={styles.container}>
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
                             <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
@@ -159,25 +191,25 @@ const VegetablesFruitsReceivingForm = () => {
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.dateOfDelivery} onChangeText={t => updateDeliveryDetail('dateOfDelivery', t)} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.dateOfDelivery} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('dateOfDelivery', t); }} />
                             <Text style={styles.deliveryLabel}>Received By:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} onChangeText={t => updateDeliveryDetail('receivedBy', t)} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('receivedBy', t); }} />
                             <Text style={styles.deliveryLabel}>Complex Manager:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={t => updateDeliveryDetail('complexManager', t)} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('complexManager', t); }} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Time of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.timeOfDelivery} onChangeText={t => updateDeliveryDetail('timeOfDelivery', t)} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.timeOfDelivery} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('timeOfDelivery', t); }} />
                             <Text style={styles.deliveryLabel}>Invoice No:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.invoiceNo} onChangeText={t => updateDeliveryDetail('invoiceNo', t)} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.invoiceNo} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('invoiceNo', t); }} />
                             <Text style={styles.deliveryLabel}>Drivers Name:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={t => updateDeliveryDetail('driversName', t)} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('driversName', t); }} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
                             <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => updateDeliveryDetail('vehicleRegNo', t)} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={t => updateDeliveryDetail('signature', t)} />
+                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('signature', t); }} />
                         </View>
                     </View>
 
@@ -211,15 +243,14 @@ const VegetablesFruitsReceivingForm = () => {
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
                         <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
                     </View>
-                                    <View style={{ height: 18 }} />
-                                    <View style={{ marginTop: 12 }}>
-                                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => clearForm())} showSavePdf={false} />
-                                    </View>
-                                    <LoadingOverlay visible={isSaving} />
-                                    <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-                </View>
-            </ScrollView>
-        </SafeAreaView>
+                        <View style={{ height: 18 }} />
+                        <View style={{ marginTop: 12 }}>
+                            <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || isSaving) return; handleSubmit(() => clearForm()); }} showSavePdf={false} isSaving={isSaving} />
+                        </View>
+                        <LoadingOverlay visible={isSaving} />
+                        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+            </View>
+        </EditableFormContainer>
     );
 };
 
@@ -237,6 +268,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         minWidth: 1123,
         paddingHorizontal: 8,
+        // ensure action buttons at the bottom are reachable when wrapped by the shared ScrollView
+        paddingBottom: 140,
     },
     docHeader: {
         flexDirection: 'row',

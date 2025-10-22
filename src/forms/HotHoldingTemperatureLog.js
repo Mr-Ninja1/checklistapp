@@ -4,6 +4,7 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'hot_holding_temperature_log_draft';
 const MAX_ROWS = 20;
@@ -34,6 +35,7 @@ export default function HotHoldingTemperatureLog() {
     const [rows, setRows] = useState(initialRows);
     const [meta, setMeta] = useState(initialMeta);
     const [busy, setBusy] = useState(false);
+    const [editMode, setEditMode] = useState(false);
     const saveTimer = useRef(null);
 
     const getTodayDate = () => {
@@ -144,7 +146,8 @@ export default function HotHoldingTemperatureLog() {
 
     return (
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={styles.content}>
+            <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
                 <View style={styles.metaContainer}>
                     <View style={styles.metaHeaderBox}>
                         <View style={styles.brandRow}>
@@ -166,7 +169,7 @@ export default function HotHoldingTemperatureLog() {
                     </View>
                 </View>
 
-                <View style={styles.tableWrap}>
+                    <View style={styles.tableWrap}>
                     <Text style={styles.tableTitle}>HOT HOLDING TEMPERATURE LOG</Text>
 
                     <View style={styles.logHeaderRow1}>
@@ -214,27 +217,39 @@ export default function HotHoldingTemperatureLog() {
                         <View key={ri} style={styles.row}>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.INDEX }]}><Text style={{ textAlign: 'center', fontSize: 10 }}>{ri + 1}</Text></View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.FOOD_ITEM }]}>
-                                <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Lasagna" />
+                                {editMode ? (
+                                    <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Lasagna" />
+                                ) : (
+                                    <Text style={styles.readOnlyCell}>{row.foodItem}</Text>
+                                )}
                             </View>
 
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_INTO_HOLD }]}>
-                                <TextInput style={styles.input} value={row.timeIntoHold} onChangeText={v => setCell(ri, 'timeIntoHold', v)} placeholder="HH:MM" />
+                                {editMode ? (
+                                    <TextInput style={styles.input} value={row.timeIntoHold} onChangeText={v => setCell(ri, 'timeIntoHold', v)} placeholder="HH:MM" />
+                                ) : (
+                                    <Text style={styles.readOnlyCell}>{row.timeIntoHold}</Text>
+                                )}
                             </View>
 
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign1}</Text>}</View>
 
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign2}</Text>}</View>
 
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign3}</Text>}</View>
 
                             <View style={[styles.cell, { flex: COL_FLEX.STAFF_NAME }]}>
-                                <TextInput style={styles.input} value={row.staffName} onChangeText={v => setCell(ri, 'staffName', v)} placeholder="Name" />
+                                {editMode ? (
+                                    <TextInput style={styles.input} value={row.staffName} onChangeText={v => setCell(ri, 'staffName', v)} placeholder="Name" />
+                                ) : (
+                                    <Text style={styles.readOnlyCell}>{row.staffName}</Text>
+                                )}
                             </View>
                         </View>
                     ))}
@@ -243,27 +258,52 @@ export default function HotHoldingTemperatureLog() {
                 <View style={styles.footerSection}>
                     <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-                        <TextInput style={styles.signatureInput} value={meta.chefSignature} onChangeText={v => setMetaField('chefSignature', v)} placeholder="" />
+                        {editMode ? (
+                            <TextInput style={styles.signatureInput} value={meta.chefSignature} onChangeText={v => setMetaField('chefSignature', v)} placeholder="" />
+                        ) : (
+                            <Text style={styles.readOnlyMeta}>{meta.chefSignature}</Text>
+                        )}
                     </View>
 
                     <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Corrective Action:</Text>
-                        <TextInput style={styles.textarea} value={meta.correctiveAction} onChangeText={v => setMetaField('correctiveAction', v)} placeholder="Document corrective action" multiline numberOfLines={4} />
+                        {editMode ? (
+                            <TextInput style={styles.textarea} value={meta.correctiveAction} onChangeText={v => setMetaField('correctiveAction', v)} placeholder="Document corrective action" multiline numberOfLines={4} />
+                        ) : (
+                            <Text style={styles.readOnlyMeta}>{meta.correctiveAction}</Text>
+                        )}
                     </View>
 
                     <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12, marginLeft: 16 }}>Complex Manager Signature:</Text>
-                        <TextInput style={styles.signatureInput} value={meta.complexManagerSignature} onChangeText={v => setMetaField('complexManagerSignature', v)} placeholder="" />
+                        {editMode ? (
+                            <TextInput style={styles.signatureInput} value={meta.complexManagerSignature} onChangeText={v => setMetaField('complexManagerSignature', v)} placeholder="" />
+                        ) : (
+                            <Text style={styles.readOnlyMeta}>{meta.complexManagerSignature}</Text>
+                        )}
                     </View>
                 </View>
 
                 <View style={styles.buttonRow}>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.btn, { backgroundColor: '#f6c342' }]}
+                        onPress={() => { if (!editMode || busy) return; handleSaveDraft(); }}
+                        disabled={!editMode || busy}
+                    >
+                        <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.btn, { backgroundColor: '#3b82f6' }]}
+                        onPress={() => { if (!editMode || busy) return; handleSubmit(); }}
+                        disabled={!editMode || busy}
+                    >
+                        <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
+                    </TouchableOpacity>
                 </View>
 
             </ScrollView>
+            </EditableFormContainer>
         </View>
     );
 }
@@ -299,6 +339,8 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#ddd', minHeight: 38 },
     cell: { padding: 1, justifyContent: 'center' },
     input: { padding: 2, fontSize: 10, textAlign: 'center', minHeight: 36, color: '#444' },
+    readOnlyCell: { padding: 6, fontSize: 10, textAlign: 'center', minHeight: 36, color: '#222' },
+    readOnlyMeta: { padding: 6, fontSize: 12, color: '#222' },
     footerSection: { marginTop: 12, marginBottom: 12, paddingHorizontal: 4 },
     signatureInput: { borderBottomWidth: 1, borderColor: '#333', padding: 6, minHeight: 36, fontSize: 12 },
     textarea: { borderWidth: 1, borderColor: '#ccc', padding: 8, borderRadius: 6, textAlignVertical: 'top', fontSize: 12 },

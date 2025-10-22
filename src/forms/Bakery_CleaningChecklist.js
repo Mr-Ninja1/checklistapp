@@ -14,6 +14,7 @@ import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { getDraft } from '../utils/formDrafts';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 // --- STUBBED ASYNC STORAGE AND API UTILITIES ---
 // NOTE: Since this environment cannot access native AsyncStorage, these functions
@@ -93,6 +94,7 @@ export default function BakeryCleaningChecklist() {
     const [metadata, setMetadata] = useState({ location: '', week: '', month: issueMonth, year: issueYear });
     const [verification, setVerification] = useState({ hseqManager: '', complexManager: '' });
     const [busy, setBusy] = useState(false);
+    const [editMode, setEditMode] = useState(false);
     
     // useFormSave integration
     const buildPayload = () => ({
@@ -217,17 +219,22 @@ export default function BakeryCleaningChecklist() {
                     <View style={styles.checkSubCol}>
                         <Checkbox
                             checked={item.days[day].checked}
-                            onPress={() => handleCheck(item.id, day)}
+                            onPress={() => editMode && handleCheck(item.id, day)}
                         />
                     </View>
                     {/* Cleaned By - 80% of the day column */}
                     <View style={styles.cleanedBySubCol}>
-                        <TextInput
-                            value={item.days[day].cleanedBy}
-                            onChangeText={(value) => handleCleanedByChange(item.id, day, value)}
-                            style={styles.cleanedByInput}
-                            maxLength={15}
-                        />
+                        {editMode ? (
+                            <TextInput
+                                value={item.days[day].cleanedBy}
+                                onChangeText={(value) => handleCleanedByChange(item.id, day, value)}
+                                style={styles.cleanedByInput}
+                                maxLength={15}
+                                editable={editMode}
+                            />
+                        ) : (
+                            <Text style={styles.cellReadText}>{item.days[day].cleanedBy}</Text>
+                        )}
                     </View>
                 </View>
             ))}
@@ -257,8 +264,9 @@ export default function BakeryCleaningChecklist() {
     }, [formData, metadata, verification]);
 
     return (
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraftLocal}>
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast">
                 <View style={styles.card}>
                     {/* Header Section - show logo, company name and issued date */}
                     <View style={styles.headerTop}>
@@ -305,7 +313,7 @@ export default function BakeryCleaningChecklist() {
                     </View>
 
                     {/* Table Container - Horizontal Scroll */}
-                    <ScrollView horizontal style={styles.tableScroll}>
+                    <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled directionalLockEnabled onStartShouldSetResponderCapture={() => true}>
                         {/* We set the width here to force the scroll and allow for landscape printing feel */}
                         <View style={{ width: TABLE_WIDTH }}>
                             {/* Table Header Row */}
@@ -343,21 +351,31 @@ export default function BakeryCleaningChecklist() {
                         <Text style={styles.verificationTitle}>Verification</Text>
                         <View style={styles.verificationField}>
                             <Text style={styles.verificationLabel}>Verified by: HSEQ Manager:</Text>
-                            <TextInput
-                                value={verification.hseqManager}
-                                onChangeText={(text) => handleVerificationChange('hseqManager', text)}
-                                style={styles.verificationInput}
-                                placeholder="Signature/Name"
-                            />
+                            {editMode ? (
+                                <TextInput
+                                    value={verification.hseqManager}
+                                    onChangeText={(text) => handleVerificationChange('hseqManager', text)}
+                                    style={styles.verificationInput}
+                                    placeholder="Signature/Name"
+                                    editable={editMode}
+                                />
+                            ) : (
+                                <Text style={styles.cellReadText}>{verification.hseqManager}</Text>
+                            )}
                         </View>
                         <View style={styles.verificationField}>
                             <Text style={styles.verificationLabel}>COMPLEX MANAGER SIGN:</Text>
-                            <TextInput
-                                value={verification.complexManager}
-                                onChangeText={(text) => handleVerificationChange('complexManager', text)}
-                                style={styles.verificationInput}
-                                placeholder="Signature/Name"
-                            />
+                            {editMode ? (
+                                <TextInput
+                                    value={verification.complexManager}
+                                    onChangeText={(text) => handleVerificationChange('complexManager', text)}
+                                    style={styles.verificationInput}
+                                    placeholder="Signature/Name"
+                                    editable={editMode}
+                                />
+                            ) : (
+                                <Text style={styles.cellReadText}>{verification.complexManager}</Text>
+                            )}
                         </View>
                     </View>
 
@@ -405,6 +423,7 @@ export default function BakeryCleaningChecklist() {
             <LoadingOverlay visible={isSaving || busy} message={(isSaving||busy) ? 'Saving...' : ''} />
             <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
+    </EditableFormContainer>
     );
 }
 

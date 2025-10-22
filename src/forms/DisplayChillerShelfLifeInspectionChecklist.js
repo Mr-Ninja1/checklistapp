@@ -4,6 +4,7 @@ import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { TouchableOpacity } from 'react-native-gesture-handler';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 // items sourced from cat.md
 const checklistItems = [
@@ -31,6 +32,7 @@ const createRowsFromItems = (items) => items.map((it, i) => ({
 export default function DisplayChillerShelfLifeInspectionChecklist() {
   const draftKey = 'display_chiller_shelf_life';
   const [rows, setRows] = useState(() => createRowsFromItems(checklistItems));
+  const [editMode, setEditMode] = useState(false);
   const today = new Date();
   const defaultDate = `${today.getDate()}/${today.getMonth() + 1}/${today.getFullYear()}`;
   const [issueDate, setIssueDate] = useState(defaultDate);
@@ -59,6 +61,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
   };
 
   const handleSubmit = async () => {
+    setBusy(true);
     try {
       const rowsWithId = rows.map((r, i) => ({ id: r.id || `${i+1}`, ...r }));
       const payload = {
@@ -83,23 +86,54 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
       console.warn('Save failed', e);
       Alert.alert('Error', 'Failed to save form');
     }
+    setBusy(false);
   };
 
   const renderRow = ({ item }) => (
     <View style={styles.row} key={item.id}>
-      <TextInput style={[styles.cell, styles.itemCol]} value={item.item} onChangeText={(t) => updateField(item.id, 'item', t)} placeholder="Item" multiline={true} />
-      <TextInput style={[styles.cell, styles.dateCol]} value={item.dateIn} onChangeText={(t) => updateField(item.id, 'dateIn', t)} />
-      <TextInput style={[styles.cell, styles.timeCol]} value={item.timeIn} onChangeText={(t) => updateField(item.id, 'timeIn', t)} />
-      <TextInput style={[styles.cell, styles.usedByCol]} value={item.usedBy} onChangeText={(t) => updateField(item.id, 'usedBy', t)} />
-      <TextInput style={[styles.cell, styles.staffCol]} value={item.staffName} onChangeText={(t) => updateField(item.id, 'staffName', t)} />
-      <TextInput style={[styles.cell, styles.qtyCol]} value={item.quantity} onChangeText={(t) => updateField(item.id, 'quantity', t)} keyboardType="numeric" />
-      <TextInput style={[styles.cell, styles.signCol]} value={item.sign} onChangeText={(t) => updateField(item.id, 'sign', t)} />
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.itemCol]} value={item.item} onChangeText={(t) => updateField(item.id, 'item', t)} placeholder="Item" multiline={true} editable />
+      ) : (
+        <Text style={[styles.cell, styles.itemCol]}>{item.item}</Text>
+      )}
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.dateCol]} value={item.dateIn} onChangeText={(t) => updateField(item.id, 'dateIn', t)} editable />
+      ) : (
+        <Text style={[styles.cell, styles.dateCol]}>{item.dateIn}</Text>
+      )}
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.timeCol]} value={item.timeIn} onChangeText={(t) => updateField(item.id, 'timeIn', t)} editable />
+      ) : (
+        <Text style={[styles.cell, styles.timeCol]}>{item.timeIn}</Text>
+      )}
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.usedByCol]} value={item.usedBy} onChangeText={(t) => updateField(item.id, 'usedBy', t)} editable />
+      ) : (
+        <Text style={[styles.cell, styles.usedByCol]}>{item.usedBy}</Text>
+      )}
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.staffCol]} value={item.staffName} onChangeText={(t) => updateField(item.id, 'staffName', t)} editable />
+      ) : (
+        <Text style={[styles.cell, styles.staffCol]}>{item.staffName}</Text>
+      )}
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.qtyCol]} value={item.quantity} onChangeText={(t) => updateField(item.id, 'quantity', t)} keyboardType="numeric" editable />
+      ) : (
+        <Text style={[styles.cell, styles.qtyCol]}>{item.quantity}</Text>
+      )}
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.signCol]} value={item.sign} onChangeText={(t) => updateField(item.id, 'sign', t)} editable />
+      ) : (
+        <Text style={[styles.cell, styles.signCol]}>{item.sign}</Text>
+      )}
     </View>
   );
 
+  const saveDraftLocal = async () => { await setDraft(draftKey, { rows, issueDate }); alert('Draft saved'); };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 160 }}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={saveDraftLocal}>
+      <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 160 }} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -124,7 +158,11 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
             <Text style={[styles.headerCell, styles.signCol]}>SIGN</Text>
           </View>
 
-          <FlatList data={rows} renderItem={renderRow} keyExtractor={r => r.id} scrollEnabled={false} />
+          <ScrollView horizontal nestedScrollEnabled={true} directionalLockEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1 }}>
+            <View style={{ width: 420 + 100 + 100 + 120 + 220 + 80 + 80 }}>
+              <FlatList data={rows} renderItem={renderRow} keyExtractor={r => r.id} scrollEnabled={false} />
+            </View>
+          </ScrollView>
         </View>
 
         <View style={{ height: 30 }} />
@@ -133,15 +171,15 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={async () => { await setDraft(draftKey, { rows, issueDate }); alert('Draft saved'); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+          <TouchableOpacity onPress={() => { if (!editMode || busy) return; saveDraftLocal(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Saving...' : (!editMode ? 'Edit to Save' : 'Save Draft')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit Checklist</Text>
+          <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSubmit(); }} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Submitting...' : (!editMode ? 'Edit to Submit' : 'Submit Checklist')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </EditableFormContainer>
   );
 }
 

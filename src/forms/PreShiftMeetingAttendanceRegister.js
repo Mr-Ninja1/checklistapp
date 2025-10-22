@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import EditableFormContainer from '../components/EditableFormContainer';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -9,6 +10,7 @@ import { TouchableOpacity } from 'react-native-gesture-handler';
 
 export default function PreShiftMeetingRegister() {
   const draftKey = 'pre_shift_meeting_attendance';
+  const [editMode, setEditMode] = useState(false);
   // Mock image asset placeholder since local assets aren't available in this environment
   // Use app logo from assets
   const logo = () => (
@@ -130,9 +132,10 @@ export default function PreShiftMeetingRegister() {
 
   // --- Component Rendering ---
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* The main ScrollView now manages vertical scrolling only */}
-      <ScrollView contentContainerStyle={styles.mainScrollContent}> 
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <SafeAreaView style={styles.safeArea}>
+        {/* The main ScrollView now manages vertical scrolling only */}
+        <ScrollView contentContainerStyle={styles.mainScrollContent}> 
 
         {/* TOP HEADER BLOCK */}
         <View style={styles.topHeader}>
@@ -188,6 +191,7 @@ export default function PreShiftMeetingRegister() {
               value={agenda} 
               onChangeText={setAgenda} 
               placeholder="e.g., Daily Production Targets" 
+              editable={editMode}
             />
             
             <Text style={[styles.infoLabel, { marginLeft: 16 }]}>PRESENTER:</Text>
@@ -196,6 +200,7 @@ export default function PreShiftMeetingRegister() {
               value={presenter} 
               onChangeText={setPresenter} 
               placeholder="..." 
+              editable={editMode}
             />
             
             <Text style={[styles.infoLabel, { marginLeft: 16 }]}>DATE:</Text>
@@ -204,6 +209,7 @@ export default function PreShiftMeetingRegister() {
               value={dateVal} 
               onChangeText={setDateVal} 
               placeholder="DD/MM/YYYY" 
+              editable={editMode}
             />
           </View>
 
@@ -223,6 +229,7 @@ export default function PreShiftMeetingRegister() {
                     return c; 
                   })} 
                   placeholder="" 
+                  editable={editMode}
                 />
               </View>
             ))}
@@ -252,15 +259,15 @@ export default function PreShiftMeetingRegister() {
             <View key={`row-${n}`} style={styles.tableRow}>
               {/* Left Table Data (Rows 1-10) */}
               <View style={styles.colSn}><Text style={styles.cellText}>{n}.</Text></View>
-              <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n]?.name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" /></View>
-              <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n]?.job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" /></View>
-              <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n]?.sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" /></View>
+              <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n]?.name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" editable={editMode} /></View>
+              <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n]?.job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" editable={editMode} /></View>
+              <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n]?.sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" editable={editMode} /></View>
 
               {/* Right Table Data (Rows 11-20) - separated by a gap */}
               <View style={[styles.colSn, styles.gap]}><Text style={styles.cellText}>{n + 10}.</Text></View>
-              <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.name} onChangeText={(t) => updateCell('right', n + 10, 'name', t)} placeholder="" /></View>
-              <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.job} onChangeText={(t) => updateCell('right', n + 10, 'job', t)} placeholder="" /></View>
-              <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.sign} onChangeText={(t) => updateCell('right', n + 10, 'sign', t)} placeholder="" /></View>
+              <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.name} onChangeText={(t) => updateCell('right', n + 10, 'name', t)} placeholder="" editable={editMode} /></View>
+              <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.job} onChangeText={(t) => updateCell('right', n + 10, 'job', t)} placeholder="" editable={editMode} /></View>
+              <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.sign} onChangeText={(t) => updateCell('right', n + 10, 'sign', t)} placeholder="" editable={editMode} /></View>
             </View>
           ))}
         </View>
@@ -269,15 +276,16 @@ export default function PreShiftMeetingRegister() {
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+          <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, opacity: editMode ? 1 : 0.6 }} disabled={!editMode}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+          <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, opacity: editMode ? 1 : 0.6 }} disabled={!editMode}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </EditableFormContainer>
   );
 }
 

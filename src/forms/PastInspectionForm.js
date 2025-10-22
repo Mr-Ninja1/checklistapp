@@ -7,6 +7,7 @@ import formStorage from '../utils/formStorage';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'past_inspection_form_draft';
 
@@ -76,7 +77,7 @@ const columns = [
 // --- Inspection Row Component (MOVED OUTSIDE and MEMOIZED) ---
 // By moving this component definition outside the main function and using React.memo,
 // we prevent the entire row and its TextInput from re-rendering when other rows change.
-const InspectionRow = React.memo(({ dateLabel, isHeader = false, row = null, setRowCallback }) => {
+const InspectionRow = React.memo(({ dateLabel, isHeader = false, row = null, setRowCallback, editable = true }) => {
     if (isHeader) {
         return (
             <View style={styles.headerRow}>
@@ -109,8 +110,9 @@ const InspectionRow = React.memo(({ dateLabel, isHeader = false, row = null, set
                         style={styles.inputField}
                         // Use row?.[col.key] for safe access
                         value={row ? row[col.key] : ''} 
-                        // Use the passed setRowCallback
-                        onChangeText={v => { if (row) setRowCallback(row.id, col.key, v); }}
+                        // Use the passed setRowCallback but only when editable
+                        onChangeText={v => { if (row && editable) setRowCallback(row.id, col.key, v); }}
+                        editable={editable}
                         textAlignVertical="center"
                     />
                 </View>
@@ -126,6 +128,7 @@ export default function PastInspectionForm() {
     const [logoDataUri, setLogoDataUri] = useState(null);
     const [busy, setBusy] = useState(false);
     const saveTimer = useRef(null);
+    const [editMode, setEditMode] = useState(false);
 
     // build payload for save operations
     const buildPayload = (status = 'draft') => ({
@@ -229,9 +232,10 @@ export default function PastInspectionForm() {
 
     // --- Render Function ---
     return (
-        <View style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                <View style={styles.mainContainer}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <View style={styles.container}>
+                <ScrollView contentContainerStyle={styles.scrollContainer}>
+                    <View style={styles.mainContainer}>
 
                     {/* Header Section */}
                     <View style={styles.metadataHeader}>
@@ -246,7 +250,7 @@ export default function PastInspectionForm() {
                             })()}
 
                             <View style={styles.metaTextBox}>
-                                <TextInput style={styles.companyNameLarge} value={state.companyName} onChangeText={v => setField('companyName', v)} />
+                                <TextInput style={styles.companyNameLarge} value={state.companyName} onChangeText={v => setField('companyName', v)} editable={editMode} />
                                 <Text style={styles.formTitleLabel}>Pest Inspection Form</Text>
                                 <Text style={styles.metaSystem}>{state.companySubtitle}</Text>
                             </View>
@@ -254,10 +258,10 @@ export default function PastInspectionForm() {
 
                         <View style={styles.metaRow}>
                             <Text style={styles.metaLabel}>Compiled by:</Text>
-                            <TextInput style={styles.metaInput} value={state.compiledBy} onChangeText={v => setField('compiledBy', v)} />
+                            <TextInput style={styles.metaInput} value={state.compiledBy} onChangeText={v => setField('compiledBy', v)} editable={editMode} />
 
                             <Text style={styles.metaLabel}>Approved By:</Text>
-                            <TextInput style={styles.metaInput} value={state.approvedBy} onChangeText={v => setField('approvedBy', v)} />
+                            <TextInput style={styles.metaInput} value={state.approvedBy} onChangeText={v => setField('approvedBy', v)} editable={editMode} />
                             
                             {/* version/revision removed as requested */}
                         </View>
@@ -276,6 +280,7 @@ export default function PastInspectionForm() {
                                 dateLabel={r.dateLabel} 
                                 row={r} 
                                 setRowCallback={setRow} 
+                                editable={editMode}
                             />
                         )}
                     </View>
@@ -295,15 +300,16 @@ export default function PastInspectionForm() {
 
                     {/* Functional Buttons provided by FormActionBar */}
                     <View style={styles.buttonRow}>
-                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
                     </View>
 
-                    <LoadingOverlay visible={isSaving} />
-                    <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+                        <LoadingOverlay visible={isSaving} />
+                        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
-                </View>
-            </ScrollView>
-        </View>
+                    </View>
+                </ScrollView>
+            </View>
+        </EditableFormContainer>
     );
 }
 

@@ -23,7 +23,7 @@ export default function FruitWashingLogPresentational({ payload }) {
             <Text style={styles.brandSubtitle}>Food Safety Inspections</Text>
           </View>
         </View>
-        <Text style={styles.title}>{metadata.subject || 'FRUIT AND VEGETABLE WASHING & SANITIZING LOG'}</Text>
+        <Text style={styles.title}>{metadata.subject || 'FRUIT ,VEGETABLE & EGG WASHING + SANITIZING LOG'}</Text>
         <Text style={styles.meta}>Doc No: {metadata.docNo || ''} • Issue Date: {metadata.issueDate || ''}</Text>
       </View>
 

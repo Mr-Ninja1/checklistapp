@@ -18,6 +18,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'coldroom_freezer_room_cleaning_checklist_draft';
 
@@ -60,6 +61,7 @@ export default function ColdRoomFreezerChecklist() {
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -185,7 +187,11 @@ export default function ColdRoomFreezerChecklist() {
             <Checkbox checked={item.checks[day].checked} onPress={() => handleCellChange(item.id, day, 'checked')} />
           </View>
           <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-            <TextInput value={item.checks[day].cleanedBy} onChangeText={t => handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={6} />
+            {editMode ? (
+              <TextInput value={item.checks[day].cleanedBy} onChangeText={t => handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={6} />
+            ) : (
+              <Text style={styles.cellReadText}>{item.checks[day].cleanedBy}</Text>
+            )}
           </View>
         </View>
       ))}
@@ -194,8 +200,9 @@ export default function ColdRoomFreezerChecklist() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }]}>
-        <View style={styles.card}>
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+          <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)), flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast"> 
+          <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
               <Image source={require('../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
@@ -237,7 +244,7 @@ export default function ColdRoomFreezerChecklist() {
             </View>
           </View>
 
-          <ScrollView horizontal style={styles.tableScroll}>
+          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled directionalLockEnabled onStartShouldSetResponderCapture={() => true}>
             <View style={{ width: TABLE_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
@@ -265,10 +272,11 @@ export default function ColdRoomFreezerChecklist() {
             <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
-          <LoadingOverlay visible={isSaving} />
-          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-        </View>
-      </ScrollView>
+            <LoadingOverlay visible={isSaving} />
+            <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+          </View>
+        </ScrollView>
+      </EditableFormContainer>
     </View>
   );
 }
@@ -306,6 +314,7 @@ const styles = StyleSheet.create({
   centerContent: { alignItems: 'center' },
   equipmentText: { fontSize: 12, color: '#1F2937' },
   cellInput: { width: '100%', textAlign: 'center', fontSize: 12, height: 30, padding: 0 },
+  cellReadText: { textAlign: 'center', fontSize: 12, paddingVertical: 6, color: '#111827' },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { borderColor: '#10B981', backgroundColor: '#10B981' },
   checkboxUnchecked: { borderColor: '#4B5563', backgroundColor: '#FFFFFF' },

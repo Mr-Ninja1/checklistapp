@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import EditableFormContainer from '../components/EditableFormContainer';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -23,6 +24,7 @@ export default function BinLinersChangingLog() {
   const [verifiedBy, setVerifiedBy] = useState('');
   const [hseqManager, setHseqManager] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // Issue date set to system date (dd/mm/yyyy)
   const issueDate = (() => {
@@ -112,8 +114,9 @@ export default function BinLinersChangingLog() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.mainScrollContent}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.mainScrollContent}>
 
         {/* Header */}
         <View style={styles.topHeader}>
@@ -179,23 +182,23 @@ export default function BinLinersChangingLog() {
             {logEntries.map((entry, idx) => (
               <View key={idx} style={styles.tableRow}>
                 <View style={styles.colDate}>
-                  <TextInput style={styles.cellInput} value={entry.date} onChangeText={(t) => updateLogEntry(idx, 'date', t)} placeholder="DD/MM/YYYY" />
+                  <TextInput style={styles.cellInput} value={entry.date} onChangeText={(t) => updateLogEntry(idx, 'date', t)} placeholder="DD/MM/YYYY" editable={editMode} />
                 </View>
 
                 <View style={styles.colChangedBy}>
-                  <TextInput style={styles.cellInput} value={entry.changedBy} onChangeText={(t) => updateLogEntry(idx, 'changedBy', t)} placeholder="" />
+                  <TextInput style={styles.cellInput} value={entry.changedBy} onChangeText={(t) => updateLogEntry(idx, 'changedBy', t)} placeholder="" editable={editMode} />
                 </View>
 
                 <View style={styles.colArea}>
-                  <TextInput style={styles.cellInput} value={entry.area} onChangeText={(t) => updateLogEntry(idx, 'area', t)} placeholder="" />
+                  <TextInput style={styles.cellInput} value={entry.area} onChangeText={(t) => updateLogEntry(idx, 'area', t)} placeholder="" editable={editMode} />
                 </View>
 
                 <View style={styles.colStaffSign}>
-                  <TextInput style={styles.cellInput} value={entry.staffSign} onChangeText={(t) => updateLogEntry(idx, 'staffSign', t)} placeholder="" />
+                  <TextInput style={styles.cellInput} value={entry.staffSign} onChangeText={(t) => updateLogEntry(idx, 'staffSign', t)} placeholder="" editable={editMode} />
                 </View>
 
                 <View style={styles.colSupervisorSign}>
-                  <TextInput style={styles.cellInput} value={entry.supervisorSign} onChangeText={(t) => updateLogEntry(idx, 'supervisorSign', t)} placeholder="" />
+                  <TextInput style={styles.cellInput} value={entry.supervisorSign} onChangeText={(t) => updateLogEntry(idx, 'supervisorSign', t)} placeholder="" editable={editMode} />
                 </View>
               </View>
             ))}
@@ -217,12 +220,13 @@ export default function BinLinersChangingLog() {
 
         {/* Shared action bar */}
         <View style={{ height: 18 }} />
-        <View style={{ marginTop: 6 }}>
-          <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
-        </View>
+          <View style={{ marginTop: 6 }}>
+            <FormActionBar onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmit : undefined} isSaving={isSaving} />
+          </View>
 
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </EditableFormContainer>
   );
 }
 

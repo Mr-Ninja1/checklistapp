@@ -4,6 +4,18 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
+import EditableFormContainer from '../components/EditableFormContainer';
+
+// Small helper to defensively render any dynamic value as text.
+// Some runtime errors occur when a non-string ends up as a direct child of
+// a non-Text element or when unexpected values are interpolated. SafeText
+// coerces values to strings and always returns a <Text> node.
+const SafeText = ({ value, children, style, ...rest }) => {
+    const text = value !== undefined
+        ? value
+        : (typeof children === 'string' ? children : (children == null ? '' : String(children)));
+    return <Text style={style} {...rest}>{String(text)}</Text>;
+};
 
 
 const DRAFT_KEY = 'cooking_temperature_log_draft';
@@ -42,6 +54,7 @@ export default function CookingTemperatureLog() {
     const [meta, setMeta] = useState(initialMeta);
     const [busy, setBusy] = useState(false);
     const [logoDataUri, setLogoDataUri] = useState(null);
+    const [editMode, setEditMode] = useState(false);
     const saveTimer = useRef(null);
 
     // Helper to format date
@@ -105,7 +118,13 @@ export default function CookingTemperatureLog() {
                 date: meta.issueDate || new Date().toLocaleDateString(),
                 metadata: meta,
                 formData: logData,
-                layoutHints: { COL_FLEX },
+                // expand COL_FLEX into a concrete object: avoid embedding a non-primitive or JSX in payload
+                layoutHints: {
+                    INDEX: COL_FLEX.INDEX,
+                    FOOD_ITEM: COL_FLEX.FOOD_ITEM,
+                    TIME_TEMP_SIGN: COL_FLEX.TIME_TEMP_SIGN,
+                    STAFF_NAME: COL_FLEX.STAFF_NAME,
+                },
                 _tableWidth: 1000,
                 assets: logoDataUri ? { logoDataUri } : {},
                 savedAt: Date.now(),
@@ -147,7 +166,8 @@ export default function CookingTemperatureLog() {
 
     return (
         <View style={styles.container}>
-            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 180 }] }>
+            <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 180, flexGrow: 1 }] } keyboardShouldPersistTaps="handled">
                 
                 {/* --- 1. Document Header (Metadata Block) --- */}
                 <View style={styles.metaContainer}>
@@ -164,11 +184,20 @@ export default function CookingTemperatureLog() {
                             <Text style={styles.docInfoValue}>{meta.issueDate}</Text>
                         </View>
                     </View>
-                    <View style={styles.metaBottomRow}>
-                        <Text style={styles.metaBottomItem}><Text style={styles.metaBold}>SUBJECT:</Text> {meta.subject}</Text>
-                        <Text style={styles.metaBottomItem}><Text style={styles.metaBold}>Compiled By:</Text> {meta.compiledBy}</Text>
-                        <Text style={styles.metaBottomItem}><Text style={styles.metaBold}>Approved By:</Text> {meta.approvedBy}</Text>
-                    </View>
+                                                <View style={styles.metaBottomRow}>
+                                                    <View style={styles.metaBottomItem}>
+                                                        <Text style={styles.metaBold}>SUBJECT:</Text>
+                                                        <SafeText style={{ marginTop: 4 }} value={meta.subject} />
+                                                    </View>
+                                                    <View style={styles.metaBottomItem}>
+                                                        <Text style={styles.metaBold}>Compiled By:</Text>
+                                                        <SafeText style={{ marginTop: 4 }} value={meta.compiledBy} />
+                                                    </View>
+                                                    <View style={styles.metaBottomItem}>
+                                                        <Text style={styles.metaBold}>Approved By:</Text>
+                                                        <SafeText style={{ marginTop: 4 }} value={meta.approvedBy} />
+                                                    </View>
+                                                </View>
                 </View>
 
                 {/* --- 2. Table Block --- */}
@@ -178,7 +207,7 @@ export default function CookingTemperatureLog() {
                     {/* Header Row 1: Probe Thermometer / Date */}
                     <View style={styles.logHeaderRow1}>
                         <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>PROBE THERMOMETER TEMPERATURE LOG FOR COOKED FOOD</Text>
-                        <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>DATE: {meta.issueDate}</Text>
+                        <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>DATE: {String(meta.issueDate || '')}</Text>
                     </View>
                     
                     {/* Header Row 2: Group Labels (FOOD ITEM, 1ST RECORD, 2ND RECORD, 3RD RECORD) */}
@@ -193,7 +222,7 @@ export default function CookingTemperatureLog() {
                                 </Text>
                             </View>
                             <View style={{ paddingVertical: 4 }}>
-                                <Text style={[styles.hText, { fontSize: 16 }]}>FOOD ITEM</Text>
+                                    <Text style={[styles.hText, { fontSize: 16 }]}>FOOD ITEM</Text>
                             </View>
                         </View>
 
@@ -230,27 +259,35 @@ export default function CookingTemperatureLog() {
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.INDEX }]}><Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '700' }}>{ri + 1}</Text></View>
                             
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.FOOD_ITEM }]}>
-                                <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Chicken Fillet" />
+                                {editMode ? (
+                                    <TextInput style={styles.input} value={row.foodItem} onChangeText={v => setCell(ri, 'foodItem', v)} placeholder="e.g., Chicken Fillet" />
+                                ) : (
+                                    <SafeText style={styles.readOnlyCell} value={row.foodItem} />
+                                )}
                             </View>
 
                             {/* 1st Record */}
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /> : <SafeText style={styles.readOnlyCell} value={row.time1} />} </View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /> : <SafeText style={styles.readOnlyCell} value={row.temp1} />} </View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /> : <SafeText style={styles.readOnlyCell} value={row.sign1} />} </View>
 
                             {/* 2nd Record */}
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /> : <SafeText style={styles.readOnlyCell} value={row.time2} />} </View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /> : <SafeText style={styles.readOnlyCell} value={row.temp2} />} </View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /> : <SafeText style={styles.readOnlyCell} value={row.sign2} />} </View>
 
                             {/* 3rd Record */}
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /></View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}><TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /></View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /> : <SafeText style={styles.readOnlyCell} value={row.time3} />} </View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /> : <SafeText style={styles.readOnlyCell} value={row.temp3} />} </View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}> {editMode ? <TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /> : <SafeText style={styles.readOnlyCell} value={row.sign3} />} </View>
 
                             {/* Staff Name */}
                             <View style={[styles.cell, { flex: COL_FLEX.STAFF_NAME }]}>
-                                <TextInput style={styles.input} value={row.staffName} onChangeText={v => setCell(ri, 'staffName', v)} placeholder="Name" />
+                                {editMode ? (
+                                    <TextInput style={styles.input} value={row.staffName} onChangeText={v => setCell(ri, 'staffName', v)} placeholder="Name" />
+                                ) : (
+                                    <SafeText style={styles.readOnlyCell} value={row.staffName} />
+                                )}
                             </View>
                         </View>
                     ))}
@@ -282,11 +319,12 @@ export default function CookingTemperatureLog() {
 
                 {/* --- 4. Action Buttons --- */}
                 <View style={styles.buttonRow}>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy || !editMode}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy || !editMode}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
                 </View>
 
             </ScrollView>
+            </EditableFormContainer>
         </View>
     );
 }
@@ -470,4 +508,5 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84 
     },
     btnText: { color: '#fff', fontWeight: '700' },
+    readOnlyCell: { paddingVertical: 6, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, color: '#333' },
 });

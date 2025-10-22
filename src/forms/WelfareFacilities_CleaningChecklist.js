@@ -19,6 +19,7 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { addFormHistory } from '../utils/formHistory';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'welfare_facilities_cleaning_checklist_draft';
 
@@ -70,7 +71,11 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
         <Checkbox checked={item.checks[day].checked} onPress={() => canInteract && handleCellChange(item.id, day, 'checked')} />
       </View>
       <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-        <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} />
+        {canInteract ? (
+          <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} />
+        ) : (
+          <Text style={styles.cellReadText}>{item.checks[day].cleanedBy}</Text>
+        )}
       </View>
     </View>
   );
@@ -84,6 +89,7 @@ export default function WelfareFacilitiesChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
   const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '' });
   const [busy, setBusy] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   // Intentionally do NOT load drafts for this form to avoid repopulation
   // after submit. Initialize metadata with current month/year.
@@ -105,6 +111,7 @@ export default function WelfareFacilitiesChecklist() {
     metadata,
     formData,
     layoutHints: {},
+    _tableWidth: TABLE_WIDTH,
     assets: {},
     savedAt: new Date().toISOString(),
     status,
@@ -192,7 +199,7 @@ export default function WelfareFacilitiesChecklist() {
     const item = stateItem || { id: `fallback-${rowItem.area}-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
 
     // Determine if interaction is allowed (i.e., if it's a real item in the state)
-    const canInteract = !!stateItem; 
+  const canInteract = !!stateItem && editMode; 
 
     return (
       <View key={item.id} style={styles.row}>
@@ -219,8 +226,9 @@ export default function WelfareFacilitiesChecklist() {
   };
 
   return (
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }]}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)), flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast">
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
@@ -238,11 +246,11 @@ export default function WelfareFacilitiesChecklist() {
             <View style={styles.areaMetaRow}>
               <View style={[styles.metaField, { flex: 2 }]}>
                 <Text style={styles.metaLabel}>LOCATION:</Text>
-                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} />
+                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} editable={editMode} />
               </View>
               <View style={styles.metaField}>
                 <Text style={styles.metaLabel}>WEEK:</Text>
-                <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." />
+                <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." editable={editMode} />
               </View>
               <View style={styles.metaField}>
                 <Text style={styles.metaLabel}>MONTH:</Text>
@@ -259,11 +267,11 @@ export default function WelfareFacilitiesChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} />
+              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} editable={editMode} />
             </View>
           </View>
 
-          <ScrollView horizontal style={styles.tableScroll}>
+          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled directionalLockEnabled onStartShouldSetResponderCapture={() => true}>
             <View style={{ width: TABLE_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
@@ -289,14 +297,14 @@ export default function WelfareFacilitiesChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            {/* Disable Save Draft action for this form to avoid draft recreation */}
-            <FormActionBar onBack={() => {}} onSaveDraft={null} onSubmit={handleSubmitLocal} showSavePdf={false} />
+            <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
           </View>
           <LoadingOverlay visible={isSaving} />
           <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
         </View>
       </ScrollView>
     </View>
+    </EditableFormContainer>
   );
 }
 

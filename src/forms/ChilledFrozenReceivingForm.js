@@ -5,6 +5,7 @@ import useFormSave from '../hooks/useFormSave';
 import { addFormHistory, removeFormHistory } from '../utils/formHistory';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 import FormActionBar from '../components/FormActionBar';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const { width } = Dimensions.get('window');
 
@@ -86,6 +87,8 @@ const ChilledFrozenReceivingForm = () => {
     } });
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
 
+    const [editMode, setEditMode] = useState(false);
+
     const today = new Date();
     const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
     const defaultIssueDate = `${pad(today.getDate())}/${pad(today.getMonth() + 1)}/${today.getFullYear()}`;
@@ -107,16 +110,50 @@ const ChilledFrozenReceivingForm = () => {
     };
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.nameOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
-            <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
-                <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
-            </TouchableOpacity>
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]} value={item.tempOfChldFrznProduct} onChangeText={(t) => updateReceivingField(item.id, 'tempOfChldFrznProduct', t)} keyboardType="numeric" placeholder="°C" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
-            <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.nameCol]} value={item.nameOfProduct} editable onChangeText={(t) => updateReceivingField(item.id, 'nameOfProduct', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.nameCol]}>{item.nameOfProduct}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.supplierCol]} value={item.supplier} editable onChangeText={(t) => updateReceivingField(item.id, 'supplier', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{item.supplier}</Text>
+            )}
+            {editMode ? (
+                <TouchableOpacity style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]} onPress={() => toggleClean(item.id)} activeOpacity={0.7}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </TouchableOpacity>
+            ) : (
+                <View style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>
+                    <Text style={dailyStyles.checkboxText}>{item.clean ? '✓' : ''}</Text>
+                </View>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} editable onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{item.temp}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]} value={item.tempOfChldFrznProduct} editable onChangeText={(t) => updateReceivingField(item.id, 'tempOfChldFrznProduct', t)} keyboardType="numeric" placeholder="°C" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]}>{item.tempOfChldFrznProduct}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]} value={item.stateOfProduct} editable onChangeText={(t) => updateReceivingField(item.id, 'stateOfProduct', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{item.stateOfProduct}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]} value={item.expiryDate} editable onChangeText={(t) => updateReceivingField(item.id, 'expiryDate', t)} placeholder="D/M/Y" />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{item.expiryDate}</Text>
+            )}
+            {editMode ? (
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.remarksCol]} value={item.remarks} editable onChangeText={(t) => updateReceivingField(item.id, 'remarks', t)} />
+            ) : (
+                <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{item.remarks}</Text>
+            )}
         </View>
     );
 
@@ -128,6 +165,7 @@ const ChilledFrozenReceivingForm = () => {
                 message={hookNotificationMessage || notificationMessage}
                 onClose={() => { setHookShowNotification(false); setShowNotification(false); }}
             />
+            <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={[styles.scrollViewContent, { flexGrow: 1, paddingBottom: 140 }]}
@@ -235,13 +273,17 @@ const ChilledFrozenReceivingForm = () => {
                             </View>
                         </View>
 
-                        {/* --- Table Rows --- */}
-                        <FlatList
-                            data={receivingData}
-                            renderItem={renderReceivingLogItem}
-                            keyExtractor={item => item.id}
-                            scrollEnabled={false}
-                        />
+                                                {/* --- Table Rows --- */}
+                                                <ScrollView horizontal nestedScrollEnabled={true} directionalLockEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1 }}>
+                                                    <View style={{ width: dailyStyles.nameCol.width + dailyStyles.supplierCol.width + dailyStyles.cleanCol.width + dailyStyles.tempCol.width + dailyStyles.tempOfBeverageCol.width + dailyStyles.stateOfProductCol.width + dailyStyles.expiryDateCol.width + dailyStyles.remarksCol.width }}>
+                                                        <FlatList
+                                                                data={receivingData}
+                                                                renderItem={renderReceivingLogItem}
+                                                                keyExtractor={item => item.id}
+                                                                scrollEnabled={false}
+                                                        />
+                                                    </View>
+                                                </ScrollView>
                     </View>
                     
                     {/* --- 5. VERIFICATION FOOTER --- */}
@@ -252,13 +294,14 @@ const ChilledFrozenReceivingForm = () => {
                     {/* Shared action bar: Save Draft / Submit */}
                     <View style={{ marginTop: 24 }}>
                         <FormActionBar
-                            onSaveDraft={handleSaveDraft}
-                            onSubmit={() => handleSubmit()}
+                            onSaveDraft={() => { if (!editMode || saving) return; handleSaveDraft(); }}
+                            onSubmit={() => { if (!editMode || saving) return; handleSubmit(); }}
                             isSaving={saving}
                         />
                     </View>
                 </View>
             </ScrollView>
+            </EditableFormContainer>
         </SafeAreaView>
     );
 };

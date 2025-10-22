@@ -4,6 +4,7 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'underbar_chiller_temperature_log_draft';
 const MAX_DAYS = 31;
@@ -44,6 +45,7 @@ export default function UnderbarChillerTemperatureLog() {
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
+  const [editMode, setEditMode] = useState(false);
 
   const getTodayDate = () => {
     const today = new Date();
@@ -160,7 +162,8 @@ export default function UnderbarChillerTemperatureLog() {
 
   return (
     <View style={styles.container}>
-  <ScrollView contentContainerStyle={styles.content}>
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+  <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
 
         {/* --- 1. Header (Metadata Block) --- */}
         <View style={styles.metaContainer}>
@@ -184,10 +187,10 @@ export default function UnderbarChillerTemperatureLog() {
 
               {/* Top action buttons placed inline with logo */}
               <View style={styles.headerButtons}>
-                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
+                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#f6c342' }]} onPress={editMode ? handleSaveDraft : undefined} disabled={busy || !editMode}>
                   <Text style={styles.headerBtnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
+                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#3b82f6' }]} onPress={editMode ? handleSubmit : undefined} disabled={busy || !editMode}>
                   <Text style={styles.headerBtnText}>{busy ? 'Submitting...' : 'Submit'}</Text>
                 </TouchableOpacity>
               </View>
@@ -195,45 +198,50 @@ export default function UnderbarChillerTemperatureLog() {
 
             <View style={styles.docInfoGrid}>
               <Text style={styles.docInfoLabel}>Issue Date:</Text>
-              <TextInput
-                style={[styles.docInfoValue, styles.headerInput]}
-                value={meta.issueDate}
-                onChangeText={v => setMetaField('issueDate', v)}
-                placeholder="DD/MM/YYYY"
-              />
+              {editMode ? (
+                <TextInput
+                  style={[styles.docInfoValue, styles.headerInput]}
+                  value={meta.issueDate}
+                  onChangeText={v => setMetaField('issueDate', v)}
+                  placeholder="DD/MM/YYYY"
+                  editable={editMode}
+                />
+              ) : (
+                <Text style={styles.readOnlyMeta}>{meta.issueDate}</Text>
+              )}
             </View>
           </View>
 
           <View style={styles.metaBottomRow}>
             <View style={[styles.metaBottomItem, { flex: 3 }]}>
               <Text style={styles.metaBold}>Subject:</Text>
-              <TextInput style={styles.monthlyInput} value={meta.subject} onChangeText={v => setMetaField('subject', v)} />
+              {editMode ? <TextInput style={styles.monthlyInput} value={meta.subject} onChangeText={v => setMetaField('subject', v)} editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.subject}</Text>}
             </View>
             <View style={styles.metaBottomItem}>
               <Text style={styles.metaBold}>Compiled By:</Text>
-              <TextInput style={styles.monthlyInput} value={meta.compiledBy} onChangeText={v => setMetaField('compiledBy', v)} />
+              {editMode ? <TextInput style={styles.monthlyInput} value={meta.compiledBy} onChangeText={v => setMetaField('compiledBy', v)} editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.compiledBy}</Text>}
             </View>
             <View style={styles.metaBottomItem}>
               <Text style={styles.metaBold}>Approved By:</Text>
-              <TextInput style={styles.monthlyInput} value={meta.approvedBy} onChangeText={v => setMetaField('approvedBy', v)} />
+              {editMode ? <TextInput style={styles.monthlyInput} value={meta.approvedBy} onChangeText={v => setMetaField('approvedBy', v)} editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.approvedBy}</Text>}
             </View>
           </View>
         </View>
 
         {/* --- 2. Monthly/Location Data --- */}
         <View style={styles.monthlyInfo}>
-          <View style={styles.monthlyInputRow}>
-            <Text style={styles.monthlyLabel}>Month:</Text>
-            <TextInput style={styles.monthlyInput} value={meta.month} onChangeText={v => setMetaField('month', v)} placeholder="e.g., October" />
-          </View>
-          <View style={styles.monthlyInputRow}>
-            <Text style={styles.monthlyLabel}>Year:</Text>
-            <TextInput style={styles.monthlyInput} value={meta.year} onChangeText={v => setMetaField('year', v)} placeholder="e.g., 2025" keyboardType="numeric" />
-          </View>
-          <View style={styles.monthlyInputRow}>
-            <Text style={styles.monthlyLabel}>Location:</Text>
-            <TextInput style={[styles.monthlyInput, { flex: 3 }]} value={meta.location} onChangeText={v => setMetaField('location', v)} placeholder="e.g., Underbar Chiller" />
-          </View>
+            <View style={styles.monthlyInputRow}>
+              <Text style={styles.monthlyLabel}>Month:</Text>
+              {editMode ? <TextInput style={styles.monthlyInput} value={meta.month} onChangeText={v => setMetaField('month', v)} placeholder="e.g., October" editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.month}</Text>}
+            </View>
+            <View style={styles.monthlyInputRow}>
+              <Text style={styles.monthlyLabel}>Year:</Text>
+              {editMode ? <TextInput style={styles.monthlyInput} value={meta.year} onChangeText={v => setMetaField('year', v)} placeholder="e.g., 2025" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.year}</Text>}
+            </View>
+            <View style={styles.monthlyInputRow}>
+              <Text style={styles.monthlyLabel}>Location:</Text>
+              {editMode ? <TextInput style={[styles.monthlyInput, { flex: 3 }]} value={meta.location} onChangeText={v => setMetaField('location', v)} placeholder="e.g., Underbar Chiller" editable={editMode} /> : <Text style={[styles.readOnlyMeta, { flex: 3 }]}>{meta.location}</Text>}
+            </View>
         </View>
 
         {/* --- 3. Instruction --- */}
@@ -287,25 +295,25 @@ export default function UnderbarChillerTemperatureLog() {
               </View>
 
               {/* Morning Record */}
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}><TextInput style={styles.input} value={row.tempMorning} onChangeText={v => setCell(ri, 'tempMorning', v)} placeholder="°C" keyboardType="numeric" /></View>
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}><TextInput style={styles.input} value={row.staffSignMorning} onChangeText={v => setCell(ri, 'staffSignMorning', v)} placeholder="Sign" /></View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempMorning} onChangeText={v => setCell(ri, 'tempMorning', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempMorning}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.staffSignMorning} onChangeText={v => setCell(ri, 'staffSignMorning', v)} placeholder="Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.staffSignMorning}</Text>}</View>
 
               {/* Afternoon Record */}
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}><TextInput style={styles.input} value={row.tempAfternoon} onChangeText={v => setCell(ri, 'tempAfternoon', v)} placeholder="°C" keyboardType="numeric" /></View>
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}><TextInput style={styles.input} value={row.staffSignAfternoon} onChangeText={v => setCell(ri, 'staffSignAfternoon', v)} placeholder="Sign" /></View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempAfternoon} onChangeText={v => setCell(ri, 'tempAfternoon', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempAfternoon}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.staffSignAfternoon} onChangeText={v => setCell(ri, 'staffSignAfternoon', v)} placeholder="Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.staffSignAfternoon}</Text>}</View>
 
               {/* Evening Record */}
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}><TextInput style={styles.input} value={row.tempEvening} onChangeText={v => setCell(ri, 'tempEvening', v)} placeholder="°C" keyboardType="numeric" /></View>
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}><TextInput style={styles.input} value={row.staffSignEvening} onChangeText={v => setCell(ri, 'staffSignEvening', v)} placeholder="Sign" /></View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempEvening} onChangeText={v => setCell(ri, 'tempEvening', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempEvening}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.staffSignEvening} onChangeText={v => setCell(ri, 'staffSignEvening', v)} placeholder="Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.staffSignEvening}</Text>}</View>
 
               {/* Corrective Action */}
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.CORRECTIVE_ACTION }]}>
-                <TextInput style={styles.input} value={row.outOfSpecAction} onChangeText={v => setCell(ri, 'outOfSpecAction', v)} placeholder="Action Taken" />
+                {editMode ? <TextInput style={styles.input} value={row.outOfSpecAction} onChangeText={v => setCell(ri, 'outOfSpecAction', v)} placeholder="Action Taken" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.outOfSpecAction}</Text>}
               </View>
 
               {/* Supervisor Name & Sign */}
               <View style={[styles.cell, { flex: COL_FLEX.SUP_NAME_SIGN }]}>
-                <TextInput style={styles.input} value={row.supNameSign} onChangeText={v => setCell(ri, 'supNameSign', v)} placeholder="Name / Sign" />
+                {editMode ? <TextInput style={styles.input} value={row.supNameSign} onChangeText={v => setCell(ri, 'supNameSign', v)} placeholder="Name / Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.supNameSign}</Text>}
               </View>
             </View>
           ))}
@@ -319,17 +327,18 @@ export default function UnderbarChillerTemperatureLog() {
           <View style={styles.verificationRow}>
             <View style={{ flex: 1, marginRight: 16 }}>
               <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>HSEQ Manager:</Text>
-              <TextInput style={styles.signatureInput} value={meta.hseqManagerSign} onChangeText={v => setMetaField('hseqManagerSign', v)} placeholder="" />
+              <TextInput style={styles.signatureInput} value={meta.hseqManagerSign} onChangeText={v => setMetaField('hseqManagerSign', v)} placeholder="" editable={editMode} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>COMPLEX Manager:</Text>
-              <TextInput style={styles.signatureInput} value={meta.complexManagerSign} onChangeText={v => setMetaField('complexManagerSign', v)} placeholder="" />
+              <TextInput style={styles.signatureInput} value={meta.complexManagerSign} onChangeText={v => setMetaField('complexManagerSign', v)} placeholder="" editable={editMode} />
             </View>
           </View>
         </View>
 
         {/* add extra bottom padding so content isn't hidden behind the footer */}
-      </ScrollView>
+        </ScrollView>
+      </EditableFormContainer>
 
     </View>
   );
@@ -402,4 +411,6 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, paddingHorizontal: 4, gap: 8 },
   btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84 },
   btnText: { color: '#fff', fontWeight: '700' },
+  readOnlyCell: { paddingVertical: 6, paddingHorizontal: 4, textAlign: 'center', fontSize: 12, color: '#374151' },
+  readOnlyMeta: { paddingVertical: 4, paddingHorizontal: 2, fontSize: 12, color: '#374151' },
 });

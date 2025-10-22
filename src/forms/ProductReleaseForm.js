@@ -4,6 +4,7 @@ import formStorage from '../utils/formStorage';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -29,6 +30,7 @@ const ProductReleaseForm = () => {
     const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
     const defaultIssueDate = `${pad(today.getDate())}/${pad(today.getMonth() + 1)}/${today.getFullYear()}`;
     const [issueDate, setIssueDate] = useState(defaultIssueDate);
+    const [editMode, setEditMode] = useState(false);
     const docRef = useMemo(() => 'BBN-SHEQ-P-F-8.9', []);
 
     const updateProductField = (id, field, value) => {
@@ -41,42 +43,49 @@ const ProductReleaseForm = () => {
             <TextInput
                 style={[dailyStyles.dataCell, dailyStyles.dateCol]}
                 value={item.date}
+                editable={editMode}
                 onChangeText={(t) => updateProductField(item.id, 'date', t)}
                 placeholder="D/M/Y"
             />
             <TextInput
                 style={[dailyStyles.dataCell, dailyStyles.productNameCol]}
                 value={item.productName}
+                editable={editMode}
                 onChangeText={(t) => updateProductField(item.id, 'productName', t)}
                 placeholder="Product"
             />
             <TextInput
                 style={[dailyStyles.dataCell, dailyStyles.batchNumberCol]}
                 value={item.batchNumber}
+                editable={editMode}
                 onChangeText={(t) => updateProductField(item.id, 'batchNumber', t)}
                 placeholder="Batch"
             />
             <TextInput
                 style={[dailyStyles.dataCell, dailyStyles.productionDateCol]}
                 value={item.productionDate}
+                editable={editMode}
                 onChangeText={(t) => updateProductField(item.id, 'productionDate', t)}
                 placeholder="D/M/Y"
             />
             <TextInput
                 style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}
                 value={item.expiryDate}
+                editable={editMode}
                 onChangeText={(t) => updateProductField(item.id, 'expiryDate', t)}
                 placeholder="D/M/Y"
             />
             <TextInput
                 style={[dailyStyles.dataCell, dailyStyles.signatureCol]}
                 value={item.signatureHead}
+                editable={editMode}
                 onChangeText={(t) => updateProductField(item.id, 'signatureHead', t)}
                 placeholder="Signature"
             />
             <TextInput
                 style={[dailyStyles.dataCell, dailyStyles.approvedCol]}
                 value={item.approvedHSEQ}
+                editable={editMode}
                 onChangeText={(t) => updateProductField(item.id, 'approvedHSEQ', t)}
                 placeholder="Signature"
             />
@@ -118,6 +127,7 @@ const ProductReleaseForm = () => {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.scrollViewContent}>
+                <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
                 <View style={styles.container}>
                     <View style={styles.docHeader}>
                         <View style={styles.logoAndSystem}>
@@ -201,6 +211,7 @@ const ProductReleaseForm = () => {
                                         <LoadingOverlay visible={isSaving} />
                                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                 </View>
+                </EditableFormContainer>
             </ScrollView>
         </SafeAreaView>
     );

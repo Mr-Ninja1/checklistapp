@@ -4,6 +4,7 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Activi
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getDraft, removeDraft } from '../utils/formDrafts';
@@ -45,7 +46,7 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
       <Checkbox checked={item.checks[day].checked} onPress={() => canInteract && handleCellChange(item.id, day, 'checked')} />
     </View>
     <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-      <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} />
+      <TextInput value={item.checks[day].cleanedBy} editable={canInteract} onChangeText={t => { if (!canInteract) return; handleCellChange(item.id, day, 'cleanedBy', t); }} placeholder="Name" style={styles.cellInput} maxLength={12} />
     </View>
   </View>
 ));
@@ -57,6 +58,7 @@ export default function CleaningEquipmentChecklist() {
   const [metadata, setMetadata] = useState({ ...initialMetadata, month: currentMonth });
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -170,7 +172,7 @@ export default function CleaningEquipmentChecklist() {
   const renderRow = rowItem => {
     const stateItem = formData.find(i => i.name === rowItem.name);
     const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
-    const canInteract = !!stateItem;
+  const canInteract = !!stateItem && editMode;
 
     return (
       <View key={item.id} style={styles.row}>
@@ -190,9 +192,10 @@ export default function CleaningEquipmentChecklist() {
   const windowHeight = Dimensions.get('window').height;
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }] }>
-        <View style={styles.card}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }] }>
+          <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
               <Image source={require('../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
@@ -206,24 +209,24 @@ export default function CleaningEquipmentChecklist() {
               <Text style={styles.docText}>Page 1 of 1</Text>
             </View>
             <Text style={styles.mainTitle}>CLEANING EQUIPMENT CHECKLIST</Text>
-            <View style={styles.areaMetaRow}>
-              <View style={[styles.metaField, { flex: 2 }]}>
-                <Text style={styles.metaLabel}>LOCATION:</Text>
-                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} />
+              <View style={styles.areaMetaRow}>
+                <View style={[styles.metaField, { flex: 2 }]}>
+                  <Text style={styles.metaLabel}>LOCATION:</Text>
+                  <TextInput value={metadata.location} onChangeText={t => { if (!editMode) return; handleMetadataChange('location', t); }} style={styles.metaInput} editable={editMode} />
+                </View>
+                <View style={styles.metaField}>
+                  <Text style={styles.metaLabel}>WEEK:</Text>
+                  <TextInput value={metadata.week} onChangeText={t => { if (!editMode) return; handleMetadataChange('week', t); }} style={styles.metaInput} placeholder="Week No." editable={editMode} />
+                </View>
+                <View style={styles.metaField}>
+                  <Text style={styles.metaLabel}>MONTH:</Text>
+                  <TextInput value={metadata.month} style={[styles.metaInput, styles.uneditable]} editable={false} />
+                </View>
+                <View style={styles.metaField}>
+                  <Text style={styles.metaLabel}>YEAR:</Text>
+                  <TextInput value={metadata.year} style={[styles.metaInput, styles.uneditable]} editable={false} />
+                </View>
               </View>
-              <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>WEEK:</Text>
-                <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." />
-              </View>
-              <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>MONTH:</Text>
-                <TextInput value={metadata.month} style={[styles.metaInput, styles.uneditable]} editable={false} />
-              </View>
-              <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>YEAR:</Text>
-                <TextInput value={metadata.year} style={[styles.metaInput, styles.uneditable]} editable={false} />
-              </View>
-            </View>
             <Text style={styles.areaTitle}>CLEANING EQUIPMENT</Text>
           </View>
 
@@ -258,15 +261,16 @@ export default function CleaningEquipmentChecklist() {
             </View>
           </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={[styles.button, styles.draftButton]} disabled={!editMode || busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+              <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={[styles.button, styles.submitButton]} disabled={!editMode || busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+            </View>
+            <LoadingOverlay visible={isSaving} />
+            <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
           </View>
-          <LoadingOverlay visible={isSaving} />
-          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </EditableFormContainer>
   );
 }
 

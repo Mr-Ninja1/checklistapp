@@ -16,6 +16,7 @@ import { addFormHistory } from '../utils/formHistory';
 import formStorage from '../utils/formStorage';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'front_of_house_cleaning_checklist_draft';
 
@@ -60,6 +61,7 @@ const Checkbox = ({ checked, onPress }) => (
 
 export default function FrontOfHouseChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
+  const [editMode, setEditMode] = useState(false);
   const [metadata, setMetadata] = useState({
     location: '',
     week: '',
@@ -193,23 +195,27 @@ export default function FrontOfHouseChecklist() {
       <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
         <Text style={styles.equipmentText}>{item.frequency}</Text>
       </View>
-
       {WEEK_DAYS.map(day => (
         <View key={day} style={[styles.dayGroupCell, { width: COL_WIDTHS.DAY_GROUP_WIDTH }]}>
           <View style={[styles.cell, styles.centerContent, { width: COL_WIDTHS.CHECK, borderRightWidth: 0, paddingHorizontal: 0 }]}>
             <Checkbox
               checked={item.checks[day].checked}
-              onPress={() => handleCellChange(item.id, day, 'checked')}
+              onPress={editMode ? () => handleCellChange(item.id, day, 'checked') : undefined}
             />
           </View>
           <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-            <TextInput
-              style={styles.cellInput}
-              maxLength={5}
-              value={item.checks[day].cleanedBy}
-              onChangeText={(text) => handleCellChange(item.id, day, 'cleanedBy', text)}
-              placeholder="Name"
-            />
+            {editMode ? (
+              <TextInput
+                style={styles.cellInput}
+                maxLength={5}
+                value={item.checks[day].cleanedBy}
+                onChangeText={(text) => handleCellChange(item.id, day, 'cleanedBy', text)}
+                placeholder="Name"
+                editable
+              />
+            ) : (
+              <Text style={styles.equipmentText}>{item.checks[day].cleanedBy}</Text>
+            )}
           </View>
         </View>
       ))}
@@ -217,6 +223,7 @@ export default function FrontOfHouseChecklist() {
   );
 
   return (
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
@@ -261,7 +268,7 @@ export default function FrontOfHouseChecklist() {
             </View>
           </View>
 
-          <ScrollView horizontal style={styles.tableScroll}>
+          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled={true} directionalLockEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1 }}>
             <View style={{ width: TABLE_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
@@ -286,16 +293,17 @@ export default function FrontOfHouseChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>
+            <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSaveDraft(); }} style={[styles.button, styles.draftButton]} disabled={!editMode || busy}>
               {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save Draft</Text>}
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>
+            <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSubmit(); }} style={[styles.button, styles.submitButton]} disabled={!editMode || busy}>
               {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
     </View>
+    </EditableFormContainer>
   );
 }
 

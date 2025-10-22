@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { addFormHistory } from '../utils/formHistory';
 import NotificationModal from '../components/NotificationModal';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -9,13 +10,10 @@ const { width } = Dimensions.get('window');
 
 // --- Component for a single Checkbox (Custom Touchable) ---
 // This component now toggles between a blank state (false) and a checkmark (true)
-const ChecklistToggle = ({ isChecked, onToggle }) => (
-    <TouchableOpacity onPress={onToggle} style={styles.checkboxContainer}>
+const ChecklistToggle = ({ isChecked, onToggle, editable = true }) => (
+    <TouchableOpacity onPress={editable ? onToggle : undefined} style={styles.checkboxContainer}>
         <View style={[styles.checkboxBox, isChecked && styles.checkboxChecked]}>
-            {/* If checked (true), show Checkmark */}
             {isChecked ? <Text style={styles.checkMark}>✓</Text> : null}
-            {/* If unchecked (false), show Cross (X) */}
-            {/* NOTE: If you need a third state for N/A, the logic would need to change from boolean to a ternary state (0, 1, 2) */}
         </View>
     </TouchableOpacity>
 );
@@ -45,6 +43,7 @@ const initialHygieneData = Array.from({ length: 13 }, (_, i) => ({
 // --- Main Form Component (Personnel Hygiene Checklist) ---
 const PersonalHygieneChecklist = () => {
     const [data, setData] = useState(initialHygieneData);
+    const [editMode, setEditMode] = useState(false);
 
     // Compute issue date helper (we will set the canonical issueDate at save time)
     const formatIssueDate = (d = new Date()) => {
@@ -89,7 +88,8 @@ const PersonalHygieneChecklist = () => {
             <TextInput
                 style={[styles.inputCell, styles.dateCol]}
                 value={item.date}
-                onChangeText={(t) => updateField(item.id, 'date', t)}
+                editable={editMode}
+                onChangeText={editMode ? (t) => updateField(item.id, 'date', t) : undefined}
                 placeholder="D/M/Y"
             />
             
@@ -97,27 +97,29 @@ const PersonalHygieneChecklist = () => {
             <TextInput
                 style={[styles.inputCell, styles.nameCol]}
                 value={item.name}
-                onChangeText={(t) => updateField(item.id, 'name', t)}
+                editable={editMode}
+                onChangeText={editMode ? (t) => updateField(item.id, 'name', t) : undefined}
                 placeholder="Name"
             />
             
             {/* Hygiene Checkboxes (10 columns) */}
-            <ChecklistToggle isChecked={item.hairCover} onToggle={() => toggleCheck(item.id, 'hairCover')} />
-            <ChecklistToggle isChecked={item.shortNails} onToggle={() => toggleCheck(item.id, 'shortNails')} />
-            <ChecklistToggle isChecked={item.workSuit} onToggle={() => toggleCheck(item.id, 'workSuit')} />
-            <ChecklistToggle isChecked={item.jewellery} onToggle={() => toggleCheck(item.id, 'jewellery')} />
-            <ChecklistToggle isChecked={item.lipstick} onToggle={() => toggleCheck(item.id, 'lipstick')} />
-            <ChecklistToggle isChecked={item.persistentDiarrhoea} onToggle={() => toggleCheck(item.id, 'persistentDiarrhoea')} />
-            <ChecklistToggle isChecked={item.persistentCough} onToggle={() => toggleCheck(item.id, 'persistentCough')} />
-            <ChecklistToggle isChecked={item.runningNose} onToggle={() => toggleCheck(item.id, 'runningNose')} />
-            <ChecklistToggle isChecked={item.skinInfection} onToggle={() => toggleCheck(item.id, 'skinInfection')} />
-            <ChecklistToggle isChecked={item.openWound} onToggle={() => toggleCheck(item.id, 'openWound')} /> 
+            <ChecklistToggle isChecked={item.hairCover} editable={editMode} onToggle={() => toggleCheck(item.id, 'hairCover')} />
+            <ChecklistToggle isChecked={item.shortNails} editable={editMode} onToggle={() => toggleCheck(item.id, 'shortNails')} />
+            <ChecklistToggle isChecked={item.workSuit} editable={editMode} onToggle={() => toggleCheck(item.id, 'workSuit')} />
+            <ChecklistToggle isChecked={item.jewellery} editable={editMode} onToggle={() => toggleCheck(item.id, 'jewellery')} />
+            <ChecklistToggle isChecked={item.lipstick} editable={editMode} onToggle={() => toggleCheck(item.id, 'lipstick')} />
+            <ChecklistToggle isChecked={item.persistentDiarrhoea} editable={editMode} onToggle={() => toggleCheck(item.id, 'persistentDiarrhoea')} />
+            <ChecklistToggle isChecked={item.persistentCough} editable={editMode} onToggle={() => toggleCheck(item.id, 'persistentCough')} />
+            <ChecklistToggle isChecked={item.runningNose} editable={editMode} onToggle={() => toggleCheck(item.id, 'runningNose')} />
+            <ChecklistToggle isChecked={item.skinInfection} editable={editMode} onToggle={() => toggleCheck(item.id, 'skinInfection')} />
+            <ChecklistToggle isChecked={item.openWound} editable={editMode} onToggle={() => toggleCheck(item.id, 'openWound')} /> 
 
             {/* COMMENT (Input) */}
             <TextInput
                 style={[styles.inputCell, styles.commentCol]}
                 value={item.comment}
-                onChangeText={(t) => updateField(item.id, 'comment', t)}
+                editable={editMode}
+                onChangeText={editMode ? (t) => updateField(item.id, 'comment', t) : undefined}
                 placeholder="Comment"
             />
             
@@ -125,14 +127,16 @@ const PersonalHygieneChecklist = () => {
             <TextInput
                 style={[styles.inputCell, styles.checkedByCol, styles.lastCol]}
                 value={item.checkedBy}
-                onChangeText={(t) => updateField(item.id, 'checkedBy', t)}
+                editable={editMode}
+                onChangeText={editMode ? (t) => updateField(item.id, 'checkedBy', t) : undefined}
                 placeholder="Checked By?"
             />
         </View>
     );
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <SafeAreaView style={styles.safeArea}>
             {/* Outer vertical scroll allows full page vertical scrolling; inner horizontal ScrollView handles wide table */}
             <ScrollView
                 contentContainerStyle={styles.scrollViewContent}
@@ -219,14 +223,10 @@ const PersonalHygieneChecklist = () => {
                     
                     {/* Save / Submit buttons (non-intrusive) */}
                     <View style={{ padding: 8, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                        <TouchableOpacity onPress={() => handleSaveDraft && handleSaveDraft()} style={{ backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }}>
+                        <TouchableOpacity onPress={editMode ? () => handleSaveDraft && handleSaveDraft() : undefined} style={{ backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }} disabled={!editMode}>
                             <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={async () => {
-                            try {
-                                await handleSubmit();
-                            } catch (e) { console.warn('submit failed', e); }
-                        }} style={{ backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }}>
+                        <TouchableOpacity onPress={editMode ? async () => { try { await handleSubmit(); } catch (e) { console.warn('submit failed', e); } } : undefined} style={{ backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }} disabled={!editMode}>
                             <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
                         </TouchableOpacity>
                     </View>
@@ -237,16 +237,10 @@ const PersonalHygieneChecklist = () => {
             {/* Fixed footer with actions */}
             <View style={{ padding: 10, borderTopWidth: 1, borderColor: '#eee', backgroundColor: '#fff' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                    <TouchableOpacity onPress={() => handleSaveDraft && handleSaveDraft()} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }}>
+                    <TouchableOpacity onPress={editMode ? () => handleSaveDraft && handleSaveDraft() : undefined} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }} disabled={!editMode}>
                         <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={async () => {
-                        try {
-                            await handleSubmit();
-                            const snapshot = buildPayload('submitted');
-                            addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e));
-                        } catch (e) { console.warn('submit failed', e); }
-                    }} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }}>
+                    <TouchableOpacity onPress={editMode ? async () => { try { await handleSubmit(); const snapshot = buildPayload('submitted'); addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e)); } catch (e) { console.warn('submit failed', e); } } : undefined} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={!editMode}>
                         <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
                     </TouchableOpacity>
                 </View>
@@ -255,6 +249,7 @@ const PersonalHygieneChecklist = () => {
             <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
             <LoadingOverlay visible={isSaving} />
         </SafeAreaView>
+        </EditableFormContainer>
     );
 };
 

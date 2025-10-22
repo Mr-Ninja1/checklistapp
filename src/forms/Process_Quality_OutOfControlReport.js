@@ -7,6 +7,7 @@ import formStorage from '../utils/formStorage';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'process_quality_out_of_control_report_draft';
 
@@ -54,6 +55,7 @@ export default function ProcessQualityOutOfControlReport() {
   const [formData, setFormData] = useState(initialFormData);
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
+  const [editMode, setEditMode] = useState(false);
 
   const getToday = () => {
     const d = new Date();
@@ -125,6 +127,7 @@ export default function ProcessQualityOutOfControlReport() {
   
 
   return (
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
 
@@ -133,8 +136,8 @@ export default function ProcessQualityOutOfControlReport() {
           <View style={styles.leftHeader}>
             {(() => { try { const logo = require('../assets/logo.jpeg'); return <Image source={logo} style={styles.logo} resizeMode="contain"/>; } catch (e) { return <View style={styles.logoPlaceholder}><Text style={styles.logoText}>Logo</Text></View>; } })()}
             <View style={styles.brandWrap}>
-              <TextInput style={[styles.companyName, styles.companyNameInput]} value={formData.companyName} onChangeText={v => setField('companyName', v)} />
-              <TextInput style={[styles.subtitle, styles.subtitleInput]} value={formData.companySubtitle} onChangeText={v => setField('companySubtitle', v)} />
+              <TextInput style={[styles.companyName, styles.companyNameInput]} value={formData.companyName} onChangeText={v => setField('companyName', v)} editable={editMode} />
+              <TextInput style={[styles.subtitle, styles.subtitleInput]} value={formData.companySubtitle} onChangeText={v => setField('companySubtitle', v)} editable={editMode} />
             </View>
           </View>
           <View style={styles.titleWrap}><TextInput style={[styles.title, styles.titleInput]} value={'Process & Quality Out of Control Report'} editable={false} /></View>
@@ -151,19 +154,19 @@ export default function ProcessQualityOutOfControlReport() {
             <View style={styles.gridRow}>
               <View style={[styles.cell, { flex: 1.5 }]}>
                 <Text style={styles.labelText}>Number:</Text>
-                <TextInput style={styles.input} value={formData.number} onChangeText={v => setField('number', v)} />
+                <TextInput style={styles.input} value={formData.number} onChangeText={v => setField('number', v)} editable={editMode} />
               </View>
               <View style={styles.cell}>
                 <Text style={styles.labelText}>Reported by:</Text>
-                <TextInput style={styles.input} value={formData.reportedBy} onChangeText={v => setField('reportedBy', v)} />
+                <TextInput style={styles.input} value={formData.reportedBy} onChangeText={v => setField('reportedBy', v)} editable={editMode} />
               </View>
               <View style={styles.cell}>
                 <Text style={styles.labelText}>Sign:</Text>
-                <TextInput style={styles.input} value={formData.reportedBySign} onChangeText={v => setField('reportedBySign', v)} />
+                <TextInput style={styles.input} value={formData.reportedBySign} onChangeText={v => setField('reportedBySign', v)} editable={editMode} />
               </View>
               <View style={[styles.cell, { borderRightWidth: 0 }]}>
                 <Text style={styles.labelText}>Time:</Text>
-                <TextInput style={styles.input} value={formData.reportedByTime} onChangeText={v => setField('reportedByTime', v)} />
+                <TextInput style={styles.input} value={formData.reportedByTime} onChangeText={v => setField('reportedByTime', v)} editable={editMode} />
               </View>
             </View>
 
@@ -171,19 +174,19 @@ export default function ProcessQualityOutOfControlReport() {
             <View style={styles.gridRow}>
               <View style={[styles.cell, { flex: 1.5 }]}>
                 <Text style={styles.labelText}>Date:</Text>
-                <TextInput style={styles.input} value={formData.date} onChangeText={v => setField('date', v)} />
+                <TextInput style={styles.input} value={formData.date} onChangeText={v => setField('date', v)} editable={editMode} />
               </View>
               <View style={styles.cell}>
                 <Text style={styles.labelText}>Notified:</Text>
-                <TextInput style={styles.input} value={formData.notified} onChangeText={v => setField('notified', v)} />
+                <TextInput style={styles.input} value={formData.notified} onChangeText={v => setField('notified', v)} editable={editMode} />
               </View>
               <View style={styles.cell}>
                 <Text style={styles.labelText}>Sign:</Text>
-                <TextInput style={styles.input} value={formData.notifiedSign} onChangeText={v => setField('notifiedSign', v)} />
+                <TextInput style={styles.input} value={formData.notifiedSign} onChangeText={v => setField('notifiedSign', v)} editable={editMode} />
               </View>
               <View style={[styles.cell, { borderRightWidth: 0 }]}>
                 <Text style={styles.labelText}>Time:</Text>
-                <TextInput style={styles.input} value={formData.notifiedTime} onChangeText={v => setField('notifiedTime', v)} />
+                <TextInput style={styles.input} value={formData.notifiedTime} onChangeText={v => setField('notifiedTime', v)} editable={editMode} />
               </View>
             </View>
 
@@ -191,7 +194,7 @@ export default function ProcessQualityOutOfControlReport() {
             <View style={styles.gridRow}>
               <View style={[styles.cell, { flex: 4, borderRightWidth: 0 }]}>
                 <Text style={styles.labelText}>Out of control description</Text>
-                <TextInput style={[styles.input, styles.textArea]} value={formData.outOfControlDescription} onChangeText={v => setField('outOfControlDescription', v)} multiline />
+                <TextInput style={[styles.input, styles.textArea]} value={formData.outOfControlDescription} onChangeText={v => setField('outOfControlDescription', v)} multiline editable={editMode} />
               </View>
             </View>
 
@@ -205,16 +208,16 @@ export default function ProcessQualityOutOfControlReport() {
             {[...formData.samples].map((s, idx) => (
               <View key={`sample-${s.id}-${idx}`} style={[styles.gridRow, styles.dataRow]}> 
                 <View style={[styles.cell, { flex: 3 }]}>
-                  <TextInput style={styles.input} value={s.sampleIdentification} onChangeText={v => setSample(s.id, 'sampleIdentification', v)} />
+                  <TextInput style={styles.input} value={s.sampleIdentification} onChangeText={v => setSample(s.id, 'sampleIdentification', v)} editable={editMode} />
                 </View>
                 <View style={[styles.cell, { flex: 2 }]}>
-                  <TextInput style={styles.input} value={s.result} onChangeText={v => setSample(s.id, 'result', v)} />
+                  <TextInput style={styles.input} value={s.result} onChangeText={v => setSample(s.id, 'result', v)} editable={editMode} />
                 </View>
                 <View style={[styles.cell, { flex: 2 }]}>
-                  <TextInput style={styles.input} value={s.specification} onChangeText={v => setSample(s.id, 'specification', v)} />
+                  <TextInput style={styles.input} value={s.specification} onChangeText={v => setSample(s.id, 'specification', v)} editable={editMode} />
                 </View>
                 <View style={[styles.cell, { flex: 3, borderRightWidth: 0 }]}>
-                  <TextInput style={styles.input} value={s.resultAfterCorrective} onChangeText={v => setSample(s.id, 'resultAfterCorrective', v)} />
+                  <TextInput style={styles.input} value={s.resultAfterCorrective} onChangeText={v => setSample(s.id, 'resultAfterCorrective', v)} editable={editMode} />
                 </View>
               </View>
             ))}
@@ -223,11 +226,11 @@ export default function ProcessQualityOutOfControlReport() {
             <View style={styles.gridRow}>
               <View style={[styles.cell, { flex: 1 }]}>
                 <Text style={styles.labelText}>Out of Control Issued by:</Text>
-                <TextInput style={styles.input} value={formData.outOfControlIssuedBy} onChangeText={v => setField('outOfControlIssuedBy', v)} />
+                <TextInput style={styles.input} value={formData.outOfControlIssuedBy} onChangeText={v => setField('outOfControlIssuedBy', v)} editable={editMode} />
               </View>
               <View style={[styles.cell, { flex: 1, borderRightWidth: 0 }]}>
                 <Text style={styles.labelText}>Origin of Out of Control</Text>
-                <TextInput style={[styles.input, styles.textArea]} value={formData.originOfOutOfControl} onChangeText={v => setField('originOfOutOfControl', v)} multiline />
+                <TextInput style={[styles.input, styles.textArea]} value={formData.originOfOutOfControl} onChangeText={v => setField('originOfOutOfControl', v)} multiline editable={editMode} />
               </View>
             </View>
 
@@ -235,10 +238,10 @@ export default function ProcessQualityOutOfControlReport() {
             {[...Array(3)].map((_, i) => (
               <View key={`space-${i}`} style={[styles.gridRow, styles.spacerRow]}>
                 <View style={[styles.cell, { flex: 1 }]}>
-                  <TextInput style={styles.input} value={formData[`spacer${i+1}`]} onChangeText={v => setField(`spacer${i+1}`, v)} />
+                  <TextInput style={styles.input} value={formData[`spacer${i+1}`]} onChangeText={v => setField(`spacer${i+1}`, v)} editable={editMode} />
                 </View>
                 <View style={[styles.cell, { flex: 1, borderRightWidth: 0 }]}> 
-                  <TextInput style={styles.input} value={formData[`spacer${i+1 + 3}`]} onChangeText={v => setField(`spacer${i+1 + 3}`, v)} />
+                  <TextInput style={styles.input} value={formData[`spacer${i+1 + 3}`]} onChangeText={v => setField(`spacer${i+1 + 3}`, v)} editable={editMode} />
                 </View>
               </View>
             ))}
@@ -248,72 +251,73 @@ export default function ProcessQualityOutOfControlReport() {
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>Signed:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.signed1} onChangeText={v => setField('signed1', v)} placeholder="" />
+                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.signed1} onChangeText={v => setField('signed1', v)} placeholder="" editable={editMode} />
                 </View>
               </View>
 
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>HSEQ MANAGER:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.hseqManagerSign} onChangeText={v => setField('hseqManagerSign', v)} placeholder="" />
+                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.hseqManagerSign} onChangeText={v => setField('hseqManagerSign', v)} placeholder="" editable={editMode} />
                 </View>
               </View>
 
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>Signed:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.signed2} onChangeText={v => setField('signed2', v)} placeholder="" />
+                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.signed2} onChangeText={v => setField('signed2', v)} placeholder="" editable={editMode} />
                 </View>
               </View>
 
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>Head of Section:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.headOfSectionSign} onChangeText={v => setField('headOfSectionSign', v)} placeholder="" />
+                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.headOfSectionSign} onChangeText={v => setField('headOfSectionSign', v)} placeholder="" editable={editMode} />
                 </View>
               </View>
 
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>Signed:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.signed3} onChangeText={v => setField('signed3', v)} placeholder="" />
+                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.signed3} onChangeText={v => setField('signed3', v)} placeholder="" editable={editMode} />
                 </View>
               </View>
 
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>Complex manager:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.complexManagerSign} onChangeText={v => setField('complexManagerSign', v)} placeholder="" />
+                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.complexManagerSign} onChangeText={v => setField('complexManagerSign', v)} placeholder="" editable={editMode} />
                 </View>
               </View>
             </View>
             </View>
             {/* RIGHT COLUMN: Problem Solving Guide */}
             <View style={[styles.rightColumn, { minWidth: 420, paddingLeft: 12 }]}> 
-              <View style={styles.problemBlock}><Text style={styles.questionText}>1. What happened to process or Quality parameter?</Text><TextInput style={[styles.solutionInput, { minHeight: 60 }]} multiline value={formData.q1} onChangeText={v => setField('q1', v)} /></View>
-              <View style={styles.problemBlock}><Text style={styles.questionText}>2. What was the possible cause?</Text><TextInput style={[styles.solutionInput, { minHeight: 60 }]} multiline value={formData.q2} onChangeText={v => setField('q2', v)} /></View>
+              <View style={styles.problemBlock}><Text style={styles.questionText}>1. What happened to process or Quality parameter?</Text><TextInput style={[styles.solutionInput, { minHeight: 60 }]} multiline value={formData.q1} onChangeText={v => setField('q1', v)} editable={editMode} /></View>
+              <View style={styles.problemBlock}><Text style={styles.questionText}>2. What was the possible cause?</Text><TextInput style={[styles.solutionInput, { minHeight: 60 }]} multiline value={formData.q2} onChangeText={v => setField('q2', v)} editable={editMode} /></View>
 
-              <View style={styles.problemBlock}><Text style={styles.questionText}>Five ways to establish root cause. What was wrong?</Text><TextInput style={[styles.solutionInput, { minHeight: 80 }]} multiline value={formData.fiveWays} onChangeText={v => setField('fiveWays', v)} /></View>
+              <View style={styles.problemBlock}><Text style={styles.questionText}>Five ways to establish root cause. What was wrong?</Text><TextInput style={[styles.solutionInput, { minHeight: 80 }]} multiline value={formData.fiveWays} onChangeText={v => setField('fiveWays', v)} editable={editMode} /></View>
 
               {[1,2,3,4,5].map(i => (
-                <View key={`why-${i}`} style={styles.problemBlock}><Text style={styles.actionHeader}>{`${i}. Why?`}</Text><TextInput style={[styles.solutionInput, { minHeight: 40 }]} multiline value={formData[`why${i}`]} onChangeText={v => setField(`why${i}`, v)} /></View>
+                <View key={`why-${i}`} style={styles.problemBlock}><Text style={styles.actionHeader}>{`${i}. Why?`}</Text><TextInput style={[styles.solutionInput, { minHeight: 40 }]} multiline value={formData[`why${i}`]} onChangeText={v => setField(`why${i}`, v)} editable={editMode} /></View>
               ))}
 
-              <View style={styles.problemBlock}><Text style={styles.actionHeader}>Root cause of the problem</Text><TextInput style={[styles.solutionInput, { minHeight: 50 }]} multiline value={formData.rootCause} onChangeText={v => setField('rootCause', v)} /></View>
-              <View style={styles.problemBlock}><Text style={styles.actionHeader}>Corrective Action:</Text><TextInput style={[styles.solutionInput, { minHeight: 50 }]} multiline value={formData.correctiveAction} onChangeText={v => setField('correctiveAction', v)} /></View>
-              <View style={styles.problemBlock}><Text style={styles.actionHeader}>Follow up:</Text><TextInput style={[styles.solutionInput, { minHeight: 50 }]} multiline value={formData.followUp} onChangeText={v => setField('followUp', v)} /></View>
+              <View style={styles.problemBlock}><Text style={styles.actionHeader}>Root cause of the problem</Text><TextInput style={[styles.solutionInput, { minHeight: 50 }]} multiline value={formData.rootCause} onChangeText={v => setField('rootCause', v)} editable={editMode} /></View>
+              <View style={styles.problemBlock}><Text style={styles.actionHeader}>Corrective Action:</Text><TextInput style={[styles.solutionInput, { minHeight: 50 }]} multiline value={formData.correctiveAction} onChangeText={v => setField('correctiveAction', v)} editable={editMode} /></View>
+              <View style={styles.problemBlock}><Text style={styles.actionHeader}>Follow up:</Text><TextInput style={[styles.solutionInput, { minHeight: 50 }]} multiline value={formData.followUp} onChangeText={v => setField('followUp', v)} editable={editMode} /></View>
             </View>
           </View>
   </ScrollView>
 
   <View style={{ marginTop: 12 }}>
-          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit()} showSavePdf={false} />
+          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmit : undefined} showSavePdf={false} />
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 
       </ScrollView>
     </View>
+    </EditableFormContainer>
   );
 }
 

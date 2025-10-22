@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
+import EditableFormContainer from '../components/EditableFormContainer';
 import useFormSave from '../hooks/useFormSave';
 import NotificationModal from '../components/NotificationModal';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -11,9 +12,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 const { width } = Dimensions.get('window');
 
 // --- Component for a single checkbox (Switch) ---
-const PPECheckbox = ({ isChecked, onToggle }) => (
-    <TouchableOpacity onPress={onToggle} style={styles.checkboxContainer}>
-        <View style={[styles.checkboxBox, isChecked && styles.checkboxChecked]}>
+const PPECheckbox = ({ isChecked, onToggle, editable = true }) => (
+    <TouchableOpacity onPress={editable ? onToggle : undefined} style={styles.checkboxContainer}>
+        <View style={[styles.checkboxBox, isChecked && styles.checkboxChecked, !editable && { opacity: 0.6 }]}>
             {isChecked ? <Text style={styles.checkMark}>✓</Text> : null}
         </View>
     </TouchableOpacity>
@@ -32,6 +33,7 @@ const initialPPEData = Array.from({ length: 13 }, (_, i) => ({
 // --- Main Form Component ---
 const PPEIssuanceForm = () => {
     const [data, setData] = useState(initialPPEData);
+    const [editMode, setEditMode] = useState(false);
     const [logoDataUri, setLogoDataUri] = useState(null);
     // compute issue date once
     const issueDate = useMemo(() => {
@@ -66,24 +68,26 @@ const PPEIssuanceForm = () => {
                 value={item.name}
                 onChangeText={(t) => updateField(item.id, 'name', t)}
                 placeholder="Name"
+                editable={editMode}
             />
             <TextInput
                 style={[styles.inputCell, styles.jobTitleCol]}
                 value={item.jobTitle}
                 onChangeText={(t) => updateField(item.id, 'jobTitle', t)}
                 placeholder="Job Title"
+                editable={editMode}
             />
             
             {/* PPE Checkboxes */}
-            <PPECheckbox isChecked={item.apron} onToggle={() => togglePPE(item.id, 'apron')} />
-            <PPECheckbox isChecked={item.cap} onToggle={() => togglePPE(item.id, 'cap')} />
-            <PPECheckbox isChecked={item.chefHat} onToggle={() => togglePPE(item.id, 'chefHat')} />
-            <PPECheckbox isChecked={item.trousers} onToggle={() => togglePPE(item.id, 'trousers')} />
-            <PPECheckbox isChecked={item.safetyBoots} onToggle={() => togglePPE(item.id, 'safetyBoots')} />
-            <PPECheckbox isChecked={item.shirt} onToggle={() => togglePPE(item.id, 'shirt')} />
-            <PPECheckbox isChecked={item.golfTShirt} onToggle={() => togglePPE(item.id, 'golfTShirt')} />
-            <PPECheckbox isChecked={item.workSuit} onToggle={() => togglePPE(item.id, 'workSuit')} />
-            <PPECheckbox isChecked={item.chefCoat} onToggle={() => togglePPE(item.id, 'chefCoat')} />
+            <PPECheckbox isChecked={item.apron} onToggle={() => togglePPE(item.id, 'apron')} editable={editMode} />
+            <PPECheckbox isChecked={item.cap} onToggle={() => togglePPE(item.id, 'cap')} editable={editMode} />
+            <PPECheckbox isChecked={item.chefHat} onToggle={() => togglePPE(item.id, 'chefHat')} editable={editMode} />
+            <PPECheckbox isChecked={item.trousers} onToggle={() => togglePPE(item.id, 'trousers')} editable={editMode} />
+            <PPECheckbox isChecked={item.safetyBoots} onToggle={() => togglePPE(item.id, 'safetyBoots')} editable={editMode} />
+            <PPECheckbox isChecked={item.shirt} onToggle={() => togglePPE(item.id, 'shirt')} editable={editMode} />
+            <PPECheckbox isChecked={item.golfTShirt} onToggle={() => togglePPE(item.id, 'golfTShirt')} editable={editMode} />
+            <PPECheckbox isChecked={item.workSuit} onToggle={() => togglePPE(item.id, 'workSuit')} editable={editMode} />
+            <PPECheckbox isChecked={item.chefCoat} onToggle={() => togglePPE(item.id, 'chefCoat')} editable={editMode} />
             
             {/* Signature/ID Columns (editable) */}
             <TextInput
@@ -91,18 +95,21 @@ const PPEIssuanceForm = () => {
                 value={item.staffNrc}
                 onChangeText={(t) => updateField(item.id, 'staffNrc', t)}
                 placeholder="Staff NRC"
+                editable={editMode}
             />
             <TextInput
                 style={[styles.inputCell, styles.signCol]}
                 value={item.staffSign}
                 onChangeText={(t) => updateField(item.id, 'staffSign', t)}
                 placeholder="Staff Sign"
+                editable={editMode}
             />
             <TextInput
                 style={[styles.inputCell, styles.supSignCol]}
                 value={item.supSign}
                 onChangeText={(t) => updateField(item.id, 'supSign', t)}
                 placeholder="Sup Sign"
+                editable={editMode}
             />
         </View>
     );
@@ -142,9 +149,8 @@ const PPEIssuanceForm = () => {
     const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PPEIssuance_draft', clearOnSubmit: () => { setData(initialPPEData); } });
 
     return (
-        <SafeAreaView style={styles.safeArea}>
-            {/* ScrollView allows the content, especially the wide table, to be visible */}
-            <ScrollView horizontal={true} contentContainerStyle={styles.scrollViewContent}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={() => handleSaveDraft()}>
+            <ScrollView horizontal contentContainerStyle={styles.scrollViewContent} nestedScrollEnabled={true}>
                 <View style={styles.container}>
                     {/* --- HEADER SECTION --- */}
                     <View style={styles.header}>
@@ -209,30 +215,30 @@ const PPEIssuanceForm = () => {
                                         scrollEnabled={false} 
                                     />
 
-                                    {/* Save / Submit buttons wired to useFormSave */}
-                                                                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
-                                                                            <TouchableOpacity
-                                                                                style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
-                                                                                onPress={async () => { try { await handleSaveDraft(); } catch(e){console.warn(e);} }}
-                                                                                disabled={isSaving}
-                                                                            >
-                                                                                <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
-                                                                            </TouchableOpacity>
+                                    {/* Save / Submit buttons wired to useFormSave (only active in editMode) */}
+                                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
+                                        <TouchableOpacity
+                                            style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
+                                            onPress={editMode ? async () => { try { await handleSaveDraft(); } catch(e){console.warn(e);} } : undefined}
+                                            disabled={!editMode || isSaving}
+                                        >
+                                            <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
+                                        </TouchableOpacity>
 
-                                                                            <TouchableOpacity
-                                                                                style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
-                                                                                                                        onPress={async () => {
-                                                                                                                            try {
-                                                                                                                                await handleSubmit();
-                                                                                                                            } catch (e) {
-                                                                                                                                console.warn('submit failed', e);
-                                                                                                                            }
-                                                                                                                        }}
-                                                                                disabled={isSaving}
-                                                                            >
-                                                                                <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
-                                                                            </TouchableOpacity>
-                                                                        </View>
+                                        <TouchableOpacity
+                                            style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
+                                            onPress={editMode ? async () => {
+                                                try {
+                                                    await handleSubmit();
+                                                } catch (e) {
+                                                    console.warn('submit failed', e);
+                                                }
+                                            } : undefined}
+                                            disabled={!editMode || isSaving}
+                                        >
+                                            <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
+                                        </TouchableOpacity>
+                                    </View>
 
                                     {/* --- FOOTER SIGNATURES --- */}
                                     <View style={styles.footerSignatures}>
@@ -240,11 +246,11 @@ const PPEIssuanceForm = () => {
                                         <Text style={styles.footerText}>COMPLEX MANAGER..................................</Text>
                                         <Text style={styles.footerText}>FINANCIAL CONTROLLER..................................</Text>
                                     </View>
-                                                                <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-                                                                <LoadingOverlay visible={isSaving} />
+                <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+                <LoadingOverlay visible={isSaving} />
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </EditableFormContainer>
     );
 };
 

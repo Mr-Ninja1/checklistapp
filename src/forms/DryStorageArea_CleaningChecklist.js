@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import EditableFormContainer from '../components/EditableFormContainer';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -44,13 +45,18 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
       <Checkbox checked={item.checks[day].checked} onPress={() => canInteract && handleCellChange(item.id, day, 'checked')} />
     </View>
     <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-      <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} />
+      {canInteract ? (
+        <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} editable={canInteract} />
+      ) : (
+        <Text style={styles.cellReadText}>{item.checks[day].cleanedBy}</Text>
+      )}
     </View>
   </View>
 ));
 
 export default function DryStorageChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
+  const [editMode, setEditMode] = useState(false);
   const [metadata, setMetadata] = useState(initialMetadata);
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
@@ -163,7 +169,7 @@ export default function DryStorageChecklist() {
   const renderRow = rowItem => {
     const stateItem = formData.find(i => i.name === rowItem.name);
     const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequencyText: rowItem.frequencyText || rowItem.frequencyValue, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
-    const canInteract = !!stateItem;
+    const canInteract = !!stateItem && editMode;
 
     return (
       <View key={item.id} style={styles.row}>
@@ -181,9 +187,10 @@ export default function DryStorageChecklist() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.card}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast">
+          <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
               <Image source={require('../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
@@ -197,14 +204,14 @@ export default function DryStorageChecklist() {
               <Text style={styles.docText}>Page 1 of 1</Text>
             </View>
             <Text style={styles.mainTitle}>DRY STORAGE AREA CLEANING CHECKLIST</Text>
-            <View style={styles.areaMetaRow}>
+              <View style={styles.areaMetaRow}>
               <View style={[styles.metaField, { flex: 2 }]}>
                 <Text style={styles.metaLabel}>LOCATION:</Text>
-                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} />
+                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} editable={editMode} />
               </View>
               <View style={styles.metaField}>
                 <Text style={styles.metaLabel}>WEEK:</Text>
-                <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." />
+                <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." editable={editMode} />
               </View>
               <View style={styles.metaField}>
                 <Text style={styles.metaLabel}>MONTH:</Text>
@@ -221,11 +228,11 @@ export default function DryStorageChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} />
+              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} editable={editMode} />
             </View>
           </View>
 
-          <ScrollView horizontal style={styles.tableScroll}>
+          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled directionalLockEnabled onStartShouldSetResponderCapture={() => true}>
             <View style={{ width: TABLE_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
@@ -250,12 +257,13 @@ export default function DryStorageChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSaveDraftLocal} style={[styles.button, styles.draftButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={editMode ? handleSaveDraftLocal : undefined} style={[styles.button, styles.draftButton]} disabled={!editMode || isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={[styles.button, styles.submitButton]} disabled={!editMode || isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+          </View>
+        </ScrollView>
+      </View>
+    </EditableFormContainer>
   );
 }
 
@@ -292,6 +300,7 @@ const styles = StyleSheet.create({
   centerContent: { alignItems: 'center' },
   equipmentText: { fontSize: 12, color: '#1F2937' },
   cellInput: { width: '100%', textAlign: 'center', fontSize: 12, height: 34, padding: 2 },
+  cellReadText: { textAlign: 'center', fontSize: 12, paddingVertical: 6, color: '#111827' },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { borderColor: '#10B981', backgroundColor: '#10B981' },
   checkboxUnchecked: { borderColor: '#4B5563', backgroundColor: '#FFFFFF' },

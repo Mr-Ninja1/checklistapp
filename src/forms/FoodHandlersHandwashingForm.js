@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import LoadingOverlay from '../components/LoadingOverlay';
 import useFormSave from '../hooks/useFormSave';
 import NotificationModal from '../components/NotificationModal';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 // Helper functions for dynamic details
 function getCurrentDate() {
@@ -251,12 +252,14 @@ export default function FoodHandlersHandwashingForm() {
 
   const handleBack = () => navigation.navigate('Home');
   const [busy, setBusy] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <LoadingOverlay visible={busy || exporting} message={busy ? 'Working...' : 'Saving PDF...'} />
       <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
-  <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
+  <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
         <View style={styles.logoRow}>
           <Image source={require('../assets/logo.jpeg')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
           <View style={{ flexDirection: 'column', flex: 1 }}>
@@ -276,12 +279,17 @@ export default function FoodHandlersHandwashingForm() {
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.label}>Location:</Text>
-            <TextInput
-              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
-              value={logDetails.location}
-              onChangeText={text => setLogDetails(prev => ({ ...prev, location: text }))}
-              placeholder="Enter Location"
-            />
+              {editMode ? (
+                <TextInput
+                  style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
+                  value={logDetails.location}
+                  onChangeText={text => setLogDetails(prev => ({ ...prev, location: text }))}
+                  editable={true}
+                  placeholder="Enter Location"
+                />
+              ) : (
+                <Text style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.location}</Text>
+              )}
           </View>
         </View>
         <View style={styles.detailRow}>
@@ -295,12 +303,17 @@ export default function FoodHandlersHandwashingForm() {
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.label}>Verified By:</Text>
-            <TextInput
-              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
-              value={logDetails.verifiedBy}
-              onChangeText={text => setLogDetails(prev => ({ ...prev, verifiedBy: text }))}
-              placeholder="Enter Verifier Name"
-            />
+            {editMode ? (
+              <TextInput
+                style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
+                value={logDetails.verifiedBy}
+                onChangeText={text => setLogDetails(prev => ({ ...prev, verifiedBy: text }))}
+                editable={true}
+                placeholder="Enter Verifier Name"
+              />
+            ) : (
+              <Text style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.verifiedBy}</Text>
+            )}
           </View>
         </View>
         <View style={styles.detailRow}>
@@ -310,6 +323,7 @@ export default function FoodHandlersHandwashingForm() {
               style={[styles.input, styles.managerSignInput, { width: dyn.managerWidth, minWidth: resp.s(80), maxWidth: resp.s(160), padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
               value={logDetails.complexManagerSign}
               onChangeText={text => setLogDetails(prev => ({ ...prev, complexManagerSign: text }))}
+              editable={editMode}
               placeholder="Signature/Initials"
             />
           </View>
@@ -334,64 +348,96 @@ export default function FoodHandlersHandwashingForm() {
             {handlers.map((row, rowIdx) => (
               <View key={rowIdx} style={styles.tableRow}>
                 <Text style={[styles.dataCell, styles.snCell, { minWidth: dyn.snW, width: dyn.snW }]}>{rowIdx + 1}</Text>
-                <TextInput
-                  style={[styles.inputCell, styles.nameCell, { minWidth: dyn.nameW, width: dyn.nameW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                  value={row.fullName}
-                  onChangeText={text => updateHandlerField(rowIdx, 'fullName', text)}
-                  placeholder="Full Name"
-                />
-                <TextInput
-                  style={[styles.inputCell, styles.jobCell, { minWidth: dyn.jobW, width: dyn.jobW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                  value={row.jobTitle}
-                  onChangeText={text => updateHandlerField(rowIdx, 'jobTitle', text)}
-                  placeholder="Job Title"
-                />
+                {editMode ? (
+                  <TextInput
+                    style={[styles.inputCell, styles.nameCell, { minWidth: dyn.nameW, width: dyn.nameW, padding: resp.s(4), fontSize: resp.ms(12) }]}
+                    value={row.fullName}
+                    onChangeText={text => updateHandlerField(rowIdx, 'fullName', text)}
+                    editable={true}
+                    placeholder="Full Name"
+                  />
+                ) : (
+                  <Text style={[styles.dataCell, styles.nameCell, { minWidth: dyn.nameW, width: dyn.nameW }]}>{row.fullName}</Text>
+                )}
+                {editMode ? (
+                  <TextInput
+                    style={[styles.inputCell, styles.jobCell, { minWidth: dyn.jobW, width: dyn.jobW, padding: resp.s(4), fontSize: resp.ms(12) }]}
+                    value={row.jobTitle}
+                    onChangeText={text => updateHandlerField(rowIdx, 'jobTitle', text)}
+                    editable={true}
+                    placeholder="Job Title"
+                  />
+                ) : (
+                  <Text style={[styles.dataCell, styles.jobCell, { minWidth: dyn.jobW, width: dyn.jobW }]}>{row.jobTitle}</Text>
+                )}
                 {TIME_SLOTS.map((time) => (
-                  <TouchableOpacity
-                    key={time}
-                    style={[styles.checkboxTouchable, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2) }]}
-                    onPress={() => toggleHandlerCheck(rowIdx, time)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.checkboxCellText, { fontSize: resp.ms(16) }]}>{row.checks[time] ? '☑' : '☐'}</Text>
-                  </TouchableOpacity>
+                  editMode ? (
+                    <TouchableOpacity
+                      key={time}
+                      style={[styles.checkboxTouchable, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2) }]}
+                      onPress={() => toggleHandlerCheck(rowIdx, time)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.checkboxCellText, { fontSize: resp.ms(16) }]}>{row.checks[time] ? '☑' : '☐'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View key={time} style={[styles.checkboxTouchable, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2) }]}> 
+                      <Text style={[styles.checkboxCellText, { fontSize: resp.ms(16) }]}>{row.checks[time] ? '☑' : '☐'}</Text>
+                    </View>
+                  )
                 ))}
-                <TextInput
-                  style={[styles.inputCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                  value={row.staffSign}
-                  onChangeText={text => updateHandlerField(rowIdx, 'staffSign', text)}
-                  placeholder="Sign"
-                />
-                <TextInput
-                  style={[styles.inputCell, styles.supCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                  value={row.supName}
-                  onChangeText={text => updateHandlerField(rowIdx, 'supName', text)}
-                  placeholder="Sup Name"
-                />
-                <TextInput
-                  style={[styles.inputCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                  value={row.supSign}
-                  onChangeText={text => updateHandlerField(rowIdx, 'supSign', text)}
-                  placeholder="Sup Sign"
-                />
+                {editMode ? (
+                  <TextInput
+                    style={[styles.inputCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
+                    value={row.staffSign}
+                    onChangeText={text => updateHandlerField(rowIdx, 'staffSign', text)}
+                    editable={true}
+                    placeholder="Sign"
+                  />
+                ) : (
+                  <Text style={[styles.dataCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW }]}>{row.staffSign}</Text>
+                )}
+                {editMode ? (
+                  <TextInput
+                    style={[styles.inputCell, styles.supCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
+                    value={row.supName}
+                    onChangeText={text => updateHandlerField(rowIdx, 'supName', text)}
+                    editable={true}
+                    placeholder="Sup Name"
+                  />
+                ) : (
+                  <Text style={[styles.dataCell, styles.supCell, { minWidth: dyn.signW, width: dyn.signW }]}>{row.supName}</Text>
+                )}
+                {editMode ? (
+                  <TextInput
+                    style={[styles.inputCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
+                    value={row.supSign}
+                    onChangeText={text => updateHandlerField(rowIdx, 'supSign', text)}
+                    editable={true}
+                    placeholder="Sup Sign"
+                  />
+                ) : (
+                  <Text style={[styles.dataCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW }]}>{row.supSign}</Text>
+                )}
               </View>
             ))}
           </View>
         </ScrollView>
-      </ScrollView>
-      <View style={styles.saveButtonContainerInner}>
+    </ScrollView>
+        <View style={styles.saveButtonContainerInner}>
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: resp.s(8) }}>
           <TouchableOpacity onPress={handleBack} style={[styles.auxButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
             <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleSaveDraft} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
+          <TouchableOpacity onPress={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
             <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Save Draft</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={() => { if (!editMode || isSaving) return; handleSavePDF(); }} activeOpacity={0.85}>
             <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
           </TouchableOpacity>
         </View>
       </View>
+  </EditableFormContainer>
     </SafeAreaView>
   );
 }

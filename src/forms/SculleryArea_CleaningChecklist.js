@@ -14,6 +14,7 @@ import {
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import useFormSave from '../hooks/useFormSave';
+import EditableFormContainer from '../components/EditableFormContainer';
 
 const DRAFT_KEY = 'scullery_area_cleaning_checklist_draft';
 
@@ -43,8 +44,13 @@ const initialCleaningState = SCULLERY_EQUIPMENT_LIST.filter(i => i.isItem).map((
   return { id: index, area: item.area, name: item.name, frequency: item.frequency, checks: dailyChecks };
 });
 
-const Checkbox = ({ checked, onPress }) => (
-  <TouchableOpacity onPress={onPress} style={[styles.checkbox, checked ? styles.checkboxChecked : styles.checkboxUnchecked]}>
+const Checkbox = ({ checked, onPress, disabled }) => (
+  <TouchableOpacity
+    onPress={disabled ? undefined : onPress}
+    disabled={!!disabled}
+    pointerEvents={disabled ? 'none' : 'auto'}
+    style={[styles.checkbox, checked ? styles.checkboxChecked : styles.checkboxUnchecked]}
+  >
     {checked && <Text style={styles.checkboxTick}>✓</Text>}
   </TouchableOpacity>
 );
@@ -56,7 +62,18 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
         <Checkbox checked={item.checks[day].checked} onPress={() => canInteract && handleCellChange(item.id, day, 'checked')} />
       </View>
       <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-        <TextInput value={item.checks[day].cleanedBy} onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={12} />
+        {canInteract ? (
+          <TextInput
+            value={item.checks[day].cleanedBy}
+            onChangeText={t => canInteract && handleCellChange(item.id, day, 'cleanedBy', t)}
+            placeholder="Name"
+            style={styles.cellInput}
+            maxLength={12}
+            editable={canInteract}
+          />
+        ) : (
+          <Text style={styles.cellText}>{item.checks[day].cleanedBy || ''}</Text>
+        )}
       </View>
     </View>
   );
@@ -65,6 +82,7 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
 export default function SculleryAreaChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
   const [metadata, setMetadata] = useState({ location: 'SCULLERY', week: '', month: '', year: '', issueDate: '', compiledBy: '', approvedBy: '', hseqManager: '' });
+  const [editMode, setEditMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
 
@@ -175,7 +193,7 @@ export default function SculleryAreaChecklist() {
   const renderRow = rowItem => {
     const stateItem = formData.find(i => i.name === rowItem.name && i.area === rowItem.area);
     const item = stateItem || { id: `fallback-${rowItem.area}-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
-    const canInteract = !!stateItem;
+    const canInteract = !!stateItem && editMode;
 
     return (
       <View key={item.id} style={styles.row}>
@@ -193,9 +211,16 @@ export default function SculleryAreaChecklist() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.card}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraftLocal}>
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps={'handled'}
+          decelerationRate={0.9}
+          scrollEventThrottle={16}
+          removeClippedSubviews={false}
+        >
+          <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
               <Image source={require('../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
@@ -212,11 +237,19 @@ export default function SculleryAreaChecklist() {
             <View style={styles.areaMetaRow}>
               <View style={[styles.metaField, { flex: 2 }]}>
                 <Text style={styles.metaLabel}>LOCATION:</Text>
-                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} />
+                {editMode ? (
+                  <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} editable={editMode} />
+                ) : (
+                  <Text style={styles.metaValue}>{metadata.location}</Text>
+                )}
               </View>
               <View style={styles.metaField}>
                 <Text style={styles.metaLabel}>WEEK:</Text>
-                <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." />
+                {editMode ? (
+                  <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." editable={editMode} />
+                ) : (
+                  <Text style={styles.metaValue}>{metadata.week}</Text>
+                )}
               </View>
               <View style={styles.metaField}>
                 <Text style={styles.metaLabel}>MONTH:</Text>
@@ -233,11 +266,22 @@ export default function SculleryAreaChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} />
+              {editMode ? (
+                <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} editable={editMode} />
+              ) : (
+                <Text style={styles.metaValue}>{metadata.hseqManager}</Text>
+              )}
             </View>
           </View>
 
-          <ScrollView horizontal style={styles.tableScroll}>
+          <ScrollView
+            horizontal
+            style={styles.tableScroll}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps={'handled'}
+            directionalLockEnabled={true}
+            onStartShouldSetResponderCapture={() => true}
+          >
             <View style={{ width: TABLE_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
@@ -262,18 +306,19 @@ export default function SculleryAreaChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSaveDraftLocal} style={[styles.button, styles.draftButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={editMode ? handleSaveDraftLocal : undefined} style={[styles.button, styles.draftButton]} disabled={!editMode || isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={[styles.button, styles.submitButton]} disabled={!editMode || isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+          </View>
+        </ScrollView>
+      </View>
+    </EditableFormContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
-  scrollContent: { padding: 8 },
+  scrollContent: { padding: 8, flexGrow: 1 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1, elevation: 4 },
   header: { borderBottomColor: '#1F2937', borderBottomWidth: 1, paddingBottom: 10, marginBottom: 10 },
   brandRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
@@ -304,6 +349,7 @@ const styles = StyleSheet.create({
   centerContent: { alignItems: 'center' },
   equipmentText: { fontSize: 12, color: '#1F2937' },
   cellInput: { width: '100%', textAlign: 'center', fontSize: 12, height: 34, padding: 2 },
+  cellText: { fontSize: 12, textAlign: 'center', height: 34, lineHeight: 34, color: '#111827' },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { borderColor: '#10B981', backgroundColor: '#10B981' },
   checkboxUnchecked: { borderColor: '#4B5563', backgroundColor: '#FFFFFF' },
