@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import ViewDocumentModal from '../components/ViewDocumentModal';
 import formStorage from '../utils/formStorage';
 import { getFormHistory, removeFormHistory } from '../utils/formHistory';
+import { normalizeSavedAtUsingFiles } from '../utils/formHistory';
 import { useIsFocused } from '@react-navigation/native';
 
 export default function FormSavesScreen() {
@@ -13,8 +14,50 @@ export default function FormSavesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('date'); // 'date' or 'category'
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('date');
+  const [activeMonth, setActiveMonth] = useState('all');
+  const [dateFilter, setDateFilter] = useState({ from: null, to: null });
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  // Local temp values to edit both from/to inside modal before applying
+  const [tempFrom, setTempFrom] = useState(null);
+  const [tempTo, setTempTo] = useState(null);
+  const [lastDaysInput, setLastDaysInput] = useState('');
+  const [lastDaysModalVisible, setLastDaysModalVisible] = useState(false);
+  const [lastDaysValue, setLastDaysValue] = useState('');
+  const [activeFilterLabel, setActiveFilterLabel] = useState('All months');
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const adjustTemp = (side, field, delta) => {
+    const cur = side === 'from' ? (tempFrom || Date.now()) : (tempTo || Date.now());
+    const d = new Date(cur);
+    if (field === 'year') d.setFullYear(d.getFullYear() + delta);
+    if (field === 'month') d.setMonth(d.getMonth() + delta);
+    if (field === 'day') d.setDate(d.getDate() + delta);
+    if (side === 'from') setTempFrom(d.getTime()); else setTempTo(d.getTime());
+  };
+  // Calendar view state for richer picker
+  const [viewFromYear, setViewFromYear] = useState(new Date().getFullYear());
+  const [viewFromMonth, setViewFromMonth] = useState(new Date().getMonth()); // 0-indexed
+  const [viewToYear, setViewToYear] = useState(new Date().getFullYear());
+  const [viewToMonth, setViewToMonth] = useState(new Date().getMonth());
+
+  const formatYMD = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const parseYMD = (s) => {
+    if (!s) return null;
+    // allow yyyy-mm-dd or locale parse
+    const iso = s.indexOf('-') === 4 ? s : null;
+    const d = iso ? new Date(s) : new Date(s);
+    if (isNaN(d.getTime())) return null;
+    return d.getTime();
+  };
+  const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const firstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -34,36 +77,66 @@ export default function FormSavesScreen() {
     loadHistory();
   }, [isFocused]);
 
-  // Filter saved forms by search term and category
+  // Filter saved forms by search term and active month
+  const monthKeyFor = (form) => {
+    if (form && form.savedAt) {
+      try {
+        const d = new Date(form.savedAt);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
+      } catch (e) {
+        return 'unknown';
+      }
+    }
+    return 'unknown';
+  };
+
   const filteredForms = savedForms.filter(f => {
     const term = (searchTerm || '').toLowerCase().trim();
-    if (!term && (categoryFilter === 'all' || (f.category || 'uncategorized') === categoryFilter)) return true;
-    // category filter check
-    if (categoryFilter !== 'all' && (f.category || 'uncategorized') !== categoryFilter) return false;
+  // (no category filter) only month filter applies
+    // month filter check
+    if (activeMonth && activeMonth !== 'all' && monthKeyFor(f) !== activeMonth) return false;
+    // date range filter (savedAt in ms)
+    if (dateFilter.from || dateFilter.to) {
+      const t = f.savedAt ? Number(f.savedAt) : null;
+      if (!t) return false;
+      // Convert all timestamps to start of day for comparison
+      const dayTs = Math.floor(t / 86400000) * 86400000;
+      const fromDay = dateFilter.from ? Math.floor(dateFilter.from / 86400000) * 86400000 : null;
+      const toDay = dateFilter.to ? Math.floor(dateFilter.to / 86400000) * 86400000 : null;
+      // Include the entire day for both from and to dates
+      if (fromDay && dayTs < fromDay) return false;
+      if (toDay && dayTs > (toDay + 86400000 - 1)) return false;
+    }
     if (!term) return true;
     // search across title, location, and stored meta payload text
     const hay = `${f.title || ''} ${f.location || ''} ${JSON.stringify(f.meta || {})}`.toLowerCase();
     return hay.indexOf(term) !== -1;
   });
 
-  // Group forms by date (DD/MM/YYYY)
+  // Group forms by savedAt date (localized) (DD/MM/YYYY)
   const groupedByDate = filteredForms.reduce((acc, form) => {
-    const date = form.date || 'Unknown Date';
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(form);
+    const dateKey = form.savedAt ? new Date(form.savedAt).toLocaleDateString() : 'Unknown Date';
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(form);
     return acc;
   }, {});
 
-  // Group forms by category
+  // Group forms by category (fallback to 'Uncategorized') - used when `viewMode` is 'category'
   const groupedByCategory = filteredForms.reduce((acc, form) => {
-    const cat = (form.category || 'uncategorized').toString();
+    const cat = (form.meta && (form.meta.category || form.meta.type)) || form.category || 'Uncategorized';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(form);
     return acc;
   }, {});
 
-  // compile unique categories for filter buttons
-  const categoryList = Array.from(new Set([ 'all', ...savedForms.map(f => f.category || 'uncategorized') ]));
+  // compile unique categories for filter buttons (not used - date only approach)
+
+  // compile unique months (YYYY-MM) for quick month/year filters, sort descending
+  const monthSet = new Set(savedForms.map(f => {
+    const k = monthKeyFor(f);
+    return k || 'unknown';
+  }));
+  const monthList = Array.from(monthSet).sort((a, b) => (a === 'unknown' ? 1 : b === 'unknown' ? -1 : b.localeCompare(a)));
 
   // Download handler (web: download JSON, native: open PDF)
   const handleDownload = async () => {
@@ -140,24 +213,244 @@ export default function FormSavesScreen() {
             style={styles.searchInput}
             placeholderTextColor="#6b7280"
           />
+          {activeMonth !== 'all' ? (
+            <Text style={{ marginTop: 6, color: '#374151' }}>Scoped to: {activeMonth === 'unknown' ? 'Unknown' : `${monthNames[Math.max(0, Number(activeMonth.split('-')[1]) - 1)]} ${activeMonth.split('-')[0]}`} — clear to search all months</Text>
+          ) : null}
           <View style={styles.controlsRow}>
-            <View style={styles.groupToggles}>
-              <TouchableOpacity onPress={() => setViewMode('date')} style={[styles.groupToggle, viewMode === 'date' ? styles.groupToggleActive : null]}>
-                <Text style={viewMode === 'date' ? styles.groupToggleTextActive : styles.groupToggleText}>By date</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setViewMode('category')} style={[styles.groupToggle, viewMode === 'category' ? styles.groupToggleActive : null]}>
-                <Text style={viewMode === 'category' ? styles.groupToggleTextActive : styles.groupToggleText}>By category</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll} contentContainerStyle={{ alignItems: 'center' }}>
-              {categoryList.map(cat => (
-                <TouchableOpacity key={cat} onPress={() => setCategoryFilter(cat)} style={[styles.categoryBtn, categoryFilter === cat ? styles.categoryBtnActive : null]}>
-                  <Text style={categoryFilter === cat ? styles.categoryBtnTextActive : styles.categoryBtnText}>{cat}</Text>
+            {/* month chips (primary filter) with friendly labels */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.categoryScroll, { marginLeft: 8 }]} contentContainerStyle={{ alignItems: 'center' }}>
+              {/* All months chip removed (now available via toolbar filter buttons) */}
+              {/* Quick actions: Set to today and Last N days */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                <TouchableOpacity style={[styles.filterBtn, activeFilterLabel === 'Today' ? styles.filterBtnActive : null]} onPress={() => {
+                  const now = new Date();
+                  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                  setDateFilter({ from: startOfDay, to: startOfDay });
+                  setActiveMonth('all');
+                  setActiveFilterLabel('Today');
+                }}>
+                  <Text style={activeFilterLabel === 'Today' ? styles.filterBtnTextActive : styles.filterBtnText}>Today</Text>
                 </TouchableOpacity>
-              ))}
+                <TouchableOpacity style={[styles.filterBtn, activeFilterLabel === 'All months' ? styles.filterBtnActive : null, { marginLeft: 8 }]} onPress={() => {
+                  setDateFilter({ from: null, to: null });
+                  setActiveMonth('all');
+                  setActiveFilterLabel('All months');
+                }}>
+                  <Text style={activeFilterLabel === 'All months' ? styles.filterBtnTextActive : styles.filterBtnText}>All months</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.filterBtn, { marginLeft: 8 }]} onPress={() => setLastDaysModalVisible(true)}>
+                  <Text style={styles.filterBtnText}>Last N days</Text>
+                </TouchableOpacity>
+              </View>
+              {monthList.map(m => {
+                const label = (m === 'unknown') ? 'Unknown' : (() => {
+                  const [y, mm] = m.split('-');
+                  const idx = Math.max(0, Math.min(11, Number(mm) - 1));
+                  return `${monthNames[idx]} ${y}`;
+                })();
+                return (
+                  <TouchableOpacity key={m} onPress={() => setActiveMonth(m)} style={[styles.categoryBtn, activeMonth === m ? styles.categoryBtnActive : null]}>
+                    <Text style={activeMonth === m ? styles.categoryBtnTextActive : styles.categoryBtnText}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {/* Date range chip next to months */}
+              <TouchableOpacity
+                style={[styles.dateRangeBtn, { marginLeft: 8 }]}
+                onPress={() => {
+                    const from = dateFilter.from || null;
+                    const to = dateFilter.to || null;
+                    setTempFrom(from);
+                    setTempTo(to);
+                    if (from) {
+                      const d = new Date(from);
+                      setViewFromYear(d.getFullYear()); setViewFromMonth(d.getMonth());
+                    } else { const now = new Date(); setViewFromYear(now.getFullYear()); setViewFromMonth(now.getMonth()); }
+                    if (to) {
+                      const d2 = new Date(to);
+                      setViewToYear(d2.getFullYear()); setViewToMonth(d2.getMonth());
+                    } else { const now2 = new Date(); setViewToYear(now2.getFullYear()); setViewToMonth(now2.getMonth()); }
+                    setDatePickerVisible(true);
+                }}
+              >
+                <Text style={styles.dateRangeBtnText}>{dateFilter.from || dateFilter.to ? (
+                  `${dateFilter.from ? new Date(dateFilter.from).toLocaleDateString() : 'Any'} → ${dateFilter.to ? new Date(dateFilter.to).toLocaleDateString() : 'Any'}`
+                ) : 'Date range'}</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
+          {/* Date picker modal */}
+          <Modal visible={datePickerVisible} animationType="slide" transparent>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+              <View style={{ width: '95%', maxHeight: '90%', backgroundColor: '#fff', borderRadius: 12 }}>
+                <ScrollView contentContainerStyle={{ padding: 18 }} showsVerticalScrollIndicator={false}>
+                  <Text style={{ fontWeight: '700', marginBottom: 8 }}>Filter by date range</Text>
+                  <Text style={{ color: '#374151', marginBottom: 12 }}>Click a field to type, or pick from the month/year lists or day grid below.</Text>
+
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                      <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerHeader}>From</Text>
+                    <TextInput placeholder="yyyy-mm-dd" value={formatYMD(tempFrom)} onChangeText={t => setTempFrom(parseYMD(t))} style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, marginTop: 6 }} />
+
+                    {/* month selector */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                      {monthNames.map((mn, idx) => (
+                        <TouchableOpacity key={mn} onPress={() => { const y = viewFromYear; const d = new Date(y, idx, tempFrom ? new Date(tempFrom).getDate() : 1); setTempFrom(d.getTime()); setViewFromMonth(idx); setViewFromYear(y); }} style={[styles.categoryBtn, viewFromMonth === idx ? styles.categoryBtnActive : null, { marginRight: 8 }]}>
+                          <Text style={viewFromMonth === idx ? styles.categoryBtnTextActive : styles.categoryBtnText}>{mn}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+
+                    {/* year controls */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewFromYear(y => y - 1); setTempFrom(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() - 1); return cd.getTime(); }); }}><Text>-</Text></TouchableOpacity>
+                      <Text style={{ paddingHorizontal: 12 }}>{viewFromYear}</Text>
+                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewFromYear(y => y + 1); setTempFrom(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() + 1); return cd.getTime(); }); }}><Text>+</Text></TouchableOpacity>
+                    </View>
+
+                    {/* day grid for From */}
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={{ marginBottom: 6 }}>{monthNames[viewFromMonth]} {viewFromYear}</Text>
+                      <View style={{ flexDirection: 'row' }}>
+                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <Text key={d} style={{ flex: 1, textAlign: 'center', fontWeight: '700' }}>{d}</Text>)}
+                      </View>
+                      <View>
+                        {(() => {
+                          const rows = [];
+                          const first = firstDayOfMonth(viewFromYear, viewFromMonth);
+                          const total = daysInMonth(viewFromYear, viewFromMonth);
+                          let cur = 1 - first;
+                          for (let r = 0; r < 6; r++) {
+                            const cols = [];
+                            for (let c = 0; c < 7; c++, cur++) {
+                                      if (cur < 1 || cur > total) {
+                                        cols.push(<View key={`${r}-${c}`} style={{ flex: 1, padding: 4 }} />);
+                                      } else {
+                                        const ts = new Date(viewFromYear, viewFromMonth, cur).getTime();
+                                        const active = tempFrom && Math.floor(tempFrom / 86400000) === Math.floor(ts / 86400000);
+                                        cols.push(
+                                          <TouchableOpacity key={`${r}-${c}`} onPress={() => setTempFrom(ts)} style={{ flex: 1, padding: 4 }}>
+                                            <View style={{ backgroundColor: active ? '#185a9d' : '#f3f4f6', borderRadius: 6, paddingVertical: 6 }}>
+                                              <Text style={{ textAlign: 'center', color: active ? '#fff' : '#111', fontSize: 13 }}>{cur}</Text>
+                                            </View>
+                                          </TouchableOpacity>
+                                        );
+                                      }
+                            }
+                            rows.push(<View key={`row-${r}`} style={{ flexDirection: 'row', marginBottom: 6 }}>{cols}</View>);
+                          }
+                          return rows;
+                        })()}
+                      </View>
+                    </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* To picker column */}
+            <View style={styles.pickerColumn}>
+                    <Text style={styles.pickerHeader}>To</Text>
+                    <TextInput placeholder="yyyy-mm-dd" value={formatYMD(tempTo)} onChangeText={t => setTempTo(parseYMD(t))} style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, marginTop: 6 }} />
+
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                      {monthNames.map((mn, idx) => (
+                        <TouchableOpacity key={mn} onPress={() => { const y = viewToYear; const d = new Date(y, idx, tempTo ? new Date(tempTo).getDate() : 1); setTempTo(d.getTime()); setViewToMonth(idx); setViewToYear(y); }} style={[styles.categoryBtn, viewToMonth === idx ? styles.categoryBtnActive : null, { marginRight: 8 }]}>
+                          <Text style={viewToMonth === idx ? styles.categoryBtnTextActive : styles.categoryBtnText}>{mn}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewToYear(y => y - 1); setTempTo(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() - 1); return cd.getTime(); }); }}><Text>-</Text></TouchableOpacity>
+                      <Text style={{ paddingHorizontal: 12 }}>{viewToYear}</Text>
+                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewToYear(y => y + 1); setTempTo(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() + 1); return cd.getTime(); }); }}><Text>+</Text></TouchableOpacity>
+                    </View>
+
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={{ marginBottom: 6 }}>{monthNames[viewToMonth]} {viewToYear}</Text>
+                      <View style={{ flexDirection: 'row' }}>
+                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <Text key={d} style={{ flex: 1, textAlign: 'center', fontWeight: '700' }}>{d}</Text>)}
+                      </View>
+                      <View>
+                        {(() => {
+                          const rows = [];
+                          const first = firstDayOfMonth(viewToYear, viewToMonth);
+                          const total = daysInMonth(viewToYear, viewToMonth);
+                          let cur = 1 - first;
+                          for (let r = 0; r < 6; r++) {
+                            const cols = [];
+                            for (let c = 0; c < 7; c++, cur++) {
+                              if (cur < 1 || cur > total) {
+                                cols.push(<View key={`${r}-${c}`} style={{ flex: 1, padding: 4 }} />);
+                              } else {
+                                const ts = new Date(viewToYear, viewToMonth, cur).getTime();
+                                const active = tempTo && Math.floor(tempTo / 86400000) === Math.floor(ts / 86400000);
+                                cols.push(
+                                  <TouchableOpacity key={`${r}-${c}`} onPress={() => setTempTo(ts)} style={{ flex: 1, padding: 4 }}>
+                                    <View style={{ backgroundColor: active ? '#185a9d' : '#f3f4f6', borderRadius: 6, paddingVertical: 6 }}>
+                                      <Text style={{ textAlign: 'center', color: active ? '#fff' : '#111', fontSize: 13 }}>{cur}</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                );
+                              }
+                            }
+                            rows.push(<View key={`row-to-${r}`} style={{ flexDirection: 'row', marginBottom: 6 }}>{cols}</View>);
+                          }
+                          return rows;
+                        })()}
+                      </View>
+                    </View>
+                  </View>
+                    </View>
+                  </ScrollView>
+
+                {/* (Previously had a single-date shortcut here; moved to toolbar) */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <TouchableOpacity style={[styles.clearBtn, { flex: 1, marginRight: 8 }]} onPress={() => { setDateFilter({ from: null, to: null }); setTempFrom(null); setTempTo(null); setDatePickerVisible(false); setActiveMonth('all'); }}>
+                    <Text style={styles.clearBtnText}>Clear</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.applyBtn, { flex: 1 }]} onPress={() => {
+                    setDateFilter({ from: tempFrom || null, to: tempTo || null });
+                    setDatePickerVisible(false);
+                    setActiveMonth('all');
+                  }}>
+                    <Text style={styles.applyBtnText}>Apply</Text>
+                  </TouchableOpacity>
+                </View>
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+          {/* Last N days modal */}
+          <Modal visible={lastDaysModalVisible} animationType="slide" transparent>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+              <View style={{ width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 18 }}>
+                <Text style={{ fontWeight: '700', marginBottom: 8 }}>Filter last N days</Text>
+                <Text style={{ color: '#374151', marginBottom: 12 }}>Enter number of days (e.g., 2 for last 2 days)</Text>
+                <TextInput keyboardType="numeric" placeholder="Days" value={lastDaysValue} onChangeText={setLastDaysValue} style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 10, borderRadius: 8, marginBottom: 12 }} />
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                  <TouchableOpacity style={[styles.clearBtn, { marginRight: 8 }]} onPress={() => setLastDaysModalVisible(false)}>
+                    <Text style={styles.clearBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.applyBtn} onPress={() => {
+                    const n = parseInt(lastDaysValue, 10);
+                    if (!n || n <= 0) return Alert.alert('Invalid', 'Enter a number greater than 0');
+                    const now = new Date();
+                    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                    const start = end - (n - 1) * 86400000;
+                    setDateFilter({ from: start, to: end });
+                    setActiveMonth('all');
+                    setActiveFilterLabel(`Last ${n} days`);
+                    setLastDaysModalVisible(false);
+                    setLastDaysValue('');
+                  }}>
+                    <Text style={styles.applyBtnText}>Go</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
       </View>
       {savedForms.length === 0 ? (
         <Text style={styles.placeholder}>{loadingHistory ? 'Loading history...' : 'No saved forms yet.'}</Text>
@@ -167,7 +460,7 @@ export default function FormSavesScreen() {
             // render grouped by date
             Object.keys(groupedByDate).map(date => (
               <View key={date} style={{ marginBottom: 24 }}>
-                <Text style={styles.dateHeading}>{date}</Text>
+                <Text style={styles.dateHeading}>{date === 'Unknown Date' ? 'Unknown saved date' : date}</Text>
                 {groupedByDate[date].map((form, idx) => (
                   <View key={form.savedAt || idx} style={styles.cardRow}>
                     <TouchableOpacity
@@ -223,8 +516,8 @@ export default function FormSavesScreen() {
                         }}
                     >
                       <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
-                      <Text style={styles.cardMeta}>Category: {form.category || 'uncategorized'} | Location: {form.location || ''}</Text>
-                      <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : ''}</Text>
+                      <Text style={styles.cardMeta}>Location: {form.location || ''}</Text>
+                      <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : 'Unknown'}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(form, idx, date)}>
                       <Text style={styles.deleteBtnText}>Delete</Text>
@@ -395,8 +688,25 @@ const styles = StyleSheet.create({
   groupToggleText: { color: '#185a9d', fontWeight: '700' },
   groupToggleTextActive: { color: '#fff', fontWeight: '700' },
   categoryScroll: { marginLeft: 12 },
-  categoryBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20, backgroundColor: '#f3f4f6', marginRight: 8 },
+  categoryBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#f3f4f6', marginRight: 8 },
   categoryBtnActive: { backgroundColor: '#185a9d' },
   categoryBtnText: { color: '#374151', fontWeight: '600', textTransform: 'capitalize' },
   categoryBtnTextActive: { color: '#fff', fontWeight: '700', textTransform: 'capitalize' },
+  dateRangeBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 18, backgroundColor: '#185a9d' },
+  dateRangeBtnText: { color: '#fff', fontWeight: '700' },
+  smallBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#eef2ff', marginHorizontal: 6, minWidth: 40, alignItems: 'center', justifyContent: 'center' },
+  pickerColumn: { minWidth: 260, flex: 1, paddingRight: 12 },
+  divider: { width: 1, backgroundColor: '#e6eef2', marginHorizontal: 12, borderRadius: 1, alignSelf: 'stretch' },
+  pickerHeader: { fontWeight: '800', fontSize: 18, marginBottom: 6 },
+  clearBtn: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ff5e62', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, marginRight: 8, alignItems: 'center', justifyContent: 'center' },
+  clearBtnText: { color: '#ff5e62', fontWeight: '700' },
+  applyBtn: { backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  applyBtnText: { color: '#fff', fontWeight: '800' },
+  smallActionBtn: { backgroundColor: '#185a9d', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
+  smallActionBtnText: { color: '#fff', fontWeight: '700' },
+  lastDaysInput: { width: 54, backgroundColor: '#fff', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: '#e6eef2', textAlign: 'center' },
+  filterBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: '#185a9d', backgroundColor: 'transparent' },
+  filterBtnActive: { backgroundColor: '#185a9d' },
+  filterBtnText: { color: '#000', fontWeight: '700' },
+  filterBtnTextActive: { color: '#fff', fontWeight: '700' },
 });

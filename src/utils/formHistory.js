@@ -70,7 +70,11 @@ export async function addFormHistory(entry) {
     location: entry.location || entry.loc || null,
     handlers: entry.handlers || null,
     pdfPath: entry.pdfPath || null,
-    savedAt: entry.savedAt || Date.now(),
+  // Use the system submission time for history entries by default so grouping
+  // reflects when the entry was actually added to the history. Callers that
+  // intentionally want to preserve an existing savedAt (e.g., import/migration)
+  // can set `_preserveSavedAt: true` on the entry.
+  savedAt: entry._preserveSavedAt ? (entry.savedAt || Date.now()) : Date.now(),
     // allow callers to store arbitrary metadata too
     // Preserve any payload provided by the caller so SavedFormRenderer can access it later.
     // Common callers pass either `payload` directly or wrap it under `meta.payload`.
@@ -181,6 +185,47 @@ export async function clearFormHistory() {
   } catch (e) {
     console.warn('clearFormHistory native failed', e);
     return [];
+  }
+}
+
+// Try to normalize savedAt values by checking corresponding file modification times
+// If a history entry has a file path (pdfPath or meta.filePath) and the file's
+// modification time is newer than the recorded savedAt, update savedAt to the
+// file's modification time. Returns the number of entries updated.
+export async function normalizeSavedAtUsingFiles() {
+  try {
+    const list = await getFormHistory();
+    if (!Array.isArray(list) || list.length === 0) return 0;
+    let updated = 0;
+    const newList = await Promise.all(list.map(async (entry) => {
+      try {
+        const filePath = entry.pdfPath || (entry.meta && entry.meta.filePath) || null;
+        if (!filePath) return entry;
+        const info = await FileSystem.getInfoAsync(filePath);
+        if (!info || !info.exists) return entry;
+        // modificationTime may be in seconds or milliseconds depending on platform
+        const m = info.modificationTime;
+        if (!m) {
+          // some versions may expose 'modificationTime' under 'modificationTime'
+          return entry;
+        }
+        let fileMs = Number(m) || 0;
+        // normalize to milliseconds
+        if (fileMs > 0 && fileMs < 1e12) fileMs = fileMs * 1000;
+        if (!entry.savedAt || fileMs > (entry.savedAt || 0) + 1000) {
+          entry.savedAt = fileMs || Date.now();
+          updated++;
+        }
+        return entry;
+      } catch (e) {
+        return entry;
+      }
+    }));
+    await writeNativeHistory(newList);
+    return updated;
+  } catch (e) {
+    console.warn('normalizeSavedAtUsingFiles failed', e);
+    return 0;
   }
 }
 
