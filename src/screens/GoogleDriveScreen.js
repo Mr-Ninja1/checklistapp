@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, ActivityIndicator, FlatList, StyleSheet, Alert } from 'react-native';
+import { View, Text, Button, ActivityIndicator, FlatList, StyleSheet, Alert, Switch } from 'react-native';
 import drive from '../utils/drive';
 
 export default function GoogleDriveScreen() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [files, setFiles] = useState([]);
+  const [useProxy, setUseProxy] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -24,7 +25,7 @@ export default function GoogleDriveScreen() {
   async function handleSignIn() {
     setLoading(true);
     try {
-      const res = await drive.signInAsync();
+      const res = await drive.signInAsync({ useProxyOverride: useProxy });
       const ui = await drive.getUserInfo();
       setUser(ui || null);
       Alert.alert('Signed in', ui && ui.email ? ui.email : 'Signed in');
@@ -91,6 +92,10 @@ export default function GoogleDriveScreen() {
       )}
 
       <View style={styles.buttons}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={{ marginRight: 8 }}>Use Expo proxy</Text>
+          <Switch value={useProxy} onValueChange={setUseProxy} />
+        </View>
         <Button title={user ? 'Refresh files' : 'Sign in with Google'} onPress={user ? handleListFiles : handleSignIn} disabled={loading} />
         <View style={{ height: 8 }} />
         <Button title="Upload test file" onPress={handleUploadTest} disabled={loading || !user} />

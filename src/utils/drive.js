@@ -126,9 +126,10 @@ export async function signOut() {
 // That keeps the auth flow identical across platforms and avoids native module
 // build/configuration issues.
 
-export async function signInAsync() {
+export async function signInAsync(options = {}) {
+  // options: { useProxyOverride: boolean|null, forceExternalOverride: boolean|null }
   // determine whether to use the Expo proxy/web client (dev) or native client
-  const useProxy = Constants.appOwnership === 'expo';
+  const useProxy = (typeof options.useProxyOverride === 'boolean') ? options.useProxyOverride : (Constants.appOwnership === 'expo');
   const clientId = pickClientId({ useProxy });
   // Debug: log which client ID and redirect URI will be used (helps verify production wiring)
   try {
@@ -145,7 +146,8 @@ export async function signInAsync() {
   const authEndpoint = (discovery && discovery.authorization_endpoint) || 'https://accounts.google.com/o/oauth2/v2/auth';
   const tokenEndpoint = (discovery && discovery.token_endpoint) || 'https://oauth2.googleapis.com/token';
   if (!discovery || !discovery.authorization_endpoint || !discovery.token_endpoint) {
-    console.warn('drive: discovery incomplete, falling back to default endpoints', { discovery });
+    // Lower verbosity: log instead of warn to avoid noisy warnings in-app.
+    console.log('drive: discovery incomplete, falling back to default endpoints', { discovery });
   }
 
   // Always use the browser PKCE flow (no native Play Services path).
@@ -166,90 +168,115 @@ export async function signInAsync() {
     (ALLOWED_DOMAIN ? `&hd=${encodeURIComponent(ALLOWED_DOMAIN)}` : '');
 
     try {
-    // Try available AuthSession methods in order of preference.
-    // 1) AuthSession.startAsync (old API)
-    // 2) AuthSession.openAuthSessionAsync (alternate API)
-    // 3) WebBrowser.openAuthSessionAsync (expo-web-browser)
-    // 4) Manual Linking fallback: open URL and wait for redirect to app URI
+    // Try available AuthSession methods in order of preference unless the app forces
+    // an external browser flow (some emulators/dev images block in-app flows).
     let result = null;
+  const forceExternal = (typeof options.forceExternalOverride === 'boolean') ? options.forceExternalOverride : Boolean(extra.forceExternalBrowser === true);
 
-    if (typeof AuthSession.startAsync === 'function') {
-      console.log('drive: using AuthSession.startAsync');
-      result = await AuthSession.startAsync({ authUrl, returnUrl: redirectUri });
-    } else if (typeof AuthSession.openAuthSessionAsync === 'function') {
-      console.log('drive: using AuthSession.openAuthSessionAsync');
-      const r = await AuthSession.openAuthSessionAsync(authUrl, redirectUri);
-      result = { type: r && r.type ? r.type : 'cancel', params: {} };
-      if (r && r.url) {
-        try { const u = new URL(r.url); const codeParam = u.searchParams.get('code'); if (codeParam) result.params.code = codeParam; } catch (e) { /* ignore */ }
-      }
-    } else {
-      console.log('drive: falling back to manual Linking flow');
-      // Try Expo WebBrowser first (works as an in-app/custom-tab fallback)
-      try {
-        if (WebBrowser && typeof WebBrowser.openAuthSessionAsync === 'function') {
-          console.log('drive: trying expo-web-browser.openAuthSessionAsync');
-          const wb = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-          // wb: { type: 'cancel'|'success'|'dismiss', url }
-          if (wb && wb.type === 'success' && wb.url) {
-            try {
-              const u = new URL(wb.url);
-              const codeParam = u.searchParams.get('code');
-              if (codeParam) {
-                result = { type: 'success', params: { code: codeParam } };
-              }
-            } catch (e) { /* ignore parse errors */ }
+    if (forceExternal) {
+      console.log('drive: forceExternalBrowser enabled — using external browser via Linking.openURL');
+      // Manual fallback: open in external browser and wait for a redirect to our app's URI
+      const waitForRedirect = (expectedPrefix, timeoutMs = 120000) => new Promise((resolve) => {
+        let resolved = false;
+        const onUrl = ({ url }) => {
+          if (!url) return;
+          if (url.startsWith(expectedPrefix) || url.includes('code=')) {
+            if (!resolved) { resolved = true; cleanup(); resolve(url); }
           }
-        }
+        };
+        const cleanup = () => {
+          try {
+            if (sub && typeof sub.remove === 'function') sub.remove();
+            else Linking.removeEventListener && Linking.removeEventListener('url', onUrl);
+          } catch (e) { /* ignore */ }
+          clearTimeout(timer);
+        };
+        let sub = null;
+        try { sub = Linking.addEventListener('url', onUrl); } catch (e) { /* ignore */ }
+        Linking.getInitialURL().then((u) => { if (u && (u.startsWith(expectedPrefix) || u.includes('code='))) { if (!resolved) { resolved = true; cleanup(); resolve(u); } } }).catch(() => {});
+        const timer = setTimeout(() => { if (!resolved) { resolved = true; cleanup(); resolve(null); } }, timeoutMs);
+      });
+
+      try {
+        const can = await Linking.canOpenURL(authUrl).catch(() => false);
+        console.log('drive: Linking.canOpenURL ->', can);
+        try { await Linking.openURL(authUrl); } catch (e) { console.warn('drive: Linking.openURL failed', e); }
       } catch (e) {
-        console.log('drive: expo-web-browser.openAuthSessionAsync failed', e);
+        console.warn('drive: error during Linking.openURL', e);
       }
 
-      // If WebBrowser didn't produce a result, fall back to opening the external browser via Linking
-      if (!result) {
-        console.log('drive: falling back to Linking.openURL (external browser)');
-
-        const waitForRedirect = (expectedPrefix, timeoutMs = 120000) => new Promise((resolve) => {
-          let resolved = false;
-          const onUrl = ({ url }) => {
-            if (!url) return;
-            if (url.startsWith(expectedPrefix) || url.includes('code=')) {
-              if (!resolved) { resolved = true; cleanup(); resolve(url); }
-            }
-          };
-          const cleanup = () => {
-            try {
-              // RN >= 0.65 returns a subscription with .remove()
-              if (sub && typeof sub.remove === 'function') sub.remove();
-              else Linking.removeEventListener && Linking.removeEventListener('url', onUrl);
-            } catch (e) { /* ignore */ }
-            clearTimeout(timer);
-          };
-          // Some RN versions use Linking.addEventListener, others return a subscription
-          let sub = null;
-          try { sub = Linking.addEventListener('url', onUrl); } catch (e) { /* ignore */ }
-          // check initial URL (in case the redirect already happened)
-          Linking.getInitialURL().then((u) => { if (u && (u.startsWith(expectedPrefix) || u.includes('code='))) { if (!resolved) { resolved = true; cleanup(); resolve(u); } } }).catch(() => {});
-          const timer = setTimeout(() => { if (!resolved) { resolved = true; cleanup(); resolve(null); } }, timeoutMs);
-        });
-
+      const redirected = await waitForRedirect(redirectUri);
+      if (!redirected) throw new Error('Auth cancelled or no redirect received');
+      result = { type: 'success', params: {} };
+      try { const u = new URL(redirected); const codeParam = u.searchParams.get('code'); if (codeParam) result.params.code = codeParam; } catch (e) { /* ignore */ }
+    } else {
+      if (typeof AuthSession.startAsync === 'function') {
+        console.log('drive: using AuthSession.startAsync');
+        result = await AuthSession.startAsync({ authUrl, returnUrl: redirectUri });
+      } else if (typeof AuthSession.openAuthSessionAsync === 'function') {
+        console.log('drive: using AuthSession.openAuthSessionAsync');
+        const r = await AuthSession.openAuthSessionAsync(authUrl, redirectUri);
+        result = { type: r && r.type ? r.type : 'cancel', params: {} };
+        if (r && r.url) {
+          try { const u = new URL(r.url); const codeParam = u.searchParams.get('code'); if (codeParam) result.params.code = codeParam; } catch (e) { /* ignore */ }
+        }
+      } else {
+        console.log('drive: falling back to manual Linking flow');
+        // Try Expo WebBrowser first (works as an in-app/custom-tab fallback)
         try {
-          const can = await Linking.canOpenURL(authUrl).catch(() => false);
-          console.log('drive: Linking.canOpenURL ->', can);
-          if (can) {
-            await Linking.openURL(authUrl);
-          } else {
-            // still attempt to open, some platforms ignore canOpenURL
-            try { await Linking.openURL(authUrl); } catch (e) { console.warn('drive: Linking.openURL failed', e); }
+          if (WebBrowser && typeof WebBrowser.openAuthSessionAsync === 'function') {
+            console.log('drive: trying expo-web-browser.openAuthSessionAsync');
+            const wb = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+            if (wb && wb.type === 'success' && wb.url) {
+              try {
+                const u = new URL(wb.url);
+                const codeParam = u.searchParams.get('code');
+                if (codeParam) {
+                  result = { type: 'success', params: { code: codeParam } };
+                }
+              } catch (e) { /* ignore parse errors */ }
+            }
           }
         } catch (e) {
-          console.warn('drive: error during Linking.openURL', e);
+          console.log('drive: expo-web-browser.openAuthSessionAsync failed', e);
         }
 
-        const redirected = await waitForRedirect(redirectUri);
-        if (!redirected) throw new Error('Auth cancelled or no redirect received');
-        result = { type: 'success', params: {} };
-        try { const u = new URL(redirected); const codeParam = u.searchParams.get('code'); if (codeParam) result.params.code = codeParam; } catch (e) { /* ignore */ }
+        if (!result) {
+          console.log('drive: falling back to Linking.openURL (external browser)');
+          const waitForRedirect = (expectedPrefix, timeoutMs = 120000) => new Promise((resolve) => {
+            let resolved = false;
+            const onUrl = ({ url }) => {
+              if (!url) return;
+              if (url.startsWith(expectedPrefix) || url.includes('code=')) {
+                if (!resolved) { resolved = true; cleanup(); resolve(url); }
+              }
+            };
+            const cleanup = () => {
+              try {
+                if (sub && typeof sub.remove === 'function') sub.remove();
+                else Linking.removeEventListener && Linking.removeEventListener('url', onUrl);
+              } catch (e) { /* ignore */ }
+              clearTimeout(timer);
+            };
+            let sub = null;
+            try { sub = Linking.addEventListener('url', onUrl); } catch (e) { /* ignore */ }
+            Linking.getInitialURL().then((u) => { if (u && (u.startsWith(expectedPrefix) || u.includes('code='))) { if (!resolved) { resolved = true; cleanup(); resolve(u); } } }).catch(() => {});
+            const timer = setTimeout(() => { if (!resolved) { resolved = true; cleanup(); resolve(null); } }, timeoutMs);
+          });
+
+          try {
+            const can = await Linking.canOpenURL(authUrl).catch(() => false);
+            console.log('drive: Linking.canOpenURL ->', can);
+            try { await Linking.openURL(authUrl); } catch (e) { console.warn('drive: Linking.openURL failed', e); }
+          } catch (e) {
+            console.warn('drive: error during Linking.openURL', e);
+          }
+
+          const redirected = await waitForRedirect(redirectUri);
+          if (!redirected) throw new Error('Auth cancelled or no redirect received');
+          result = { type: 'success', params: {} };
+          try { const u = new URL(redirected); const codeParam = u.searchParams.get('code'); if (codeParam) result.params.code = codeParam; } catch (e) { /* ignore */ }
+        }
       }
     }
 
@@ -343,6 +370,9 @@ function pickClientId({ useProxy = false } = {}) {
   // Prefer an installed/native client id if configured (this supports custom-scheme
   // redirect URIs for private/mobile apps). Otherwise fall back to the web client id
   // for PKCE/browser flows.
+  // If running through the Expo proxy (dev) prefer the web client id so redirects
+  // match the proxy redirect and avoid server-side client restrictions.
+  if (useProxy && CLIENT_ID_WEB && !CLIENT_ID_WEB.startsWith('<SET_')) return CLIENT_ID_WEB;
   if (CLIENT_ID_INSTALLED && !CLIENT_ID_INSTALLED.startsWith('<SET_')) return CLIENT_ID_INSTALLED;
   return CLIENT_ID_WEB;
 }
