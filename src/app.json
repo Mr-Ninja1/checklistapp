@@ -2,9 +2,11 @@
   "expo": {
     "name": "src",
     "slug": "src",
+    "owner": "mr-ninja1",
+    "scheme": "checklistapp",
     "version": "1.0.0",
-  "orientation": "default",
-    "icon": "./assets/icon.png",
+    "orientation": "default",
+    "icon": "./assets/logo.jpeg",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -13,7 +15,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.src"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +28,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "googleClientIdAndroid": "815051787209-q2fessai98b08g0ja49f9oiqae431c28.apps.googleusercontent.com",
+      "googleClientIdWeb": "815051787209-q9gaqqfci3ochh2j5aqocq2rqk78o1c7.apps.googleusercontent.com",
+      "googleClientIdIos": "815051787209-ng28p3dqqbke5e6qgb5opksq69il4adq.apps.googleusercontent.com",
+      "googleClientIdInstalled": "815051787209-p20gk5j52gcl7tphpjgi0vinouu8t4em.apps.googleusercontent.com"
     }
   }
 }

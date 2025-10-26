@@ -9,6 +9,7 @@ import KitchenCategory from './screens/KitchenCategory';
 import FOHCategoryScreen from './screens/FOHCategoryScreen';
 import FOHFormScreen from './screens/FOHFormScreen';
 import FormSavesScreen from './screens/FormSavesScreen';
+import GoogleDriveScreen from './screens/GoogleDriveScreen';
 import FOH_FrontOfHouseCleaningChecklist from './forms/FOH_FrontOfHouseCleaningChecklist';
 import BOH_ShelfLifeInspectionChecklist from './forms/BOH_ShelfLifeInspectionChecklist';
 import ProductsNetContentChecklist from './forms/ProductsNetContentChecklist';
@@ -85,6 +86,7 @@ export default function App() {
   <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FormSaves" component={FormSavesScreen} options={{ headerShown: false }} />
+    <Stack.Screen name="GoogleDriveTest" component={GoogleDriveScreen} options={{ headerShown: false }} />
         <Stack.Screen name="KitchenCategory" component={KitchenCategory} options={{ headerShown: false }} />
         <Stack.Screen name="FOHCategory" component={FOHCategoryScreen} options={{ headerShown: false }} />
   <Stack.Screen name="FOHFormScreen" component={FOHFormScreen} options={{ headerShown: false }} />

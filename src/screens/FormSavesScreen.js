@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, P
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import ViewDocumentModal from '../components/ViewDocumentModal';
+import DriveFloatingButton from '../components/DriveFloatingButton';
 import formStorage from '../utils/formStorage';
 import { getFormHistory, removeFormHistory } from '../utils/formHistory';
 import { normalizeSavedAtUsingFiles } from '../utils/formHistory';
@@ -277,6 +278,13 @@ export default function FormSavesScreen() {
                   `${dateFilter.from ? new Date(dateFilter.from).toLocaleDateString() : 'Any'} → ${dateFilter.to ? new Date(dateFilter.to).toLocaleDateString() : 'Any'}`
                 ) : 'Date range'}</Text>
               </TouchableOpacity>
+              {/* Drive button inline (appears after date range) */}
+              <DriveFloatingButton inline onSyncComplete={async () => {
+                try {
+                  const history = await getFormHistory();
+                  setSavedForms((history || []).slice().reverse());
+                } catch (e) { /* ignore */ }
+              }} />
             </ScrollView>
           </View>
         </View>
@@ -592,6 +600,7 @@ export default function FormSavesScreen() {
         onClose={() => setModalVisible(false)}
         onDownload={handleDownload}
       />
+      {/* Google Drive button is shown inline in the filter row now */}
     </View>
   );
 }

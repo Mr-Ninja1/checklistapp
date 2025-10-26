@@ -31,6 +31,27 @@ async function saveForm(formId, payload) {
       console.warn('formStorage: failed to schedule addFormHistory', e);
     }
 
+    // Fire-and-forget: attempt to upload this saved form to Google Drive if configured
+    (async () => {
+      try {
+        const drive = await import('./drive');
+        if (!drive || typeof drive.isConfigured !== 'function') return;
+        const configured = await drive.isConfigured().catch(() => false);
+        if (!configured) return;
+        const token = await drive.getAccessToken().catch(() => null);
+        if (!token) return; // not signed in
+
+        // Build a safe filename and include savedAt in the payload
+        const safeTitle = (payload && (payload.title || payload.formType)) ? String((payload.title || payload.formType)).replace(/[^a-z0-9-_\. ]/gi, '_') : 'form';
+        const filename = `checklistapp_${safeTitle}_${historyEntry.savedAt || Date.now()}.json`;
+        // Upload wrapped payload (including savedAt and metadata)
+        await drive.uploadJsonFile(filename, { savedAt: historyEntry.savedAt || Date.now(), payload }).catch(err => { throw err; });
+      } catch (e) {
+        // Non-fatal: log and continue
+        console.warn('formStorage: auto drive upload failed', e);
+      }
+    })();
+
     return { filePath };
   } catch (err) {
     console.error('formStorage.saveForm error', err);

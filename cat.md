@@ -1,1 +1,8 @@
-FRONT OF HOUSE CLEANING CHECKLIST- NICE AND RESPONSIVE LAYOUT
+To properly implement Google Sign-In in a React Native app for both Android and iOS, you must use both the web client ID and the native client IDs (Android and iOS). The web client ID alone will not be sufficient to correctly initiate the native authentication flow on each platform. 
+The web client ID serves a specific purpose, primarily for obtaining an ID token for server-side authentication and for supporting offlineAccess. The native client IDs are what allow the platform-specific Google Sign-In SDKs to launch the correct authentication window and complete the sign-in process natively. 
+How the client IDs communicate
+Web Client ID: This ID is used by the React Native Google Sign-In library (@react-native-google-signin/google-signin) to request tokens, which are then used to grant access to Google APIs like Google Drive.
+Native Client IDs (Android and iOS): These are passed to the underlying native SDKs. When you call GoogleSignin.signIn(), the library uses the appropriate native ID to communicate with Google's authentication services on the device.
+How they work together: The GoogleSignin.configure() method uses all three IDs. When running on Android, the library uses the Android client ID. On iOS, it uses the iOS client ID. It uses the web client ID to obtain the token necessary for API access, which is why it is often the only required parameter in the configure call, but the native setup still requires the platform-specific IDs to be present and correctly configured. 
+Step-by-step setup
+Follow these steps to correctly set up all three client IDs and configure the library for a hybrid environment.
