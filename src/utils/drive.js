@@ -164,7 +164,7 @@ export async function signInAsync(options = {}) {
     `&scope=${encodeURIComponent(SCOPES)}` +
     `&code_challenge=${encodeURIComponent(codeChallenge)}` +
     `&code_challenge_method=S256` +
-    `&access_type=offline&prompt=consent` +
+    `&access_type=offline&prompt=consent&include_granted_scopes=true` +
     (ALLOWED_DOMAIN ? `&hd=${encodeURIComponent(ALLOWED_DOMAIN)}` : '');
 
     try {
@@ -304,7 +304,18 @@ export async function signInAsync(options = {}) {
     const { access_token, expires_in, refresh_token } = tokens;
     const expiresAt = expires_in ? Date.now() + Number(expires_in) * 1000 : Date.now() + 3600 * 1000;
     await SecureStore.setItemAsync(TOKEN_KEY, access_token);
-    if (refresh_token) await SecureStore.setItemAsync('drive_refresh_token', refresh_token);
+    if (refresh_token) {
+      await SecureStore.setItemAsync('drive_refresh_token', refresh_token);
+      // eslint-disable-next-line no-console
+      console.log('drive: refresh_token received and stored');
+    } else {
+      // If Google didn't return a refresh_token it's often because the user previously
+      // granted access and the consent screen did not return a refresh token again.
+      // We keep prompt=consent + access_type=offline in the auth URL to try to force
+      // a refresh token on demand; log a helpful message for debugging.
+      // eslint-disable-next-line no-console
+      console.warn('drive: no refresh_token returned from token exchange — existing grants may suppress refresh_token. To force a refresh token, re-run sign-in with prompt=consent and ensure client is configured to allow offline access.');
+    }
     await SecureStore.setItemAsync(TOKEN_EXPIRES_KEY, String(expiresAt));
     // Fetch basic userinfo and persist it for UI
     try {
@@ -346,6 +357,25 @@ export async function getUserInfo() {
   } catch (e) {
     console.warn('drive.getUserInfo error', e);
     return null;
+  }
+}
+
+// Ensure we have a refresh token for long-lived offline access. If none is stored
+// this helper will run the sign-in flow (with prompt=consent already present) to
+// try to obtain one. Returns true if a refresh token is present after running.
+export async function ensureRefreshToken(options = {}) {
+  try {
+    const rt = await SecureStore.getItemAsync('drive_refresh_token');
+    if (rt) return true;
+    // Trigger sign-in flow which already includes prompt=consent and access_type=offline.
+    // Force external browser if running in environments that block in-app flows.
+    await signInAsync({ ...options, forceExternalOverride: options.forceExternalOverride || false });
+    const newRt = await SecureStore.getItemAsync('drive_refresh_token');
+    return Boolean(newRt);
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('drive.ensureRefreshToken failed', e);
+    return false;
   }
 }
 
