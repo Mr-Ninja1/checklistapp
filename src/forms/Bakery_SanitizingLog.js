@@ -9,7 +9,7 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import EditableFormContainer from '../components/EditableFormContainer';
 
-// TIME SLOTS (AM shift) from cat.md
+
 const TIME_SLOTS = [
   '06:00AM','07:00AM','08:00AM','09:00AM','10:00AM','11:00AM','12:00PM','13:00PM','14:00PM','15:00PM','16:00PM'
 ];
