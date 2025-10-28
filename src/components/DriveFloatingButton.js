@@ -49,8 +49,8 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
         const f = await drive.ensureFolder('checklistapp_backups').catch(() => null);
         if (f && f.id) setFolderId(f.id);
       } catch (e) { /* ignore */ }
-      setLoading(false);
-      Alert.alert('Signed in', `Google Drive is now connected${ui && ui.email ? ' (' + (ui.email || '') + ')' : ''}.`);
+  setLoading(false);
+  Alert.alert('Signed in', `Dropbox is now connected${ui && ui.email ? ' (' + (ui.email || '') + ')' : ''}.`);
       // refresh remote list when signed in
       try {
         let list = null;
@@ -80,8 +80,8 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
       await drive.signOut();
       setSignedIn(false);
       setUserInfo(null);
-      setLoading(false);
-      Alert.alert('Signed out', 'Disconnected from Google Drive.');
+  setLoading(false);
+  Alert.alert('Signed out', 'Disconnected from Dropbox.');
     } catch (e) {
       setLoading(false);
       Alert.alert('Sign out failed', String(e));
@@ -193,7 +193,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
 
   const InlineButton = (
     <TouchableOpacity style={[styles.button, inline ? styles.inlineButton : null]} onPress={() => setModalOpen(true)}>
-      <Image source={require('../assets/google.png')} style={[styles.icon, inline ? styles.inlineIcon : null]} resizeMode="contain" />
+      <Image source={require('../assets/dropbox.png')} style={[styles.icon, inline ? styles.inlineIcon : null]} resizeMode="contain" />
     </TouchableOpacity>
   );
 
@@ -205,7 +205,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
         </TouchableWithoutFeedback>
         <View style={styles.modalContainer} pointerEvents="box-none">
           <View style={styles.modalCard}>
-            <Text style={{ fontWeight: '800', fontSize: 16, marginBottom: 10 }}>Google Drive</Text>
+            <Text style={{ fontWeight: '800', fontSize: 16, marginBottom: 10 }}>Dropbox</Text>
             <ScrollView>
               <Text style={{ marginBottom: 8 }}>Connected: {signedIn ? 'Yes' : 'No'}</Text>
               {userInfo ? (
@@ -219,10 +219,10 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
               ) : null}
               {loading ? <ActivityIndicator /> : (
                 <>
-                  {!signedIn ? (
+                      {!signedIn ? (
                     <>
-                      <TouchableOpacity style={styles.actionBtn} onPress={handleSignIn}><Text style={styles.actionBtnText}>Sign in with Google</Text></TouchableOpacity>
-                      <Text style={{ marginTop: 12, color: '#444' }}>Sign in to enable Drive sync (push/pull) features.</Text>
+                      <TouchableOpacity style={styles.actionBtn} onPress={handleSignIn}><Text style={styles.actionBtnText}>Sign in with Dropbox</Text></TouchableOpacity>
+                      <Text style={{ marginTop: 12, color: '#444' }}>Sign in to enable Dropbox sync (push/pull) features.</Text>
                     </>
                   ) : (
                     <>
@@ -251,7 +251,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
                   )}
                 </>
               )}
-              <Text style={{ marginTop: 12, color: '#444' }}>Note: This feature requires configuring a Google OAuth Client ID and the expo-auth-session & secure-store packages. See project README for setup.</Text>
+              <Text style={{ marginTop: 12, color: '#444' }}>Note: This feature requires configuring a Dropbox App Key and the expo-auth-session & secure-store packages. See project README for setup.</Text>
               <TouchableOpacity style={[styles.actionBtn, { marginTop: 10 }]} onPress={handleShowRedirectUris}>
                 <Text style={styles.actionBtnText}>Show redirect URIs</Text>
               </TouchableOpacity>

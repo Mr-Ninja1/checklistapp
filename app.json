@@ -1,4 +1,10 @@
 {
+  "expo": {
+    "scheme": "checklistapp",
+    "extra": {
+      "dropboxAppKey": "fc5bqdv55hchi8e"
+    }
+  },
   "android": {
     "package": "com.mrninja1.app"
   }

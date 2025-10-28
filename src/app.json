@@ -38,7 +38,8 @@
       "googleClientIdWeb": "815051787209-q9gaqqfci3ochh2j5aqocq2rqk78o1c7.apps.googleusercontent.com",
       "googleClientIdIos": "815051787209-ng28p3dqqbke5e6qgb5opksq69il4adq.apps.googleusercontent.com",
       "googleClientIdInstalled": "815051787209-p20gk5j52gcl7tphpjgi0vinouu8t4em.apps.googleusercontent.com",
-      "forceExternalBrowser": true
+      "forceExternalBrowser": true,
+      "dropboxAppKey": "fc5bqdv55hchi8e"
     }
   }
 }

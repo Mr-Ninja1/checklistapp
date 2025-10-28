@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Button, ActivityIndicator, FlatList, StyleSheet, Alert, Switch } from 'react-native';
 import drive from '../utils/drive';
 
-export default function GoogleDriveScreen() {
+export default function DropboxScreen() {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [files, setFiles] = useState([]);
@@ -13,7 +13,7 @@ export default function GoogleDriveScreen() {
     (async () => {
       const ok = await drive.isConfigured().catch(() => false);
       if (!ok && mounted) {
-        Alert.alert('Google OAuth not configured', 'Please set client IDs in app.json (expo.extra.googleClientId*) before testing.');
+        Alert.alert('Dropbox not configured', 'Please set dropboxAppKey in app.json (expo.extra.dropboxAppKey) before testing.');
         return;
       }
       const info = await drive.getUserInfo().catch(() => null);
@@ -28,7 +28,8 @@ export default function GoogleDriveScreen() {
       const res = await drive.signInAsync({ useProxyOverride: useProxy });
       const ui = await drive.getUserInfo();
       setUser(ui || null);
-      Alert.alert('Signed in', ui && ui.email ? ui.email : 'Signed in');
+      const name = (ui && (ui.email || (ui.name && ui.name.display_name))) || 'Signed in';
+      Alert.alert('Signed in', name);
     } catch (e) {
       Alert.alert('Sign in failed', String(e.message || e));
     } finally {
@@ -57,7 +58,7 @@ export default function GoogleDriveScreen() {
       const payload = { test: true, ts: now };
       const name = `test_${now}.json`;
       const ok = await drive.uploadJsonFile(name, payload);
-      Alert.alert('Upload OK', ok && ok.id ? `file id: ${ok.id}` : 'uploaded');
+      Alert.alert('Upload OK', ok && ok.name ? `file: ${ok.name}` : 'uploaded');
     } catch (e) {
       Alert.alert('Upload failed', String(e.message || e));
     } finally {
@@ -68,8 +69,8 @@ export default function GoogleDriveScreen() {
   async function handleListFiles() {
     setLoading(true);
     try {
-      const res = await drive.listFilesAsync("name contains 'checklistapp_test' or name contains 'checklistapp_' ");
-      const arr = (res && res.files) ? res.files : [];
+      const res = await drive.listFilesAsync('');
+      const arr = (res && res.entries) ? res.entries : [];
       setFiles(arr);
       if (!arr.length) Alert.alert('No files found');
     } catch (e) {
@@ -79,13 +80,25 @@ export default function GoogleDriveScreen() {
     }
   }
 
+  async function handleShowDebugInfo() {
+    setLoading(true);
+    try {
+      const info = await drive.getDebugInfo();
+      Alert.alert('Dropbox debug', JSON.stringify(info, null, 2));
+    } catch (e) {
+      Alert.alert('Debug failed', String(e.message || e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Google Drive Test</Text>
+      <Text style={styles.title}>Dropbox Test</Text>
       {user ? (
         <View style={styles.info}>
           <Text style={styles.label}>Signed in:</Text>
-          <Text>{user.name || user.email}</Text>
+          <Text>{(user && (user.name && user.name.display_name)) || user.email || 'Unknown'}</Text>
         </View>
       ) : (
         <Text style={styles.label}>Not signed in</Text>
@@ -96,7 +109,10 @@ export default function GoogleDriveScreen() {
           <Text style={{ marginRight: 8 }}>Use Expo proxy</Text>
           <Switch value={useProxy} onValueChange={setUseProxy} />
         </View>
-        <Button title={user ? 'Refresh files' : 'Sign in with Google'} onPress={user ? handleListFiles : handleSignIn} disabled={loading} />
+        <View style={{ height: 8 }} />
+        <Button title="Show Dropbox Debug" onPress={handleShowDebugInfo} disabled={loading} />
+        <View style={{ height: 8 }} />
+        <Button title={user ? 'Refresh files' : 'Sign in with Dropbox'} onPress={user ? handleListFiles : handleSignIn} disabled={loading} />
         <View style={{ height: 8 }} />
         <Button title="Upload test file" onPress={handleUploadTest} disabled={loading || !user} />
         <View style={{ height: 8 }} />

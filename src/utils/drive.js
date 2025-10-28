@@ -1,9 +1,9 @@
-// Minimal Google Drive helper using Expo AuthSession and SecureStore.
-// NOTE: This is a lightweight scaffold. To make it work you must:
+// Minimal Dropbox helper using Expo AuthSession and SecureStore.
+// Replaces the previous Google Drive implementation. To make this work you must:
 // 1) Install dependencies: expo-auth-session and expo-secure-store
 //    expo install expo-auth-session expo-secure-store
-// 2) Add your Google OAuth client ID to app config (app.json extra.googleClientId)
-// 3) Configure allowed redirect URIs in the Google Console (for expo use the expo proxy or the redirect created by makeRedirectUri)
+// 2) Add your Dropbox App Key to app config (`app.json` -> `expo.extra.dropboxAppKey`)
+// 3) Add your app's redirect URI (if using Expo proxy, add the proxy redirect URI in the Dropbox app settings)
 
 import * as AuthSession from 'expo-auth-session';
 import * as SecureStore from 'expo-secure-store';
@@ -13,42 +13,42 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { Linking, AppState } from 'react-native';
 
-const TOKEN_KEY = 'drive_access_token';
-const TOKEN_EXPIRES_KEY = 'drive_access_token_expires_at';
-const USER_INFO_KEY = 'drive_user_info';
+const TOKEN_KEY = 'dropbox_access_token';
+const TOKEN_EXPIRES_KEY = 'dropbox_access_token_expires_at';
+const USER_INFO_KEY = 'dropbox_user_info';
 
-// Client IDs should be added to app.json under expo.extra
+// Dropbox API endpoints
+const AUTH_ENDPOINT = 'https://www.dropbox.com/oauth2/authorize';
+const TOKEN_ENDPOINT = 'https://api.dropboxapi.com/oauth2/token';
+const API_BASE = 'https://api.dropboxapi.com/2';
+const CONTENT_UPLOAD_URL = 'https://content.dropboxapi.com/2/files/upload';
+const CONTENT_DOWNLOAD_URL = 'https://content.dropboxapi.com/2/files/download';
+
+// Dropbox app key should be added to app.json under expo.extra
 const extra = (Constants.manifest && Constants.manifest.extra) || (Constants.expoConfig && Constants.expoConfig.extra) || {};
-const CLIENT_ID_ANDROID = extra.googleClientIdAndroid || '<SET_GOOGLE_CLIENT_ID_ANDROID>';
-const CLIENT_ID_WEB = extra.googleClientIdWeb || '<SET_GOOGLE_CLIENT_ID_WEB>';
-const CLIENT_ID_IOS = extra.googleClientIdIos || '<SET_GOOGLE_CLIENT_ID_IOS>';
-const CLIENT_ID_INSTALLED = extra.googleClientIdInstalled || '<SET_GOOGLE_CLIENT_ID_INSTALLED>';
-// Optional: restrict sign-in to a specific Google Workspace/domain (e.g. 'yourcompany.com')
-const ALLOWED_DOMAIN = extra.googleAllowedDomain || null;
-const SCOPES = 'openid profile email https://www.googleapis.com/auth/drive.file';
+const DROPBOX_APP_KEY = extra.dropboxAppKey || '<SET_DROPBOX_APP_KEY>';
+// Optional: custom app folder path prefix for uploaded files
+const BACKUP_PREFIX = 'checklistapp_';
+// Dropbox scopes to request. Adjust if you need different permissions.
+const SCOPES = 'files.content.write files.content.read account_info.read';
 
 function getRedirectUri({ useProxy = false } = {}) {
-  // When useProxy is true (Expo dev via AuthSession proxy) we use the proxy/web redirect.
-  // For standalone/native builds use native redirect.
   try {
     const uri = AuthSession.makeRedirectUri(useProxy ? { useProxy: true } : { native: true });
-    // Some environments may return a non-string (boolean) from makeRedirectUri;
-    // in that case fall back to a sensible native scheme based on app config.
     if (typeof uri === 'string' && uri) return uri;
   } catch (e) {
     // ignore and fallback
   }
-  // Fallback: construct a native scheme URI from app.json `scheme` or default
   const scheme = (Constants.manifest && Constants.manifest.scheme) || (Constants.expoConfig && Constants.expoConfig.scheme) || 'checklistapp';
-  // Use an explicit native redirect path so it's stable across builds.
-  // Use the single-slash form recommended for mobile custom-scheme redirects.
-  return `${scheme}:/oauth2redirect`;
+  // Prefer the double-slash form for native apps (checklistapp://oauth2redirect) which
+  // is commonly registered in OAuth provider consoles. Use single-slash only when
+  // an environment or provider specifically needs it.
+  if (useProxy) return `${scheme}:/oauth2redirect`;
+  return `${scheme}://oauth2redirect`;
 }
 
 export async function isConfigured() {
-  // configured if any client id has been set to a non-placeholder value
-  const any = [CLIENT_ID_ANDROID, CLIENT_ID_WEB, CLIENT_ID_IOS, CLIENT_ID_INSTALLED].find(id => id && !id.startsWith('<SET_'));
-  return Boolean(any);
+  return Boolean(DROPBOX_APP_KEY && !DROPBOX_APP_KEY.startsWith('<SET_'));
 }
 
 export async function getAccessToken() {
@@ -63,7 +63,7 @@ export async function getAccessToken() {
       // failed to refresh: clear stored values
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await SecureStore.deleteItemAsync(TOKEN_EXPIRES_KEY);
-      await SecureStore.deleteItemAsync('drive_refresh_token');
+      await SecureStore.deleteItemAsync('dropbox_refresh_token');
       return null;
     }
     return token;
@@ -75,16 +75,12 @@ export async function getAccessToken() {
 
 async function refreshAccessToken() {
   try {
-    const refreshToken = await SecureStore.getItemAsync('drive_refresh_token');
+    const refreshToken = await SecureStore.getItemAsync('dropbox_refresh_token');
     if (!refreshToken) return null;
-    const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
-    // pick a client id appropriate for the running environment
-    const useProxy = Constants.appOwnership === 'expo';
-    const clientId = pickClientId({ useProxy });
-    const res = await fetch(discovery.token_endpoint, {
+    const res = await fetch(TOKEN_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: encodeForm({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: clientId }),
+      body: encodeForm({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: DROPBOX_APP_KEY }),
     });
     if (!res.ok) {
       const txt = await res.text();
@@ -97,7 +93,7 @@ async function refreshAccessToken() {
     const expiresAt = expires_in ? Date.now() + Number(expires_in) * 1000 : Date.now() + 3600 * 1000;
     await SecureStore.setItemAsync(TOKEN_KEY, access_token);
     await SecureStore.setItemAsync(TOKEN_EXPIRES_KEY, String(expiresAt));
-    if (refresh_token) await SecureStore.setItemAsync('drive_refresh_token', refresh_token);
+    if (refresh_token) await SecureStore.setItemAsync('dropbox_refresh_token', refresh_token);
     return access_token;
   } catch (e) {
     console.warn('refreshAccessToken error', e);
@@ -109,11 +105,11 @@ export async function signOut() {
   try {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(TOKEN_EXPIRES_KEY);
-    await SecureStore.deleteItemAsync('drive_refresh_token');
+    await SecureStore.deleteItemAsync('dropbox_refresh_token');
     await SecureStore.deleteItemAsync(USER_INFO_KEY);
     return true;
   } catch (e) {
-    console.warn('drive.signOut failed', e);
+    console.warn('dropbox.signOut failed', e);
     return false;
   }
 }
@@ -130,25 +126,19 @@ export async function signInAsync(options = {}) {
   // options: { useProxyOverride: boolean|null, forceExternalOverride: boolean|null }
   // determine whether to use the Expo proxy/web client (dev) or native client
   const useProxy = (typeof options.useProxyOverride === 'boolean') ? options.useProxyOverride : (Constants.appOwnership === 'expo');
-  const clientId = pickClientId({ useProxy });
   // Debug: log which client ID and redirect URI will be used (helps verify production wiring)
   try {
     const redirectDebug = getRedirectUri({ useProxy });
     // eslint-disable-next-line no-console
-    console.log('drive.signInAsync -> useProxy=', useProxy, 'clientId=', clientId, 'redirectUri=', redirectDebug, 'redirectType=', typeof redirectDebug, 'platform=', Platform.OS);
+    console.log('drive.signInAsync -> useProxy=', useProxy, 'redirectUri=', redirectDebug, 'redirectType=', typeof redirectDebug, 'platform=', Platform.OS);
   } catch (e) {
     /* ignore logging errors */
   }
-  if (!clientId || clientId.startsWith('<SET_')) throw new Error('Google Client ID not configured (set app.json extra.googleClientId*)');
-  const discovery = await AuthSession.fetchDiscoveryAsync('https://accounts.google.com');
+  const appKey = DROPBOX_APP_KEY;
+  if (!appKey || appKey.startsWith('<SET_')) throw new Error('Dropbox App Key not configured (set app.json extra.dropboxAppKey)');
   const redirectUri = getRedirectUri({ useProxy });
-  // Ensure we have usable endpoints; some environments may return incomplete discovery results.
-  const authEndpoint = (discovery && discovery.authorization_endpoint) || 'https://accounts.google.com/o/oauth2/v2/auth';
-  const tokenEndpoint = (discovery && discovery.token_endpoint) || 'https://oauth2.googleapis.com/token';
-  if (!discovery || !discovery.authorization_endpoint || !discovery.token_endpoint) {
-    // Lower verbosity: log instead of warn to avoid noisy warnings in-app.
-    console.log('drive: discovery incomplete, falling back to default endpoints', { discovery });
-  }
+  const authEndpoint = 'https://www.dropbox.com/oauth2/authorize';
+  const tokenEndpoint = 'https://api.dropboxapi.com/oauth2/token';
 
   // Always use the browser PKCE flow (no native Play Services path).
 
@@ -159,13 +149,20 @@ export async function signInAsync(options = {}) {
 
   const authUrl = `${authEndpoint}` +
     `?response_type=code` +
-    `&client_id=${encodeURIComponent(clientId)}` +
+    `&client_id=${encodeURIComponent(appKey)}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent(SCOPES)}` +
     `&code_challenge=${encodeURIComponent(codeChallenge)}` +
     `&code_challenge_method=S256` +
-    `&access_type=offline&prompt=consent&include_granted_scopes=true` +
-    (ALLOWED_DOMAIN ? `&hd=${encodeURIComponent(ALLOWED_DOMAIN)}` : '');
+    `&token_access_type=offline` +
+    `&scope=${encodeURIComponent(SCOPES)}`;
+
+  // Dev: show the full auth URL so we can copy the redirect_uri param and inspect it
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    try {
+      // eslint-disable-next-line no-console
+      console.log('drive: authUrl ->', authUrl);
+    } catch (e) {}
+  }
 
     try {
     // Try available AuthSession methods in order of preference unless the app forces
@@ -284,14 +281,14 @@ export async function signInAsync(options = {}) {
     const code = result.params && result.params.code;
     if (!code) throw new Error('No code returned from auth');
 
-    // Exchange authorization code for tokens
+    // Exchange authorization code for tokens (Dropbox)
     const tokenRes = await fetch(tokenEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: encodeForm({
         grant_type: 'authorization_code',
         code,
-        client_id: clientId,
+        client_id: appKey,
         redirect_uri: redirectUri,
         code_verifier: codeVerifier,
       }),
@@ -305,46 +302,26 @@ export async function signInAsync(options = {}) {
     const expiresAt = expires_in ? Date.now() + Number(expires_in) * 1000 : Date.now() + 3600 * 1000;
     await SecureStore.setItemAsync(TOKEN_KEY, access_token);
     if (refresh_token) {
-      await SecureStore.setItemAsync('drive_refresh_token', refresh_token);
-      // eslint-disable-next-line no-console
-      console.log('drive: refresh_token received and stored');
+      await SecureStore.setItemAsync('dropbox_refresh_token', refresh_token);
+      console.log('dropbox: refresh_token received and stored');
     } else {
-      // If Google didn't return a refresh_token it's often because the user previously
-      // granted access and the consent screen did not return a refresh token again.
-      // We keep prompt=consent + access_type=offline in the auth URL to try to force
-      // a refresh token on demand; log a helpful message for debugging.
-      // eslint-disable-next-line no-console
-      console.warn('drive: no refresh_token returned from token exchange — existing grants may suppress refresh_token. To force a refresh token, re-run sign-in with prompt=consent and ensure client is configured to allow offline access.');
+      console.warn('dropbox: no refresh_token returned from token exchange — reauthenticate to obtain one');
     }
     await SecureStore.setItemAsync(TOKEN_EXPIRES_KEY, String(expiresAt));
     // Fetch basic userinfo and persist it for UI
     try {
-      const uiRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${access_token}` } });
-      if (uiRes.ok) {
-        const ui = await uiRes.json();
-        // If ALLOWED_DOMAIN is set, enforce membership
-        if (ALLOWED_DOMAIN) {
-          const email = ui.email || '';
-          const hd = ui.hd || (email.split('@')[1] || '');
-          if (!hd || String(hd).toLowerCase() !== String(ALLOWED_DOMAIN).toLowerCase()) {
-            // clear any tokens we stored
-            await SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
-            await SecureStore.deleteItemAsync(TOKEN_EXPIRES_KEY).catch(() => {});
-            await SecureStore.deleteItemAsync('drive_refresh_token').catch(() => {});
-            // Do not persist user info; reject sign-in
-            throw new Error('auth_not_allowed: account not in allowed domain');
-          }
-        }
+      // Fetch Dropbox account info
+      const userRes = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' } });
+      if (userRes.ok) {
+        const ui = await userRes.json();
         await SecureStore.setItemAsync(USER_INFO_KEY, JSON.stringify(ui));
       }
     } catch (e) {
-      console.warn('drive: failed to fetch userinfo', e);
-      // If enforcement failed we want to forward the error to callers
-      if (e && String(e).startsWith('Error: auth_not_allowed')) throw e;
+      console.warn('dropbox: failed to fetch userinfo', e);
     }
     return { access_token, expiresAt, refresh_token };
   } catch (e) {
-    console.warn('drive.signInAsync failed', e);
+    console.warn('dropbox.signInAsync failed', e);
     throw e;
   }
 }
@@ -355,9 +332,78 @@ export async function getUserInfo() {
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (e) {
-    console.warn('drive.getUserInfo error', e);
+    console.warn('dropbox.getUserInfo error', e);
     return null;
   }
+}
+
+// Dev helper: return which clientId and redirectUri will be used and whether
+// a refresh token is currently stored. Useful for debugging auth config on
+// device/emulator without adding UI.
+export async function getDebugInfo() {
+  try {
+    const useProxy = Constants.appOwnership === 'expo';
+    const redirectUri = getRedirectUri({ useProxy });
+    const rt = await SecureStore.getItemAsync('dropbox_refresh_token');
+    return { clientId: DROPBOX_APP_KEY, redirectUri, hasRefreshToken: Boolean(rt) };
+  } catch (e) {
+    console.warn('dropbox.getDebugInfo error', e);
+    return null;
+  }
+}
+
+// Dev helper: import an access token into SecureStore for local testing (dev only).
+export async function importAccessToken(token, refreshToken = null, expiresInSeconds = 3600) {
+  try {
+    if (!token) throw new Error('Missing token');
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    const expiresAt = Date.now() + Number(expiresInSeconds) * 1000;
+    await SecureStore.setItemAsync(TOKEN_EXPIRES_KEY, String(expiresAt));
+    if (refreshToken) await SecureStore.setItemAsync('dropbox_refresh_token', refreshToken);
+    console.log('dropbox: importAccessToken stored token (dev only)');
+    return true;
+  } catch (e) {
+    console.warn('dropbox.importAccessToken failed', e);
+    throw e;
+  }
+}
+
+// Dev helper: revoke and clear any stored token. Calls Dropbox token revoke endpoint if a token exists.
+export async function revokeAccessToken() {
+  try {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (token) {
+      try {
+        // Dropbox token revoke endpoint expects an Authorization: Bearer <token> header
+        const res = await fetch('https://api.dropboxapi.com/2/auth/token/revoke', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: ''
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          console.warn('dropbox.revokeAccessToken: revoke endpoint returned', res.status, txt);
+        } else {
+          console.log('dropbox: token revoked via API');
+        }
+      } catch (e) {
+        console.warn('dropbox.revokeAccessToken: API call failed', e);
+      }
+    }
+    // Clear local storage regardless
+    await signOut();
+    return true;
+  } catch (e) {
+    console.warn('dropbox.revokeAccessToken failed', e);
+    throw e;
+  }
+}
+
+// Dev helper: trigger a forced reauthentication (uses external browser and
+// prompt=consent to try to obtain a refresh token). Returns the same result
+// shape as `signInAsync` or will throw on error.
+export async function forceReauthenticate() {
+  return signInAsync({ forceExternalOverride: true, useProxyOverride: false });
 }
 
 // Ensure we have a refresh token for long-lived offline access. If none is stored
@@ -365,16 +411,16 @@ export async function getUserInfo() {
 // try to obtain one. Returns true if a refresh token is present after running.
 export async function ensureRefreshToken(options = {}) {
   try {
-    const rt = await SecureStore.getItemAsync('drive_refresh_token');
+    const rt = await SecureStore.getItemAsync('dropbox_refresh_token');
     if (rt) return true;
     // Trigger sign-in flow which already includes prompt=consent and access_type=offline.
     // Force external browser if running in environments that block in-app flows.
     await signInAsync({ ...options, forceExternalOverride: options.forceExternalOverride || false });
-    const newRt = await SecureStore.getItemAsync('drive_refresh_token');
+    const newRt = await SecureStore.getItemAsync('dropbox_refresh_token');
     return Boolean(newRt);
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.warn('drive.ensureRefreshToken failed', e);
+    console.warn('dropbox.ensureRefreshToken failed', e);
     return false;
   }
 }
@@ -396,42 +442,28 @@ function encodeForm(obj) {
   return Object.keys(obj).map(k => encodeURIComponent(k) + '=' + encodeURIComponent(obj[k])).join('&');
 }
 
-function pickClientId({ useProxy = false } = {}) {
-  // Prefer an installed/native client id if configured (this supports custom-scheme
-  // redirect URIs for private/mobile apps). Otherwise fall back to the web client id
-  // for PKCE/browser flows.
-  // If running through the Expo proxy (dev) prefer the web client id so redirects
-  // match the proxy redirect and avoid server-side client restrictions.
-  if (useProxy && CLIENT_ID_WEB && !CLIENT_ID_WEB.startsWith('<SET_')) return CLIENT_ID_WEB;
-  if (CLIENT_ID_INSTALLED && !CLIENT_ID_INSTALLED.startsWith('<SET_')) return CLIENT_ID_INSTALLED;
-  return CLIENT_ID_WEB;
-}
+
 
 // Upload a JSON payload as a file to the user's Drive using multipart upload.
 export async function uploadJsonFile(filename, jsonObj) {
   const token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
   // Prefix files so the app can query its own backups easily across devices
-  const safeName = `checklistapp_${filename}`;
-  const metadata = { name: safeName, mimeType: 'application/json' };
-  const boundary = '-------driveupload' + Date.now();
-  const bodyParts = [];
-  bodyParts.push(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`);
-  bodyParts.push(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(jsonObj)}\r\n`);
-  bodyParts.push(`--${boundary}--`);
-  const body = bodyParts.join('');
-  const url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-  const res = await fetch(url, {
+  const safeName = `${BACKUP_PREFIX}${filename}`;
+  const dropboxPath = `/${safeName}`;
+  const body = typeof jsonObj === 'string' ? jsonObj : JSON.stringify(jsonObj);
+  const res = await fetch(CONTENT_UPLOAD_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': `multipart/related; boundary=${boundary}`,
+      'Content-Type': 'application/octet-stream',
+      'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath, mode: 'add', autorename: true, mute: false }),
     },
     body,
   });
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Drive upload failed: ${res.status} ${txt}`);
+    throw new Error(`Dropbox upload failed: ${res.status} ${txt}`);
   }
   return res.json();
 }
@@ -440,27 +472,29 @@ export async function uploadJsonFile(filename, jsonObj) {
 export async function uploadJsonFileToFolder(filename, jsonObj, parentFolderId) {
   const token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
-  const safeName = `checklistapp_${filename}`;
-  const metadata = { name: safeName, mimeType: 'application/json' };
-  if (parentFolderId) metadata.parents = [parentFolderId];
-  const boundary = '-------driveupload' + Date.now();
-  const bodyParts = [];
-  bodyParts.push(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n`);
-  bodyParts.push(`--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(jsonObj)}\r\n`);
-  bodyParts.push(`--${boundary}--`);
-  const body = bodyParts.join('');
-  const url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-  const res = await fetch(url, {
+  const safeName = `${BACKUP_PREFIX}${filename}`;
+  let folderPath = '';
+  if (parentFolderId) {
+    // parentFolderId can be a path string or an object with path_lower
+    if (typeof parentFolderId === 'string') folderPath = parentFolderId;
+    else if (parentFolderId.path_lower) folderPath = parentFolderId.path_lower;
+    // normalize
+    if (folderPath && !folderPath.startsWith('/')) folderPath = `/${folderPath}`;
+  }
+  const dropboxPath = `${folderPath}/${safeName}`.replace(/\/+/g, '/').replace(/\\/g, '/');
+  const body = typeof jsonObj === 'string' ? jsonObj : JSON.stringify(jsonObj);
+  const res = await fetch(CONTENT_UPLOAD_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': `multipart/related; boundary=${boundary}`,
+      'Content-Type': 'application/octet-stream',
+      'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath, mode: 'add', autorename: true, mute: false }),
     },
     body,
   });
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Drive upload failed: ${res.status} ${txt}`);
+    throw new Error(`Dropbox upload failed: ${res.status} ${txt}`);
   }
   return res.json();
 }
@@ -469,12 +503,20 @@ export async function uploadJsonFileToFolder(filename, jsonObj, parentFolderId) 
 export async function findFolderByName(folderName) {
   const token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
-  const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName.replace(/'/g, "\\'")}' and trashed=false`;
-  const url = `https://www.googleapis.com/drive/v3/files?pageSize=10&fields=files(id,name,modifiedTime)&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error('Drive folder list failed');
+  const res = await fetch(`${API_BASE}/files/list_folder`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: '', recursive: true, limit: 2000 }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Dropbox list_folder failed: ${res.status} ${txt}`);
+  }
   const data = await res.json();
-  if (data.files && data.files.length) return data.files[0];
+  if (data.entries && data.entries.length) {
+    const found = data.entries.find(e => e['.tag'] === 'folder' && e.name === folderName);
+    return found || null;
+  }
   return null;
 }
 
@@ -482,17 +524,17 @@ export async function findFolderByName(folderName) {
 export async function createFolder(folderName) {
   const token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
-  const metadata = { name: folderName, mimeType: 'application/vnd.google-apps.folder' };
-  const res = await fetch('https://www.googleapis.com/drive/v3/files', {
+  const res = await fetch(`${API_BASE}/files/create_folder_v2`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(metadata),
+    body: JSON.stringify({ path: `/${folderName}`, autorename: false }),
   });
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`Create folder failed: ${res.status} ${txt}`);
   }
-  return res.json();
+  const data = await res.json();
+  return data.metadata || data;
 }
 
 // Ensure a named folder exists (returns folder object)
@@ -502,44 +544,67 @@ export async function ensureFolder(folderName) {
   return createFolder(folderName);
 }
 
-// List files inside a folder (optionally restrict by additional query fragment)
+// List files inside a folder (folderId may be a path or metadata object)
 export async function listFilesInFolder(folderId, extraQuery = "") {
   const token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
-  let q = `'${folderId}' in parents and trashed=false`;
-  if (extraQuery && extraQuery.trim()) q += ` and (${extraQuery})`;
-  const url = `https://www.googleapis.com/drive/v3/files?pageSize=100&fields=files(id,name,modifiedTime,owners)&q=${encodeURIComponent(q)}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error('Drive list in folder failed');
-  return res.json();
-}
-
-export async function downloadFile(fileId) {
-  const token = await getAccessToken();
-  if (!token) throw new Error('Not signed in');
-  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  let path = '';
+  if (folderId) {
+    if (typeof folderId === 'string') path = folderId;
+    else if (folderId.path_lower) path = folderId.path_lower;
+    if (path && !path.startsWith('/')) path = `/${path}`;
+  }
+  const res = await fetch(`${API_BASE}/files/list_folder`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: path || '', recursive: false, limit: 200 }),
+  });
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Drive download failed: ${res.status} ${txt}`);
+    throw new Error(`Dropbox list_folder failed: ${res.status} ${txt}`);
+  }
+  const data = await res.json();
+  let entries = data.entries || [];
+  if (extraQuery && extraQuery.trim()) {
+    const q = extraQuery.toLowerCase();
+    entries = entries.filter(e => e.name && e.name.toLowerCase().includes(q));
+  }
+  return { entries };
+}
+
+export async function downloadFile(filePathOrMeta) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Not signed in');
+  let path = '';
+  if (!filePathOrMeta) throw new Error('Missing path');
+  if (typeof filePathOrMeta === 'string') path = filePathOrMeta;
+  else if (filePathOrMeta.path_lower) path = filePathOrMeta.path_lower;
+  if (!path.startsWith('/')) path = `/${path}`;
+  const res = await fetch(CONTENT_DOWNLOAD_URL, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Dropbox-API-Arg': JSON.stringify({ path }) },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Dropbox download failed: ${res.status} ${txt}`);
   }
   const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch (e) {
-    // return raw text if not JSON
-    return text;
-  }
+  try { return JSON.parse(text); } catch (e) { return text; }
 }
 
 export async function listFilesAsync(query = '') {
   const token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
-  const q = encodeURIComponent(query);
-  const url = `https://www.googleapis.com/drive/v3/files?pageSize=50&fields=files(id,name,modifiedTime,owners)&q=${q}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error('Drive list failed');
-  return res.json();
+  const res = await fetch(`${API_BASE}/files/list_folder`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: '', recursive: false, limit: 200 }),
+  });
+  if (!res.ok) throw new Error('Dropbox list failed');
+  const data = await res.json();
+  if (!query) return data;
+  const q = query.toLowerCase();
+  return { entries: (data.entries || []).filter(e => e.name && e.name.toLowerCase().includes(q)) };
 }
 
 export default {
@@ -556,4 +621,21 @@ export default {
   listFilesInFolder,
   getUserInfo,
   isConfigured,
+  // dev helpers
+  importAccessToken,
+  revokeAccessToken,
 };
+
+// Dev-only: print resolved app key and redirectUri on module load to aid debugging on device/emulator
+if (typeof __DEV__ !== 'undefined' && __DEV__) {
+  (async () => {
+    try {
+      const info = await getDebugInfo();
+      // eslint-disable-next-line no-console
+      console.log('DROPBOX DEBUG INFO (dev):', info);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('DROPBOX DEBUG INFO error', e);
+    }
+  })();
+}
