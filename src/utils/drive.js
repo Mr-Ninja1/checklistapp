@@ -31,6 +31,9 @@ const DROPBOX_APP_KEY = extra.dropboxAppKey || '<SET_DROPBOX_APP_KEY>';
 const BACKUP_PREFIX = 'checklistapp_';
 // Dropbox scopes to request. Adjust if you need different permissions.
 const SCOPES = 'files.content.write files.content.read account_info.read';
+// Prefer the Dropbox App Folder named Bravoapp (the app container) as the base
+// location for backups. If it exists we'll use its path (e.g. '/Apps/Bravoapp').
+const APP_CONTAINER_NAME = 'Bravoapp';
 
 function getRedirectUri({ useProxy = false } = {}) {
   try {
@@ -144,6 +147,15 @@ export async function signInAsync(options = {}) {
 
   // generate PKCE verifier & challenge
   const codeVerifier = generateCodeVerifier(128);
+  // Persist the code verifier briefly so flows that open an external browser
+  // and then resume the app (which may reload JS) can still access the
+  // verifier during the token exchange. This avoids "invalid code verifier"
+  // errors when the in-memory variable is lost across the auth redirect.
+  try {
+    await SecureStore.setItemAsync('dropbox_code_verifier', codeVerifier);
+  } catch (e) {
+    /* ignore persistence errors */
+  }
   const hashed = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, codeVerifier, { encoding: Crypto.CryptoEncoding.BASE64 });
   const codeChallenge = base64UrlEncode(hashed);
 
@@ -282,6 +294,13 @@ export async function signInAsync(options = {}) {
     if (!code) throw new Error('No code returned from auth');
 
     // Exchange authorization code for tokens (Dropbox)
+    // ensure we have the codeVerifier (try SecureStore fallback if lost in-memory)
+    let verifierToUse = codeVerifier;
+    if (!verifierToUse) {
+      try {
+        verifierToUse = await SecureStore.getItemAsync('dropbox_code_verifier');
+      } catch (e) { verifierToUse = null; }
+    }
     const tokenRes = await fetch(tokenEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -290,7 +309,7 @@ export async function signInAsync(options = {}) {
         code,
         client_id: appKey,
         redirect_uri: redirectUri,
-        code_verifier: codeVerifier,
+        code_verifier: verifierToUse,
       }),
     });
     if (!tokenRes.ok) {
@@ -308,6 +327,8 @@ export async function signInAsync(options = {}) {
       console.warn('dropbox: no refresh_token returned from token exchange — reauthenticate to obtain one');
     }
     await SecureStore.setItemAsync(TOKEN_EXPIRES_KEY, String(expiresAt));
+  // remove persisted code verifier now that token exchange succeeded
+  try { await SecureStore.deleteItemAsync('dropbox_code_verifier'); } catch (e) { /* ignore */ }
     // Fetch basic userinfo and persist it for UI
     try {
       // Fetch Dropbox account info
@@ -446,31 +467,80 @@ function encodeForm(obj) {
 
 // Upload a JSON payload as a file to the user's Drive using multipart upload.
 export async function uploadJsonFile(filename, jsonObj) {
-  const token = await getAccessToken();
+  // Ensure we have a valid token (getAccessToken will attempt refresh if expired)
+  let token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
+
   // Prefix files so the app can query its own backups easily across devices
   const safeName = `${BACKUP_PREFIX}${filename}`;
-  const dropboxPath = `/${safeName}`;
+
+  // Prefer uploading under the resolved master app folder (App Container such
+  // as /Apps/Bravoapp) or a legacy backup folder if present. getMasterFolderPath()
+  // returns an absolute path (e.g. '/apps/bravoapp') or '' to indicate the app
+  // container root should be used.
+  let targetPath = `/${safeName}`;
+  try {
+    const masterPath = await getMasterFolderPath().catch(() => '');
+    const base = masterPath || '';
+    targetPath = `${base ? base : ''}/${safeName}`.replace(/\\/g, '/');
+    if (!targetPath.startsWith('/')) targetPath = `/${targetPath.replace(/^\/+/, '')}`;
+  } catch (e) {
+    // ignore and fall back to root
+  }
+
   const body = typeof jsonObj === 'string' ? jsonObj : JSON.stringify(jsonObj);
-  const res = await fetch(CONTENT_UPLOAD_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/octet-stream',
-      'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath, mode: 'add', autorename: true, mute: false }),
-    },
-    body,
-  });
+
+  // helper to perform the POST (so we can retry after refresh)
+  const doUpload = async (bearer) => {
+    const res = await fetch(CONTENT_UPLOAD_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+        'Content-Type': 'application/octet-stream',
+        // Disable autorename to avoid Dropbox creating duplicate "(1)" files on race conditions.
+        // We'll handle conflict responses explicitly and treat them as skipped uploads.
+        'Dropbox-API-Arg': JSON.stringify({ path: targetPath, mode: 'add', autorename: false, mute: false }),
+      },
+      body,
+    });
+    return res;
+  };
+
+  let res = await doUpload(token).catch(err => { throw err; });
   if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Dropbox upload failed: ${res.status} ${txt}`);
+    const txt = await res.text().catch(() => '');
+    // If token invalid, try to refresh once
+    if (res.status === 401 || (txt && txt.includes('invalid_access_token'))) {
+      // attempt refresh
+      const refreshed = await refreshAccessToken().catch(() => null);
+      if (refreshed) {
+        token = refreshed;
+        res = await doUpload(token).catch(err => { throw err; });
+      } else {
+        // clear stored credentials to force user to reauthenticate
+        await signOut().catch(() => {});
+        throw new Error(`Dropbox upload failed: invalid or expired access token. Please sign in again.`);
+      }
+    }
+    if (!res.ok) {
+      const txt2 = txt || (await res.text().catch(() => ''));
+      // If Dropbox reports a path conflict (file already exists) treat this as a skipped upload.
+      if (txt2 && (txt2.includes('path/conflict') || txt2.includes('conflict') || txt2.includes('file already exists'))) {
+        return { skipped: true };
+      }
+      if (txt2 && (txt2.includes('required scope') || txt2.includes('not permitted') || txt2.includes('files.content.write'))) {
+        throw new Error(`Dropbox upload failed: missing Dropbox app permission. The Dropbox App Console must enable 'files.content.write' (and related file scopes) for your App. Response: ${res.status} ${txt2}`);
+      }
+      throw new Error(`Dropbox upload failed: ${res.status} ${txt2}`);
+    }
   }
   return res.json();
 }
 
 // Upload JSON into a specific folder (parents array). If parents is provided, include it in metadata.
 export async function uploadJsonFileToFolder(filename, jsonObj, parentFolderId) {
-  const token = await getAccessToken();
+  // Resolve token and ensure parent folder exists when possible
+  let token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
   const safeName = `${BACKUP_PREFIX}${filename}`;
   let folderPath = '';
@@ -481,20 +551,58 @@ export async function uploadJsonFileToFolder(filename, jsonObj, parentFolderId) 
     // normalize
     if (folderPath && !folderPath.startsWith('/')) folderPath = `/${folderPath}`;
   }
-  const dropboxPath = `${folderPath}/${safeName}`.replace(/\/+/g, '/').replace(/\\/g, '/');
+
+  // If no explicit folder path provided, prefer the master app folder
+  if (!folderPath) {
+    try {
+      const masterPath = await getMasterFolderPath().catch(() => '');
+      if (masterPath) folderPath = masterPath;
+      else folderPath = '';
+    } catch (e) {
+      // ignore and fallback to root
+    }
+  }
+
+  const dropboxPath = `${folderPath || ''}/${safeName}`.replace(/\\/g, '/').replace(/\\/g, '/');
   const body = typeof jsonObj === 'string' ? jsonObj : JSON.stringify(jsonObj);
-  const res = await fetch(CONTENT_UPLOAD_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/octet-stream',
-      'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath, mode: 'add', autorename: true, mute: false }),
-    },
-    body,
-  });
+
+  const doUpload = async (bearer) => {
+    const res = await fetch(CONTENT_UPLOAD_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+        'Content-Type': 'application/octet-stream',
+        // Disable autorename to avoid Dropbox creating duplicate "(1)" files on race conditions.
+        'Dropbox-API-Arg': JSON.stringify({ path: dropboxPath, mode: 'add', autorename: false, mute: false }),
+      },
+      body,
+    });
+    return res;
+  };
+
+  let res = await doUpload(token).catch(err => { throw err; });
   if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Dropbox upload failed: ${res.status} ${txt}`);
+    const txt = await res.text().catch(() => '');
+    if (res.status === 401 || (txt && txt.includes('invalid_access_token'))) {
+      const refreshed = await refreshAccessToken().catch(() => null);
+      if (refreshed) {
+        token = refreshed;
+        res = await doUpload(token).catch(err => { throw err; });
+      } else {
+        await signOut().catch(() => {});
+        throw new Error(`Dropbox upload failed: invalid or expired access token. Please sign in again.`);
+      }
+    }
+    if (!res.ok) {
+      const txt2 = txt || (await res.text().catch(() => ''));
+      if (txt2 && (txt2.includes('path/conflict') || txt2.includes('conflict') || txt2.includes('file already exists'))) {
+        return { skipped: true };
+      }
+      if (txt2 && (txt2.includes('required scope') || txt2.includes('not permitted') || txt2.includes('files.content.write'))) {
+        throw new Error(`Dropbox upload failed: missing Dropbox app permission. The Dropbox App Console must enable 'files.content.write' (and related file scopes) for your App. Response: ${res.status} ${txt2}`);
+      }
+      throw new Error(`Dropbox upload failed: ${res.status} ${txt2}`);
+    }
   }
   return res.json();
 }
@@ -572,6 +680,122 @@ export async function listFilesInFolder(folderId, extraQuery = "") {
   return { entries };
 }
 
+// List files under a path recursively. Returns { entries } similar to listFilesInFolder
+export async function listFilesRecursive(folderPath = '') {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Not signed in');
+  let path = folderPath || '';
+  if (path && !path.startsWith('/')) path = `/${path}`;
+  const res = await fetch(`${API_BASE}/files/list_folder`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: path || '', recursive: true, limit: 2000 }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Dropbox list_folder recursive failed: ${res.status} ${txt}`);
+  }
+  const data = await res.json();
+  return { entries: data.entries || [] };
+}
+
+// Ensure a nested folder path exists (e.g. /checklistapp_backups/2025-10-28)
+export async function ensureFolderPath(path) {
+  if (!path) return null;
+  let normalized = path;
+  // normalize to no leading slash for easier prefix checks
+  if (normalized.startsWith('/')) normalized = normalized.substring(1);
+  // Try to create the full path in one call; if it exists, we'll catch the error and return metadata by listing
+  try {
+    // If the requested path is under the app master folder (checklistapp_backups)
+    // prefer to resolve that master folder's actual path in Dropbox (it may live
+    // under /Apps/<app-name>/ or at root) and create the nested path relative to it.
+    const PREFIX = 'checklistapp_backups';
+    let fullPath = null;
+    if (normalized === PREFIX || normalized.startsWith(`${PREFIX}/`)) {
+      // locate existing master folder anywhere in the user's Dropbox
+      try {
+        const master = await findFolderByName(PREFIX).catch(() => null);
+        if (master && (master.path_lower || master.path_display)) {
+          const base = master.path_lower || master.path_display || `/${PREFIX}`;
+          if (normalized === PREFIX) {
+            fullPath = base;
+          } else {
+            const rest = normalized.substring(PREFIX.length + 1);
+            fullPath = `${base}/${rest}`.replace(/\\/g, '/').replace(/\\/g, '/');
+          }
+        } else {
+          // master not found — prefer to create under the app container (Bravoapp)
+          // when available; otherwise fall back to root.
+          try {
+            const appBase = await getMasterFolderPath().catch(() => '');
+            if (appBase) fullPath = `${appBase}/${normalized}`.replace(/\\/g, '/');
+            else fullPath = `/${normalized}`;
+          } catch (e) {
+            fullPath = `/${normalized}`;
+          }
+        }
+      } catch (e) {
+        fullPath = `/${normalized}`;
+      }
+    } else {
+      // If the requested path is not under the legacy PREFIX, prefer to create
+      // the nested folder under the resolved app container (e.g. /Apps/Bravoapp)
+      // when available. getMasterFolderPath() will return the best base path or
+      // '' if not found.
+      try {
+        const master = await getMasterFolderPath().catch(() => '');
+        if (master) fullPath = `${master}/${normalized}`.replace(/\\/g, '/');
+        else fullPath = `/${normalized}`;
+      } catch (e) {
+        fullPath = `/${normalized}`;
+      }
+    }
+
+    const token = await getAccessToken();
+    if (!token) throw new Error('Not signed in');
+    const res = await fetch(`${API_BASE}/files/create_folder_v2`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: fullPath, autorename: false }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.metadata || data;
+    }
+    // If folder exists, list_folder will return an error; fall through to fetch metadata
+  } catch (e) {
+    // ignore and try to locate the folder
+  }
+  // Try to locate by listing parent
+  try {
+    // When locating by listing, assume the parent is the master folder if the
+    // requested path begins with checklistapp_backups. Otherwise use the
+    // computed parent path.
+    const parent = `/${normalized}`.substring(0, `/${normalized}`.lastIndexOf('/')) || '/';
+    const name = `/${normalized}`.substring(`/${normalized}`.lastIndexOf('/') + 1);
+    const listed = await listFilesInFolder(parent === '/' ? '' : parent).catch(() => ({ entries: [] }));
+    const found = (listed.entries || []).find(e => e['.tag'] === 'folder' && (e.name === name || e.name === name.replace(/^\//, '')));
+    if (found) return found;
+  } catch (e) {
+    // ignore
+  }
+  // As last resort, attempt to create again (may throw)
+  try {
+    const token2 = await getAccessToken();
+    if (!token2) throw new Error('Not signed in');
+    const res2 = await fetch(`${API_BASE}/files/create_folder_v2`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token2}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: normalized, autorename: false }),
+    });
+    if (res2.ok) return (await res2.json()).metadata;
+  } catch (e) {
+    // give up
+  }
+  return null;
+}
+
 export async function downloadFile(filePathOrMeta) {
   const token = await getAccessToken();
   if (!token) throw new Error('Not signed in');
@@ -607,7 +831,7 @@ export async function listFilesAsync(query = '') {
   return { entries: (data.entries || []).filter(e => e.name && e.name.toLowerCase().includes(q)) };
 }
 
-export default {
+const defaultExport = {
   signInAsync,
   signOut,
   getAccessToken,
@@ -619,12 +843,372 @@ export default {
   createFolder,
   ensureFolder,
   listFilesInFolder,
+  listFilesRecursive,
   getUserInfo,
   isConfigured,
+  // pagination & restore helpers
+  listFilesInFolderPaginated,
+  listFilesByDateRange,
+  restoreFilesBatch,
+  getMasterFolderPath,
+  // hashing helpers
+  computeJsonHash,
+  computeRemoteFileHash,
+  folderHasFileWithHash,
   // dev helpers
   importAccessToken,
   revokeAccessToken,
 };
+
+export default defaultExport;
+
+// --- Pagination and restore helpers -------------------------------------------------
+// List files in a folder with pagination support. Returns { entries, cursor, has_more }
+export async function listFilesInFolderPaginated(folderPath = '', limit = 200, cursor = null, recursive = false) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Not signed in');
+
+  if (cursor) {
+    const res = await fetch(`${API_BASE}/files/list_folder/continue`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cursor }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(`Dropbox list_folder/continue failed: ${res.status} ${txt}`);
+    }
+    const data = await res.json();
+    return { entries: data.entries || [], cursor: data.cursor, has_more: !!data.has_more };
+  }
+
+  let path = '';
+  if (folderPath) {
+    // Resolve master folder path if listing by logical name 'checklistapp_backups'
+    if (folderPath === 'checklistapp_backups' || folderPath.startsWith('checklistapp_backups/')) {
+      try {
+        const master = await findFolderByName('checklistapp_backups').catch(() => null);
+        if (master && (master.path_lower || master.path_display)) {
+          const base = master.path_lower || master.path_display || '/checklistapp_backups';
+          if (folderPath === 'checklistapp_backups') path = base;
+          else {
+            const rest = folderPath.substring('checklistapp_backups'.length + 1);
+            path = `${base}/${rest}`;
+          }
+        } else {
+          if (!folderPath.startsWith('/')) path = `/${folderPath}`;
+          else path = folderPath;
+        }
+      } catch (e) {
+        if (!folderPath.startsWith('/')) path = `/${folderPath}`;
+        else path = folderPath;
+      }
+    } else {
+      if (!folderPath.startsWith('/')) path = `/${folderPath}`;
+      else path = folderPath;
+    }
+  }
+  const res = await fetch(`${API_BASE}/files/list_folder`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: path || '', recursive: !!recursive, limit }),
+  });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(`Dropbox list_folder failed: ${res.status} ${txt}`);
+  }
+  const data = await res.json();
+  return { entries: data.entries || [], cursor: data.cursor, has_more: !!data.has_more };
+}
+
+// Return the resolved master folder path (if present). If the app is using an App Folder
+// (e.g. /Apps/Bravoapp) this will return the path inside that app container. If not found,
+// returns '/checklistapp_backups' which will be created under the app root when used.
+export async function getMasterFolderPath() {
+  try {
+    // Prefer the explicit app container name (Bravoapp). This resolves the
+    // path for apps that are installed in an App Folder (e.g. /Apps/Bravoapp).
+    try {
+      const appContainer = await findFolderByName(APP_CONTAINER_NAME).catch(() => null);
+      if (appContainer && (appContainer.path_lower || appContainer.path_display)) return appContainer.path_lower || appContainer.path_display;
+    } catch (e) {
+      // ignore and continue to legacy lookup
+    }
+    // Fallback: look for legacy `checklistapp_backups` folder anywhere in the account
+    const master = await findFolderByName('checklistapp_backups').catch(() => null);
+    if (master && (master.path_lower || master.path_display)) return master.path_lower || master.path_display;
+    // If neither found, return empty string to indicate the app container root should be used
+    return '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// List files by date range or year under a backup master folder (e.g. checklistapp_backups).
+// This function pages through remote listing but stops when 'limit' matching entries are found.
+// Options: { folderPath, fromDate, toDate, year, limit, cursor }
+export async function listFilesByDateRange(options = {}) {
+  // Default to the app container root (empty path) so we search under /Apps/Bravoapp
+  // or the user's app folder rather than creating/expecting a top-level checklistapp_backups.
+  const { folderPath = '', fromDate = null, toDate = null, year = null, limit = 100, cursor = null } = options || {};
+  const collected = [];
+  let nextCursor = cursor;
+  let hasMore = false;
+
+  // Resolve listing base: if user asked for 'checklistapp_backups', try to resolve its actual path inside the app
+  let listingBase = folderPath;
+  // If callers explicitly requested the legacy 'checklistapp_backups' name, try
+  // to resolve it; otherwise default to listing the app container root so we pick
+  // up backups placed directly under /Apps/Bravoapp or similar.
+  if (folderPath === 'checklistapp_backups' || folderPath.startsWith('checklistapp_backups/')) {
+    try {
+      const master = await findFolderByName('checklistapp_backups').catch(() => null);
+      if (master && (master.path_lower || master.path_display)) {
+        const base = master.path_lower || master.path_display || '/checklistapp_backups';
+        if (folderPath === 'checklistapp_backups') listingBase = base;
+        else {
+          const rest = folderPath.substring('checklistapp_backups'.length + 1);
+          listingBase = `${base}/${rest}`;
+        }
+      } else {
+        listingBase = '';
+      }
+    } catch (e) {
+      listingBase = '';
+    }
+  
+  }
+
+  // helper to parse date folder from path_lower: '/checklistapp_backups/2025-10-28/filename.json'
+  const parseDateFromPath = (p, name) => {
+    if (!p && !name) return null;
+    // If a path is provided, search ALL segments for a YYYY-MM-DD folder name
+    if (p) {
+      const parts = p.split('/').filter(Boolean);
+      for (const seg of parts) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(seg)) return seg;
+      }
+    }
+    // Fallback: attempt to parse savedAt timestamp from filename pattern
+    if (name) {
+      // match trailing _<timestamp>.json or -<timestamp>.json
+      const m = name.match(/[_-](\d{10,13})\.json$/);
+      if (m && m[1]) {
+        const ts = Number(m[1]);
+        if (!Number.isNaN(ts) && ts > 0) {
+          const d = new Date(ts);
+          if (!isNaN(d.getTime())) {
+            const yyyy = d.getUTCFullYear();
+            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(d.getUTCDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // iterate pages until we have enough entries or no more pages
+  let localCursor = nextCursor || null;
+  while (collected.length < limit) {
+    const page = await listFilesInFolderPaginated(listingBase, 200, localCursor, true).catch(e => { throw e; });
+    const pageEntries = (page.entries || []).filter(e => e['.tag'] === 'file');
+    for (const e of pageEntries) {
+      if (collected.length >= limit) break;
+      const dateStr = parseDateFromPath(e.path_lower || e.path_display || '', e.name || '');
+      if (year && !dateStr) continue;
+      if (year && dateStr && !dateStr.startsWith(String(year))) continue;
+      if (fromDate || toDate) {
+        if (!dateStr) continue; // can't determine date
+        const dt = new Date(dateStr + 'T00:00:00Z');
+        if (fromDate && dt < new Date(fromDate)) continue;
+        if (toDate && dt > new Date(toDate)) continue;
+      }
+      collected.push(e);
+    }
+    localCursor = page.cursor || null;
+    hasMore = !!page.has_more;
+    if (!localCursor || !hasMore) break;
+  }
+
+  return { entries: collected, cursor: localCursor, has_more: hasMore };
+}
+
+// Restore (download and import) a batch of remote files. Returns { results: [...], nextCursor, has_more }
+// Options: { folderPath, fromDate, toDate, year, limit, cursor, onProgress }
+export async function restoreFilesBatch(options = {}) {
+  // Default to app container root unless caller specifies otherwise
+  const { folderPath = '', fromDate = null, toDate = null, year = null, limit = 20, cursor = null, onProgress = null } = options || {};
+  // First, list candidate files (paged, filtered)
+  const listRes = await listFilesByDateRange({ folderPath, fromDate, toDate, year, limit, cursor }).catch(e => { throw e; });
+  const entries = listRes.entries || [];
+  const results = [];
+
+  // Dynamically import formStorage's default export to avoid circular require at module load
+  const { default: formStorage } = await import('./formStorage');
+  // Load local history to detect existing form UUIDs so we can skip importing duplicates
+  let existingUUIDs = new Set();
+  try {
+    const { getFormHistory } = await import('./formHistory');
+    const hist = await getFormHistory().catch(() => []);
+    for (const h of (hist || [])) {
+      try {
+        const pu = h.meta && h.meta.payload && h.meta.payload.formUUID;
+        if (pu) existingUUIDs.add(String(pu));
+      } catch (e) { /* ignore */ }
+    }
+  } catch (e) { /* ignore history read errors */ }
+
+  for (let i = 0; i < entries.length; i++) {
+    const e = entries[i];
+    try {
+      // Extra safety: ensure the listed entry actually belongs to the requested year
+      // (some list operations may return extra items). If a year filter was supplied
+      // skip any entry that does not parse to that year.
+      if (year) {
+        // attempt to parse YYYY-MM-DD from path or timestamp in filename
+        const parseDateFromPath = (p, name) => {
+          try {
+            if (p) {
+              const parts = p.split('/').filter(Boolean);
+              for (const seg of parts) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(seg)) return seg;
+              }
+            }
+            if (name) {
+              const m = name.match(/[_-](\d{10,13})\.json$/);
+              if (m && m[1]) {
+                const ts = Number(m[1]);
+                if (!Number.isNaN(ts) && ts > 0) {
+                  const d = new Date(ts);
+                  if (!isNaN(d.getTime())) {
+                    const yyyy = d.getUTCFullYear();
+                    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getUTCDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                  }
+                }
+              }
+            }
+          } catch (err) { /* ignore */ }
+          return null;
+        };
+        const dateStr = parseDateFromPath(e.path_lower || e.path_display || '', e.name || '');
+        if (!dateStr || !dateStr.startsWith(String(year))) {
+          // skip entries that don't clearly belong to the requested year
+          results.push({ entry: e, imported: false, skipped: true, reason: 'year_mismatch' });
+          if (typeof onProgress === 'function') {
+            try { onProgress({ index: i, total: entries.length, entry: e }); } catch (e) { /* ignore */ }
+          }
+          continue;
+        }
+      }
+      // Fast skip: if the filename contains a form UUID tag and we already have it locally, skip downloading/importing
+      let skipBecauseExists = false;
+      try {
+        const name = e.name || '';
+        const m = name.match(/_id_([A-Za-z0-9_-]+)/);
+        if (m && m[1]) {
+          if (existingUUIDs.has(m[1])) {
+            results.push({ entry: e, imported: false, skipped: true, reason: 'already_exists' });
+            if (typeof onProgress === 'function') {
+              try { onProgress({ index: i, total: entries.length, entry: e }); } catch (e) { /* ignore */ }
+            }
+            continue;
+          }
+        }
+      } catch (err) { /* ignore name parse errors */ }
+
+      const payload = await downloadFile(e).catch(err => { throw err; });
+      // payload is expected to be { payload, savedAt } or the original wrapped object
+      const wrapped = (payload && payload.payload) ? payload : { payload, savedAt: (payload && payload.savedAt) ? payload.savedAt : Date.now() };
+      // If the downloaded wrapped payload contains a formUUID that we already have, skip importing
+      try {
+        const remoteUUID = wrapped && wrapped.payload && wrapped.payload.formUUID;
+        if (remoteUUID && existingUUIDs.has(String(remoteUUID))) {
+          results.push({ entry: e, imported: false, skipped: true, reason: 'already_exists' });
+          if (typeof onProgress === 'function') {
+            try { onProgress({ index: i, total: entries.length, entry: e }); } catch (e) { /* ignore */ }
+          }
+          continue;
+        }
+      } catch (err) { /* ignore */ }
+
+      // Choose a formId derived from Dropbox file id (if present) or name
+      const candidateId = e.id ? `dbx_${e.id.replace(/:/g, '_')}` : `dbx_${Date.now()}_${i}`;
+      const imp = await formStorage.importForm(candidateId, wrapped).catch(err => { throw err; });
+      // record that we now have this UUID locally so subsequent files in this batch can be deduped
+      try {
+        const newUuid = wrapped && wrapped.payload && wrapped.payload.formUUID;
+        if (newUuid) existingUUIDs.add(String(newUuid));
+      } catch (e) { /* ignore */ }
+
+      results.push({ entry: e, imported: true, formId: imp.formId, filePath: imp.filePath });
+      if (typeof onProgress === 'function') {
+        try { onProgress({ index: i, total: entries.length, entry: e }); } catch (e) { /* ignore progress errors */ }
+      }
+    } catch (err) {
+      results.push({ entry: e, imported: false, error: (err && err.message) ? err.message : String(err) });
+    }
+  }
+
+  return { results, nextCursor: listRes.cursor, has_more: listRes.has_more };
+}
+
+// Compute a SHA-256 hash for a JSON payload/string. Returns hex string.
+export async function computeJsonHash(jsonObj) {
+  try {
+    const body = (typeof jsonObj === 'string') ? jsonObj : JSON.stringify(jsonObj);
+    return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, body);
+  } catch (e) {
+    console.warn('drive.computeJsonHash failed', e);
+    return null;
+  }
+}
+
+// Compute a SHA-256 hash for a remote file's content by downloading it.
+// Returns hex string or null on error.
+export async function computeRemoteFileHash(fileMeta) {
+  try {
+    if (!fileMeta) return null;
+    const txt = await downloadFile(fileMeta).catch(() => null);
+    if (txt === null || typeof txt === 'undefined') return null;
+    const body = (typeof txt === 'string') ? txt : JSON.stringify(txt);
+    return await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, body);
+  } catch (e) {
+    console.warn('drive.computeRemoteFileHash failed', e);
+    return null;
+  }
+}
+
+// Check whether any file in the given folderPath has identical content to the
+// provided local hash. Downloads remote files and compares SHA-256 hashes.
+// Returns the matching file metadata if found, otherwise null.
+export async function folderHasFileWithHash(folderPath, localHash) {
+  try {
+    if (!localHash) return null;
+    // normalize folderPath
+    let path = folderPath || '';
+    if (path && !path.startsWith('/')) path = `/${path}`;
+    // list files non-recursively in the folder
+    const listed = await listFilesInFolder(path === '/' ? '' : path).catch(() => ({ entries: [] }));
+    const files = (listed.entries || []).filter(e => e['.tag'] === 'file');
+    for (const f of files) {
+      try {
+        const remoteHash = await computeRemoteFileHash(f).catch(() => null);
+        if (!remoteHash) continue;
+        if (remoteHash === localHash) return f;
+      } catch (e) {
+        // ignore and continue
+      }
+    }
+    return null;
+  } catch (e) {
+    console.warn('drive.folderHasFileWithHash failed', e);
+    return null;
+  }
+}
 
 // Dev-only: print resolved app key and redirectUri on module load to aid debugging on device/emulator
 if (typeof __DEV__ !== 'undefined' && __DEV__) {

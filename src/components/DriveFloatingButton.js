@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, Image, StyleSheet, Modal, Text, TouchableWithoutFeedback, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
-import drive from '../utils/drive';
+import * as drive from '../utils/drive';
 import { getFormHistory, addFormHistory } from '../utils/formHistory';
 import formStorage from '../utils/formStorage';
 
@@ -11,7 +11,10 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
   const [signedIn, setSignedIn] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [remoteFiles, setRemoteFiles] = useState([]);
+  const [remoteYears, setRemoteYears] = useState([]);
+  const [selectedYears, setSelectedYears] = useState([]);
   const [folderId, setFolderId] = useState(null);
+  const [statusMessage, setStatusMessage] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -23,19 +26,24 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
         if (mounted && ui) setUserInfo(ui);
       } catch (e) { /* ignore */ }
     })();
-    // also attempt to resolve the app folder id (if signed in)
+    // also attempt to resolve the app master path (if signed in) without creating folders
     (async () => {
       try {
-        const f = await drive.ensureFolder('checklistapp_backups').catch(() => null);
-        if (mounted && f && f.id) setFolderId(f.id);
+        const masterPath = await drive.getMasterFolderPath().catch(() => '');
+        if (mounted && masterPath) setFolderId(masterPath);
       } catch (e) { /* ignore */ }
     })();
     return () => { mounted = false; };
   }, []);
 
+  // NOTE: remote scanning is intentionally not automatic on modal open.
+  // Scanning can be expensive for large backups, so we only refresh when
+  // the user explicitly requests a restore/preview action (see handlers).
+
   const handleSignIn = async () => {
     try {
       setLoading(true);
+      setStatusMessage('Opening Dropbox sign-in...');
       await drive.signInAsync();
       setSignedIn(true);
       // attempt to read profile
@@ -44,13 +52,14 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
         ui = await drive.getUserInfo();
         if (ui) setUserInfo(ui);
       } catch (e) { /* ignore */ }
-      // Ensure app folder exists and sync
+      // Ensure app folder exists and sync (resolve master path without creating new folders)
       try {
-        const f = await drive.ensureFolder('checklistapp_backups').catch(() => null);
-        if (f && f.id) setFolderId(f.id);
+        const masterPath = await drive.getMasterFolderPath().catch(() => '');
+        if (masterPath) setFolderId(masterPath);
       } catch (e) { /* ignore */ }
-  setLoading(false);
-  Alert.alert('Signed in', `Dropbox is now connected${ui && ui.email ? ' (' + (ui.email || '') + ')' : ''}.`);
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Signed in', `Dropbox is now connected${ui && ui.email ? ' (' + (ui.email || '') + ')' : ''}.`);
       // refresh remote list when signed in
       try {
         let list = null;
@@ -77,11 +86,13 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
   const handleSignOut = async () => {
     try {
       setLoading(true);
+      setStatusMessage('Signing out...');
       await drive.signOut();
       setSignedIn(false);
       setUserInfo(null);
-  setLoading(false);
-  Alert.alert('Signed out', 'Disconnected from Dropbox.');
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Signed out', 'Disconnected from Dropbox.');
     } catch (e) {
       setLoading(false);
       Alert.alert('Sign out failed', String(e));
@@ -102,26 +113,23 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
     // Upload missing saved forms and import missing remote files
     try {
       setLoading(true);
+      setStatusMessage('Uploading backups...');
       const history = await getFormHistory();
       const entries = (history || []).slice().reverse();
 
-      // Ensure folder exists
-      let f = null;
-      try { f = await drive.ensureFolder('checklistapp_backups'); if (f && f.id) setFolderId(f.id); } catch (e) { f = null; }
+      // Resolve master app folder path (e.g. /Apps/Bravoapp) so we can target date folders inside it.
+      const masterPath = await drive.getMasterFolderPath().catch(() => '');
+      // We'll cache per-date-folder listings for this run to avoid listing the entire account.
+      const folderCache = {}; // { '2025-10-28': [entries...] }
 
-      // List remote files in folder (if available) or global matching names
-      let remoteList = { files: [] };
-      try {
-        if (f && f.id) remoteList = await drive.listFilesInFolder(f.id, "name contains 'checklistapp_'");
-        else remoteList = await drive.listFilesAsync("name contains 'checklistapp_'");
-      } catch (e) { remoteList = { files: [] }; }
-
-      const remoteNames = new Set((remoteList.files || []).map(x => x.name));
-
-      // Push: upload local entries that do not have a matching remote name
+      // (uploads will be handled below) Only perform uploads on explicit Save-to-Dropbox action. Do not pull/download during this action.
+      let uploaded = 0;
+      let skipped = 0;
+      let failed = 0;
       for (let i = 0; i < entries.length; i++) {
         const item = entries[i];
         try {
+          setStatusMessage(`Uploading ${i + 1}/${entries.length} - ${(item.title || 'form').slice(0, 40)}`);
           let payload = null;
           if (item.meta && item.meta.formId) {
             const loaded = await formStorage.loadForm(item.meta.formId).catch(() => null);
@@ -129,43 +137,279 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
           }
           if (!payload) payload = item.meta?.payload || item.meta || item;
           const safeTitle = (item.title ? item.title.replace(/[^a-z0-9-_\. ]/gi, '_') : 'form');
-          const filename = `${safeTitle}_${item.savedAt || Date.now()}.json`;
+          const uuidTag = (payload && payload.formUUID) ? `_id_${payload.formUUID}` : '';
+          const filename = `${safeTitle}_${item.savedAt || Date.now()}${uuidTag}.json`;
           const prefixed = `checklistapp_${filename}`;
-          if (remoteNames.has(prefixed)) continue; // skip already uploaded
-          if (f && f.id) await drive.uploadJsonFileToFolder(filename, payload, f.id).catch(e => { throw e; });
-          else await drive.uploadJsonFile(filename, payload).catch(e => { throw e; });
+
+          // Compute target date folder (store date folders directly under the app container)
+          const dt = item.savedAt ? new Date(Number(item.savedAt)) : new Date();
+          const dateFolder = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+          const targetPath = (masterPath ? `${masterPath}/${dateFolder}` : `/${dateFolder}`).replace(/\\/g, '/');
+
+          // Ensure the date folder exists under the app container (creates if missing)
+          try {
+            await drive.ensureFolderPath(dateFolder);
+          } catch (err) {
+            // ignore ensure errors; listing may still work
+          }
+
+          // Load folder listing from cache or remote (non-recursive)
+          let folderEntries = folderCache[dateFolder];
+          if (!folderEntries) {
+            try {
+              const listRes = await drive.listFilesInFolder(targetPath).catch(() => ({ entries: [] }));
+              folderEntries = listRes.entries || [];
+            } catch (err) {
+              folderEntries = [];
+            }
+            folderCache[dateFolder] = folderEntries;
+          }
+
+          // Fast path: check exact filename or uuid tag inside the date folder only
+          const exactExists = (folderEntries || []).some(x => x && x.name === prefixed);
+          const uuidExists = (payload && payload.formUUID) ? (folderEntries || []).some(x => x && typeof x.name === 'string' && x.name.includes(`_id_${payload.formUUID}`)) : false;
+          if (exactExists || uuidExists) { skipped += 1; continue; }
+
+          // Second: check whether any file in the target folder has identical content
+          const localWrapped = { payload, savedAt: item.savedAt || Date.now() };
+          const localHash = await drive.computeJsonHash(localWrapped).catch(() => null);
+          let duplicate = null;
+          if (localHash && folderEntries && folderEntries.length) {
+            for (const f of folderEntries) {
+              try {
+                const remoteHash = await drive.computeRemoteFileHash(f).catch(() => null);
+                if (remoteHash && remoteHash === localHash) { duplicate = f; break; }
+              } catch (err) { /* ignore per-file errors */ }
+            }
+          }
+          if (duplicate) { skipped += 1; continue; }
+
+          // No duplicate found — proceed to upload into date folder
+          try {
+            const upRes = await drive.uploadJsonFileToFolder(filename, localWrapped, targetPath).catch(err => { throw err; });
+            if (upRes && upRes.skipped) { skipped += 1; }
+            else { uploaded += 1; }
+            // update cached folderEntries to include uploaded filename to avoid re-checking later
+            folderCache[dateFolder] = folderCache[dateFolder] || [];
+            folderCache[dateFolder].push({ name: prefixed });
+          } catch (e) {
+            // fallback to root upload
+            try { const upRes2 = await drive.uploadJsonFile(filename, localWrapped).catch(err => { throw err; }); if (upRes2 && upRes2.skipped) skipped += 1; else uploaded += 1; } catch (err) { console.warn('drive: upload fallback failed', err); failed += 1; }
+          }
         } catch (e) {
           console.warn('drive: upload entry failed', e);
+          failed += 1;
         }
       }
 
-      // Pull: import remote files that are not present locally
-      const localNameSet = new Set((entries || []).map(it => `checklistapp_${(it.title ? it.title.replace(/[^a-z0-9-_\. ]/gi, '_') : 'form')}_${it.savedAt || ''}.json`));
-      for (const rf of (remoteList.files || [])) {
-        try {
-          if (localNameSet.has(rf.name)) continue;
-          // download and import
-          await handleImport(rf);
-        } catch (e) {
-          console.warn('drive: import remote file failed', e);
-        }
-      }
-
+      setStatusMessage('');
       setLoading(false);
-      Alert.alert('Sync complete', 'Push/pull sync attempted for saved forms.');
+      Alert.alert('Save complete', `Uploaded: ${uploaded}\nSkipped (already present): ${skipped}\nFailed: ${failed}`);
       if (typeof onSyncComplete === 'function') onSyncComplete();
     } catch (e) {
+      setStatusMessage('');
       setLoading(false);
       Alert.alert('Sync failed', String(e));
+    }
+  };
+
+  const handleRestoreRecent = async () => {
+    try {
+      // Ensure we have an up-to-date remote index before restoring recent
+      setLoading(true);
+      setStatusMessage('Scanning remote backups...');
+      await refreshRemoteList().catch(() => null);
+      setStatusMessage('Downloading recent backups...');
+      // restore up to 20 recent files (you can adjust limit or pass a cursor to continue)
+      const masterPath = await drive.getMasterFolderPath().catch(() => '');
+      const res = await drive.restoreFilesBatch({ folderPath: masterPath, limit: 20, onProgress: ({ index, total, entry }) => {
+        try { setStatusMessage(`Downloading ${index + 1}/${total}: ${entry.name || entry.path_display || ''}`); } catch (err) {}
+      } }).catch(e => { throw e; });
+      setStatusMessage('');
+      setLoading(false);
+      const ok = (res.results || []).filter(r => r.imported).length;
+      const fail = (res.results || []).filter(r => !r.imported).length;
+      Alert.alert('Restore complete', `Imported: ${ok}\nFailed: ${fail}`);
+      if (typeof onSyncComplete === 'function') onSyncComplete();
+    } catch (e) {
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Restore failed', String(e));
+    }
+  };
+
+  const handleRestoreYear = async (year) => {
+    try {
+      setLoading(true);
+      setStatusMessage(`Downloading backups for ${year}...`);
+      let cursor = null;
+      let imported = 0;
+      let failed = 0;
+      // Loop until all pages for that year are restored
+      do {
+        const masterPath = await drive.getMasterFolderPath().catch(() => '');
+        const res = await drive.restoreFilesBatch({ folderPath: masterPath, year, limit: 50, cursor, onProgress: ({ index, total, entry }) => {
+          try { setStatusMessage(`Downloading ${year}: ${index + 1}/${total} ${entry.name || entry.path_display || ''}`); } catch (err) {}
+        } }).catch(e => { throw e; });
+        const results = res.results || [];
+        for (const r of results) {
+          if (r.imported) imported += 1; else failed += 1;
+        }
+        cursor = res.nextCursor || null;
+        // If the restoreFilesBatch indicates has_more but returned no cursor, break to avoid infinite loop
+        if (res.has_more && !cursor) break;
+      } while (cursor);
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Restore complete', `Year ${year} - Imported: ${imported}\nFailed: ${failed}`);
+      if (typeof onSyncComplete === 'function') onSyncComplete();
+    } catch (e) {
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Restore failed', String(e));
+    }
+  };
+
+  const toggleYear = (year) => {
+    try {
+      setSelectedYears(prev => {
+        const s = new Set(prev || []);
+        if (s.has(year)) s.delete(year);
+        else s.add(year);
+        return Array.from(s).sort((a,b) => b - a);
+      });
+    } catch (e) { /* ignore */ }
+  };
+
+  const handlePreviewSelected = async () => {
+    try {
+      if (!selectedYears || !selectedYears.length) {
+        Alert.alert('Preview', 'No years selected.');
+        return;
+      }
+      // If we don't already have the remote year list, refresh it now.
+      if (!remoteYears || !remoteYears.length) {
+        setLoading(true);
+        setStatusMessage('Scanning remote backups...');
+        await refreshRemoteList().catch(() => null);
+      } else {
+        setLoading(true);
+      }
+      setStatusMessage('Gathering preview counts...');
+      const masterPath = await drive.getMasterFolderPath().catch(() => '');
+      const report = [];
+      for (const y of selectedYears) {
+        try {
+          // quick preview: fetch up to 1000 entries; if there are more, mark as 1000+
+          const res = await drive.listFilesByDateRange({ folderPath: masterPath, year: y, limit: 1000 }).catch(() => ({ entries: [] }));
+          const count = (res.entries || []).length;
+          const more = res.has_more ? '+' : '';
+          report.push(`${y}: ${count}${more}`);
+        } catch (e) { report.push(`${y}: error`); }
+      }
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Preview counts', report.join('\n'));
+    } catch (e) {
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Preview failed', String(e));
+    }
+  };
+
+  const handleRestoreSelected = async () => {
+    try {
+      if (!selectedYears || !selectedYears.length) {
+        Alert.alert('Restore', 'No years selected.');
+        return;
+      }
+      // Ensure we've scanned remote backups for available files before restoring
+      if (!remoteYears || !remoteYears.length) {
+        setLoading(true);
+        setStatusMessage('Scanning remote backups...');
+        await refreshRemoteList().catch(() => null);
+      } else {
+        setLoading(true);
+      }
+      let totalImported = 0;
+      let totalFailed = 0;
+      const masterPath = await drive.getMasterFolderPath().catch(() => '');
+      for (const y of selectedYears) {
+        setStatusMessage(`Restoring ${y}...`);
+        let cursor = null;
+        do {
+          const res = await drive.restoreFilesBatch({ folderPath: masterPath, year: y, limit: 50, cursor, onProgress: ({ index, total, entry }) => {
+            try { setStatusMessage(`Downloading ${y}: ${index + 1}/${total} ${entry.name || entry.path_display || ''}`); } catch (err) {}
+          } }).catch(e => { throw e; });
+          const results = res.results || [];
+          for (const r of results) {
+            if (r.imported) totalImported += 1; else totalFailed += 1;
+          }
+          cursor = res.nextCursor || null;
+          if (res.has_more && !cursor) break;
+        } while (cursor);
+      }
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Restore complete', `Imported: ${totalImported}\nFailed: ${totalFailed}`);
+      if (typeof onSyncComplete === 'function') onSyncComplete();
+    } catch (e) {
+      setStatusMessage('');
+      setLoading(false);
+      Alert.alert('Restore failed', String(e));
     }
   };
 
   const refreshRemoteList = async () => {
     try {
       setLoading(true);
-      const list = await drive.listFilesAsync("name contains 'checklistapp_'");
-      setRemoteFiles(list.files || []);
+      setStatusMessage('Scanning remote backups...');
+      // Resolve the actual master folder path and list recursively to find backups wherever they are located
+  const masterPath = await drive.getMasterFolderPath().catch(() => '');
+  const res = await drive.listFilesRecursive(masterPath === '/' ? '' : masterPath).catch(() => ({ entries: [] }));
+      const entries = res.entries || [];
+      setRemoteFiles(entries);
+      // Derive available years by scanning any path segment for YYYY-MM-DD or by filename timestamp
+      const yearsSet = new Set();
+      const extractDateFolder = (p, name) => {
+        try {
+          if (p) {
+            const parts = (p || '').split('/').filter(Boolean);
+            for (const seg of parts) {
+              if (/^\d{4}-\d{2}-\d{2}$/.test(seg)) return seg;
+            }
+          }
+          if (name) {
+            const m = (name || '').match(/[_-](\d{10,13})\.json$/);
+            if (m && m[1]) {
+              const ts = Number(m[1]);
+              if (!Number.isNaN(ts) && ts > 0) {
+                const d = new Date(ts);
+                if (!isNaN(d.getTime())) {
+                  const yyyy = d.getUTCFullYear();
+                  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+                  const dd = String(d.getUTCDate()).padStart(2, '0');
+                  return `${yyyy}-${mm}-${dd}`;
+                }
+              }
+            }
+          }
+        } catch (err) { /* ignore */ }
+        return null;
+      };
+
+      entries.forEach(e => {
+        try {
+          const p = (e.path_lower || e.path_display || '');
+          const name = e.name || '';
+          const dateFolder = extractDateFolder(p, name);
+          if (dateFolder) yearsSet.add(Number(dateFolder.slice(0,4)));
+        } catch (err) { /* ignore */ }
+      });
+      const years = Array.from(yearsSet).sort((a,b) => b - a);
+      setRemoteYears(years);
       setLoading(false);
+      setStatusMessage('');
     } catch (e) {
       setLoading(false);
       console.warn('drive: list failed', e);
@@ -175,17 +419,131 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
   const handleImport = async (file) => {
     try {
       setLoading(true);
-      const payload = await drive.downloadFile(file.id);
+      setStatusMessage('Importing files...');
+      // If the selected item is a folder, list its files and import each file
+      if (file && file['.tag'] === 'folder') {
+        const path = file.path_lower || file.path_display || '';
+        const list = await drive.listFilesRecursive(path === '/' ? '' : path).catch(() => ({ entries: [] }));
+        const files = (list.entries || []).filter(e => e['.tag'] === 'file');
+        if (!files.length) {
+          setStatusMessage('');
+          setLoading(false);
+          Alert.alert('Import', 'No files found inside the selected folder.');
+          return;
+        }
+        let imported = 0;
+        let failed = 0;
+        // helper: extract YYYY-MM-DD date folder from path or filename
+        const extractDateFolder = (p, name) => {
+          try {
+            if (p) {
+              const parts = (p || '').split('/').filter(Boolean);
+              for (const seg of parts) {
+                if (/^\d{4}-\d{2}-\d{2}$/.test(seg)) return seg;
+              }
+            }
+            if (name) {
+              const m = (name || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+              if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+              const m2 = (name || '').match(/[_-](\d{10,13})\.json$/);
+              if (m2 && m2[1]) {
+                const ts = Number(m2[1]);
+                if (!Number.isNaN(ts) && ts > 0) {
+                  const d = new Date(ts);
+                  if (!isNaN(d.getTime())) {
+                    const yyyy = d.getUTCFullYear();
+                    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+                    const dd = String(d.getUTCDate()).padStart(2, '0');
+                    return `${yyyy}-${mm}-${dd}`;
+                  }
+                }
+              }
+            }
+          } catch (err) { /* ignore */ }
+          return null;
+        };
+        // Build set of existing local UUIDs to skip duplicates
+        let existingUUIDs = new Set();
+        try {
+          const { getFormHistory } = await import('../utils/formHistory');
+          const hist = await getFormHistory().catch(() => []);
+          for (const h of (hist || [])) {
+            try { const pu = h.meta && h.meta.payload && h.meta.payload.formUUID; if (pu) existingUUIDs.add(String(pu)); } catch (e) { }
+          }
+        } catch (e) { /* ignore */ }
+
+        for (const f of files) {
+          try {
+            // Fast skip: if filename contains uuid tag and we already have it, skip download
+            const name = f.name || '';
+            const m = name.match(/_id_([A-Za-z0-9_-]+)/);
+            if (m && m[1] && existingUUIDs.has(m[1])) {
+              // already present locally
+              continue;
+            }
+            setStatusMessage(`Downloading ${f.name || ''}...`);
+            const payload = await drive.downloadFile(f).catch(err => { throw err; });
+            let wrapped = (payload && payload.payload) ? payload : { payload, savedAt: (payload && payload.savedAt) ? payload.savedAt : null };
+            // If the remote wrapped payload does not include savedAt, attempt to infer it
+            // from the file path or filename (YYYY-MM-DD folder or timestamp suffix).
+            if (!wrapped.savedAt) {
+              const dateFolder = extractDateFolder(f.path_lower || f.path_display || '', f.name || '');
+              if (dateFolder) {
+                const dt = new Date(`${dateFolder}T00:00:00Z`);
+                if (!isNaN(dt.getTime())) wrapped.savedAt = dt.getTime();
+              }
+              if (!wrapped.savedAt) wrapped.savedAt = Date.now();
+            }
+            // If wrapped payload includes formUUID and we already have it, skip import
+            const remoteUUID = wrapped && wrapped.payload && wrapped.payload.formUUID;
+            if (remoteUUID && existingUUIDs.has(String(remoteUUID))) continue;
+            const formId = f.id ? `drive_${f.id}` : `drive_${Date.now()}`;
+            const imp = await formStorage.importForm(formId, wrapped).catch(err => { throw err; });
+            imported += 1;
+            if (remoteUUID) existingUUIDs.add(String(remoteUUID));
+          } catch (err) {
+            console.warn('drive: import file failed', err);
+            failed += 1;
+          }
+        }
+        setStatusMessage('');
+        setLoading(false);
+        Alert.alert('Import complete', `Imported: ${imported}\nFailed: ${failed}`);
+        if (typeof onSyncComplete === 'function') onSyncComplete();
+        return;
+      }
+
+      // Otherwise assume it's a file metadata object
+      // Fast skip: check filename for uuid tag and local history
+      try {
+        const { getFormHistory } = await import('../utils/formHistory');
+        const hist = await getFormHistory().catch(() => []);
+        const name = file && file.name ? file.name : '';
+        const m = name.match(/_id_([A-Za-z0-9_-]+)/);
+        if (m && m[1]) {
+          const exists = (hist || []).some(h => { try { return h.meta && h.meta.payload && String(h.meta.payload.formUUID) === String(m[1]); } catch (e) { return false; } });
+          if (exists) {
+            setStatusMessage('');
+            setLoading(false);
+            Alert.alert('Import skipped', `${file.name} already exists locally.`);
+            return;
+          }
+        }
+      } catch (e) { /* ignore history read errors */ }
+
+      const payload = await drive.downloadFile(file).catch(err => { throw err; });
       // If payload has savedAt, try to preserve it
-      const formId = `drive_${file.id}`;
-      // Save locally
-      await formStorage.saveForm(formId, payload).catch(() => null);
-      // Add to history, preserve savedAt if available
-      await addFormHistory({ title: payload.title || file.name, savedAt: payload.savedAt || Date.now(), _preserveSavedAt: true, meta: { payload } });
+      const wrapped = (payload && payload.payload) ? payload : { payload, savedAt: (payload && payload.savedAt) ? payload.savedAt : Date.now() };
+      const formId = file.id ? `drive_${file.id}` : `drive_${Date.now()}`;
+      // Import locally without triggering auto-upload
+      await formStorage.importForm(formId, wrapped).catch(() => null);
+      // importForm already added a history entry; notify user
+      setStatusMessage('');
       setLoading(false);
       Alert.alert('Imported', `${file.name} imported into saved forms.`);
       if (typeof onSyncComplete === 'function') onSyncComplete();
     } catch (e) {
+      setStatusMessage('');
       setLoading(false);
       Alert.alert('Import failed', String(e));
     }
@@ -207,7 +565,13 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
           <View style={styles.modalCard}>
             <Text style={{ fontWeight: '800', fontSize: 16, marginBottom: 10 }}>Dropbox</Text>
             <ScrollView>
-              <Text style={{ marginBottom: 8 }}>Connected: {signedIn ? 'Yes' : 'No'}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ fontWeight: '700' }}>Dropbox</Text>
+                <TouchableOpacity onPress={() => setModalOpen(false)} style={{ padding: 6 }} accessibilityLabel="Close">
+                  <Text style={{ fontSize: 20, fontWeight: '700' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ marginBottom: 8, color: '#444' }}>Connected: {signedIn ? 'Yes' : 'No'}</Text>
               {userInfo ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                   {userInfo.picture ? <Image source={{ uri: userInfo.picture }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 8 }} /> : null}
@@ -217,44 +581,53 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
                   </View>
                 </View>
               ) : null}
-              {loading ? <ActivityIndicator /> : (
+              {loading ? (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 12 }}>
+                  <ActivityIndicator />
+                  {statusMessage ? <Text style={{ marginTop: 12, fontWeight: '600' }}>{statusMessage}</Text> : null}
+                </View>
+              ) : (
                 <>
                       {!signedIn ? (
                     <>
-                      <TouchableOpacity style={styles.actionBtn} onPress={handleSignIn}><Text style={styles.actionBtnText}>Sign in with Dropbox</Text></TouchableOpacity>
+                      <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleSignIn}><Text style={styles.actionBtnText}>Sign in with Dropbox</Text></TouchableOpacity>
                       <Text style={{ marginTop: 12, color: '#444' }}>Sign in to enable Dropbox sync (push/pull) features.</Text>
                     </>
                   ) : (
                     <>
-                      <TouchableOpacity style={styles.actionBtn} onPress={handleSignOut}><Text style={styles.actionBtnText}>Sign out</Text></TouchableOpacity>
+                      <TouchableOpacity style={styles.actionBtnSecondary} onPress={handleSignOut}><Text style={styles.actionBtnTextSecondary}>Sign out</Text></TouchableOpacity>
 
-                      {/* Push (upload) */}
-                      <TouchableOpacity style={[styles.actionBtn, { marginTop: 8 }]} onPress={() => { handleSyncNow(); }}><Text style={styles.actionBtnText}>Sync saved forms now (upload)</Text></TouchableOpacity>
+                      <View style={styles.actionRow}>
+                        <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => { handleSyncNow(); }}><Text style={styles.actionBtnText}>Save to Dropbox</Text></TouchableOpacity>
+                        <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => handleRestoreRecent()}><Text style={styles.actionBtnTextOutline}>Restore recent</Text></TouchableOpacity>
+                      </View>
 
-                      {/* Pull (remote list + import) */}
-                      <View style={{ height: 12 }} />
-                      <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#0b74de' }]} onPress={() => refreshRemoteList()}><Text style={styles.actionBtnText}>Refresh remote file list</Text></TouchableOpacity>
-                      <Text style={{ marginTop: 12, fontWeight: '700' }}>Remote backups</Text>
-                      {remoteFiles.length === 0 ? (
-                        <Text style={{ color: '#444', marginTop: 8 }}>No remote backup files found.</Text>
-                      ) : remoteFiles.map(f => (
-                        <View key={f.id} style={{ marginTop: 8, padding: 8, borderRadius: 8, backgroundColor: '#f3f4f6' }}>
-                          <Text style={{ fontWeight: '700' }}>{f.name}</Text>
-                          <Text style={{ color: '#666', marginTop: 4 }}>Modified: {new Date(f.modifiedTime).toLocaleString()}</Text>
-                          <View style={{ flexDirection: 'row', marginTop: 8 }}>
-                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10a37f', marginRight: 8 }]} onPress={() => handleImport(f)}><Text style={styles.actionBtnText}>Import</Text></TouchableOpacity>
-                            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#6b7280' }]} onPress={() => Alert.alert('Preview', 'Preview is not implemented yet')}><Text style={styles.actionBtnText}>Preview</Text></TouchableOpacity>
+                      {remoteYears && remoteYears.length > 0 ? (
+                        <View style={{ marginTop: 10 }}>
+                          <Text style={{ fontWeight: '700', marginBottom: 8 }}>Restore by year</Text>
+                          <View style={{ marginBottom: 8 }}>
+                            <Text style={{ marginBottom: 6, color: '#333' }}>Select years to preview or restore:</Text>
+                            <View style={{ maxHeight: 220, marginBottom: 8 }}>
+                              <ScrollView>
+                                {remoteYears.map(y => (
+                                  <TouchableOpacity key={String(y)} style={[styles.yearRow, selectedYears && selectedYears.includes(y) ? styles.yearRowSelected : null]} onPress={() => toggleYear(y)}>
+                                    <Text style={styles.yearRowText}>{y}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </ScrollView>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                              <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => handlePreviewSelected()}><Text style={styles.actionBtnTextOutline}>Preview selected</Text></TouchableOpacity>
+                              <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => handleRestoreSelected()}><Text style={styles.actionBtnText}>Restore selected</Text></TouchableOpacity>
+                            </View>
                           </View>
                         </View>
-                      ))}
+                      ) : null}
                     </>
                   )}
                 </>
               )}
-              <Text style={{ marginTop: 12, color: '#444' }}>Note: This feature requires configuring a Dropbox App Key and the expo-auth-session & secure-store packages. See project README for setup.</Text>
-              <TouchableOpacity style={[styles.actionBtn, { marginTop: 10 }]} onPress={handleShowRedirectUris}>
-                <Text style={styles.actionBtnText}>Show redirect URIs</Text>
-              </TouchableOpacity>
+              
             </ScrollView>
             <TouchableOpacity style={styles.closeBtn} onPress={() => setModalOpen(false)}><Text style={{ color: '#185a9d', fontWeight: '700' }}>Close</Text></TouchableOpacity>
           </View>
@@ -301,7 +674,19 @@ const styles = StyleSheet.create({
   modalOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
   modalContainer: { flex: 1, justifyContent: 'flex-end' },
   modalCard: { backgroundColor: '#fff', padding: 18, borderTopLeftRadius: 12, borderTopRightRadius: 12, minHeight: 180 },
-  actionBtn: { backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, marginTop: 6 },
+  // Primary full-width button (modern)
+  actionBtnPrimary: { backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, marginTop: 8, minWidth: 140, flex: 1, marginRight: 8, alignItems: 'center', justifyContent: 'center' },
+  actionBtnPrimaryOutline: { borderColor: '#185a9d', borderWidth: 1, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, marginTop: 8, minWidth: 140, flex: 1, alignItems: 'center', justifyContent: 'center' },
   actionBtnText: { color: '#fff', fontWeight: '800', textAlign: 'center' },
+  actionBtnTextOutline: { color: '#185a9d', fontWeight: '800', textAlign: 'center' },
+  actionBtnSecondary: { alignSelf: 'center', backgroundColor: '#efefef', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, marginTop: 6 },
+  actionBtnTextSecondary: { color: '#333', fontWeight: '700' },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  yearBtn: { width: '48%', backgroundColor: '#0b74de', paddingVertical: 10, borderRadius: 8, marginBottom: 8, alignItems: 'center' },
+  yearBtnText: { color: '#fff', fontWeight: '700' },
+  yearBtnSelected: { backgroundColor: '#064f9a' },
+  yearRow: { paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#f6f9ff' },
+  yearRowText: { color: '#0b74de', fontWeight: '800', fontSize: 16 },
+  yearRowSelected: { backgroundColor: '#e6f0ff' },
   closeBtn: { marginTop: 12, alignSelf: 'flex-end' },
 });

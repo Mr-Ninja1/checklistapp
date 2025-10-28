@@ -1,5 +1,5 @@
 // No changes needed; the file is already valid JavaScript.
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from './screens/SplashScreen';
@@ -78,6 +78,16 @@ const linking = {
 };
 
 export default function App() {
+  useEffect(() => {
+    // Start the upload queue auto-processor when the app mounts.
+    (async () => {
+      try {
+        const uploadQueue = await import('./utils/uploadQueue');
+        const { AppState } = await import('react-native');
+        uploadQueue.startAutoUploader(AppState);
+      } catch (e) { /* ignore */ }
+    })();
+  }, []);
   return (
   <ResponsiveView lockLandscape={false}>
       <NavigationContainer linking={linking}>
