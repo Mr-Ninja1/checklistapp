@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, View, Text, FlatList, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import { StyleSheet, View, Text, FlatList, ScrollView, TextInput, Image, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';

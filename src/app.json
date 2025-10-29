@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "src",
-    "slug": "src",
+  "name": "Bravo manager",
+  "slug": "bravo-manager",
     "owner": "mr-ninja1",
     "scheme": "checklistapp",
     "version": "1.0.0",

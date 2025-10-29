@@ -1,5 +1,6 @@
 // No changes needed; the file is already valid JavaScript.
 import React, { useEffect } from 'react';
+import { LogBox, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from './screens/SplashScreen';
@@ -79,12 +80,40 @@ const linking = {
 
 export default function App() {
   useEffect(() => {
+    // Suppress noisy deprecation warnings coming from third-party libs
+    // that still access removed React Native exports. These should be
+    // resolved by upgrading those dependencies; this is a temporary
+    // suppression to reduce noise in user builds.
+    try {
+      LogBox.ignoreLogs([
+        'ProgressBarAndroid has been extracted',
+        'SafeAreaView has been deprecated',
+        'Clipboard has been extracted',
+        'PushNotificationIOS has been extracted',
+      ]);
+    } catch (e) { /* ignore */ }
     // Start the upload queue auto-processor when the app mounts.
     (async () => {
       try {
         const uploadQueue = await import('./utils/uploadQueue');
         const { AppState } = await import('react-native');
         uploadQueue.startAutoUploader(AppState);
+        // Register a listener so the UI can prompt the user if entries
+        // are moved to permanent failure after repeated retries.
+        try {
+          if (typeof uploadQueue.onPermanentFailure === 'function') {
+            uploadQueue.onPermanentFailure(({ entry, reason }) => {
+              try {
+                const title = (entry && entry.title) ? String(entry.title) : 'Saved Form';
+                Alert.alert(
+                  'Backup failed',
+                  `${title} could not be uploaded after repeated attempts. Connect to the internet to allow automatic retry, or manually upload from Saved Forms.`,
+                  [{ text: 'OK' }],
+                );
+              } catch (e) { /* ignore alert errors */ }
+            });
+          }
+        } catch (e) { /* ignore listener registration errors */ }
       } catch (e) { /* ignore */ }
     })();
   }, []);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Button, ActivityIndicator, FlatList, StyleSheet, Alert, Switch } from 'react-native';
 import drive from '../utils/drive';
 
@@ -22,8 +22,17 @@ export default function DropboxScreen() {
     return () => { mounted = false; };
   }, []);
 
-  async function handleSignIn() {
+  const loadingWatchRef = useRef(null);
+  const startLoading = (msg) => {
+    try { if (loadingWatchRef.current) { clearTimeout(loadingWatchRef.current); loadingWatchRef.current = null; } } catch (e) {}
     setLoading(true);
+    // optional message not used in this dev screen
+    try { loadingWatchRef.current = setTimeout(() => { try { console.warn('GoogleDriveScreen: operation timeout'); } catch (e) {} ; setLoading(false); loadingWatchRef.current = null; }, 30000); } catch (e) {}
+  };
+  const stopLoading = () => { try { if (loadingWatchRef.current) { clearTimeout(loadingWatchRef.current); loadingWatchRef.current = null; } } catch (e) {}; setLoading(false); };
+
+  async function handleSignIn() {
+    startLoading();
     try {
       const res = await drive.signInAsync({ useProxyOverride: useProxy });
       const ui = await drive.getUserInfo();
@@ -33,12 +42,12 @@ export default function DropboxScreen() {
     } catch (e) {
       Alert.alert('Sign in failed', String(e.message || e));
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   }
 
   async function handleSignOut() {
-    setLoading(true);
+    startLoading();
     try {
       await drive.signOut();
       setUser(null);
@@ -47,12 +56,12 @@ export default function DropboxScreen() {
     } catch (e) {
       Alert.alert('Sign out failed', String(e.message || e));
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   }
 
   async function handleUploadTest() {
-    setLoading(true);
+    startLoading();
     try {
       const now = new Date().toISOString();
       const payload = { test: true, ts: now };
@@ -62,12 +71,12 @@ export default function DropboxScreen() {
     } catch (e) {
       Alert.alert('Upload failed', String(e.message || e));
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   }
 
   async function handleListFiles() {
-    setLoading(true);
+    startLoading();
     try {
       const res = await drive.listFilesAsync('');
       const arr = (res && res.entries) ? res.entries : [];
@@ -76,19 +85,19 @@ export default function DropboxScreen() {
     } catch (e) {
       Alert.alert('List failed', String(e.message || e));
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   }
 
   async function handleShowDebugInfo() {
-    setLoading(true);
+    startLoading();
     try {
       const info = await drive.getDebugInfo();
       Alert.alert('Dropbox debug', JSON.stringify(info, null, 2));
     } catch (e) {
       Alert.alert('Debug failed', String(e.message || e));
     } finally {
-      setLoading(false);
+      stopLoading();
     }
   }
 

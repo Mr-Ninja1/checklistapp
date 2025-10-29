@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, Image, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import EditableFormContainer from '../components/EditableFormContainer';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';

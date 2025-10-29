@@ -5,7 +5,8 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
  * A register component for recording a Toolbox Talk (TBT).

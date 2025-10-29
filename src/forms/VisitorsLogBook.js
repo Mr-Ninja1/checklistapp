@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
 import EditableFormContainer from '../components/EditableFormContainer';
 import NotificationModal from '../components/NotificationModal';

@@ -289,14 +289,7 @@ export default function HomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* Dev: quick access to Dropbox test screen (only in dev builds) */}
-      {__DEV__ && (
-        <View style={{ padding: 12, alignSelf: 'stretch', alignItems: 'flex-end' }}>
-          <TouchableOpacity onPress={() => navigation.navigate('DropboxTest')} style={{ padding: 8, backgroundColor: '#185a9d', borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Open Dropbox Test</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Dev Dropbox test access removed — button intentionally hidden in Home screen */}
 
 
 
