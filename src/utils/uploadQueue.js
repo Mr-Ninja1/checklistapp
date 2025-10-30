@@ -7,6 +7,14 @@ let _processing = false;
 
 const QUEUE_PATH = FileSystem.documentDirectory + 'uploadQueue.json';
 const FAILED_PATH = FileSystem.documentDirectory + 'failedUploads.json';
+const UPLOADED_PATH = FileSystem.documentDirectory + 'uploaded.json';
+
+// Internet reachability probe configuration. Uses a lightweight 204 endpoint
+// which returns quickly on successful internet access. These values can be
+// tuned if desired or moved to an app config later.
+const PROBE_URL = 'https://clients3.google.com/generate_204';
+const PROBE_TIMEOUT_MS = 3000; // abort probe after 3s
+const PROBE_INTERVAL_MS = 10 * 1000; // probe every 10s when falling back
 
 // Subscribers to permanent-failure notifications. UI code can register a
 // listener to show an in-app alert when entries are moved to permanent failure.
@@ -33,6 +41,71 @@ async function writeFailedUploads(list) {
   }
 }
 
+async function readUploaded() {
+  try {
+    const info = await FileSystem.getInfoAsync(UPLOADED_PATH);
+    if (!info.exists) return [];
+    const txt = await FileSystem.readAsStringAsync(UPLOADED_PATH);
+    return JSON.parse(txt || '[]');
+  } catch (e) {
+    console.warn('uploadQueue: readUploaded failed', e);
+    return [];
+  }
+}
+
+async function writeUploaded(list) {
+  try {
+    await FileSystem.makeDirectoryAsync(FileSystem.documentDirectory, { intermediates: true }).catch(() => {});
+    await FileSystem.writeAsStringAsync(UPLOADED_PATH, JSON.stringify(list || []));
+  } catch (e) {
+    console.warn('uploadQueue: writeUploaded failed', e);
+  }
+}
+
+export async function markUploaded(formUUID) {
+  try {
+    if (!formUUID) return false;
+    const list = await readUploaded();
+    if (list.some(u => String(u) === String(formUUID))) return true;
+    list.push(String(formUUID));
+    await writeUploaded(list);
+    return true;
+  } catch (e) {
+    console.warn('uploadQueue.markUploaded failed', e);
+    return false;
+  }
+}
+
+// Perform a lightweight HTTP probe to determine if the device has real
+// internet access. Returns a boolean. This is a safer check than relying
+// on NetInfo.isConnected which only implies a network (e.g., Wi-Fi) but not
+// necessarily internet access.
+export async function httpProbe(timeoutMs = PROBE_TIMEOUT_MS, url = PROBE_URL) {
+  try {
+    // Abortable fetch to bound time spent waiting
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    const resp = await fetch(url, { method: 'GET', cache: 'no-cache', signal: controller.signal });
+    clearTimeout(id);
+    // The generate_204 endpoint returns 204 on success. Treat 2xx as success.
+    const ok = !!(resp && (resp.status === 204 || (resp.status >= 200 && resp.status < 300)));
+    try { if (ok) console.log('uploadQueue.httpProbe -> internet reachable'); } catch (e) {}
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function isUploaded(formUUID) {
+  try {
+    if (!formUUID) return false;
+    const list = await readUploaded();
+    return list.some(u => String(u) === String(formUUID));
+  } catch (e) {
+    return false;
+  }
+}
+
 export async function getFailedUploads() {
   return await readFailedUploads();
 }
@@ -42,6 +115,22 @@ export async function clearFailedUploads() {
     await writeFailedUploads([]);
     return true;
   } catch (e) { return false; }
+}
+
+// Remove any queued entries that reference the given payload.formUUID.
+// Returns the number of entries removed.
+export async function removeByFormUUID(formUUID) {
+  try {
+    if (!formUUID) return 0;
+    const q = await readQueue();
+    const before = q.length;
+    const filtered = q.filter(item => !(item && item.payload && String(item.payload.formUUID) === String(formUUID)));
+    if (filtered.length !== before) await writeQueue(filtered);
+    return before - filtered.length;
+  } catch (e) {
+    console.warn('uploadQueue.removeByFormUUID failed', e);
+    return 0;
+  }
 }
 
 export function onPermanentFailure(fn) {
@@ -102,6 +191,10 @@ export async function enqueue(entry) {
     } catch (e) { /* ignore dedupe errors */ }
     q.push(entry);
     await writeQueue(q);
+    try { console.log('uploadQueue.enqueue -> enqueued', entry && entry.payload && entry.payload.formUUID); } catch (e) {}
+      // Attempt to process the queue immediately so newly-enqueued items upload
+      // as soon as possible (processQueue is concurrency-safe).
+      try { processQueue().catch(() => {}); } catch (e) { /* ignore */ }
     return true;
   } catch (e) {
     console.warn('uploadQueue.enqueue failed', e);
@@ -122,14 +215,24 @@ async function tryUploadEntry(entry) {
 
     // Attempt upload
     try {
+        // If this formUUID was already uploaded by an immediate save elsewhere
+        // (race conditions can cause the queued entry to remain), skip uploading.
+        try {
+          const maybeUUID = entry && entry.payload && entry.payload.formUUID;
+          if (maybeUUID && await isUploaded(maybeUUID)) return true;
+        } catch (e) { /* ignore uploaded-check errors */ }
       await drive.ensureFolderPath(dateFolder).catch(() => {});
       const res = await drive.uploadJsonFileToFolder(filename, { savedAt: entry.savedAt || Date.now(), payload: entry.payload }, targetPath).catch(err => { throw err; });
       // res may be { skipped: true } or metadata
+      // If upload succeeded, mark the formUUID as uploaded so queued duplicates
+      // will be skipped later.
+      try { if (entry && entry.payload && entry.payload.formUUID) markUploaded(entry.payload.formUUID).catch(() => {}); } catch (e) {}
       return true;
     } catch (err) {
       // fallback to root
       try {
         const res2 = await drive.uploadJsonFile(filename, { savedAt: entry.savedAt || Date.now(), payload: entry.payload });
+        try { if (entry && entry.payload && entry.payload.formUUID) markUploaded(entry.payload.formUUID).catch(() => {}); } catch (e) {}
         return true;
       } catch (err2) {
         // upload failed
@@ -147,6 +250,33 @@ export async function processQueue() {
   try {
     // Prevent concurrent drains
     if (_processing) return { processed: 0, remaining: (await readQueue()).length };
+
+    // Ensure we only attempt uploads when we have both internet access and
+    // a valid Dropbox auth token. This avoids unnecessary upload attempts
+    // (and noisy logs) when the device is offline or the user is signed out.
+    try {
+      // 1) check auth
+      let token = null;
+      try { token = await drive.getAccessToken().catch(() => null); } catch (e) { token = null; }
+      if (!token) {
+        try { console.log('uploadQueue.processQueue -> skipped: no dropbox auth token'); } catch (e) {}
+        return { processed: 0, remaining: (await readQueue()).length };
+      }
+      // 2) check internet via probe
+      let internetOk = false;
+      try { internetOk = await httpProbe(); } catch (e) { internetOk = false; }
+      if (!internetOk) {
+        try { console.log('uploadQueue.processQueue -> skipped: no internet'); } catch (e) {}
+        return { processed: 0, remaining: (await readQueue()).length };
+      }
+
+    } catch (e) {
+      // If our lightweight checks fail unexpectedly, bail out conservatively.
+      try { console.warn('uploadQueue.processQueue -> pre-checks failed', e); } catch (er) {}
+      return { processed: 0, remaining: (await readQueue()).length };
+    }
+
+    try { console.log('uploadQueue.processQueue -> starting drain at', new Date().toISOString()); } catch (e) {}
     _processing = true;
     const q = await readQueue();
     if (!q || q.length === 0) {
@@ -215,6 +345,7 @@ export async function processQueue() {
       }
     }
     await writeQueue(remaining);
+    try { console.log('uploadQueue.processQueue -> completed', { processed: q.length - remaining.length, remaining: remaining.length }); } catch (e) {}
     return { processed: q.length - remaining.length, remaining: remaining.length };
   } catch (e) {
     console.warn('uploadQueue.processQueue failed', e);
@@ -224,31 +355,190 @@ export async function processQueue() {
   }
 }
 
+// Ensure any saved forms present in the local history are enqueued for upload
+// if they are not already recorded as uploaded or present in the queue. This
+// helps recover cases where saves happened while the auto-enqueue step failed
+// or files were created outside the normal save flow. It is safe to call
+// repeatedly and is idempotent.
+export async function enqueueMissingFromHistory() {
+  try {
+    // Load history (lightweight index)
+    const { getFormHistory } = await import('./formHistory');
+    const history = await getFormHistory().catch(() => []);
+    if (!Array.isArray(history) || history.length === 0) return 0;
+
+    // Read current queue and uploaded list once for efficient checks
+    const q = await readQueue();
+    const uploadedList = await readUploaded();
+    const queuedUUIDs = new Set((q || []).map(item => (item && item.payload && item.payload.formUUID) ? String(item.payload.formUUID) : null));
+    const uploadedSet = new Set((uploadedList || []).map(u => String(u)));
+
+    let enqueued = 0;
+    for (const h of history) {
+      try {
+        const meta = h && h.meta ? h.meta : {};
+        let payload = null;
+        // Prefer payload loaded from formStorage when meta.formId exists
+        if (meta && meta.formId) {
+          try {
+            const formStorage = await import('./formStorage');
+            const loaded = await formStorage.loadForm(meta.formId).catch(() => null);
+            if (loaded && loaded.payload) payload = loaded.payload;
+          } catch (e) { /* ignore load errors */ }
+        }
+        // Fallbacks: meta.payload, meta.formData, or meta itself
+        if (!payload) {
+          if (meta && meta.payload && Object.keys(meta.payload || {}).length) payload = meta.payload;
+          else if (meta && Array.isArray(meta.formData)) {
+            const m = { ...meta };
+            const rows = m.formData || [];
+            delete m.formData;
+            payload = { metadata: m, formData: rows };
+          } else if (meta && meta.formData && Object.keys(meta.formData || {}).length) payload = meta.formData;
+          else payload = meta || null;
+        }
+
+        // Determine a UUID if present
+        const candidateUuid = payload && payload.formUUID ? String(payload.formUUID) : null;
+        if (candidateUuid && uploadedSet.has(candidateUuid)) continue; // already uploaded
+        if (candidateUuid && queuedUUIDs.has(candidateUuid)) continue; // already queued
+
+        // If no candidateUuid, we still want to enqueue; enqueue() will assign one.
+        // Build entry
+        const entry = { title: (h && h.title) ? String(h.title) : 'Saved Form', payload: payload || {}, savedAt: h && h.savedAt ? h.savedAt : (payload && payload.savedAt) ? payload.savedAt : Date.now() };
+        try {
+          await enqueue(entry);
+          enqueued += 1;
+          // track queued uuid to avoid duplicate enqueues in this run
+          const addedUuid = entry && entry.payload && entry.payload.formUUID ? String(entry.payload.formUUID) : null;
+          if (addedUuid) queuedUUIDs.add(addedUuid);
+        } catch (e) {
+          // If enqueue fails, continue with other items
+          console.warn('uploadQueue.enqueueMissingFromHistory: enqueue failed for', h && h.title, e);
+        }
+      } catch (e) { /* ignore per-entry errors */ }
+    }
+    try { if (enqueued > 0) console.log('uploadQueue.enqueueMissingFromHistory -> enqueued', enqueued, 'missing items'); } catch (e) {}
+    return enqueued;
+  } catch (e) {
+    console.warn('uploadQueue.enqueueMissingFromHistory failed', e);
+    return 0;
+  }
+}
+
 // Start a simple auto-processor that callers can call once (e.g., app mount).
 export function startAutoUploader(appStateEmitter) {
   // appStateEmitter should be the AppState module or similar with addEventListener
   try {
     // run an initial drain
     processQueue().catch(() => {});
+
+    // Try to listen for network connectivity changes via NetInfo (best-effort).
+    // If NetInfo is not installed we fall back to AppState events and a periodic timer.
+    try {
+      let netUnsub = null;
+      let fallbackToHttpProbe = false;
+      try {
+        // require rather than import to avoid bundling failure when module missing
+        const NetInfoModule = require('@react-native-community/netinfo');
+        const NetInfo = NetInfoModule && NetInfoModule.default ? NetInfoModule.default : NetInfoModule;
+        if (NetInfo && typeof NetInfo.addEventListener === 'function') {
+          // immediate check - catch errors in case native part is not linked
+          try {
+            NetInfo.fetch().then(async s => {
+              try {
+                // If NetInfo reports explicit internet reachability use it.
+                if (s && s.isInternetReachable === true) {
+                  processQueue().catch(() => {});
+                } else if (s && s.isConnected) {
+                  // Connected to a network but NetInfo can't guarantee internet.
+                  // Do an explicit HTTP probe to verify actual internet access.
+                  try {
+                    const ok = await httpProbe();
+                    if (ok) processQueue().catch(() => {});
+                  } catch (e) { /* ignore probe errors */ }
+                }
+              } catch (e) {}
+            }).catch((err) => { fallbackToHttpProbe = true; });
+          } catch (e) { fallbackToHttpProbe = true; }
+          // subscribe for changes (guard in try/catch to avoid NativeModule.RNCNetInfo null errors)
+          try {
+            netUnsub = NetInfo.addEventListener(state => {
+              try {
+                // If NetInfo explicitly reports internet reachability, act immediately.
+                if (state && state.isInternetReachable === true) {
+                  processQueue().catch(() => {});
+                  return;
+                }
+                // If NetInfo reports connected but not internet-reachable, do a probe
+                if (state && state.isConnected) {
+                  httpProbe().then(ok => { if (ok) processQueue().catch(() => {}); }).catch(() => {});
+                }
+              } catch (e) { /* ignore listener errors */ }
+            });
+          } catch (e) { fallbackToHttpProbe = true; }
+        } else {
+          fallbackToHttpProbe = true;
+        }
+      } catch (e) {
+        // NetInfo not available or require failed — fallback to HTTP probe
+        fallbackToHttpProbe = true;
+      }
+
+      // If NetInfo isn't usable (native module not linked), fall back to a lightweight HTTP probe
+      // which attempts a quick fetch to a fast 204 endpoint and triggers processQueue when reachable.
+      if (fallbackToHttpProbe) {
+        try {
+          // initial probe
+          try {
+            httpProbe().then(ok => { if (ok) processQueue().catch(() => {}); }).catch(() => {});
+          } catch (e) {}
+          // periodic probe (more aggressive for mobile transitions)
+          setInterval(() => {
+            try { httpProbe().then(ok => { if (ok) processQueue().catch(() => {}); }).catch(() => {}); } catch (e) {}
+          }, PROBE_INTERVAL_MS);
+        } catch (e) { /* ignore probe errors */ }
+      }
+      // We intentionally don't return the unsubscribe since this runs for app lifetime
+    } catch (e) { /* ignore NetInfo subscription errors */ }
+
+    // Also listen for AppState changes as a fallback
     if (appStateEmitter && typeof appStateEmitter.addEventListener === 'function') {
       try {
-        // Register for AppState changes (when app becomes active, attempt drain)
         appStateEmitter.addEventListener('change', (state) => {
           if (state === 'active') processQueue().catch(() => {});
         });
       } catch (e) {
-        // Some RN runtimes return a subscription object; tolerate both shapes
         try {
           const sub = appStateEmitter.addEventListener('change', (state) => {
             if (state === 'active') processQueue().catch(() => {});
           });
-          // no further action; we intentionally do not remove listener for app lifetime
         } catch (e2) { /* ignore */ }
       }
+
+      // Listen for auth state changes so we can attempt to process the queue when
+      // the user signs in (credentials now available). This avoids needing every
+      // sign-in UI to call processQueue manually.
+      try {
+        if (drive && typeof drive.addAuthListener === 'function') {
+          try {
+            drive.addAuthListener((isSignedIn) => {
+              try {
+                if (isSignedIn) {
+                  // Reconcile history into the queue first so any saved forms
+                  // that were missed are enqueued before we attempt to drain.
+                  enqueueMissingFromHistory().catch(() => {});
+                  // run a quick probe/trigger so uploads start as soon as possible
+                  httpProbe().then(ok => { if (ok) processQueue().catch(() => {}); else processQueue().catch(() => {}); }).catch(() => { processQueue().catch(() => {}); });
+                }
+              } catch (e) { /* ignore listener errors */ }
+            });
+          } catch (e) { /* ignore */ }
+        }
+      } catch (e) { /* ignore addAuthListener errors */ }
     }
-    // Periodic fallback: attempt to drain every 5 minutes in case AppState events
-    // are missed or the app remains active for long periods. This is lightweight
-    // and helps recover from transient network issues.
+
+    // Periodic fallback: attempt to drain every 5 minutes in case events are missed.
     try {
       setInterval(() => {
         processQueue().catch(() => {});
@@ -261,6 +551,7 @@ export default {
   enqueue,
   processQueue,
   startAutoUploader,
+  enqueueMissingFromHistory,
   getFailedUploads,
   clearFailedUploads,
   onPermanentFailure,

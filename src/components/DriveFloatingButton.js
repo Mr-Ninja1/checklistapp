@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, TouchableOpacity, Image, StyleSheet, Modal, Text, TouchableWithoutFeedback, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Image, StyleSheet, Modal, Text, TouchableWithoutFeedback, Alert, ActivityIndicator, ScrollView, FlatList } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as drive from '../utils/drive';
+import { processQueue } from '../utils/uploadQueue';
 import { getFormHistory, addFormHistory } from '../utils/formHistory';
 import formStorage from '../utils/formStorage';
 
-export default function DriveFloatingButton({ onSyncComplete, inline = false } = {}) {
+export default function DriveFloatingButton({ onSyncComplete, inline = false, openOnMount = false } = {}) {
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false);
   const [signedIn, setSignedIn] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [remoteFiles, setRemoteFiles] = useState([]);
@@ -15,6 +17,12 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
   const [selectedYears, setSelectedYears] = useState([]);
   const [folderId, setFolderId] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
+  // Restore/download progress modal state (separate from the Dropbox modal)
+  const [restoreModalOpen, setRestoreModalOpen] = useState(false);
+  const [restoreProgress, setRestoreProgress] = useState({ index: 0, total: 0, entry: '' });
+  const [restoreMessage, setRestoreMessage] = useState('');
+  const statusRef = useRef('');
+  useEffect(() => { statusRef.current = statusMessage || ''; }, [statusMessage]);
   const loadingWatchRef = useRef(null);
 
   const startLoading = (msg) => {
@@ -27,14 +35,14 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
     } catch (e) {}
     setStatusMessage(msg || '');
     setLoading(true);
-    // watchdog: clear loading after 30s to avoid stuck spinner
+    // watchdog: clear loading after 5 minutes to avoid stuck spinner
     try {
       loadingWatchRef.current = setTimeout(() => {
-        try { console.warn('DriveFloatingButton: operation timeout, clearing loading'); } catch (e) {}
-        setStatusMessage('Operation taking longer than expected');
-        setLoading(false);
-        loadingWatchRef.current = null;
-      }, 30000);
+        // silently clear loading state (don't spam the log)
+        try { setStatusMessage(''); } catch (e) {}
+        try { setLoading(false); } catch (e) {}
+        try { loadingWatchRef.current = null; } catch (e) {}
+      }, 300000);
     } catch (e) { /* ignore */ }
   };
 
@@ -48,6 +56,38 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
     setStatusMessage('');
     setLoading(false);
   };
+
+  // keep ref in sync to avoid stale closures in listeners
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+
+  // Subscribe to structured progress events from drive helper so UI can respond immediately
+  useEffect(() => {
+    let unsub = null;
+    try {
+      if (drive && typeof drive.addProgressListener === 'function') {
+        unsub = drive.addProgressListener(evt => {
+          try {
+            if (!evt || evt.type !== 'restore') return;
+            const { index, total, entry } = evt;
+            // update status text
+            try { setStatusMessage(`Downloading: ${index + 1}/${total} ${entry && (entry.name || entry.path_display || '')}`); } catch (e) {}
+            // if this is the final item, stop loading and refresh
+            try {
+              if ((typeof total === 'number') && (typeof index === 'number') && index + 1 >= total) {
+                // avoid redundant calls if already not loading
+                try { if (loadingRef.current) stopLoading(); } catch (e) {}
+                try { if (typeof onSyncComplete === 'function') { const maybe = onSyncComplete(); if (maybe && typeof maybe.then === 'function') maybe.catch(() => {}); } } catch (e) {}
+                try { triggerRefreshInBackground(0, 1, 3000); } catch (e) {}
+                // ensure restore modal is closed when restore finishes
+                try { setRestoreModalOpen(false); } catch (e) {}
+              }
+            } catch (e) { /* ignore */ }
+          } catch (e) { /* ignore listener error */ }
+        });
+      }
+    } catch (e) {}
+    return () => { try { if (typeof unsub === 'function') unsub(); } catch (e) {} };
+  }, [onSyncComplete]);
 
   // Wait until the form history reflects additional entries. This polls
   // `getFormHistory()` until `currentCount >= startCount + expectedDelta` or timeout.
@@ -65,6 +105,62 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
       }
     } catch (e) { /* ignore */ }
     return false;
+  };
+
+  // Kick off a background refresh: wait for history to include new entries, then call onSyncComplete()
+  const triggerRefreshInBackground = (preCount, delta = 1, timeoutMs = 5000) => {
+    (async () => {
+      try {
+        await waitForHistoryIncrease(preCount, delta, timeoutMs);
+          // Stop loading as soon as history shows the new entries.
+          try { stopLoading(); } catch (e) {}
+          if (typeof onSyncComplete === 'function') {
+            try { await onSyncComplete(); } catch (err) { /* avoid noisy logs */ }
+          }
+          return;
+      } catch (e) { /* ignore */ }
+    })();
+  };
+
+  // Monitor statusMessage for a trailing "x/y" progress marker and when it reaches
+  // completion (x >= y) force-stop the loading UI and trigger a background refresh.
+  // Returns a function to stop the monitor.
+  const startProgressMonitor = (preCount = 0, expectedDelta = 1, countdownTimeoutMs = 5000) => {
+    let stopped = false;
+    let showed = false;
+    const start = Date.now();
+    const interval = setInterval(() => {
+      try {
+        const msg = String(statusRef.current || '');
+        const m = msg.match(/(\d+)\s*\/\s*(\d+)/);
+        if (m && m[1] && m[2]) {
+          const cur = Number(m[1]);
+          const tot = Number(m[2]);
+          if (!isNaN(cur) && !isNaN(tot) && cur >= tot) {
+            if (!showed) {
+              showed = true;
+              try { stopLoading(); } catch (e) {}
+              // Immediately trigger UI refresh (caller-provided callback) since downloads finished
+              try {
+                if (typeof onSyncComplete === 'function') {
+                  const maybe = onSyncComplete();
+                  if (maybe && typeof maybe.then === 'function') maybe.catch(() => {});
+                }
+              } catch (e) {}
+              // Also trigger background history wait to be safe
+              try { triggerRefreshInBackground(preCount, expectedDelta, countdownTimeoutMs); } catch (e) {}
+            }
+          }
+        }
+        // also bail if timeout exceeded
+        if (Date.now() - start > countdownTimeoutMs + 2000) {
+          if (!stopped) { stopped = true; clearInterval(interval); }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 250);
+    return () => { try { stopped = true; clearInterval(interval); } catch (e) {} };
   };
 
   useEffect(() => {
@@ -86,6 +182,14 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
     })();
     return () => { mounted = false; };
   }, []);
+
+  // If parent requests the modal to open on mount (e.g. via navigation param), open it.
+  useEffect(() => {
+    try {
+      if (openOnMount) setModalOpen(true);
+    } catch (e) {}
+    // only run on mount / when openOnMount changes
+  }, [openOnMount]);
 
   // NOTE: remote scanning is intentionally not automatic on modal open.
   // Scanning can be expensive for large backups, so we only refresh when
@@ -117,6 +221,8 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
         else list = await drive.listFilesAsync("name contains 'checklistapp_'");
         setRemoteFiles(list.files || []);
       } catch (e) { /* ignore */ }
+      // After sign-in, attempt to drain the upload queue immediately
+      try { processQueue().catch(() => {}); } catch (e) { /* ignore */ }
     } catch (e) {
   stopLoading();
       // Detect domain restriction error from drive helper
@@ -267,7 +373,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
 
   const handleRestoreRecent = async () => {
     // Only refresh the remote index and display remote saves — do not download anything.
-  startLoading('Scanning remote backups...');
+    startLoading('Scanning remote backups...');
     try {
       await refreshRemoteList().catch(() => null);
       Alert.alert('Remote scan complete', 'Remote backups index refreshed. Select a year and use "Restore selected" to import files.');
@@ -280,7 +386,13 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
   };
 
   const handleRestoreYear = async (year) => {
-  startLoading(`Downloading backups for ${year}...`);
+    // Use a separate restore modal to show per-file progress so the Dropbox modal
+    // remains responsive and we can provide a clear "Done" message afterwards.
+    setRestoreMessage(`Downloading backups for ${year}...`);
+    // close the Drive floating modal so only the restore modal is visible
+    try { setModalOpen(false); } catch (e) {}
+    setRestoreModalOpen(true);
+    setRestoreProgress({ index: 0, total: 0, entry: '' });
     // capture starting history count so we can wait until imports appear in UI
     let preCount = 0;
     try { const hist = await getFormHistory().catch(() => []); preCount = Array.isArray(hist) ? hist.length : 0; } catch (e) { preCount = 0; }
@@ -292,7 +404,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
       do {
         const masterPath = await drive.getMasterFolderPath().catch(() => '');
         const res = await drive.restoreFilesBatch({ folderPath: masterPath, year, limit: 50, cursor, onProgress: ({ index, total, entry }) => {
-          try { setStatusMessage(`Downloading ${year}: ${index + 1}/${total} ${entry.name || entry.path_display || ''}`); } catch (err) {}
+          try { setRestoreProgress({ index: index + 1, total: total || 0, entry: entry && (entry.name || entry.path_display) ? (entry.name || entry.path_display) : '' }); } catch (err) {}
         } }).catch(e => { throw e; });
         const results = res.results || [];
         for (const r of results) {
@@ -302,16 +414,14 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
         // If the restoreFilesBatch indicates has_more but returned no cursor, break to avoid infinite loop
         if (res.has_more && !cursor) break;
       } while (cursor);
-      Alert.alert('Restore complete', `Year ${year} - Imported: ${imported}\nFailed: ${failed}`);
-      // wait for history file to be updated (up to a short timeout) so the saved-forms UI can refresh
-      try { await waitForHistoryIncrease(preCount, imported, 4000); } catch (e) { /* ignore */ }
-      if (typeof onSyncComplete === 'function') {
-        try { await onSyncComplete(); } catch (err) { console.warn('onSyncComplete failed', err); }
-      }
+      // stop spinner/modal immediately and show a completion alert
+      setRestoreModalOpen(false);
+      Alert.alert('Restore complete', `Year ${year} - Imported: ${imported}\nFailed: ${failed}`, [{ text: 'OK', onPress: () => { try { if (typeof onSyncComplete === 'function') onSyncComplete(); } catch (e) {} } }]);
+      // in background, wait for history to be updated and then trigger onSyncComplete to refresh UI
+      try { triggerRefreshInBackground(preCount, imported, 4000); } catch (e) { /* ignore */ }
     } catch (e) {
+      setRestoreModalOpen(false);
       Alert.alert('Restore failed', String(e));
-    } finally {
-      stopLoading();
     }
   };
 
@@ -340,26 +450,29 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'OK', onPress: async () => {
-          // Wrap the restore flow in try/finally so loading is always cleared
-            // capture pre-restore history count
-            let preCount = 0;
-            try { const hist = await getFormHistory().catch(() => []); preCount = Array.isArray(hist) ? hist.length : 0; } catch (e) { preCount = 0; }
-            startLoading();
-            try {
+          // close the Drive floating modal before opening the restore modal
+          try { setModalOpen(false); } catch (e) {}
+          // capture pre-restore history count
+          let preCount = 0;
+          try { const hist = await getFormHistory().catch(() => []); preCount = Array.isArray(hist) ? hist.length : 0; } catch (e) { preCount = 0; }
+          // open dedicated restore modal
+          setRestoreModalOpen(true);
+          setRestoreMessage('Restoring selected years...');
+          try {
             // Ensure we've scanned remote backups for available files before restoring
             if (!remoteYears || !remoteYears.length) {
-              setStatusMessage('Scanning remote backups...');
+              setRestoreMessage('Scanning remote backups...');
               await refreshRemoteList().catch(() => null);
             }
             let totalImported = 0;
             let totalFailed = 0;
             const masterPath = await drive.getMasterFolderPath().catch(() => '');
             for (const y of selectedYears) {
-              setStatusMessage(`Restoring ${y}...`);
+              setRestoreMessage(`Restoring ${y}...`);
               let cursor = null;
               do {
                 const res = await drive.restoreFilesBatch({ folderPath: masterPath, year: y, limit: 50, cursor, onProgress: ({ index, total, entry }) => {
-                  try { setStatusMessage(`Downloading ${y}: ${index + 1}/${total} ${entry.name || entry.path_display || ''}`); } catch (err) {}
+                  try { setRestoreProgress({ index: index + 1, total: total || 0, entry: entry && (entry.name || entry.path_display) ? (entry.name || entry.path_display) : '' }); } catch (err) {}
                 } }).catch(e => { throw e; });
                 const results = res.results || [];
                 for (const r of results) {
@@ -369,15 +482,13 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
                 if (res.has_more && !cursor) break;
               } while (cursor);
             }
-            Alert.alert('Restore complete', `Imported: ${totalImported}\nFailed: ${totalFailed}`);
-            try { await waitForHistoryIncrease(preCount, totalImported, 5000); } catch (e) { /* ignore */ }
-            if (typeof onSyncComplete === 'function') {
-              try { await onSyncComplete(); } catch (err) { console.warn('onSyncComplete failed', err); }
-            }
+            // close modal and notify user
+            setRestoreModalOpen(false);
+            Alert.alert('Restore complete', `Imported: ${totalImported}\nFailed: ${totalFailed}`, [{ text: 'OK', onPress: () => { try { if (typeof onSyncComplete === 'function') onSyncComplete(); } catch (e) {} } }]);
+            try { triggerRefreshInBackground(preCount, totalImported, 5000); } catch (e) { /* ignore */ }
           } catch (e) {
+            setRestoreModalOpen(false);
             Alert.alert('Restore failed', String(e));
-          } finally {
-            stopLoading();
           }
         } }
       ],
@@ -435,14 +546,14 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
     } catch (e) {
       console.warn('drive: list failed', e);
     } finally {
-      setLoading(false);
-      setStatusMessage('');
+      // use centralized stop helper so watchdog is cleared and status is reset
+      stopLoading();
     }
   };
 
   const handleImport = async (file) => {
-    setLoading(true);
-    setStatusMessage('Importing files...');
+    // use centralized start helper to set status and start watchdog
+    startLoading('Importing files...');
     try {
       // If the selected item is a folder, list its files and import each file
       if (file && file['.tag'] === 'folder') {
@@ -529,11 +640,10 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
             failed += 1;
           }
         }
+        // stop spinner immediately and show a completion alert
+        stopLoading();
         Alert.alert('Import complete', `Imported: ${imported}\nFailed: ${failed}`);
-        try { const hist = await getFormHistory().catch(() => []); const preCount = Array.isArray(hist) ? hist.length - imported : 0; await waitForHistoryIncrease(preCount, imported, 4000); } catch (e) { /* ignore */ }
-        if (typeof onSyncComplete === 'function') {
-          try { await onSyncComplete(); } catch (err) { console.warn('onSyncComplete failed', err); }
-        }
+        try { const hist = await getFormHistory().catch(() => []); const preCount = Array.isArray(hist) ? hist.length - imported : 0; triggerRefreshInBackground(preCount, imported, 4000); } catch (e) { /* ignore */ }
         return;
       }
 
@@ -560,12 +670,10 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
       const formId = file.id ? `drive_${file.id}` : `drive_${Date.now()}`;
       // Import locally without triggering auto-upload
       await formStorage.importForm(formId, wrapped).catch(() => null);
-      // importForm already added a history entry; notify user
+      // importForm already added a history entry; stop spinner & notify user
+      stopLoading();
       Alert.alert('Imported', `${file.name} imported into saved forms.`);
-      try { const hist = await getFormHistory().catch(() => []); const preCount = Array.isArray(hist) ? hist.length - 1 : 0; await waitForHistoryIncrease(preCount, 1, 3000); } catch (e) { /* ignore */ }
-      if (typeof onSyncComplete === 'function') {
-        try { await onSyncComplete(); } catch (err) { console.warn('onSyncComplete failed', err); }
-      }
+      try { const hist = await getFormHistory().catch(() => []); const preCount = Array.isArray(hist) ? hist.length - 1 : 0; triggerRefreshInBackground(preCount, 1, 3000); } catch (e) { /* ignore */ }
     } catch (e) {
       Alert.alert('Import failed', String(e));
     } finally {
@@ -634,15 +742,23 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
                           <Text style={{ fontWeight: '700', marginBottom: 8 }}>Restore by year</Text>
                           <View style={{ marginBottom: 8 }}>
                             <Text style={{ marginBottom: 6, color: '#333' }}>Select years to restore:</Text>
-                            <View style={{ maxHeight: 220, marginBottom: 8 }}>
-                              <ScrollView>
-                                {remoteYears.map(y => (
-                                  <TouchableOpacity key={String(y)} style={[styles.yearRow, selectedYears && selectedYears.includes(y) ? styles.yearRowSelected : null]} onPress={() => toggleYear(y)}>
-                                    <Text style={styles.yearRowText}>{y}</Text>
-                                  </TouchableOpacity>
-                                ))}
-                              </ScrollView>
-                            </View>
+                              <View style={{ maxHeight: 220, marginBottom: 8 }}>
+                                <FlatList
+                                  data={remoteYears}
+                                  keyExtractor={(item) => String(item)}
+                                  numColumns={2}
+                                  showsVerticalScrollIndicator={true}
+                                  renderItem={({ item: y }) => {
+                                    const isSel = selectedYears && selectedYears.includes(y);
+                                    return (
+                                      <TouchableOpacity key={String(y)} style={[styles.yearTile, isSel ? styles.yearTileSelected : null]} onPress={() => toggleYear(y)}>
+                                        <Text style={[styles.yearTileText, isSel ? styles.yearTileTextSelected : null]}>{y}</Text>
+                                        {isSel ? <Text style={styles.yearRowCheck}>✓</Text> : null}
+                                      </TouchableOpacity>
+                                    );
+                                  }}
+                                />
+                              </View>
                             <View style={{ marginTop: 8, alignItems: 'center' }}>
                               <TouchableOpacity style={[styles.actionBtnPrimary, { minWidth: 260 }]} onPress={() => handleRestoreSelected()}><Text style={styles.actionBtnText}>Restore selected</Text></TouchableOpacity>
                             </View>
@@ -656,6 +772,23 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false } =
               
             </ScrollView>
             <TouchableOpacity style={styles.closeBtn} onPress={() => setModalOpen(false)}><Text style={{ color: '#185a9d', fontWeight: '700' }}>Close</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Restore progress modal (separate from the Drive modal) */}
+      <Modal visible={restoreModalOpen} transparent animationType="fade">
+        <View style={styles.restoreOverlay}>
+          <View style={styles.restoreCard}>
+            <Text style={{ fontWeight: '800', fontSize: 16, marginBottom: 10 }}>Restoring backups</Text>
+            <Text style={{ marginBottom: 8, color: '#444' }}>{restoreMessage}</Text>
+            <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 12 }}>
+              <ActivityIndicator size="large" />
+              {restoreProgress && restoreProgress.total ? (
+                <Text style={{ marginTop: 8 }}>{`${restoreProgress.index}/${restoreProgress.total} - ${restoreProgress.entry || ''}`}</Text>
+              ) : null}
+            </View>
+            <TouchableOpacity style={styles.closeBtn} onPress={() => { setRestoreModalOpen(false); }}><Text style={{ color: '#185a9d', fontWeight: '700' }}>Cancel</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -700,6 +833,8 @@ const styles = StyleSheet.create({
   modalOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
   modalContainer: { flex: 1, justifyContent: 'flex-end', paddingBottom: 12 },
   modalCard: { backgroundColor: '#fff', padding: 18, borderTopLeftRadius: 12, borderTopRightRadius: 12, minHeight: 300, maxHeight: '92%' },
+  restoreOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  restoreCard: { backgroundColor: '#fff', padding: 18, borderRadius: 12, minWidth: 280, maxWidth: '92%', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 10 },
   // Primary full-width button (modern)
   actionBtnPrimary: { backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, marginTop: 8, minWidth: 140, flex: 1, marginRight: 8, alignItems: 'center', justifyContent: 'center' },
   actionBtnPrimaryOutline: { borderColor: '#185a9d', borderWidth: 1, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 10, marginTop: 8, minWidth: 140, flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -711,8 +846,15 @@ const styles = StyleSheet.create({
   yearBtn: { width: '48%', backgroundColor: '#0b74de', paddingVertical: 10, borderRadius: 8, marginBottom: 8, alignItems: 'center' },
   yearBtnText: { color: '#fff', fontWeight: '700' },
   yearBtnSelected: { backgroundColor: '#064f9a' },
-  yearRow: { paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#f6f9ff' },
+  yearRow: { paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#f6f9ff', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   yearRowText: { color: '#0b74de', fontWeight: '800', fontSize: 16 },
-  yearRowSelected: { backgroundColor: '#e6f0ff' },
+  yearRowTextSelected: { color: '#fff', fontWeight: '900' },
+  yearRowSelected: { backgroundColor: '#185a9d', borderRadius: 8, paddingHorizontal: 12 },
+  yearRowCheck: { color: '#fff', fontWeight: '900', fontSize: 18 },
+  // Tile styles for two-column year grid
+  yearTile: { width: '48%', margin: '1%', backgroundColor: '#f6f9ff', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  yearTileSelected: { backgroundColor: '#185a9d' },
+  yearTileText: { color: '#0b74de', fontWeight: '800', fontSize: 16 },
+  yearTileTextSelected: { color: '#fff', fontWeight: '900' },
   closeBtn: { marginTop: 12, alignSelf: 'flex-end' },
 });

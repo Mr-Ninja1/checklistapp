@@ -1,7 +1,9 @@
 import warnOnce from '../utils/warnOnce';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet } from 'react-native';
+import { httpProbe, processQueue } from '../utils/uploadQueue';
+import * as drive from '../utils/drive';
 import { LinearGradient } from 'expo-linear-gradient';
 import LoadingOverlay from '../components/LoadingOverlay';
 
@@ -160,6 +162,46 @@ export default function HomeScreen() {
   const isWide = width > 700;
   const isMobile = width < 700;
 
+  // Internet reachability status for header icon (default to false so the
+  // icon is visible immediately while the first probe runs).
+  const [hasInternet, setHasInternet] = useState(false);
+  // start as `null` so we don't flash the banner while we check token on mount
+  // banner will be shown only when dropboxConnected === false
+  const [dropboxConnected, setDropboxConnected] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    let timer = null;
+    let authUnsub = null;
+    const probe = async () => {
+      try {
+        const ok = await httpProbe();
+        if (mounted) setHasInternet(!!ok);
+      } catch (e) {
+        if (mounted) setHasInternet(false);
+      }
+    };
+    // initial
+    probe();
+    // read dropbox auth state and subscribe for changes
+    (async () => {
+      try {
+        const t = await drive.getAccessToken().catch(() => null);
+        if (mounted) setDropboxConnected(Boolean(t));
+      } catch (e) { if (mounted) setDropboxConnected(false); }
+      try {
+        const unsub = drive.addAuthListener && drive.addAuthListener((isSignedIn) => {
+          try { if (mounted) setDropboxConnected(Boolean(isSignedIn)); } catch (e) {}
+        });
+        if (typeof unsub === 'function') authUnsub = unsub;
+      } catch (e) {}
+    })();
+    // poll periodically; matches uploadQueue fallback interval
+    timer = setInterval(probe, 10 * 1000);
+    return () => { mounted = false; if (timer) clearInterval(timer); try { if (typeof authUnsub === 'function') authUnsub(); } catch (e) {} };
+  }, []);
+
+
   // Main UI
   return (
     // ensure the root fills the viewport on web by setting a minHeight based on window height
@@ -224,6 +266,7 @@ export default function HomeScreen() {
                   style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', marginRight: 12, shadowColor: '#185a9d', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6 }}
                   resizeMode="contain"
                 />
+                {/* reachability icon removed from here — now shown on the right side of the time/date row */}
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 22, fontWeight: '700', color: '#185a9d', letterSpacing: 1, textAlign: 'left', marginBottom: 2 }}>Bravo!</Text>
                   <Text style={{ fontSize: 15, color: '#43cea2', opacity: 0.95, textAlign: 'left', marginBottom: 0, fontWeight: '500' }}>Food Safety Inspections</Text>
@@ -259,6 +302,7 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#fff', letterSpacing: 1 }}>Bravo!</Text>
               <Text style={{ fontSize: 15, color: '#fff', opacity: 0.85 }}>Food Safety Inspections</Text>
             </View>
+              {/* reachability icon removed from here — now shown on the right side of the time/date row */}
             <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 12, minWidth: 220, alignItems: 'flex-start', elevation: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                 <Text style={{ fontSize: 16, color: '#22c1c3', fontWeight: 'bold', marginRight: 6 }}>📍</Text>
@@ -286,6 +330,24 @@ export default function HomeScreen() {
           <Text style={{ fontSize: isMobile ? 16 : 22, fontWeight: 'bold', color: '#fff', marginRight: 16 }}>{timeString}</Text>
           <Text style={{ fontSize: isMobile ? 13 : 18, color: '#fff', marginRight: 8 }}>📅</Text>
           <Text style={{ fontSize: isMobile ? 13 : 16, color: '#fff', fontWeight: 'bold' }}>{dateString}, {yearString}</Text>
+          {/* spacer pushes the icon to the far right of the header row */}
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity
+            onPress={async () => {
+              try {
+                const ok = await httpProbe();
+                setHasInternet(!!ok);
+                if (ok) processQueue().catch(() => {});
+              } catch (e) { /* ignore */ }
+            }}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={ hasInternet ? require('../assets/internetaccess.png') : require('../assets/nointernet.png') }
+              style={{ width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, marginRight: isMobile ? 12 : 24 }}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -377,6 +439,30 @@ export default function HomeScreen() {
       <View style={styles.footer}>
         <Text style={styles.footerText}>Bravo @ {new Date().getFullYear()}</Text>
       </View>
+
+      {/* Dropbox disconnected sticky banner (bottom-center).
+          Show only when we explicitly know the user is NOT connected (dropboxConnected === false).
+          Position slightly above footer and under the floating history button using responsive bottom offset. */}
+      {dropboxConnected === false ? (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => {
+            try { navigation.navigate('FormSaves', { openDriveModal: true }); } catch (e) {}
+          }}
+          style={[
+            styles.dropboxBanner,
+            {
+              // position the banner above the footer and roughly under the history button
+              bottom: isMobile ? 120 : 160,
+              left: isMobile ? 18 : 20,
+              right: isMobile ? 18 : 20,
+              backgroundColor: '#c62828', // red background
+            }
+          ]}
+        >
+          <Text style={[styles.dropboxBannerText, { color: '#fff' }]}>Dropbox not connected — tap to connect</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -453,6 +539,30 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#888',
+    fontSize: 14,
+  },
+  dropboxBanner: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff3cd',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#ffd966',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  dropboxBannerText: {
+    color: '#856404',
+    fontWeight: '700',
     fontSize: 14,
   },
 });

@@ -96,6 +96,8 @@ async function refreshAccessToken() {
     const expiresAt = expires_in ? Date.now() + Number(expires_in) * 1000 : Date.now() + 3600 * 1000;
     await SecureStore.setItemAsync(TOKEN_KEY, access_token);
     await SecureStore.setItemAsync(TOKEN_EXPIRES_KEY, String(expiresAt));
+    // Notify listeners that auth is now available
+    try { _emitAuth(true); } catch (e) {}
     if (refresh_token) await SecureStore.setItemAsync('dropbox_refresh_token', refresh_token);
     return access_token;
   } catch (e) {
@@ -110,6 +112,8 @@ export async function signOut() {
     await SecureStore.deleteItemAsync(TOKEN_EXPIRES_KEY);
     await SecureStore.deleteItemAsync('dropbox_refresh_token');
     await SecureStore.deleteItemAsync(USER_INFO_KEY);
+    // Notify listeners that auth has been cleared
+    try { _emitAuth(false); } catch (e) {}
     return true;
   } catch (e) {
     console.warn('dropbox.signOut failed', e);
@@ -340,6 +344,8 @@ export async function signInAsync(options = {}) {
     } catch (e) {
       console.warn('dropbox: failed to fetch userinfo', e);
     }
+    // Notify listeners that auth is available after successful sign-in
+    try { _emitAuth(true); } catch (e) {}
     return { access_token, expiresAt, refresh_token };
   } catch (e) {
     console.warn('dropbox.signInAsync failed', e);
@@ -382,6 +388,7 @@ export async function importAccessToken(token, refreshToken = null, expiresInSec
     await SecureStore.setItemAsync(TOKEN_EXPIRES_KEY, String(expiresAt));
     if (refreshToken) await SecureStore.setItemAsync('dropbox_refresh_token', refreshToken);
     console.log('dropbox: importAccessToken stored token (dev only)');
+    try { _emitAuth(true); } catch (e) {}
     return true;
   } catch (e) {
     console.warn('dropbox.importAccessToken failed', e);
@@ -862,6 +869,43 @@ const defaultExport = {
 
 export default defaultExport;
 
+// --- Progress listener API (structured events) ----------------------------------
+// Lightweight subscriptions for UI to listen to progress from restore/upload ops.
+const _progressListeners = new Set();
+export function addProgressListener(fn) {
+  if (typeof fn !== 'function') return () => {};
+  _progressListeners.add(fn);
+  return () => { try { _progressListeners.delete(fn); } catch (e) {} };
+}
+function _emitProgress(evt) {
+  try {
+    for (const l of Array.from(_progressListeners)) {
+      try { l(evt); } catch (e) { /* ignore listener errors */ }
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// --- Auth listener API ---------------------------------------------------------
+// Lightweight subscription for other modules (uploadQueue, UI) to be notified
+// when auth state changes (signed in / signed out). Listeners receive a
+// single boolean argument: true when signed in, false when signed out.
+const _authListeners = new Set();
+export function addAuthListener(fn) {
+  if (typeof fn !== 'function') return () => {};
+  _authListeners.add(fn);
+  return () => { try { _authListeners.delete(fn); } catch (e) {} };
+}
+export function removeAuthListener(fn) {
+  try { _authListeners.delete(fn); } catch (e) { /* ignore */ }
+}
+function _emitAuth(isSignedIn) {
+  try {
+    for (const l of Array.from(_authListeners)) {
+      try { l(Boolean(isSignedIn)); } catch (e) { /* ignore listener errors */ }
+    }
+  } catch (e) { /* ignore */ }
+}
+
 // --- Pagination and restore helpers -------------------------------------------------
 // List files in a folder with pagination support. Returns { entries, cursor, has_more }
 export async function listFilesInFolderPaginated(folderPath = '', limit = 200, cursor = null, recursive = false) {
@@ -1120,7 +1164,7 @@ export async function restoreFilesBatch(options = {}) {
         }
       } catch (err) { /* ignore name parse errors */ }
 
-      const payload = await downloadFile(e).catch(err => { throw err; });
+  const payload = await downloadFile(e).catch(err => { throw err; });
       // payload is expected to be { payload, savedAt } or the original wrapped object
       const wrapped = (payload && payload.payload) ? payload : { payload, savedAt: (payload && payload.savedAt) ? payload.savedAt : Date.now() };
       // If the downloaded wrapped payload contains a formUUID that we already have, skip importing
@@ -1145,9 +1189,12 @@ export async function restoreFilesBatch(options = {}) {
       } catch (e) { /* ignore */ }
 
       results.push({ entry: e, imported: true, formId: imp.formId, filePath: imp.filePath });
+      // notify caller-provided callback
       if (typeof onProgress === 'function') {
         try { onProgress({ index: i, total: entries.length, entry: e }); } catch (e) { /* ignore progress errors */ }
       }
+      // emit structured progress event for any global listeners
+      try { _emitProgress({ type: 'restore', index: i, total: entries.length, entry: e }); } catch (e) { /* ignore */ }
     } catch (err) {
       results.push({ entry: e, imported: false, error: (err && err.message) ? err.message : String(err) });
     }

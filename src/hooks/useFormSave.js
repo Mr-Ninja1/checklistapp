@@ -122,6 +122,19 @@ export default function useFormSave(a, b = {}) {
       };
       await waitForInFlight(5000);
   const payload = safeGetPayload('submitted');
+      // If a stable draft exists, carry over its formUUID so the submitted
+      // form and the draft share the same identifier. This prevents a common
+      // double-upload scenario where an autosave created a queued entry with
+      // one UUID and the final submit generated a different UUID and enqueued
+      // or uploaded separately.
+      try {
+        const draftWrapped = await formStorage.loadForm(stableDraftId).catch(() => null);
+        if (draftWrapped && draftWrapped.payload && draftWrapped.payload.formUUID && !payload.formUUID) {
+          payload.formUUID = draftWrapped.payload.formUUID;
+        }
+      } catch (e) {
+        // Non-fatal: continue without transferring the UUID
+      }
       const id = `${formType}_${Date.now()}`;
 
       // Start saving. Wait a short while for quick saves to finish so the

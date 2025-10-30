@@ -42,52 +42,22 @@ async function saveForm(formId, payload) {
       console.warn('formStorage: failed to schedule addFormHistory', e);
     }
 
-    // Fire-and-forget: attempt to upload this saved form to Dropbox if configured.
-    // If upload fails (no network or not signed in), enqueue the wrapped payload
-    // so it will be uploaded later when connectivity and credentials are available.
-    (async () => {
-      try {
-        const uploadQueue = await import('./uploadQueue');
-        const drive = await import('./drive');
-        if (!drive || typeof drive.isConfigured !== 'function') return;
-        const configured = await drive.isConfigured().catch(() => false);
-        if (!configured) return;
-        const token = await drive.getAccessToken().catch(() => null);
-        // Build a simple entry for the queue
-        const entry = { title: payload && (payload.title || payload.formType) ? String((payload.title || payload.formType)) : 'form', payload, savedAt: historyEntry.savedAt || Date.now() };
-        if (!token) {
-          // not signed in: persist for later
-          try { await uploadQueue.enqueue(entry); } catch (e) { /* ignore */ }
-          return;
-        }
-
-        // Try immediate upload; if it fails, enqueue
+    // Queue-first behavior: persist a queue entry for this saved form so uploads
+    // are tracked and retried by the upload queue. This keeps saves fast and
+    // ensures offline behavior is reliable: forms are recorded locally in the
+    // queue and processed when connectivity/credentials become available.
+      // Queue-first behavior: always enqueue the saved form so the upload system
+      // can track pending uploads reliably. This ensures offline saves populate
+      // the queue and uploads are handled centrally by the uploadQueue processor.
+      (async () => {
         try {
-          const dt = entry.savedAt ? new Date(Number(entry.savedAt)) : new Date();
-          const dateFolder = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-          const safeTitle = entry.title ? entry.title.replace(/[^a-z0-9-_\. ]/gi, '_') : 'form';
-          const uuidTag = (payload && payload.formUUID) ? `_id_${payload.formUUID}` : '';
-          const filename = `checklistapp_${safeTitle}_${entry.savedAt || Date.now()}${uuidTag}.json`;
-          try {
-            await drive.ensureFolderPath(dateFolder).catch(() => {});
-            const res = await drive.uploadJsonFileToFolder(filename, { savedAt: entry.savedAt || Date.now(), payload }, `/${dateFolder}`).catch(err => { throw err; });
-            if (res && res.skipped) {
-              // skip
-            }
-            return;
-          } catch (err) {
-            // fallback to root upload
-            try { await drive.uploadJsonFile(filename, { savedAt: entry.savedAt || Date.now(), payload }).catch(err => { throw err; }); return; } catch (err2) { /* fall through to enqueue */ }
-          }
+          const uploadQueue = await import('./uploadQueue');
+          const entry = { title: payload && (payload.title || payload.formType) ? String((payload.title || payload.formType)) : 'form', payload, savedAt: historyEntry.savedAt || Date.now() };
+          try { await uploadQueue.enqueue(entry); } catch (e) { /* ignore enqueue errors */ }
         } catch (e) {
-          // If immediate upload fails, persist to queue
-          try { await uploadQueue.enqueue(entry); } catch (ee) { /* ignore */ }
+          console.warn('formStorage: enqueue failed', e);
         }
-      } catch (e) {
-        // Non-fatal: log and continue
-        console.warn('formStorage: auto drive upload failed', e);
-      }
-    })();
+      })();
 
     return { filePath };
   } catch (err) {
@@ -110,6 +80,11 @@ async function saveDraft(formId, payload) {
     } catch (e) { /* ignore */ }
     const wrapped = { payload, savedAt: Date.now() };
     await FileSystem.writeAsStringAsync(filePath, JSON.stringify(wrapped));
+    // NOTE: Drafts are intentionally saved locally only. We don't auto-upload
+    // or enqueue drafts to avoid accidental duplicate uploads and to respect
+    // the user's expectation that drafts remain local until explicitly saved
+    // or submitted. Previous behavior attempted to upload/enqueue drafts which
+    // led to duplicate remote files when the user later submitted the form.
     return { filePath };
   } catch (err) {
     console.error('formStorage.saveDraft error', err);

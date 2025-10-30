@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Button, ActivityIndicator, FlatList, StyleSheet, Alert, Switch } from 'react-native';
 import drive from '../utils/drive';
+import { processQueue } from '../utils/uploadQueue';
 
 export default function DropboxScreen() {
   const [loading, setLoading] = useState(false);
@@ -39,6 +40,8 @@ export default function DropboxScreen() {
       setUser(ui || null);
       const name = (ui && (ui.email || (ui.name && ui.name.display_name))) || 'Signed in';
       Alert.alert('Signed in', name);
+      // After sign-in, immediately attempt to drain any queued uploads now that auth is available.
+      try { processQueue().catch(() => {}); } catch (e) { /* ignore */ }
     } catch (e) {
       Alert.alert('Sign in failed', String(e.message || e));
     } finally {

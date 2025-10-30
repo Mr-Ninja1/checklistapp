@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -10,6 +11,8 @@ import { normalizeSavedAtUsingFiles } from '../utils/formHistory';
 import { useIsFocused } from '@react-navigation/native';
 
 export default function FormSavesScreen() {
+  const navigation = useNavigation();
+  const route = useRoute();
   const [savedForms, setSavedForms] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -60,22 +63,29 @@ export default function FormSavesScreen() {
   const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
   const firstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
   const isFocused = useIsFocused();
+  // Extracted loader so we can call it manually (Refresh button) and from useEffect
+  const loadHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const history = await getFormHistory();
+      setSavedForms((history || []).slice().reverse());
+      setLoadingHistory(false);
+    } catch (e) {
+      setLoadingHistory(false);
+      setSavedForms([]);
+    }
+  };
 
   useEffect(() => {
-    async function loadHistory() {
-      // Prefer centralized history store (works for web and native)
-      try {
-        setLoadingHistory(true);
-        const history = await getFormHistory();
-        setSavedForms((history || []).slice().reverse());
-        setLoadingHistory(false);
-      } catch (e) {
-        setLoadingHistory(false);
-        setSavedForms([]);
-      }
-    }
     // reload whenever the screen becomes focused
     loadHistory();
+    // If navigated here with a request to open the Drive sign-in modal, clear the param after consuming
+    try {
+      if (route && route.params && route.params.openDriveModal) {
+        // reset param so it doesn't reopen on back/soft re-render
+        try { navigation.setParams({ openDriveModal: false }); } catch (e) {}
+      }
+    } catch (e) {}
   }, [isFocused]);
 
   // Filter saved forms by search term and active month
@@ -214,6 +224,12 @@ export default function FormSavesScreen() {
             style={styles.searchInput}
             placeholderTextColor="#6b7280"
           />
+          {/* Manual refresh placed below the search input for immediate visibility after restores */}
+          <View style={{ marginTop: 8, marginBottom: 8, alignItems: 'flex-end' }}>
+            <TouchableOpacity style={styles.smallActionBtnCompact} onPress={() => loadHistory()}>
+              <Text style={styles.smallActionBtnText}>{loadingHistory ? 'Refreshing...' : 'Refresh'}</Text>
+            </TouchableOpacity>
+          </View>
           {activeMonth !== 'all' ? (
             <Text style={{ marginTop: 6, color: '#374151' }}>Scoped to: {activeMonth === 'unknown' ? 'Unknown' : `${monthNames[Math.max(0, Number(activeMonth.split('-')[1]) - 1)]} ${activeMonth.split('-')[0]}`} — clear to search all months</Text>
           ) : null}
@@ -279,7 +295,7 @@ export default function FormSavesScreen() {
                 ) : 'Date range'}</Text>
               </TouchableOpacity>
               {/* Drive button inline (appears after date range) */}
-              <DriveFloatingButton inline onSyncComplete={async () => {
+              <DriveFloatingButton inline openOnMount={Boolean(route && route.params && route.params.openDriveModal)} onSyncComplete={async () => {
                 try {
                   const history = await getFormHistory();
                   setSavedForms((history || []).slice().reverse());
@@ -713,6 +729,7 @@ const styles = StyleSheet.create({
   applyBtnText: { color: '#fff', fontWeight: '800' },
   smallActionBtn: { backgroundColor: '#185a9d', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
   smallActionBtnText: { color: '#fff', fontWeight: '700' },
+  smallActionBtnCompact: { backgroundColor: '#185a9d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, minWidth: 96, alignItems: 'center' },
   lastDaysInput: { width: 54, backgroundColor: '#fff', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: '#e6eef2', textAlign: 'center' },
   filterBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: '#185a9d', backgroundColor: 'transparent' },
   filterBtnActive: { backgroundColor: '#185a9d' },
