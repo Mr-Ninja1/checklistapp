@@ -334,11 +334,57 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }} />
           <TouchableOpacity
             onPress={async () => {
+              // User-triggered manual connectivity check + reconnection attempt
               try {
-                const ok = await httpProbe();
+                setLoadingMsg('Checking internet...');
+                setLoadingCard(true);
+
+                // First try the normal HTTP probe (fast-path)
+                let ok = false;
+                try {
+                  ok = await httpProbe();
+                } catch (e) { ok = false; }
+
+                // If probe failed, try NetInfo as a best-effort fallback (may be more permissive)
+                if (!ok) {
+                  try {
+                    // require dynamically so web builds without the library won't fail here
+                    // eslint-disable-next-line global-require
+                    const NetInfo = require('@react-native-community/netinfo').default;
+                    if (NetInfo && typeof NetInfo.fetch === 'function') {
+                      const state = await NetInfo.fetch();
+                      ok = !!(state && (state.isConnected || state.isInternetReachable));
+                    }
+                  } catch (e) {
+                    // NetInfo not available — ignore
+                  }
+                }
+
                 setHasInternet(!!ok);
-                if (ok) processQueue().catch(() => {});
-              } catch (e) { /* ignore */ }
+
+                // If we got connectivity, attempt to reconcile queued uploads and refresh auth state
+                if (ok) {
+                  try {
+                    // refresh/store dropbox auth flag
+                    const t = await drive.getAccessToken().catch(() => null);
+                    setDropboxConnected(Boolean(t));
+                  } catch (e) {
+                    // ignore
+                  }
+
+                  try {
+                    await processQueue();
+                  } catch (e) {
+                    // processing may fail, but we've signalled an attempt
+                    console.warn('processQueue failed on manual retry', e);
+                  }
+                }
+              } catch (e) {
+                console.warn('manual connectivity check failed', e);
+              } finally {
+                // hide loader after a short grace so users see feedback
+                setTimeout(() => setLoadingCard(false), 300);
+              }
             }}
             activeOpacity={0.7}
           >

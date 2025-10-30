@@ -149,6 +149,35 @@ export default function FormSavesScreen() {
   }));
   const monthList = Array.from(monthSet).sort((a, b) => (a === 'unknown' ? 1 : b === 'unknown' ? -1 : b.localeCompare(a)));
 
+  // Build a year -> months map from savedForms so we can show years in header
+  // and reveal months for a single year in a modal when tapped.
+  const yearMap = (savedForms || []).reduce((acc, f) => {
+    try {
+      if (!f || !f.savedAt) return acc;
+      const d = new Date(f.savedAt);
+      if (isNaN(d.getTime())) return acc;
+      const y = String(d.getFullYear());
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      if (!acc[y]) acc[y] = new Set();
+      acc[y].add(m);
+    } catch (e) { /* ignore */ }
+    return acc;
+  }, {});
+  const yearList = Object.keys(yearMap).sort((a, b) => Number(b) - Number(a));
+
+  const [yearModalVisible, setYearModalVisible] = useState(false);
+  const [modalYear, setModalYear] = useState(null);
+  const [modalYearMonths, setModalYearMonths] = useState([]);
+
+  const openYearModal = (y) => {
+    try {
+      const months = Array.from(yearMap[y] || []).sort((a, b) => Number(b) - Number(a));
+      setModalYearMonths(months);
+      setModalYear(y);
+      setYearModalVisible(true);
+    } catch (e) { setModalYearMonths([]); setModalYear(y); setYearModalVisible(true); }
+  };
+
   // Download handler (web: download JSON, native: open PDF)
   const handleDownload = async () => {
     if (!selectedForm) return;
@@ -230,6 +259,39 @@ export default function FormSavesScreen() {
               <Text style={styles.smallActionBtnText}>{loadingHistory ? 'Refreshing...' : 'Refresh'}</Text>
             </TouchableOpacity>
           </View>
+          {/* Year -> Months modal: shows months available for the selected year */}
+          <Modal visible={yearModalVisible} animationType="slide" transparent>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+              <View style={{ width: '90%', maxHeight: '70%', backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
+                <Text style={{ fontWeight: '800', fontSize: 18, marginBottom: 8 }}>Months in {modalYear}</Text>
+                <ScrollView>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                    {modalYearMonths && modalYearMonths.length ? (
+                      modalYearMonths.map(m => {
+                        const label = `${monthNames[Number(m) - 1] || m} ${modalYear}`;
+                        const key = `${modalYear}-${m}`;
+                        return (
+                          <TouchableOpacity key={key} onPress={() => { setActiveMonth(`${modalYear}-${m}`); setYearModalVisible(false); }} style={[styles.categoryBtn, { margin: 6 }]}>
+                            <Text style={styles.categoryBtnText}>{label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })
+                    ) : (
+                      <Text style={{ color: '#666' }}>No months found for this year.</Text>
+                    )}
+                  </View>
+                </ScrollView>
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 }}>
+                  <TouchableOpacity style={[styles.clearBtn, { marginRight: 8 }]} onPress={() => { setActiveMonth('all'); setYearModalVisible(false); }}>
+                    <Text style={styles.clearBtnText}>All months</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.applyBtn} onPress={() => setYearModalVisible(false)}>
+                    <Text style={styles.applyBtnText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
           {activeMonth !== 'all' ? (
             <Text style={{ marginTop: 6, color: '#374151' }}>Scoped to: {activeMonth === 'unknown' ? 'Unknown' : `${monthNames[Math.max(0, Number(activeMonth.split('-')[1]) - 1)]} ${activeMonth.split('-')[0]}`} — clear to search all months</Text>
           ) : null}
@@ -259,18 +321,7 @@ export default function FormSavesScreen() {
                   <Text style={styles.filterBtnText}>Last N days</Text>
                 </TouchableOpacity>
               </View>
-              {monthList.map(m => {
-                const label = (m === 'unknown') ? 'Unknown' : (() => {
-                  const [y, mm] = m.split('-');
-                  const idx = Math.max(0, Math.min(11, Number(mm) - 1));
-                  return `${monthNames[idx]} ${y}`;
-                })();
-                return (
-                  <TouchableOpacity key={m} onPress={() => setActiveMonth(m)} style={[styles.categoryBtn, activeMonth === m ? styles.categoryBtnActive : null]}>
-                    <Text style={activeMonth === m ? styles.categoryBtnTextActive : styles.categoryBtnText}>{label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+              {/* years are shown in the separate scrollable row below (no inline year chips here) */}
               {/* Date range chip next to months */}
               <TouchableOpacity
                 style={[styles.dateRangeBtn, { marginLeft: 8 }]}
@@ -303,7 +354,22 @@ export default function FormSavesScreen() {
               }} />
             </ScrollView>
           </View>
-        </View>
+          </View>
+          {/* Years container: separate horizontal scroll placed below the top filter controls */}
+          <View style={{ width: '100%', paddingTop: 8, paddingBottom: 6 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ alignItems: 'center', paddingLeft: 8, paddingRight: 16 }}>
+              {yearList && yearList.length ? yearList.map(y => {
+                const isAnyMonthActive = activeMonth && activeMonth.indexOf(String(y)) === 0;
+                return (
+                  <TouchableOpacity key={y} onPress={() => openYearModal(y)} style={[styles.categoryBtn, isAnyMonthActive ? styles.categoryBtnActive : null, { marginRight: 8 }]}>
+                    <Text style={isAnyMonthActive ? styles.categoryBtnTextActive : styles.categoryBtnText}>{y}</Text>
+                  </TouchableOpacity>
+                );
+              }) : (
+                <Text style={{ color: '#666', marginLeft: 8 }}>No years available</Text>
+              )}
+            </ScrollView>
+          </View>
           {/* Date picker modal */}
           <Modal visible={datePickerVisible} animationType="slide" transparent>
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
@@ -542,9 +608,9 @@ export default function FormSavesScreen() {
                       <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
                       <Text style={styles.cardMeta}>Location: {form.location || ''}</Text>
                       <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : 'Unknown'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(form, idx, date)}>
-                      <Text style={styles.deleteBtnText}>Delete</Text>
+                      <TouchableOpacity style={styles.deleteBtnSmall} onPress={() => handleDelete(form, idx, date)}>
+                        <Text style={styles.deleteBtnTextSmall}>Delete</Text>
+                      </TouchableOpacity>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -599,9 +665,9 @@ export default function FormSavesScreen() {
                     >
                       <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
                       <Text style={styles.cardMeta}>Date: {form.date || ''} | Location: {form.location || ''}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(form, idx)}>
-                      <Text style={styles.deleteBtnText}>Delete</Text>
+                      <TouchableOpacity style={styles.deleteBtnSmall} onPress={() => handleDelete(form, idx)}>
+                        <Text style={styles.deleteBtnTextSmall}>Delete</Text>
+                      </TouchableOpacity>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -627,19 +693,36 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   deleteBtn: {
-    backgroundColor: '#ff5e62',
+    backgroundColor: '#e70e0eff',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 18,
     marginLeft: 8,
+    marginRight:40,
     alignSelf: 'stretch',
     justifyContent: 'center',
+    width:40,
+
+    
   },
   deleteBtnText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
   },
+  // small delete button placed inside card
+  deleteBtnSmall: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    backgroundColor: '#ff5e62',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnTextSmall: { color: '#fff', fontWeight: '700', fontSize: 14 },
   container: {
     flex: 1,
     backgroundColor: '#f7f7f7',
@@ -670,13 +753,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 14,
     padding: 18,
+    paddingRight: 48, // leave room for inline delete button (slightly inset)
     marginBottom: 18,
     shadowColor: '#185a9d',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 3,
-    width: '100%',
+    flex: 1,
   },
   cardTitle: {
     fontSize: 18,

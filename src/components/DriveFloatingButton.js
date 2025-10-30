@@ -743,12 +743,8 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
                           <View style={{ marginBottom: 8 }}>
                             <Text style={{ marginBottom: 6, color: '#333' }}>Select years to restore:</Text>
                               <View style={{ maxHeight: 220, marginBottom: 8 }}>
-                                <FlatList
-                                  data={remoteYears}
-                                  keyExtractor={(item) => String(item)}
-                                  numColumns={2}
-                                  showsVerticalScrollIndicator={true}
-                                  renderItem={({ item: y }) => {
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                                  {remoteYears.map(y => {
                                     const isSel = selectedYears && selectedYears.includes(y);
                                     return (
                                       <TouchableOpacity key={String(y)} style={[styles.yearTile, isSel ? styles.yearTileSelected : null]} onPress={() => toggleYear(y)}>
@@ -756,8 +752,8 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
                                         {isSel ? <Text style={styles.yearRowCheck}>✓</Text> : null}
                                       </TouchableOpacity>
                                     );
-                                  }}
-                                />
+                                  })}
+                                </View>
                               </View>
                             <View style={{ marginTop: 8, alignItems: 'center' }}>
                               <TouchableOpacity style={[styles.actionBtnPrimary, { minWidth: 260 }]} onPress={() => handleRestoreSelected()}><Text style={styles.actionBtnText}>Restore selected</Text></TouchableOpacity>
