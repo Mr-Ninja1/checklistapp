@@ -232,7 +232,7 @@ const PackagingMaterialsReceivingForm = () => {
                         <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
                     </View>
                     <View style={{ marginTop: 12 }}>
-                        <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || isSaving) return; handleSubmit(); }} showSavePdf={false} isSaving={isSaving} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={isSaving} />
                     </View>
                     {/* Notification shown after submit (useFormSave sets message) */}
                     <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

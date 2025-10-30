@@ -430,10 +430,10 @@ export default function FoodHandlersHandwashingForm() {
           <TouchableOpacity onPress={handleBack} style={[styles.auxButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
             <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
+          <TouchableOpacity onPress={handleSaveDraft} disabled={isSaving} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
             <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Save Draft</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={() => { if (!editMode || isSaving) return; handleSavePDF(); }} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} disabled={isSaving} activeOpacity={0.85}>
             <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
           </TouchableOpacity>
         </View>

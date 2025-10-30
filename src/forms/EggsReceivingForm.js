@@ -94,16 +94,6 @@ const EggsReceivingForm = () => {
     scheduleAutoSave = _scheduleAutoSave;
 
     useEffect(() => { if (showNotification) { Alert.alert(notificationMessage || 'Saved'); setShowNotification(false); } }, [showNotification]);
-    // Wrap save/submit so they only run when editMode is active and not already saving
-    const onSaveDraftPress = () => {
-        if (!editMode || isSaving) return;
-        handleSaveDraft();
-    };
-
-    const onSubmitPress = () => {
-        if (!editMode || isSaving) return;
-        handleSubmit();
-    };
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
@@ -274,7 +264,7 @@ const EggsReceivingForm = () => {
                         {/* Form action buttons should appear below the form content so they are
                             reachable on mobile screens and do not interfere with the table layout. */}
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={onSaveDraftPress} onSubmit={onSubmitPress} showSavePdf={false} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
                         </View>
 
                         <View style={styles.verificationFooter}>

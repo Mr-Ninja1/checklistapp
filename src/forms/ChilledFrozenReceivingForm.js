@@ -295,8 +295,8 @@ const ChilledFrozenReceivingForm = () => {
                     {/* Shared action bar: Save Draft / Submit */}
                     <View style={{ marginTop: 24 }}>
                         <FormActionBar
-                            onSaveDraft={() => { if (!editMode || saving) return; handleSaveDraft(); }}
-                            onSubmit={() => { if (!editMode || saving) return; handleSubmit(); }}
+                            onSaveDraft={handleSaveDraft}
+                            onSubmit={handleSubmit}
                             isSaving={saving}
                         />
                     </View>

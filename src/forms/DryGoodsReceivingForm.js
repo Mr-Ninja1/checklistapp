@@ -285,7 +285,7 @@ const DryGoodsReceivingForm = () => {
                     {/* --- Action buttons --- */}
                         <View style={{ height: 18 }} />
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || saving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || saving) return; handleSubmit(); }} showSavePdf={false} isSaving={saving} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={saving} />
                         </View>
                         <LoadingOverlay visible={saving} message={'Saving form...'} />
                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

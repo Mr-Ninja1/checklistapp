@@ -240,22 +240,22 @@ const PPEIssuanceForm = () => {
                                     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
                                         <TouchableOpacity
                                             style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
-                                            onPress={(!editMode || isSaving) ? undefined : async () => { try { await handleSaveDraft(); } catch(e){console.warn(e);} }}
-                                            disabled={!editMode || isSaving}
+                                            onPress={async () => { try { await handleSaveDraft(); } catch(e){console.warn(e);} }}
+                                            disabled={isSaving}
                                         >
                                             <Text style={{ fontWeight: '700', fontSize: 16 }}>{isSaving ? 'Saving...' : 'Save Draft'}</Text>
                                         </TouchableOpacity>
 
                                         <TouchableOpacity
                                             style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
-                                            onPress={(!editMode || isSaving) ? undefined : async () => {
+                                            onPress={async () => {
                                                 try {
                                                     await handleSubmit();
                                                 } catch (e) {
                                                     console.warn('submit failed', e);
                                                 }
                                             }}
-                                            disabled={!editMode || isSaving}
+                                            disabled={isSaving}
                                         >
                                             <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
                                         </TouchableOpacity>

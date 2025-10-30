@@ -277,10 +277,10 @@ export default function PreShiftMeetingRegister() {
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, opacity: editMode ? 1 : 0.6 }} disabled={!editMode}>
+          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, opacity: editMode ? 1 : 0.6 }} disabled={!editMode}>
+          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
           </TouchableOpacity>
         </View>

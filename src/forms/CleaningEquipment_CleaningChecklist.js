@@ -262,8 +262,8 @@ export default function CleaningEquipmentChecklist() {
           </ScrollView>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={[styles.button, styles.draftButton]} disabled={!editMode || busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-              <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={[styles.button, styles.submitButton]} disabled={!editMode || busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+              <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
             </View>
             <LoadingOverlay visible={isSaving} />
             <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

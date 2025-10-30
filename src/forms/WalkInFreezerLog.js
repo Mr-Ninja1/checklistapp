@@ -243,8 +243,8 @@ export default function WalkInFreezerLog() {
           </View>
 
           <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={[styles.button, styles.draftButton]} disabled={busy || !editMode}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={[styles.button, styles.submitButton]} disabled={busy || !editMode}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Log</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Log</Text>}</TouchableOpacity>
           </View>
           <LoadingOverlay visible={isSaving} />
           <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

@@ -293,12 +293,12 @@ export default function FrontOfHouseChecklist() {
           </ScrollView>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSaveDraft(); }} style={[styles.button, styles.draftButton]} disabled={!editMode || busy}>
-              {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save Draft</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSubmit(); }} style={[styles.button, styles.submitButton]} disabled={!editMode || busy}>
-              {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}
-            </TouchableOpacity>
+              <TouchableOpacity onPress={() => { if (busy) return; handleSaveDraft(); }} style={[styles.button, styles.draftButton]} disabled={busy}>
+                {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save Draft</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { if (busy) return; handleSubmit(); }} style={[styles.button, styles.submitButton]} disabled={busy}>
+                {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}
+              </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

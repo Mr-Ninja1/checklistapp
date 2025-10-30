@@ -270,7 +270,7 @@ export default function TrainingAttendanceRegister() {
         {/* Action bar + overlays */}
         <View style={{ height: 18 }} />
         <View style={{ marginTop: 8, paddingHorizontal: 8 }}>
-          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } } : undefined} showSavePdf={false} />
+          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } }} showSavePdf={false} />
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

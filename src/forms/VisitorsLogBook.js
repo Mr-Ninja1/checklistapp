@@ -342,15 +342,15 @@ export default function VisitorsLogBook() {
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: '#f6c342' }]}
-              onPress={editMode ? handleSaveDraft : undefined}
-              disabled={!editMode || isSaving}
+              onPress={handleSaveDraft}
+              disabled={isSaving}
             >
               <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: '#3b82f6' }]}
-              onPress={editMode ? async () => { try { await handleSubmit(); } catch (e) { console.warn('submit failed', e); } } : undefined}
-              disabled={!editMode || isSaving}
+              onPress={async () => { try { await handleSubmit(); } catch (e) { console.warn('submit failed', e); } }}
+              disabled={isSaving}
             >
               <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
             </TouchableOpacity>

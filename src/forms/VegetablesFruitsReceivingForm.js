@@ -246,7 +246,7 @@ const VegetablesFruitsReceivingForm = () => {
                     </View>
                         <View style={{ height: 18 }} />
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || isSaving) return; handleSubmit(() => clearForm()); }} showSavePdf={false} isSaving={isSaving} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={isSaving} />
                         </View>
                         <LoadingOverlay visible={isSaving} />
                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

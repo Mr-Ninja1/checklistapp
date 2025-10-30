@@ -385,7 +385,7 @@ const BeverageReceivingForm = () => {
 
                                 {/* Action buttons - Save Draft & Submit */}
                                 <View style={{ height: 18 }} />
-                        <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || isSaving) return; handleSubmit(); }} showSavePdf={false} isSaving={isSaving} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={isSaving} />
                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                     </View>
                 </ScrollView>

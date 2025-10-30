@@ -300,7 +300,7 @@ export default function PastInspectionForm() {
 
                     {/* Functional Buttons provided by FormActionBar */}
                     <View style={styles.buttonRow}>
-                        <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
                     </View>
 
                         <LoadingOverlay visible={isSaving} />

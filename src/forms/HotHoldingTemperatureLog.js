@@ -288,15 +288,15 @@ export default function HotHoldingTemperatureLog() {
                 <View style={styles.buttonRow}>
                     <TouchableOpacity
                         style={[styles.btn, { backgroundColor: '#f6c342' }]}
-                        onPress={() => { if (!editMode || busy) return; handleSaveDraft(); }}
-                        disabled={!editMode || busy}
+                        onPress={() => { if (busy) return; handleSaveDraft(); }}
+                        disabled={busy}
                     >
                         <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.btn, { backgroundColor: '#3b82f6' }]}
-                        onPress={() => { if (!editMode || busy) return; handleSubmit(); }}
-                        disabled={!editMode || busy}
+                        onPress={() => { if (busy) return; handleSubmit(); }}
+                        disabled={busy}
                     >
                         <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
                     </TouchableOpacity>

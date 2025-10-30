@@ -212,10 +212,10 @@ export default function FruitWashingLog() {
           </View>
         </View>
 
-        <View style={styles.buttonRow}>
-         <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} disabled={!editMode || isSaving}><Text style={styles.btnText}>{!editMode ? 'Edit to Save' : (isSaving ? 'Saving...' : 'Save Draft')}</Text></TouchableOpacity>
-         <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={() => { if (!editMode || isSaving) return; submitAndRecord(); }} disabled={!editMode || isSaving}><Text style={styles.btnText}>{!editMode ? 'Edit to Submit' : (isSaving ? 'Submitting...' : 'Submit Log')}</Text></TouchableOpacity>
-        </View>
+  <View style={styles.buttonRow}>
+   <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+   <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={submitAndRecord} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+  </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
       </ScrollView>

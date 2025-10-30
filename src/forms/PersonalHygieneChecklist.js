@@ -238,26 +238,18 @@ const PersonalHygieneChecklist = () => {
                         <Text style={styles.footerText}>HSEQ SIGN:..................................</Text>
                     </View>
                     
-                    {/* Save / Submit buttons (non-intrusive) */}
-                    <View style={{ padding: 8, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                        <TouchableOpacity onPress={(!editMode || isSaving) ? undefined : () => handleSaveDraft && handleSaveDraft()} style={{ backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }} disabled={!editMode || isSaving}>
-                            <Text style={{ color: '#fff', fontWeight: '700' }}>{isSaving ? 'Saving...' : 'Save Draft'}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={(!editMode || isSaving) ? undefined : async () => { try { await handleSubmit(); } catch (e) { console.warn('submit failed', e); } }} style={{ backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }} disabled={!editMode || isSaving}>
-                            <Text style={{ color: '#fff', fontWeight: '700' }}>{isSaving ? 'Submitting...' : 'Submit'}</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {/* Inline action buttons removed — footer contains Save/Submit to avoid duplicate controls */}
                                         </View>
                                     </ScrollView>
                                 </View>
                         </ScrollView>
             {/* Fixed footer with actions */}
-            <View style={{ padding: 10, borderTopWidth: 1, borderColor: '#eee', backgroundColor: '#fff' }}>
+                <View style={{ padding: 10, borderTopWidth: 1, borderColor: '#eee', backgroundColor: '#fff' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                    <TouchableOpacity onPress={editMode ? () => handleSaveDraft && handleSaveDraft() : undefined} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }} disabled={!editMode}>
+                    <TouchableOpacity onPress={() => { if (isSaving) return; handleSaveDraft && handleSaveDraft(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }} disabled={isSaving}>
                         <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={editMode ? async () => { try { await handleSubmit(); const snapshot = buildPayload('submitted'); addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e)); } catch (e) { console.warn('submit failed', e); } } : undefined} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={!editMode}>
+                    <TouchableOpacity onPress={async () => { if (isSaving) return; try { await handleSubmit(); const snapshot = buildPayload('submitted'); addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e)); } catch (e) { console.warn('submit failed', e); } }} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={isSaving}>
                         <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
                     </TouchableOpacity>
                 </View>

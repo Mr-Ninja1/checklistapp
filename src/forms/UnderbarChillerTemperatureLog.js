@@ -187,10 +187,10 @@ export default function UnderbarChillerTemperatureLog() {
 
               {/* Top action buttons placed inline with logo */}
               <View style={styles.headerButtons}>
-                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#f6c342' }]} onPress={editMode ? handleSaveDraft : undefined} disabled={busy || !editMode}>
+                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
                   <Text style={styles.headerBtnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#3b82f6' }]} onPress={editMode ? handleSubmit : undefined} disabled={busy || !editMode}>
+                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
                   <Text style={styles.headerBtnText}>{busy ? 'Submitting...' : 'Submit'}</Text>
                 </TouchableOpacity>
               </View>

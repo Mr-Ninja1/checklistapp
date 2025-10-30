@@ -310,7 +310,7 @@ export default function ProcessQualityOutOfControlReport() {
   </ScrollView>
 
   <View style={{ marginTop: 12 }}>
-          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmit : undefined} showSavePdf={false} />
+          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

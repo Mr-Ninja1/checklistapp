@@ -250,8 +250,8 @@ export default function KitchenWeeklyCleaningChecklist() {
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
-            <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={[styles.button, styles.draftButton]} disabled={!editMode || isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
-            <TouchableOpacity onPress={editMode ? () => handleSubmit() : undefined} style={[styles.button, styles.submitButton]} disabled={!editMode || isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
           </View>
         </View>
         </ScrollView>
