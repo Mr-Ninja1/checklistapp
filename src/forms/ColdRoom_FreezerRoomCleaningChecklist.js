@@ -197,10 +197,18 @@ export default function ColdRoomFreezerChecklist() {
       ))}
     </View>
   );
+  // Action buttons rendered outside pointer-events-blocking children so they
+  // remain tappable when editMode is false.
+  const actionButtons = (
+    <View style={styles.buttonContainer}>
+      <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
           <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)), flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast"> 
           <View style={styles.card}>
           <View style={styles.header}>
@@ -268,10 +276,7 @@ export default function ColdRoomFreezerChecklist() {
             </View>
           </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
-          </View>
+          {/* buttons moved into EditableFormContainer via actionButtons prop */}
             <LoadingOverlay visible={isSaving} />
             <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
           </View>

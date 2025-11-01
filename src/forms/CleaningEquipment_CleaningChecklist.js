@@ -190,9 +190,17 @@ export default function CleaningEquipmentChecklist() {
   };
 
   const windowHeight = Dimensions.get('window').height;
+  // Action buttons so they remain tappable while viewing (rendered outside
+  // the pointer-events blocking children wrapper).
+  const actionButtons = (
+    <View style={styles.buttonContainer}>
+      <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+    </View>
+  );
 
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }] }>
           <View style={styles.card}>
@@ -261,10 +269,7 @@ export default function CleaningEquipmentChecklist() {
             </View>
           </ScrollView>
 
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-              <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
-            </View>
+            {/* buttons moved into EditableFormContainer via actionButtons prop */}
             <LoadingOverlay visible={isSaving} />
             <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
           </View>

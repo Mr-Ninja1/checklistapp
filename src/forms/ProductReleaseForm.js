@@ -5,6 +5,7 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import ResponsiveTable from '../components/ResponsiveTable';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -188,7 +189,8 @@ const ProductReleaseForm = () => {
                     </View>
 
                     <View style={dailyStyles.tableContainer}>
-                        <View style={dailyStyles.tableHeader}>
+                        <ResponsiveTable>
+                            <View style={dailyStyles.tableHeader}>
                             <Text style={[dailyStyles.headerCell, dailyStyles.dateCol]}>Date</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.productNameCol]}>Product Name</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.batchNumberCol]}>Batch{"\n"}Number</Text>
@@ -198,14 +200,15 @@ const ProductReleaseForm = () => {
                             <Text style={[dailyStyles.headerCell, dailyStyles.approvedCol]}>Approved by HSEQ{"\n"}Manager</Text>
                         </View>
 
-                        <FlatList
-                            data={productData}
-                            renderItem={renderProductLogItem}
-                            keyExtractor={item => item.id}
-                            scrollEnabled={false}
-                        />
-                    </View>
-                                        <View style={{ height: 18 }} />
+                            <FlatList
+                                data={productData}
+                                renderItem={renderProductLogItem}
+                                keyExtractor={item => item.id}
+                                scrollEnabled={false}
+                            />
+                            </ResponsiveTable>
+                        </View>
+                        <View style={{ height: 18 }} />
                                         <View style={{ marginTop: 12 }}>
                                             <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); })} showSavePdf={false} />
                                         </View>

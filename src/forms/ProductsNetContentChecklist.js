@@ -134,8 +134,15 @@ export default function ProductsNetContentChecklist() {
     }
   };
 
+  const actionButtons = (
+    <View style={styles.buttonRow}>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSubmitLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
+    </View>
+  );
+
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraftLocal}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraftLocal} actionButtons={actionButtons}>
       <View style={styles.container}>
       <ScrollView contentContainerStyle={{ ...styles.content, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
 
@@ -251,10 +258,7 @@ export default function ProductsNetContentChecklist() {
           </View>
         </View>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSubmitLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
-        </View>
+        {/* action buttons moved into EditableFormContainer via actionButtons prop */}
   <LoadingOverlay visible={isSaving || busy} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 

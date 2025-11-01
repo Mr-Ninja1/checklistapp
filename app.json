@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Bravo manager",
+  "name": "Bravo manager",
     "slug": "bravo-manager",
     "scheme": "checklistapp",
-    "icon": "./src/assets/logo.jpeg",
+  "icon": "./src/assets/bravo.png",
     "extra": {
       "dropboxAppKey": "fc5bqdv55hchi8e"
     },

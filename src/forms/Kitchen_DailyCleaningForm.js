@@ -209,6 +209,21 @@ export default function Kitchen_DailyCleaningForm() {
     }
   };
 
+  // Render action buttons outside pointer-events-blocking children so they're
+  // tappable while viewing (editMode may be false). Keep handlers unchanged.
+  const actionButtons = (
+    <View style={{ paddingVertical: s(8) }}>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: 8 }} disabled={busy}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save Draft</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#185a9d', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8 }} disabled={busy}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Submit</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const handleBack = () => {
     setBusy(true);
     setTimeout(() => {
@@ -218,7 +233,7 @@ export default function Kitchen_DailyCleaningForm() {
   };
 
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
       <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: s(180) }} alwaysBounceVertical>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       <View style={styles.headerTop}>
@@ -263,15 +278,7 @@ export default function Kitchen_DailyCleaningForm() {
 
       <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All kitchen staff must clean and sanitize the listed areas after use.</Text>
 
-      <View style={{ padding: s(8), alignItems: 'center' }}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save Draft</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSave} style={{ backgroundColor: '#185a9d', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Submit</Text></TouchableOpacity>
-        </View>
-      </View>
+      {/* buttons moved into EditableFormContainer via actionButtons prop */}
       </ScrollView>
     </EditableFormContainer>
   );

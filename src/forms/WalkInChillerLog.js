@@ -172,7 +172,7 @@ export default function WalkInChillerLog() {
   return (
     <View style={styles.container}>
   <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={hookSaveDraft}>
-  <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast" horizontal={false}>
+  <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast" horizontal={false} nestedScrollEnabled={true} directionalLockEnabled={true}>
         <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
@@ -205,7 +205,7 @@ export default function WalkInChillerLog() {
             <Text style={styles.instruction}>Instruction: The temperature of the Walk-in Chiller should be between 0° C and 4° C</Text>
           </View>
 
-          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled directionalLockEnabled onStartShouldSetResponderCapture={() => true}>
+          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled={true} directionalLockEnabled={true} showsHorizontalScrollIndicator={true} onStartShouldSetResponderCapture={() => true}>
             <View style={{ minWidth: TABLE_MIN_WIDTH }}>
               <View style={styles.headerRow}>
                 <View style={[styles.headerCell, { width: COL_WIDTHS.DATE }]}><Text style={styles.headerText}>Date</Text></View>

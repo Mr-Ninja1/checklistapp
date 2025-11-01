@@ -184,8 +184,18 @@ export default function KitchenWeeklyCleaningChecklist() {
     </View>
   );
 
+  // Move the action buttons outside the pointer-events-blocking area so they
+  // remain tappable while viewing (editMode false). Use existing handlers.
+  const actionButtons = (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
+      <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
+      <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
+    </View>
+  );
+
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
@@ -248,11 +258,7 @@ export default function KitchenWeeklyCleaningChecklist() {
             </View>
           </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
-            <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
-          </View>
+          {/* Buttons moved into EditableFormContainer via actionButtons prop */}
         </View>
         </ScrollView>
         <LoadingOverlay visible={isSaving} />

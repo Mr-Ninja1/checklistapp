@@ -145,6 +145,20 @@ export default function UnderbarChillerTemperatureLog() {
     setBusy(false);
   };
 
+  // Action buttons moved out of the children wrapper so they're tappable
+  // even when the form is not in edit mode. EditableFormContainer will
+  // render these outside the pointer-events-blocking area.
+  const actionButtons = (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+      <TouchableOpacity onPress={handleSaveDraft} style={[styles.btn, { backgroundColor: '#f6c342' }]} disabled={busy}>
+        <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleSubmit} style={[styles.btn, { backgroundColor: '#3b82f6' }]} disabled={busy}>
+        <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   // Revised Flex Distribution for perfect alignment (Total Flex: 1.0 + 9.0 + 2.0 + 2.0 = 14.0)
   const COL_FLEX = {
     DATE: 1.0,
@@ -162,8 +176,8 @@ export default function UnderbarChillerTemperatureLog() {
 
   return (
     <View style={styles.container}>
-      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
-  <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
+        <ScrollView contentContainerStyle={[styles.content, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
 
         {/* --- 1. Header (Metadata Block) --- */}
         <View style={styles.metaContainer}>
@@ -185,15 +199,7 @@ export default function UnderbarChillerTemperatureLog() {
                 <Text style={styles.brandSubtitle}>Food Safety Management System</Text>
               </View>
 
-              {/* Top action buttons placed inline with logo */}
-              <View style={styles.headerButtons}>
-                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
-                  <Text style={styles.headerBtnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.headerBtn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
-                  <Text style={styles.headerBtnText}>{busy ? 'Submitting...' : 'Submit'}</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Top action buttons removed from header — rendered by EditableFormContainer.actionButtons */}
             </View>
 
             <View style={styles.docInfoGrid}>
@@ -336,7 +342,8 @@ export default function UnderbarChillerTemperatureLog() {
           </View>
         </View>
 
-        {/* add extra bottom padding so content isn't hidden behind the footer */}
+        {/* add extra bottom padding so content isn't hidden behind the floating action buttons */}
+        <View style={{ height: 110 }} />
         </ScrollView>
       </EditableFormContainer>
 

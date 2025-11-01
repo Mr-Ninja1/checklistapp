@@ -237,23 +237,23 @@ const PersonalHygieneChecklist = () => {
                         {/* Only HSEQ SIGN is visible in the hygiene checklist image */}
                         <Text style={styles.footerText}>HSEQ SIGN:..................................</Text>
                     </View>
-                    
-                    {/* Inline action buttons removed — footer contains Save/Submit to avoid duplicate controls */}
+
+                    {/* Inline action buttons placed here so they appear close to the end of the table */}
+                    <View style={{ paddingVertical: 8 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                            <TouchableOpacity onPress={() => { if (isSaving) return; handleSaveDraft && handleSaveDraft(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }} disabled={isSaving}>
+                                <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={async () => { if (isSaving) return; try { await handleSubmit(); const snapshot = buildPayload('submitted'); addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e)); } catch (e) { console.warn('submit failed', e); } }} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={isSaving}>
+                                <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                                         </View>
                                     </ScrollView>
                                 </View>
                         </ScrollView>
-            {/* Fixed footer with actions */}
-                <View style={{ padding: 10, borderTopWidth: 1, borderColor: '#eee', backgroundColor: '#fff' }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                    <TouchableOpacity onPress={() => { if (isSaving) return; handleSaveDraft && handleSaveDraft(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }} disabled={isSaving}>
-                        <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={async () => { if (isSaving) return; try { await handleSubmit(); const snapshot = buildPayload('submitted'); addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e)); } catch (e) { console.warn('submit failed', e); } }} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={isSaving}>
-                        <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+            
             {/* Notifications and loading overlay */}
             <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
             <LoadingOverlay visible={isSaving} />
@@ -285,7 +285,8 @@ const styles = StyleSheet.create({
         minWidth: totalWidth + 20,
         // Increase vertical depth so forms can scroll further (long forms)
         minHeight: 1200,
-        paddingBottom: 400,
+        // Reduce extra bottom padding now that actions are inline near the table end
+        paddingBottom: 20,
     },
     container: {
         flex: 1,

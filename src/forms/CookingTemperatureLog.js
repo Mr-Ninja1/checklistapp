@@ -103,10 +103,6 @@ export default function CookingTemperatureLog() {
     const setMetaField = (k, v) => setMeta(prev => ({ ...prev, [k]: v }));
 
     const handleSubmit = async () => {
-        if (!editMode) {
-            Alert.alert('Edit mode required', 'Tap Edit to enable submitting this form.');
-            return;
-        }
         // Save all rows (including empty) so presentational matches exact editable form
         const logData = rows.map((r, i) => ({ index: i + 1, ...r }));
 
@@ -151,6 +147,19 @@ export default function CookingTemperatureLog() {
         setBusy(false);
     };
 
+    // Action buttons rendered outside the pointer-events-blocking children wrapper
+    // so they remain tappable even when editMode is off.
+    const actionButtons = (
+        <View style={styles.buttonRow}>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
+                <Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
+                <Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     // Flex values for column widths (Total Flex: 14.1)
     const COL_FLEX = {
         INDEX: 0.6,
@@ -161,7 +170,7 @@ export default function CookingTemperatureLog() {
 
     return (
         <View style={styles.container}>
-            <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+            <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
             <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 180 }] } keyboardShouldPersistTaps="handled">
                 
                 {/* --- 1. Document Header (Metadata Block) --- */}
@@ -312,11 +321,7 @@ export default function CookingTemperatureLog() {
                     </View>
                 </View>
 
-                {/* --- 4. Action Buttons --- */}
-                <View style={styles.buttonRow}>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
-                </View>
+                {/* buttons moved into EditableFormContainer via actionButtons prop */}
 
             </ScrollView>
             </EditableFormContainer>

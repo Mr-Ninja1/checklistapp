@@ -6,6 +6,7 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import formStorage from '../utils/formStorage';
+import ResponsiveTable from '../components/ResponsiveTable';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -215,7 +216,8 @@ const VegetablesFruitsReceivingForm = () => {
                     </View>
 
                     <View style={dailyStyles.tableContainer}>
-                        <View style={dailyStyles.tableHeader}>
+                        <ResponsiveTable>
+                            <View style={dailyStyles.tableHeader}>
                             <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Type of Veg / Fruit</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
 
@@ -237,7 +239,8 @@ const VegetablesFruitsReceivingForm = () => {
                             </View>
                         </View>
 
-                        <FlatList data={receivingData} renderItem={renderReceivingLogItem} keyExtractor={item => item.id} scrollEnabled={false} />
+                            <FlatList data={receivingData} renderItem={renderReceivingLogItem} keyExtractor={item => item.id} scrollEnabled={false} />
+                        </ResponsiveTable>
                     </View>
 
                     <View style={styles.verificationFooter}>

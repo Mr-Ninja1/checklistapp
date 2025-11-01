@@ -5,6 +5,7 @@ import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import ResponsiveTable from '../components/ResponsiveTable';
 
 const { width } = Dimensions.get('window');
 
@@ -201,31 +202,33 @@ const PackagingMaterialsReceivingForm = () => {
                         </View>
                     </View>
 
-                    <View style={dailyStyles.tableContainer}>
-                        <View style={dailyStyles.tableHeader}>
-                            <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Name of Product</Text>
-                            <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
+                        <View style={dailyStyles.tableContainer}>
+                            <ResponsiveTable>
+                                <View style={dailyStyles.tableHeader}>
+                                    <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Name of Product</Text>
+                                    <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
 
-                            <View style={dailyStyles.groupHeaderCol}>
-                                <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
-                                <View style={dailyStyles.subHeaderRow}>
-                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.cleanCol]}>Clean</Text>
-                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempCol, dailyStyles.lastSubHeaderCell]}>Temp</Text>
-                                </View>
-                            </View>
+                                    <View style={dailyStyles.groupHeaderCol}>
+                                        <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
+                                        <View style={dailyStyles.subHeaderRow}>
+                                            <Text style={[dailyStyles.subHeaderCell, dailyStyles.cleanCol]}>Clean</Text>
+                                            <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempCol, dailyStyles.lastSubHeaderCell]}>Temp</Text>
+                                        </View>
+                                    </View>
 
-                            <View style={[dailyStyles.groupHeaderCol, dailyStyles.lastGroupHeaderCol]}>
-                                <Text style={dailyStyles.groupHeaderTitle}>Product</Text>
-                                <View style={dailyStyles.subHeaderRow}>
-                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.stateOfProductCol]}>State of{"\n"}Product</Text>
-                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
-                                    <Text style={[dailyStyles.subHeaderCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
+                                    <View style={[dailyStyles.groupHeaderCol, dailyStyles.lastGroupHeaderCol]}>
+                                        <Text style={dailyStyles.groupHeaderTitle}>Product</Text>
+                                        <View style={dailyStyles.subHeaderRow}>
+                                            <Text style={[dailyStyles.subHeaderCell, dailyStyles.stateOfProductCol]}>State of{"\n"}Product</Text>
+                                            <Text style={[dailyStyles.subHeaderCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
+                                            <Text style={[dailyStyles.subHeaderCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
+                                        </View>
+                                    </View>
                                 </View>
-                            </View>
+
+                                <FlatList data={receivingData} renderItem={renderReceivingLogItem} keyExtractor={item => item.id} scrollEnabled={false} />
+                            </ResponsiveTable>
                         </View>
-
-                        <FlatList data={receivingData} renderItem={renderReceivingLogItem} keyExtractor={item => item.id} scrollEnabled={false} />
-                    </View>
 
                     <View style={styles.verificationFooter}>
                         <Text style={styles.verificationText}>VERIFIED BY</Text>

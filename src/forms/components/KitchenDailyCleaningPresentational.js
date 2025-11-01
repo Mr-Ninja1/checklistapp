@@ -24,7 +24,7 @@ export default function KitchenDailyCleaningPresentational({ payload }) {
   const perTimeWidth = COL.TIME_SLOT || 56;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} nestedScrollEnabled={true}>
       <View style={styles.card}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
@@ -38,7 +38,7 @@ export default function KitchenDailyCleaningPresentational({ payload }) {
           </View>
         </View>
 
-        <ScrollView horizontal contentContainerStyle={{ minWidth: _tableWidth || 900 }}>
+  <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: _tableWidth || 900 }}>
           <View style={styles.table}>
             {/* Header: main labels and per-slot labels */}
             <View style={[styles.headerRowDark, { alignItems: 'stretch' }]}>

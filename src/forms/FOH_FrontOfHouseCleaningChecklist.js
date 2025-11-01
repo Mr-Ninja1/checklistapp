@@ -222,8 +222,19 @@ export default function FrontOfHouseChecklist() {
     </View>
   );
 
+  const actionButtons = (
+    <View style={styles.buttonContainer}>
+      <TouchableOpacity onPress={() => { if (busy) return; handleSaveDraft(); }} style={[styles.button, styles.draftButton]} disabled={busy}>
+        {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save Draft</Text>}
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => { if (busy) return; handleSubmit(); }} style={[styles.button, styles.submitButton]} disabled={busy}>
+        {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
@@ -292,14 +303,7 @@ export default function FrontOfHouseChecklist() {
             </View>
           </ScrollView>
 
-          <View style={styles.buttonContainer}>
-              <TouchableOpacity onPress={() => { if (busy) return; handleSaveDraft(); }} style={[styles.button, styles.draftButton]} disabled={busy}>
-                {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save Draft</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => { if (busy) return; handleSubmit(); }} style={[styles.button, styles.submitButton]} disabled={busy}>
-                {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}
-              </TouchableOpacity>
-          </View>
+          {/* action buttons moved into EditableFormContainer.actionButtons */}
         </View>
       </ScrollView>
     </View>

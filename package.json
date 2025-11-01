@@ -1,6 +1,7 @@
 {
   "devDependencies": {
-    "expo": "^54.0.20"
+    "expo": "^54.0.20",
+    "babel-plugin-transform-remove-console": "^6.9.4"
   },
   "name": "app",
   "version": "1.0.0",

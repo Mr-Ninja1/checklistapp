@@ -192,11 +192,11 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={() => { if (busy) return; saveDraftLocal(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={busy}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Saving...' : 'Save Draft'}</Text>
+          <TouchableOpacity onPress={() => { if (!editMode || busy) return; saveDraftLocal(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Saving...' : (!editMode ? 'Edit to Save' : 'Save Draft')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => { if (busy) return; handleSubmit(); }} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={busy}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text>
+          <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSubmit(); }} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Submitting...' : (!editMode ? 'Edit to Submit' : 'Submit Checklist')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

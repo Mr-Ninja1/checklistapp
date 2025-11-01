@@ -233,8 +233,12 @@ export default function FOH_DailyCleaningForm() {
 
   const needsHorizontal = TOTAL_TABLE_WIDTH > availableWidth;
 
+  const actionButtons = (
+    <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} isSaving={busy} />
+  );
+
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
     <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 140 }}>
       <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
       {/* Header: logo + company name at top-left, title centered below */}
@@ -314,7 +318,7 @@ export default function FOH_DailyCleaningForm() {
 
       <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All food handlers are required to clean and sanitize the equipment used every after use.</Text>
 
-      <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} />
+  {/* action buttons moved into EditableFormContainer.actionButtons */}
     </ScrollView>
     </EditableFormContainer>
   );
@@ -328,9 +332,9 @@ const styles = StyleSheet.create({
   metaColDate: { flexDirection: 'column', width: 160, marginRight: 8 },
   metaColLocation: { flex: 1, marginRight: 8 },
   metaColShift: { width: 80 },
-  metadataInputInline: { borderBottomWidth: 1, borderBottomColor: '#aaa', paddingVertical: 4, paddingHorizontal: 6 },
+  metadataInputInline: { borderBottomWidth: 1, borderBottomColor: '#aaa', paddingVertical: 4, paddingHorizontal: 6, textAlignVertical: 'center' },
   metaRowInlineSecond: { flexDirection: 'row', marginTop: 6 },
-  complexManagerInput: { borderWidth: 1, borderColor: '#ddd', height: 36, paddingHorizontal: 8, marginTop: 6, borderRadius: 4 },
+  complexManagerInput: { borderWidth: 1, borderColor: '#ddd', height: 36, paddingHorizontal: 8, marginTop: 6, borderRadius: 4, textAlignVertical: 'center' },
   tickBadge: { marginTop: 8, backgroundColor: '#e6ffea', padding: 6, borderRadius: 4, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#c9f2d0' },
   metadataRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginBottom: 6 },
   metadataItem: { flexDirection: 'row', alignItems: 'center', marginRight: 18, marginBottom: 10 },
@@ -345,7 +349,7 @@ const styles = StyleSheet.create({
   dataCell: { padding: 6, borderRightWidth: 1, borderColor: '#4B5563', justifyContent: 'center', alignItems: 'center' },
   leftAlign: { alignItems: 'flex-start', paddingLeft: 12 },
   dataText: { fontSize: 12, color: '#333' },
-  textInput: { width: '100%', height: 36, borderWidth: 1, borderColor: '#4B5563', paddingHorizontal: 6, fontSize: 12, textAlign: 'center', backgroundColor: '#fff', borderRadius: 4 },
+  textInput: { width: '100%', height: 36, borderWidth: 1, borderColor: '#4B5563', paddingHorizontal: 6, fontSize: 12, textAlign: 'center', textAlignVertical: 'center', backgroundColor: '#fff', borderRadius: 4 },
   checkboxContainer: { width: 36, height: 36, borderWidth: 1.5, borderColor: '#333', borderRadius: 6, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6', padding: 2 },
   checkboxText: { fontSize: 20, fontWeight: '700', color: '#008000', lineHeight: 20 },
 

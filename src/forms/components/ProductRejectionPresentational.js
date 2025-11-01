@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import ResponsiveTable from '../../components/ResponsiveTable';
 
 export default function ProductRejectionPresentational({ payload }) {
   if (!payload) return null;
@@ -53,7 +54,8 @@ export default function ProductRejectionPresentational({ payload }) {
         ))}
       </View>
       <View style={{ width: '100%' }}>
-        <View style={[styles.tableOuter, { alignSelf: 'stretch', paddingHorizontal: 0 }]}> 
+        <ResponsiveTable>
+          <View style={[styles.tableOuter, { alignSelf: 'stretch', paddingHorizontal: 0 }]}> 
           <View style={styles.tableHeaderRow}>
             <Text style={[styles.colHeader, { width: 40 }]}>S/N</Text>
             <Text style={[styles.colHeader, { width: 160 }]}>Name of product Rejected</Text>
@@ -74,7 +76,8 @@ export default function ProductRejectionPresentational({ payload }) {
               <Text style={[styles.cellInput, { width: 180, borderRightWidth: 0 }]}>{entry.reason}</Text>
             </View>
           ))}
-        </View>
+          </View>
+        </ResponsiveTable>
       </View>
       <View style={styles.signatures}>
         <View style={styles.sigRow}><Text style={styles.sigLabel}>Name & signature of stores Officer:</Text><Text style={styles.sigInput}>{storeOfficer}</Text></View>

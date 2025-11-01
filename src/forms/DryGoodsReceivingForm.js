@@ -5,6 +5,7 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import ResponsiveTable from '../components/ResponsiveTable';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -251,8 +252,9 @@ const DryGoodsReceivingForm = () => {
                     </View>
                     {/* ...existing code... */}
                     <View style={dailyStyles.tableContainer}>
-                        {/* Grouped header row */}
-                        <View style={{ flexDirection: 'row', backgroundColor: '#eee' }}>
+                        <ResponsiveTable>
+                            {/* Grouped header row */}
+                            <View style={{ flexDirection: 'row', backgroundColor: '#eee' }}>
                             <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}></Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}></Text>
                             <View style={{ flexDirection: 'row' }}>
@@ -261,8 +263,8 @@ const DryGoodsReceivingForm = () => {
                             </View>
                             <Text style={[dailyStyles.headerCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}></Text>
                         </View>
-                        {/* Actual column header row */}
-                        <View style={dailyStyles.tableHeader}>
+                            {/* Actual column header row */}
+                            <View style={dailyStyles.tableHeader}>
                             <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Name of Product</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.cleanCol]}>Clean</Text>
@@ -271,12 +273,13 @@ const DryGoodsReceivingForm = () => {
                             <Text style={[dailyStyles.headerCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
                         </View>
-                        <FlatList
-                            data={receivingData}
-                            renderItem={renderReceivingLogItem}
-                            keyExtractor={item => item.id}
-                            scrollEnabled={false}
-                        />
+                            <FlatList
+                                data={receivingData}
+                                renderItem={renderReceivingLogItem}
+                                keyExtractor={item => item.id}
+                                scrollEnabled={false}
+                            />
+                        </ResponsiveTable>
                     </View>
                     <View style={styles.verificationFooter}>
                         <Text style={styles.verificationText}>VERIFIED BY</Text>

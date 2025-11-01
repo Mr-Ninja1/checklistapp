@@ -34,11 +34,15 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.overlay}>
         <View style={styles.modalContent}>
-          {/* Vertical scroll for modal content; enable nested scrolling so inner horizontal scrolls work */}
+          {/* Modal content: allow vertical scrolling of the modal while also permitting
+              horizontal panning of wide saved-forms. Wrap the form renderer in a
+              horizontal ScrollView nested inside the vertical ScrollView. */}
           <ScrollView style={{ maxHeight: '92%' }} contentContainerStyle={{ paddingBottom: 12 }} nestedScrollEnabled={true}>
+            {/* Render the saved form inside a plain View; presentational components
+                should implement their own horizontal ScrollView when needed. Removing
+                the modal-level horizontal ScrollView prevents gesture conflicts so
+                users can drag on the table area itself to pan horizontally. */}
             <View ref={formRef} collapsable={false}>
-              {/* Render the saved form directly; the presentational renderer handles its own horizontal scrolling
-                  (so we avoid wrapping another horizontal ScrollView which would steal gestures). */}
               <SavedFormRenderer savedPayload={form} embedded={true} />
             </View>
           </ScrollView>

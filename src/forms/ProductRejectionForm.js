@@ -110,9 +110,19 @@ export default function ProductRejectionForm() {
   const logo = () => (
     <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
   );
+  const actionButtons = (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
+      <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={[styles.mainScrollContent, { paddingBottom: 200 }]}> 
         {/* ...existing code... */}
@@ -191,16 +201,8 @@ export default function ProductRejectionForm() {
           <View style={styles.sigRow}><Text style={styles.sigLabel}>Approved by (Finance and stock controller):</Text>{editMode ? <TextInput style={styles.sigInput} value={financeStockController} onChangeText={setFinanceStockController} /> : <Text style={styles.sigInput}>{financeStockController}</Text>}</View>
           <View style={styles.sigRow}><Text style={styles.sigLabel}>Rejected product collected by (Name & signature):</Text>{editMode ? <TextInput style={styles.sigInput} value={rejectedProductCollector} onChangeText={setRejectedProductCollector} /> : <Text style={styles.sigInput}>{rejectedProductCollector}</Text>}</View>
         </View>
-        {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
-        <View style={{ height: 18 }} />
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Spacer for bottom area so content can scroll above the floating actionButtons */}
+        <View style={{ height: 110 }} />
         </ScrollView>
       </SafeAreaView>
     </EditableFormContainer>

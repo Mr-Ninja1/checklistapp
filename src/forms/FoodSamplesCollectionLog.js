@@ -202,7 +202,7 @@ export default function FoodSamplesCollectionLog() {
             ))}
           </View>
         </View>
-  <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
+  <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || isSaving) return; handleSubmit(); }} showSavePdf={false} />
 
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

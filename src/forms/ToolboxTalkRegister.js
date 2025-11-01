@@ -244,7 +244,7 @@ export default function ToolboxTalkRegister() {
 
         {/* Action bar + overlays */}
         <View style={styles.buttonRow}>
-          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
+          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
         </View>
 
         <LoadingOverlay visible={isSaving} />

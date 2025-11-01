@@ -126,14 +126,35 @@ export default function ThawingTemperatureLog() {
 
     const handleSaveDraft = async () => { setBusy(true); try { await setDraft(DRAFT_KEY, { rows, meta }); } catch (e) { console.warn('save draft', e); } setBusy(false); };
 
+    // Action buttons rendered outside the pointer-events-blocking children wrapper
+    // so they remain tappable even when editMode is false.
+    const actionButtons = (
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+            <TouchableOpacity
+                style={[styles.btn, { backgroundColor: '#f6c342' }]}
+                onPress={() => { if (busy) return; handleSaveDraft(); }}
+                disabled={busy}
+            >
+                <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={[styles.btn, { backgroundColor: '#3b82f6' }]}
+                onPress={() => { if (busy) return; handleSubmit(); }}
+                disabled={busy}
+            >
+                <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     // Reduce the INDEX and FOOD_ITEM relative widths so the table fits better on A4 landscape
     // Give more relative weight to STAFF_NAME so long names fit when saved
     const COL_FLEX = { INDEX: 0.45, FOOD_ITEM: 1.5, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 2.5 };
 
     return (
         <View style={styles.container}>
-            <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
-            <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 220 }]} keyboardShouldPersistTaps="handled"> 
+            <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
+                <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 220 }]} keyboardShouldPersistTaps="handled"> 
                 <View style={styles.metaContainer}>
                     <View style={styles.metaHeaderBox}>
                         <View style={styles.brandRow}>
@@ -224,18 +245,8 @@ export default function ThawingTemperatureLog() {
                     </View>
                 </View>
 
-                <View style={styles.buttonRow}>
-                    <TouchableOpacity
-                        style={[styles.btn, { backgroundColor: '#f6c342' }]}
-                        onPress={() => { if (busy) return; handleSaveDraft(); }}
-                        disabled={busy}
-                    ><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.btn, { backgroundColor: '#3b82f6' }]}
-                        onPress={() => { if (busy) return; handleSubmit(); }}
-                        disabled={busy}
-                    ><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
-                </View>
+                {/* spacer so content can scroll above the floating actionButtons */}
+                <View style={{ height: 110 }} />
 
             </ScrollView>
             </EditableFormContainer>

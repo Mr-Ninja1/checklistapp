@@ -221,7 +221,7 @@ export default function BinLinersChangingLog() {
         {/* Shared action bar */}
         <View style={{ height: 18 }} />
           <View style={{ marginTop: 6 }}>
-            <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
+            <FormActionBar onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmit : undefined} isSaving={isSaving} />
           </View>
 
       </ScrollView>

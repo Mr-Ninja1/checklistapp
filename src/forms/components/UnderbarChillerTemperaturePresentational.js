@@ -23,6 +23,9 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
   // Render 31 rows if no data so presentational matches editable layout
   const rowsToRender = rows && rows.length ? rows : Array.from({ length: 31 }, (_, i) => ({ day: i + 1 }));
 
+  // Compute total table width for presentational rendering (sum of column widths)
+  const TABLE_WIDTH = COL.DATE + (COL.TEMP + COL.SIGN) * 3 + COL.CORRECTIVE_ACTION + COL.SUP_NAME_SIGN;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
@@ -65,7 +68,8 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
           <Text style={styles.instructionText}><Text style={{ fontWeight: '800' }}>Instruction:</Text> {metadata.instruction || 'The temperature of the Underbar Chiller should be between 0°C and 4°C.'}</Text>
         </View>
 
-        <View style={styles.tableWrap}>
+        <ScrollView horizontal={true} nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: TABLE_WIDTH }}>
+          <View style={styles.tableWrap}>
           {/* Header row 1: groups */}
           {/* Group header: Date | Morning | Afternoon | Evening | Corrective | Sup */}
           <View style={[styles.tableGroupHeader]}> 
@@ -111,7 +115,8 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
               <View style={[styles.cellFixed, { width: COL.SUP_NAME_SIGN }]}><Text style={styles.cellText}>{r.supNameSign || ''}</Text></View>
             </View>
           ))}
-        </View>
+          </View>
+        </ScrollView>
       </View>
     </ScrollView>
   );

@@ -164,6 +164,15 @@ export default function CoolingTemperatureLog() {
         setBusy(false);
     };
 
+    // Action buttons rendered outside the children wrapper so they remain tappable
+    // when editMode is false. EditableFormContainer will render this prop above the modal.
+    const actionButtons = (
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+        </View>
+    );
+
     // Flex values for column widths 
     const COL_FLEX = {
         INDEX: 0.6,
@@ -174,7 +183,7 @@ export default function CoolingTemperatureLog() {
     };
     
     return (
-        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+        <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
         <View style={styles.container}>
             <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 180, flexGrow: 1 }]} keyboardShouldPersistTaps="handled">
                 
@@ -372,11 +381,8 @@ export default function CoolingTemperatureLog() {
                     </View>
                 </View>
 
-                {/* --- 4. Action Buttons --- */}
-                <View style={styles.buttonRow}>
-                    <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-                        <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
-                </View>
+                {/* spacer so content can scroll above the floating actionButtons */}
+                <View style={{ height: 110 }} />
 
             </ScrollView>
         </View>

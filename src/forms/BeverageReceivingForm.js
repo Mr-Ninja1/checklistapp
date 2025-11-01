@@ -7,6 +7,7 @@ import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
+import ResponsiveTable from '../components/ResponsiveTable';
 
 const { width } = Dimensions.get('window');
 
@@ -341,8 +342,9 @@ const BeverageReceivingForm = () => {
 
                     {/* --- 4. RECEIVING LOG TABLE --- */}
                     <View style={dailyStyles.tableContainer}>
-                        {/* --- Table Header --- */}
-                        <View style={dailyStyles.tableHeader}>
+                        <ResponsiveTable>
+                            {/* --- Table Header --- */}
+                            <View style={dailyStyles.tableHeader}>
                             {/* Static Columns */}
                             <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Name of Product</Text>
                             <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
@@ -368,13 +370,14 @@ const BeverageReceivingForm = () => {
                             </View>
                         </View>
 
-                        {/* --- Table Rows --- */}
-                        <FlatList
+                            {/* --- Table Rows --- */}
+                            <FlatList
                                 data={receivingData}
                                 renderItem={renderReceivingLogItem}
                                 keyExtractor={item => item.id}
-                                scrollEnabled={false} 
+                                scrollEnabled={false}
                             />
+                        </ResponsiveTable>
                     </View>
                     
                     {/* --- 5. VERIFICATION FOOTER --- */}

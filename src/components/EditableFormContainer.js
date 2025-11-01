@@ -2,7 +2,7 @@ import React from 'react';
 import { SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Text, Keyboard, View } from 'react-native';
 import PropTypes from 'prop-types';
 
-export default function EditableFormContainer({ children, editMode, setEditMode, onSaveDraft }) {
+export default function EditableFormContainer({ children, editMode, setEditMode, onSaveDraft, actionButtons }) {
   const isEditing = editMode;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -23,11 +23,28 @@ export default function EditableFormContainer({ children, editMode, setEditMode,
             still allowing children (which should be individually gated) to
             receive touches where appropriate.
           */}
+          {/*
+            When not editing we want the form inputs to be non-interactive but
+            still allow container-level gestures (like horizontal scrolling of
+            wide tables). Use 'box-none' so the wrapper itself does not capture
+            pointer events but its children (e.g. ScrollView) can still receive
+            touches. This preserves the original intent while enabling read-only
+            scroll interactions.
+          */}
           <View style={{ flex: 1 }} pointerEvents={isEditing ? 'auto' : 'box-none'}>
             {children}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Render form action buttons outside the pointer-events-blocking children wrapper
+          so they remain tappable even when editMode is off. Forms can pass JSX via
+          the `actionButtons` prop. */}
+      {actionButtons ? (
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 18, alignItems: 'center', zIndex: 250 }}>
+          {actionButtons}
+        </View>
+      ) : null}
 
       <TouchableOpacity
         accessible={true}
@@ -74,4 +91,5 @@ EditableFormContainer.propTypes = {
   editMode: PropTypes.bool.isRequired,
   setEditMode: PropTypes.func.isRequired,
   onSaveDraft: PropTypes.func,
+  actionButtons: PropTypes.node,
 };

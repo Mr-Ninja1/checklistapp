@@ -23,7 +23,10 @@ export default function TrainingAttendanceRegister() {
     const year = today.getFullYear();
     return `${day}/${month}/${year}`;
   };
-  const defaultDate = getDefaultDate();
+  // Choose whether to autofill the date field with the system date for new forms.
+  // Set to `false` if you prefer the date input to start empty.
+  const AUTO_FILL_DATE = true;
+  const defaultDate = AUTO_FILL_DATE ? getDefaultDate() : '';
   const [subject, setSubject] = useState('');
   const [presenter, setPresenter] = useState('');
   const [dateVal, setDateVal] = useState(defaultDate);
@@ -87,7 +90,7 @@ export default function TrainingAttendanceRegister() {
   const draftId = 'TrainingAttendanceRegister_draft';
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
     // clear form when submit completes
-    setSubject(''); setPresenter(''); setDateVal(defaultDate);
+  setSubject(''); setPresenter(''); setDateVal(defaultDate);
     setTopics(['', '', '', '']);
     setCells(() => {
       const state = { left: {}, right: {} };
@@ -108,6 +111,7 @@ export default function TrainingAttendanceRegister() {
           if (payload.metadata) {
             setSubject(payload.metadata.subject || '');
             setPresenter(payload.metadata.presenter || '');
+            // Prefer saved metadata date; fall back to defaultDate which may be empty
             setDateVal(payload.metadata.date || payload.metadata.dateVal || defaultDate);
           }
           if (payload.formData) {
@@ -193,9 +197,11 @@ export default function TrainingAttendanceRegister() {
             
             <Text style={[styles.infoLabel, { marginLeft: 16 }]}>DATE:</Text>
             <TextInput 
-              style={[styles.infoFill, styles.inputUnderline, { flex: 1, backgroundColor: '#eee' }]} 
+              style={[styles.infoFill, styles.inputUnderline, { flex: 1, backgroundColor: editMode ? '#fff' : '#eee' }]} 
               value={dateVal} 
-              editable={false} 
+              onChangeText={setDateVal}
+              placeholder={AUTO_FILL_DATE ? undefined : 'DD/MM/YYYY'}
+              editable={editMode}
             />
           </View>
 
@@ -270,7 +276,7 @@ export default function TrainingAttendanceRegister() {
         {/* Action bar + overlays */}
         <View style={{ height: 18 }} />
         <View style={{ marginTop: 8, paddingHorizontal: 8 }}>
-          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } }} showSavePdf={false} />
+          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } } : undefined} showSavePdf={false} />
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

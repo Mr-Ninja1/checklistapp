@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import ResponsiveTable from '../components/ResponsiveTable';
 import { addFormHistory } from '../utils/formHistory';
 
 const { width, height: windowHeight } = Dimensions.get('window');
@@ -294,26 +295,28 @@ const HealthStatusCheck = () => {
                     </Text>
 
                     <View style={dailyStyles.tableContainer}>
-                        <View style={dailyStyles.tableHeader}>
-                            <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>NAMES</Text>
-                            <Text style={[dailyStyles.headerCell, dailyStyles.positionCol, dailyStyles.spanTwoRows]}>POSITION</Text>
-                            {daysOfWeek.map(day => (
-                                <View key={day} style={dailyStyles.dayHeaderCol}>
-                                    <Text style={dailyStyles.dayHeaderTitle}>{day}</Text>
-                                    <View style={dailyStyles.subHeaderRow}>
-                                        <Text style={[dailyStyles.subHeaderCell]}>{'Fit for\nwork'}</Text>
-                                        <Text style={[dailyStyles.lastSubHeaderCell]}>{'Managers\ncomment'}</Text>
+                        <ResponsiveTable>
+                            <View style={dailyStyles.tableHeader}>
+                                <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>NAMES</Text>
+                                <Text style={[dailyStyles.headerCell, dailyStyles.positionCol, dailyStyles.spanTwoRows]}>POSITION</Text>
+                                {daysOfWeek.map(day => (
+                                    <View key={day} style={dailyStyles.dayHeaderCol}>
+                                        <Text style={dailyStyles.dayHeaderTitle}>{day}</Text>
+                                        <View style={dailyStyles.subHeaderRow}>
+                                            <Text style={[dailyStyles.subHeaderCell]}>{'Fit for\nwork'}</Text>
+                                            <Text style={[dailyStyles.lastSubHeaderCell]}>{'Managers\ncomment'}</Text>
+                                        </View>
                                     </View>
-                                </View>
-                            ))}
-                        </View>
+                                ))}
+                            </View>
 
-                        <FlatList
-                            data={weeklyData}
-                            renderItem={renderWeeklyLogItem}
-                            keyExtractor={item => item.id}
-                            scrollEnabled={false}
-                        />
+                            <FlatList
+                                data={weeklyData}
+                                renderItem={renderWeeklyLogItem}
+                                keyExtractor={item => item.id}
+                                scrollEnabled={false}
+                            />
+                        </ResponsiveTable>
                     </View>
                     
 

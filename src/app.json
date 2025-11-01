@@ -6,7 +6,7 @@
     "scheme": "checklistapp",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/logo.jpeg",
+  "icon": "./assets/bravo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {

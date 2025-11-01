@@ -126,6 +126,15 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     setBusy(false);
   };
 
+  // Render action buttons outside the pointer-events-blocking children so they
+  // remain tappable when editMode is false.
+  const actionButtons = (
+    <View style={styles.buttonRow}>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
+    </View>
+  );
+
   // use flex weights so columns scale and can expand for A4-like width
   const columnHeaders = useMemo(() => [
     { key: 'name', label: 'ITEMS', flex: 3, isStatic: true },
@@ -169,8 +178,8 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     </View>
   );
 
-        return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
+    return (
+  <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerBox}>
@@ -206,10 +215,9 @@ export default function BOH_ShelfLifeInspectionChecklist() {
           <TextInput value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} style={styles.signatureInput} placeholder="Complex Manager name/sign" editable={editMode} />
         </View>
 
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
-          <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
-        </View>
+        {/* Buttons are provided via the `actionButtons` prop to EditableFormContainer so
+            they remain tappable even when the form is read-only. Removed inline
+            duplicate buttons to avoid duplicate controls. */}
         <LoadingOverlay visible={isSaving || busy} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => {
           setShowNotification(false);
