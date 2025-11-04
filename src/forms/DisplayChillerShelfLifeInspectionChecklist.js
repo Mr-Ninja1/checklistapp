@@ -6,6 +6,7 @@ import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 // items sourced from cat.md
 const checklistItems = [
@@ -39,6 +40,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
   const defaultDate = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth() + 1).padStart(2,'0')}/${today.getFullYear()}`;
   const [issueDate, setIssueDate] = useState(defaultDate);
   const [verifiedBy, setVerifiedBy] = useState('');
+  const [verifiedBySign, setVerifiedBySign] = useState('');
   const [baristaSign, setBaristaSign] = useState('');
 
   React.useEffect(() => {
@@ -50,6 +52,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
           if (d.rows) setRows(d.rows);
           if (d.issueDate) setIssueDate(d.issueDate);
           if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
+          if (d.verifiedBySign) setVerifiedBySign(d.verifiedBySign);
           if (d.baristaSign) setBaristaSign(d.baristaSign);
         }
       } catch (e) {}
@@ -58,9 +61,9 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
   }, []);
 
   React.useEffect(() => {
-    const t = setTimeout(() => setDraft(draftKey, { rows, issueDate, verifiedBy, baristaSign }), 700);
+    const t = setTimeout(() => setDraft(draftKey, { rows, issueDate, verifiedBy, verifiedBySign, baristaSign }), 700);
     return () => clearTimeout(t);
-  }, [rows, issueDate, verifiedBy, baristaSign]);
+  }, [rows, issueDate, verifiedBy, verifiedBySign, baristaSign]);
 
   const updateField = (id, field, value) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
@@ -75,12 +78,13 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         templateVersion: 'v1.0',
         title: 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST',
         frequency: 'DAILY',
-        date: issueDate,
-        verifiedBy,
-        baristaSign,
+  date: issueDate,
+  verifiedBy,
+  verifiedBySign,
+  baristaSign,
         formData: rowsWithId,
-        layoutHints: { itemCol: 420, dateCol: 100, timeCol: 100, usedByCol: 120, staffCol: 220, qtyCol: 80, signCol: 80 },
-        _tableWidth: 420 + 100 + 100 + 120 + 220 + 80 + 80,
+  layoutHints: { itemCol: 420, dateCol: 100, timeCol: 100, usedByCol: 120, staffCol: 220, qtyCol: 80, signCol: 180 },
+  _tableWidth: 420 + 100 + 100 + 120 + 220 + 80 + 180,
         savedAt: Date.now(),
       };
 
@@ -132,9 +136,17 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         <Text style={[styles.cell, styles.qtyCol]}>{item.quantity}</Text>
       )}
       {editMode ? (
-        <TextInput style={[styles.cell, styles.signCol]} value={item.sign} onChangeText={(t) => updateField(item.id, 'sign', t)} editable />
+        <View style={[styles.cell, styles.signCol, { alignItems: 'center', justifyContent: 'center' }]}>
+            <SignatureField value={item.sign} onChange={(v) => updateField(item.id, 'sign', v)} editable={editMode} width={160} height={120} />
+          </View>
       ) : (
-        <Text style={[styles.cell, styles.signCol]}>{item.sign}</Text>
+        <View style={[styles.cell, styles.signCol, { alignItems: 'center', justifyContent: 'center' }]}>
+          {item.sign ? (
+            <Image source={{ uri: item.sign.startsWith('data:') ? item.sign : `data:image/png;base64,${item.sign}` }} style={{ width: 160, height: 120, resizeMode: 'contain' }} />
+          ) : (
+            <Text style={{ color: '#333' }}>{item.sign}</Text>
+          )}
+        </View>
       )}
     </View>
   );
@@ -181,9 +193,14 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
             <Text style={{ fontSize: 12, fontWeight: '700' }}>DATE:</Text>
             <TextInput style={{ borderBottomWidth: 1, minWidth: 120, paddingVertical: 4 }} value={issueDate} onChangeText={setIssueDate} />
             <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 12 }}>VERIFIED BY:</Text>
-            <TextInput style={{ borderBottomWidth: 1, minWidth: 140, paddingVertical: 4 }} value={verifiedBy} onChangeText={setVerifiedBy} />
+            <View style={{ marginLeft: 8 }}>
+              <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={240} height={120} />
+            </View>
+            <TextInput style={{ borderBottomWidth: 1, minWidth: 140, paddingVertical: 4, marginLeft: 8 }} value={verifiedBy} onChangeText={setVerifiedBy} />
             <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 12 }}>BARISTA SIGN:</Text>
-            <TextInput style={{ borderBottomWidth: 1, minWidth: 140, paddingVertical: 4 }} value={baristaSign} onChangeText={setBaristaSign} />
+            <View style={{ marginLeft: 8 }}>
+              <SignatureField value={baristaSign} onChange={setBaristaSign} editable={editMode} width={320} height={160} />
+            </View>
           </View>
         ) : (
           <Text style={{ fontSize: 12, color: '#333' }}>DATE: {issueDate}    VERIFIED BY: {verifiedBy || '______________________'}    BARISTA SIGN: {baristaSign || '____________________'}</Text>

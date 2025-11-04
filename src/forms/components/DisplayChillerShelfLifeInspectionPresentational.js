@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 
 export default function DisplayChillerShelfLifeInspectionPresentational({ payload }) {
   if (!payload) return null;
-  const { title = 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST', frequency = 'DAILY', formData = [], layoutHints = {}, assets = {}, date = '', verifiedBy = '', baristaSign = '' } = payload;
+  const { title = 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST', frequency = 'DAILY', formData = [], layoutHints = {}, assets = {}, date = '', verifiedBy = '', verifiedBySign = '', baristaSign = '' } = payload;
 
   const tableW = payload._tableWidth || 1000;
 
@@ -30,7 +30,7 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
             <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
             <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
             <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
-            <Text style={[styles.th, { width: 80 }]}>SIGN</Text>
+            <Text style={[styles.th, { width: 180 }]}>SIGN</Text>
           </View>
 
           {formData.map((r, idx) => (
@@ -41,14 +41,37 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
               <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
               <Text style={[styles.td, { width: 220 }]}>{r.staffName}</Text>
               <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
-              <Text style={[styles.td, { width: 80 }]}>{r.sign}</Text>
+              <View style={[styles.td, { width: 180, alignItems: 'center', justifyContent: 'center' }]}>
+                {r.sign ? (
+                  <Image source={{ uri: r.sign.startsWith('data:') ? r.sign : `data:image/png;base64,${r.sign}` }} style={{ width: 160, height: 120, resizeMode: 'contain' }} />
+                ) : (
+                  <Text style={{ color: '#333' }}>{r.sign}</Text>
+                )}
+              </View>
             </View>
           ))}
         </View>
       </ScrollView>
 
   <View style={{ height: 12 }} />
-  <Text style={styles.footer}>DATE: {date || '______________________'}    VERIFIED BY: {verifiedBy || '______________________'}    BARISTA SIGN: {baristaSign || '______________________'}</Text>
+  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+    <Text style={styles.footer}>DATE: {date || '______________________'}    VERIFIED BY: {verifiedBy || '______________________'}</Text>
+    <View style={{ marginLeft: 12 }}>
+      {verifiedBySign ? (
+        <Image source={{ uri: verifiedBySign.startsWith('data:') ? verifiedBySign : `data:image/png;base64,${verifiedBySign}` }} style={{ width: 160, height: 80, resizeMode: 'contain' }} />
+      ) : null}
+    </View>
+  </View>
+  <View style={{ marginTop: 8 }}>
+    <Text style={{ fontSize: 12, fontWeight: '700' }}>BARISTA SIGN:</Text>
+    <View style={{ marginTop: 6 }}>
+      {baristaSign ? (
+        <Image source={{ uri: baristaSign.startsWith('data:') ? baristaSign : `data:image/png;base64,${baristaSign}` }} style={{ width: 320, height: 160, resizeMode: 'contain' }} />
+      ) : (
+        <Text style={{ color: '#666' }}>______________________</Text>
+      )}
+    </View>
+  </View>
     </ScrollView>
   );
 }
