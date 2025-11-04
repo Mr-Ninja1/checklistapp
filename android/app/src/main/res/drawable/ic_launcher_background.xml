@@ -1,6 +1,16 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-  <item android:drawable="@color/splashscreen_background"/>
+  <!-- Gradient background to match JS splash (top to bottom) -->
   <item>
-    <bitmap android:gravity="center" android:src="@drawable/splashscreen_logo"/>
+    <shape>
+      <gradient
+        android:angle="270"
+        android:startColor="#43cea2"
+        android:endColor="#185a9d"
+        android:type="linear" />
+    </shape>
+  </item>
+  <!-- Center the logo on top of the gradient -->
+  <item>
+    <bitmap android:gravity="center" android:src="@drawable/splashscreen_logo" />
   </item>
 </layer-list>

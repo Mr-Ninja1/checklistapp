@@ -180,3 +180,7 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// copyBravoAssets removed from this build.gradle to avoid duplicate resource
+// creation when building from the `src/android` module. Kept only in
+// `src/android/app/build.gradle` so assets are copied just once.
