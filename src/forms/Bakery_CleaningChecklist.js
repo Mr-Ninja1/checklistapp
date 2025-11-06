@@ -16,6 +16,7 @@ import NotificationModal from '../components/NotificationModal';
 import { getDraft } from '../utils/formDrafts';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 
 // --- STUBBED ASYNC STORAGE AND API UTILITIES ---
 // NOTE: Since this environment cannot access native AsyncStorage, these functions
@@ -355,7 +356,17 @@ export default function BakeryCleaningChecklist() {
                             {editMode ? (
                                 <SignatureField value={verification.hseqManager} onChange={v => handleVerificationChange('hseqManager', v)} editable={editMode} width={260} height={80} placeholder="Tap to sign - HSEQ Manager" />
                             ) : (
-                                <Text style={styles.cellReadText}>{verification.hseqManager}</Text>
+                                (() => {
+                                    const v = verification.hseqManager;
+                                    if (v && typeof v === 'string') {
+                                        const s = v.trim();
+                                        if (s.startsWith('data:') || (/^[A-Za-z0-9+/=\s]+$/.test(s) && s.replace(/\s+/g, '').length > 100)) {
+                                            const uri = s.startsWith('data:') ? s : `data:image/png;base64,${s.replace(/\s+/g,'')}`;
+                                            return <SignatureThumb uri={uri} width={260} height={96} layers={10} spread={1.2} />;
+                                        }
+                                    }
+                                    return <Text style={styles.cellReadText}>{verification.hseqManager}</Text>;
+                                })()
                             )}
                         </View>
                         <View style={styles.verificationField}>
@@ -363,7 +374,17 @@ export default function BakeryCleaningChecklist() {
                             {editMode ? (
                                 <SignatureField value={verification.complexManager} onChange={v => handleVerificationChange('complexManager', v)} editable={editMode} width={260} height={80} placeholder="Tap to sign - Complex Manager" />
                             ) : (
-                                <Text style={styles.cellReadText}>{verification.complexManager}</Text>
+                                (() => {
+                                    const v = verification.complexManager;
+                                    if (v && typeof v === 'string') {
+                                        const s = v.trim();
+                                        if (s.startsWith('data:') || (/^[A-Za-z0-9+/=\s]+$/.test(s) && s.replace(/\s+/g, '').length > 100)) {
+                                            const uri = s.startsWith('data:') ? s : `data:image/png;base64,${s.replace(/\s+/g,'')}`;
+                                            return <SignatureThumb uri={uri} width={260} height={96} layers={10} spread={1.2} />;
+                                        }
+                                    }
+                                    return <Text style={styles.cellReadText}>{verification.complexManager}</Text>;
+                                })()
                             )}
                         </View>
                     </View>

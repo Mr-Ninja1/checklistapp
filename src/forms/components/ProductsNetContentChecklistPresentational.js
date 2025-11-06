@@ -108,18 +108,18 @@ const ProductsNetContentChecklistPresentational = ({ payload }) => {
         </View>
 
         <View style={styles.verifyFooter}>
-          <View style={styles.verifyCol}><Text style={styles.verifyLabel}>Verified By</Text></View>
+          <View style={styles.verifyCol} />
           <View style={styles.verifyCol}>
             <View style={{ marginBottom: 6 }}>
-              <Text style={{ fontWeight: '700' }}>Supervisor:</Text>
+              <Text style={{ fontWeight: '700' }}>Supervisor</Text>
               {renderSignature(verification.supervisorSign || verification.supervisor || '', styles.verifyValue, { width: 160, height: 44 })}
             </View>
             <View style={{ marginBottom: 6 }}>
-              <Text style={{ fontWeight: '700' }}>HSEQ Manager:</Text>
+              <Text style={{ fontWeight: '700' }}>HSEQ Manager</Text>
               {renderSignature(verification.hseqManagerSign || verification.hseqManager || '', styles.verifyValue, { width: 160, height: 44 })}
             </View>
             <View style={{ marginBottom: 6 }}>
-              <Text style={{ fontWeight: '700' }}>Complex Manager:</Text>
+              <Text style={{ fontWeight: '700' }}>Complex Manager</Text>
               {renderSignature(verification.complexManagerSign || verification.complexManager || '', styles.verifyValue, { width: 160, height: 44 })}
             </View>
           </View>

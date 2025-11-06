@@ -117,19 +117,54 @@ export default function BakingControlSheet({ navigation }) {
     <View key={index} style={styles.row}>
       {columnHeaders.map(col => (
         <View key={col.key} style={[styles.cell, { width: col.width }]}>
-          <TextInput
-            value={item[col.key]}
-            onChangeText={v => handleEntryChange(index, col.key, v)}
-            style={styles.input}
-            multiline={true}
-            numberOfLines={2}
-            textAlignVertical="top"
-            editable={editMode}
-          />
+          {(col.key === 'bakerSign' || col.key === 'supervisorSign') ? (
+            editMode ? (
+              <SignatureField value={item[col.key]} onChange={v => handleEntryChange(index, col.key, v)} editable={true} width={col.width - 20} height={80} />
+            ) : (
+              // show saved signature image if present, else text
+              (function renderSavedSig() {
+                const val = item[col.key];
+                if (!val) return <Text style={styles.input}>{''}</Text>;
+                const s = String(val || '').trim();
+                if (s.startsWith('data:') || s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:') || s.startsWith('blob:')) {
+                  return <Image source={{ uri: s }} style={{ width: col.width - 20, height: 64, resizeMode: 'contain' }} />;
+                }
+                const compact = s.replace(/\s+/g, '');
+                const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+                if (compact.length > 100 && base64ish.test(compact)) {
+                  return <Image source={{ uri: `data:image/png;base64,${compact}` }} style={{ width: col.width - 20, height: 64, resizeMode: 'contain' }} />;
+                }
+                return <Text style={styles.inputText}>{s}</Text>;
+              })()
+            )
+          ) : (
+            <TextInput
+              value={item[col.key]}
+              onChangeText={v => handleEntryChange(index, col.key, v)}
+              style={styles.input}
+              multiline={true}
+              numberOfLines={2}
+              textAlignVertical="top"
+              editable={editMode}
+            />
+          )}
         </View>
       ))}
     </View>
   );
+
+  // wrap submit to ensure notification shows reliably across platforms
+  const submitHandler = async () => {
+    try {
+      await handleSubmit();
+      // use the setShowNotification from hook to display confirmation
+      setTimeout(() => {
+        try { setShowNotification(true); } catch (e) { /* ignore */ }
+      }, 250);
+    } catch (e) {
+      console.warn('submitHandler failed', e);
+    }
+  };
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
       <View style={styles.container}>
@@ -188,7 +223,7 @@ export default function BakingControlSheet({ navigation }) {
 
                         <FormActionBar
           onSaveDraft={handleSaveDraft}
-          onSubmit={handleSubmit}
+          onSubmit={submitHandler}
           showSavePdf={false} // or true, depending on requirements
         />
         <LoadingOverlay visible={isSaving} />

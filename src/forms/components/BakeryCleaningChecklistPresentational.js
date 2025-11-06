@@ -20,16 +20,29 @@ export default function BakeryCleaningChecklistPresentational({ payload }) {
   const TABLE_WIDTH = _tableWidth || (COL.AREA + COL.FREQ + (DAYS_OF_WEEK.length * COL.DAY));
 
   const normalizeSignature = (v) => {
-    if (!v || typeof v !== 'string') return null;
-    if (v.startsWith('data:')) return v;
-    const compact = v.replace(/\s+/g, '');
-    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    if (!v) return null;
+    // handle object shapes like { uri } or { data }
+    if (typeof v === 'object') {
+      const maybe = v.uri || v.data || v.base64 || v;
+      if (typeof maybe === 'string') return normalizeSignature(maybe);
+      return null;
+    }
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (!s) return null;
+      if (s.startsWith('data:')) return s.replace(/\s+/g, '');
+      // data urls with whitespace/newlines
+      if (/^data:image\/.+;base64,/.test(s)) return s.replace(/\s+/g, '');
+      const compact = s.replace(/\s+/g, '');
+      // treat long base64 as image
+      if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+    }
     return null;
   };
 
   const renderMaybeSignature = (val, textStyle = {}) => {
     const uri = normalizeSignature(val);
-    if (uri) return <SignatureThumb uri={uri} width={140} height={44} />;
+    if (uri) return <SignatureThumb uri={uri} width={240} height={96} layers={10} spread={1.2} />;
     return <Text style={textStyle}>{val || ''}</Text>;
   };
 

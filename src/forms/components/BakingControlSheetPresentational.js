@@ -21,16 +21,28 @@ export default function BakingControlSheetPresentational({ payload }) {
   const tableWidth = columnHeaders.reduce((s, c) => s + (c.width || 120), 0);
 
   const normalizeSignature = (v) => {
-    if (!v || typeof v !== 'string') return null;
-    if (v.startsWith('data:')) return v;
-    const compact = v.replace(/\s+/g, '');
+    if (!v) return null;
+    // handle object shapes like { uri } or { data }
+    if (typeof v === 'object') {
+      if (v.uri && typeof v.uri === 'string') return v.uri.trim();
+      if (v.data && typeof v.data === 'string') {
+        const compact = v.data.replace(/\s+/g, '');
+        if (compact.length) return `data:image/png;base64,${compact}`;
+      }
+      return null;
+    }
+    if (typeof v !== 'string') return null;
+    const s = v.trim();
+    if (!s) return null;
+    if (s.startsWith('data:')) return s;
+    const compact = s.replace(/\s+/g, '');
     if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
     return null;
   };
 
   const renderMaybeSignature = (val, textStyle = {}) => {
     const uri = normalizeSignature(val);
-    if (uri) return <SignatureThumb uri={uri} width={120} height={48} />;
+    if (uri) return <SignatureThumb uri={uri} width={240} height={96} layers={10} spread={1.2} />;
     return <Text style={textStyle}>{val || ''}</Text>;
   };
 

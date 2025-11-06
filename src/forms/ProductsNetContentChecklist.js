@@ -240,28 +240,52 @@ export default function ProductsNetContentChecklist() {
         </View>
 
         <View style={styles.verifyFooter}>
-          <View style={styles.verifyCol}><Text style={styles.verifyLabel}>Verified By</Text></View>
+          <View style={styles.verifyCol} />
           <View style={styles.verifyCol}>
             {editMode ? (
-              <SignatureField value={verification.supervisorSign} onChange={v => handleVerificationChange('supervisorSign', v)} editable={editMode} width={220} height={60} placeholder="Supervisor" />
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontWeight: '700', marginBottom: 6 }}>Supervisor</Text>
+                <SignatureField value={verification.supervisorSign} onChange={v => handleVerificationChange('supervisorSign', v)} editable={editMode} width={220} height={60} placeholder="Supervisor" />
+              </View>
             ) : (() => {
               const v = verification.supervisorSign;
               const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-              return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>;
+              return (
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontWeight: '700', marginBottom: 6 }}>Supervisor</Text>
+                  {uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>}
+                </View>
+              );
             })()}
             {editMode ? (
-              <SignatureField value={verification.hseqManagerSign} onChange={v => handleVerificationChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="HSEQ Manager" />
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontWeight: '700', marginBottom: 6 }}>HSEQ Manager</Text>
+                <SignatureField value={verification.hseqManagerSign} onChange={v => handleVerificationChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="HSEQ Manager" />
+              </View>
             ) : (() => {
               const v = verification.hseqManagerSign;
               const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-              return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>;
+              return (
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontWeight: '700', marginBottom: 6 }}>HSEQ Manager</Text>
+                  {uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>}
+                </View>
+              );
             })()}
             {editMode ? (
-              <SignatureField value={verification.complexManagerSign} onChange={v => handleVerificationChange('complexManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Complex Manager" />
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontWeight: '700', marginBottom: 6 }}>Complex manager</Text>
+                <SignatureField value={verification.complexManagerSign} onChange={v => handleVerificationChange('complexManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Complex Manager" />
+              </View>
             ) : (() => {
               const v = verification.complexManagerSign;
               const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-              return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>;
+              return (
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ fontWeight: '700', marginBottom: 6 }}>Complex manager</Text>
+                  {uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>}
+                </View>
+              );
             })()}
           </View>
         </View>
