@@ -7,6 +7,31 @@ export default function CookingTemperaturePresentational({ payload }) {
   const p = payload.payload || payload;
   const { metadata = {}, formData = [], layoutHints = {}, _tableWidth } = p;
 
+  // Helper: normalize many possible signature shapes into a usable image URI
+  const resolveSignatureUri = (val) => {
+    if (!val) return null;
+    // string values
+    if (typeof val === 'string') {
+      const s = String(val);
+      if (s.startsWith('data:')) return s;
+      if (s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:') || s.startsWith('blob:')) return s;
+      // long base64 blobs (legacy) -> convert to data: URI
+      // crude check: long and mostly base64 chars
+      const maybeBase64 = /^[A-Za-z0-9+/=\s]+$/.test(s.replace(/\s+/g, ''));
+      if (maybeBase64 && s.replace(/\s+/g, '').length > 200) return `data:image/png;base64,${s.replace(/\s+/g, '')}`;
+      return null;
+    }
+    // object shapes
+    if (typeof val === 'object') {
+      if (val.uri) return val.uri;
+      if (val.data) {
+        const d = String(val.data);
+        return d.startsWith('data:') ? d : `data:image/png;base64,${d}`;
+      }
+    }
+    return null;
+  };
+
   // Ensure we render 15 rows to match the editable form
   const rowsToRender = (formData && formData.length) ? formData : Array.from({ length: 15 }, (_, i) => ({ index: i + 1 }));
 
@@ -89,15 +114,30 @@ export default function CookingTemperaturePresentational({ payload }) {
 
               <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
               <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign1 || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
+                {(() => {
+                  const u = resolveSignatureUri(r.sign1);
+                  return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign1 || ''}</Text>;
+                })()}
+              </View>
 
               <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
               <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign2 || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
+                {(() => {
+                  const u = resolveSignatureUri(r.sign2);
+                  return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign2 || ''}</Text>;
+                })()}
+              </View>
 
               <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
               <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign3 || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
+                {(() => {
+                  const u = resolveSignatureUri(r.sign3);
+                  return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign3 || ''}</Text>;
+                })()}
+              </View>
 
               <View style={[styles.cellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
             </View>
@@ -110,8 +150,8 @@ export default function CookingTemperaturePresentational({ payload }) {
         <View style={styles.footerSection}>
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-            {metadata.chefSignature ? (
-              <SignatureThumb uri={String(metadata.chefSignature).startsWith('data:') ? metadata.chefSignature : `data:image/png;base64,${metadata.chefSignature}`} width={220} height={80} layers={8} spread={1.0} />
+            {resolveSignatureUri(metadata.chefSignature) ? (
+              <SignatureThumb uri={resolveSignatureUri(metadata.chefSignature)} width={220} height={80} layers={8} spread={1.0} />
             ) : (
               <Text style={styles.signatureLine}>{'______________________________'}</Text>
             )}
@@ -119,27 +159,17 @@ export default function CookingTemperaturePresentational({ payload }) {
 
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Corrective Action:</Text>
-            <Text style={styles.textarea}>{metadata.correctiveAction || ''}</Text>
+            <Text style={styles.textarea}>{metadata.correctiveAction || metadata.corrective_action || metadata.correctiveActionText || ''}</Text>
           </View>
 
           <View style={{ marginBottom: 12 }}>
-            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
-            <View style={{ marginTop: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700' }}>HSEQ Manager:</Text>
-              {metadata.hseqManagerSignature ? (
-                <SignatureThumb uri={String(metadata.hseqManagerSignature).startsWith('data:') ? metadata.hseqManagerSignature : `data:image/png;base64,${metadata.hseqManagerSignature}`} width={220} height={80} layers={8} spread={1.0} />
-              ) : (
-                <Text style={{ marginTop: 4 }}>{'______________________________'}</Text>
-              )}
-            </View>
-            <View style={{ marginTop: 8 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700' }}>Complex Manager:</Text>
-              {metadata.complexManagerSignature ? (
-                <SignatureThumb uri={String(metadata.complexManagerSignature).startsWith('data:') ? metadata.complexManagerSignature : `data:image/png;base64,${metadata.complexManagerSignature}`} width={220} height={80} layers={8} spread={1.0} />
-              ) : (
-                <Text style={{ marginTop: 4 }}>{'______________________________'}</Text>
-              )}
-            </View>
+            {/* Show only Complex Manager signature here — remove the decorative "Verified by" header and HSEQ Manager label per request */}
+            <Text style={{ fontSize: 12, fontWeight: '700' }}>Complex Manager:</Text>
+            {resolveSignatureUri(metadata.complexManagerSignature) ? (
+              <SignatureThumb uri={resolveSignatureUri(metadata.complexManagerSignature)} width={220} height={80} layers={8} spread={1.0} />
+            ) : (
+              <Text style={{ marginTop: 4 }}>{'______________________________'}</Text>
+            )}
           </View>
         </View>
       </View>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, PanResponder } from 'react-native';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import useResponsive from '../utils/responsive';
@@ -55,13 +55,37 @@ export default function Kitchen_DailyCleaningForm() {
   const [loadingDraft, setLoadingDraft] = React.useState(true);
   const draftKey = 'kitchen_daily_cleaning';
   const saveTimer = useRef(null);
+  const scrollRef = useRef(null);
+  const scrollXRef = useRef(0);
+  const panStartScroll = useRef(0);
+
+  // PanResponder to allow horizontal dragging from anywhere over the table area.
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      // claim responder when horizontal movement is dominant
+      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 4;
+    },
+    onPanResponderGrant: () => {
+      panStartScroll.current = scrollXRef.current || 0;
+    },
+    onPanResponderMove: (_, gestureState) => {
+      const desired = Math.max(0, panStartScroll.current - gestureState.dx);
+      if (scrollRef.current && typeof scrollRef.current.scrollTo === 'function') {
+        try { scrollRef.current.scrollTo({ x: desired, animated: false }); } catch (e) { /* ignore */ }
+      }
+    },
+    onPanResponderRelease: () => {},
+    onPanResponderTerminate: () => {},
+  })).current;
   const navigation = (typeof require('@react-navigation/native') !== 'undefined') ? require('@react-navigation/native').useNavigation() : null;
 
   const now = new Date();
   const sysDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
   // Determine current shift automatically from system time
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
-  const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+  // prefer a signature field for verification; keep older text key as fallback
+  const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedSign: '', verifiedBy: '' });
   const [logoDataUri, setLogoDataUri] = useState(null);
   const [editMode, setEditMode] = useState(false);
 
@@ -262,18 +286,53 @@ export default function Kitchen_DailyCleaningForm() {
 
       <View style={styles.metadataContainer}>
         <View style={styles.metadataRow}>
-          {Object.keys(metadata).map(key => (
+          {/* Render generic metadata keys except verified (we render verified separately) */}
+          {Object.keys(metadata).filter(k => !/^verified/i.test(k)).map(key => (
             <View key={key} style={styles.metadataItem}>
               <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>{key.charAt(0).toUpperCase()+key.slice(1)}:</Text>
               <TextInput style={[styles.metadataInput, { minWidth: s(80), height: s(28), fontSize: ms(10) }]} value={metadata[key]} onChangeText={(t)=>handleMetadataChange(key,t)} />
             </View>
           ))}
+
+          {/* Verified By: prefer a signature. In edit mode the user can tap to sign; when viewing we show the saved signature or fallback to text. */}
+          <View key="verified" style={styles.metadataItem}>
+            <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>Verified By:</Text>
+            {editMode ? (
+              <SignatureField
+                value={metadata.verifiedSign || metadata.verifiedBy || ''}
+                onChange={(v) => handleMetadataChange('verifiedSign', v)}
+                editable={true}
+                width={s(180)}
+                height={s(56)}
+                placeholder="Tap to sign"
+              />
+            ) : (
+              metadata.verifiedSign ? (
+                <Image source={{ uri: String(metadata.verifiedSign).startsWith('data:') ? metadata.verifiedSign : `data:image/png;base64,${metadata.verifiedSign}` }} style={{ width: s(180), height: s(56), resizeMode: 'contain' }} />
+              ) : (
+                <Text style={styles.dataText}>{metadata.verifiedBy || ''}</Text>
+              )
+            )}
+          </View>
         </View>
         <Text style={[styles.tickInstruction, { fontSize: ms(11) }]}>✓ TICK AFTER CLEANING</Text>
       </View>
 
       <View onStartShouldSetResponder={()=>true} onMoveShouldSetResponder={()=>true} onResponderTerminationRequest={()=>false}>
-        <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} directionalLockEnabled={false} contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }} keyboardShouldPersistTaps="handled" alwaysBounceHorizontal>
+        <ScrollView
+          horizontal
+          nestedScrollEnabled={true}
+          showsHorizontalScrollIndicator={true}
+          directionalLockEnabled={false}
+          contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
+          keyboardShouldPersistTaps="handled"
+          alwaysBounceHorizontal
+          ref={scrollRef}
+          onScroll={(e) => { scrollXRef.current = e.nativeEvent.contentOffset.x || 0; }}
+          scrollEventThrottle={16}
+          // attach pan handlers to allow dragging from anywhere in the enclosing view
+          {...panResponder.panHandlers}
+        >
           <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
             <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
               <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>

@@ -5,6 +5,8 @@ import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../../utils/formDrafts';
 import { addFormHistory } from '../../utils/formHistory';
 import EditableFormContainer from '../../components/EditableFormContainer';
+import SignatureField from '../../components/SignatureField';
+import SignatureThumb from '../../components/SignatureThumb';
 
 
 const DRAFT_KEY = 'cooling_temperature_log_draft';
@@ -181,6 +183,28 @@ export default function CoolingTemperatureLog() {
         TIME_TEMP_SIGN: 1.0, // Each T/T/S column (9 total)
         STAFF_NAME: 1.5,
     };
+
+    // Normalize previewable signature values for read-only rendering
+    const resolvePreviewUri = (val) => {
+        if (!val) return null;
+        if (typeof val === 'object') {
+            if (val.uri && typeof val.uri === 'string') {
+                const u = val.uri.trim(); if (u) return u;
+            }
+            if (val.data && typeof val.data === 'string') {
+                const compact = val.data.replace(/\s+/g, '');
+                if (compact.length) return `data:image/png;base64,${compact}`;
+            }
+            return null;
+        }
+        if (typeof val !== 'string') return null;
+        const s = val.trim(); if (!s) return null;
+        if (s.startsWith('data:') || s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:') || s.startsWith('blob:')) return s;
+        const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+        const compact = s.replace(/\s+/g, '');
+        if (compact.length > 100 && base64ish.test(compact)) return `data:image/png;base64,${compact}`;
+        return null;
+    };
     
     return (
         <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
@@ -337,17 +361,30 @@ export default function CoolingTemperatureLog() {
                             {/* 1st Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time1}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp1}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign1} onChange={v => setCell(ri, 'sign1', v)} editable={editMode} width={100} height={48} placeholder="Tap to sign" /> : (() => {
+                                // render image preview when available to avoid showing long data URLs
+                                const uri = resolvePreviewUri(row.sign1);
+                                if (uri) return (<View style={{ alignItems: 'center', justifyContent: 'center' }}><SignatureThumb uri={uri} width={80} height={48} layers={10} spread={1.2} /></View>);
+                                return <Text style={styles.readOnlyCell}>{row.sign1}</Text>;
+                            })()}</View>
 
                             {/* 2nd Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time2}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp2}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign2} onChange={v => setCell(ri, 'sign2', v)} editable={editMode} width={100} height={48} placeholder="Tap to sign" /> : (() => {
+                                const uri = resolvePreviewUri(row.sign2);
+                                if (uri) return (<View style={{ alignItems: 'center', justifyContent: 'center' }}><SignatureThumb uri={uri} width={80} height={48} layers={10} spread={1.2} /></View>);
+                                return <Text style={styles.readOnlyCell}>{row.sign2}</Text>;
+                            })()}</View>
 
                             {/* 3rd Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time3}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp3}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign3} onChange={v => setCell(ri, 'sign3', v)} editable={editMode} width={100} height={48} placeholder="Tap to sign" /> : (() => {
+                                const uri = resolvePreviewUri(row.sign3);
+                                if (uri) return (<View style={{ alignItems: 'center', justifyContent: 'center' }}><SignatureThumb uri={uri} width={80} height={48} layers={10} spread={1.2} /></View>);
+                                return <Text style={styles.readOnlyCell}>{row.sign3}</Text>;
+                            })()}</View>
 
                             {/* Staff Name */}
                             <View style={[styles.cell, { flex: COL_FLEX.STAFF_NAME }]}>
@@ -361,7 +398,14 @@ export default function CoolingTemperatureLog() {
                 <View style={styles.footerSection}>
                     <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-                        <TextInput style={[styles.signatureInput, { fontSize: 14 }]} value={meta.chefSignature} onChangeText={v => setMetaField('chefSignature', v)} placeholder="" />
+                        {editMode ? (
+                            <SignatureField value={meta.chefSignature} onChange={v => setMetaField('chefSignature', v)} editable={editMode} width={260} height={80} />
+                        ) : (
+                            (() => {
+                                const uri = resolvePreviewUri(meta.chefSignature);
+                                return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={14} spread={1.6} /> : <Text style={styles.signatureInput}>{meta.chefSignature || ''}</Text>;
+                            })()
+                        )}
                     </View>
 
                     <View style={{ marginBottom: 12 }}>
@@ -371,14 +415,17 @@ export default function CoolingTemperatureLog() {
 
                     <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>COMPLEX Manager Signature:</Text>
-                        <TextInput style={[styles.signatureInput, { fontSize: 14 }]} value={meta.complexManagerSignature} onChangeText={v => setMetaField('complexManagerSignature', v)} placeholder="" />
+                        {editMode ? (
+                            <SignatureField value={meta.complexManagerSignature} onChange={v => setMetaField('complexManagerSignature', v)} editable={editMode} width={260} height={80} />
+                        ) : (
+                            (() => {
+                                const uri = resolvePreviewUri(meta.complexManagerSignature);
+                                return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={14} spread={1.6} /> : <Text style={styles.signatureInput}>{meta.complexManagerSignature || ''}</Text>;
+                            })()
+                        )}
                     </View>
 
-                    {/* Verified by line (visual label as in the original template) */}
-                    <View style={{ paddingHorizontal: 4, marginTop: 6 }}>
-                        <Text style={{ fontSize: 12, fontWeight: '700' }}>Verified by:</Text>
-                        <Text style={{ marginTop: 8, fontSize: 12 }}>Complex Manager: ......................................................</Text>
-                    </View>
+                    {/* Removed duplicate decorative "Verified by" label - signatures are shown above */}
                 </View>
 
                 {/* spacer so content can scroll above the floating actionButtons */}

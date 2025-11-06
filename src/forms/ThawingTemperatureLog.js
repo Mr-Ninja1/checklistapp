@@ -82,6 +82,32 @@ export default function ThawingTemperatureLog() {
     const setCell = useCallback((r,k,v) => setRows(prev => prev.map((row,i) => i===r?{...row,[k]:v}:row)), []);
     const setMetaField = (k,v) => setMeta(prev => ({ ...prev, [k]: v }));
 
+    // Normalize various signature shapes into an image URI usable by <Image/>
+    const resolvePreviewUri = (val) => {
+        if (!val) return null;
+        // strings
+        if (typeof val === 'string') {
+            const s = val.trim();
+            if (!s) return null;
+            if (s.startsWith('data:')) return s;
+            if (s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:') || s.startsWith('blob:')) return s;
+            const compact = s.replace(/\s+/g, '');
+            const base64ish = /^[A-Za-z0-9+/=]+$/;
+            if (compact.length > 100 && base64ish.test(compact)) return `data:image/png;base64,${compact}`;
+            return null;
+        }
+        // object shapes: { uri } or { data }
+        if (typeof val === 'object') {
+            if (val.uri) return val.uri;
+            if (val.data) {
+                const d = String(val.data).trim();
+                if (!d) return null;
+                return d.startsWith('data:') ? d : `data:image/png;base64,${d}`;
+            }
+        }
+        return null;
+    };
+
     const handleSubmit = async () => {
         // save all rows (including empty) so presentational matches editable form
         const logData = rows.map((r, i) => ({ index: i + 1, ...r }));
@@ -215,15 +241,42 @@ export default function ThawingTemperatureLog() {
                             </View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v=>setCell(ri,'time1',v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time1}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v=>setCell(ri,'temp1',v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp1}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign1} onChangeText={v=>setCell(ri,'sign1',v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>
+                                {editMode ? (
+                                    <SignatureField value={row.sign1} onChange={v=>setCell(ri,'sign1',v)} editable={editMode} width={120} height={56} placeholder="Tap to sign" />
+                                ) : (
+                                    (() => {
+                                        const uri = resolvePreviewUri(row.sign1);
+                                        return uri ? <Image source={{ uri }} style={{ width: 120, height: 56, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyCell}>{typeof row.sign1 === 'string' ? row.sign1 : ''}</Text>;
+                                    })()
+                                )}
+                            </View>
 
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v=>setCell(ri,'time2',v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time2}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v=>setCell(ri,'temp2',v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp2}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign2} onChangeText={v=>setCell(ri,'sign2',v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>
+                                {editMode ? (
+                                    <SignatureField value={row.sign2} onChange={v=>setCell(ri,'sign2',v)} editable={editMode} width={120} height={56} placeholder="Tap to sign" />
+                                ) : (
+                                    (() => {
+                                        const uri = resolvePreviewUri(row.sign2);
+                                        return uri ? <Image source={{ uri }} style={{ width: 120, height: 56, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyCell}>{typeof row.sign2 === 'string' ? row.sign2 : ''}</Text>;
+                                    })()
+                                )}
+                            </View>
 
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v=>setCell(ri,'time3',v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time3}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v=>setCell(ri,'temp3',v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp3}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign3} onChangeText={v=>setCell(ri,'sign3',v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>
+                                {editMode ? (
+                                    <SignatureField value={row.sign3} onChange={v=>setCell(ri,'sign3',v)} editable={editMode} width={120} height={56} placeholder="Tap to sign" />
+                                ) : (
+                                    (() => {
+                                        const uri = resolvePreviewUri(row.sign3);
+                                        return uri ? <Image source={{ uri }} style={{ width: 120, height: 56, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyCell}>{typeof row.sign3 === 'string' ? row.sign3 : ''}</Text>;
+                                    })()
+                                )}
+                            </View>
 
                             <View style={[styles.cell, { flex: COL_FLEX.STAFF_NAME }]}>{editMode ? <TextInput style={styles.input} value={row.staffName} onChangeText={v=>setCell(ri,'staffName',v)} placeholder="Name" /> : <Text style={styles.readOnlyCell}>{row.staffName}</Text>}</View>
                         </View>
@@ -236,11 +289,11 @@ export default function ThawingTemperatureLog() {
                             {editMode ? (
                                 <SignatureField value={meta.chefSignature} onChange={v => setMetaField('chefSignature', v)} editable={editMode} width={220} height={80} />
                             ) : (
-                                meta.chefSignature ? (
-                                    <Image source={{ uri: String(meta.chefSignature).startsWith('data:') ? meta.chefSignature : `data:image/png;base64,${meta.chefSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
-                                ) : (
-                                    <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.chefSignature}</Text>
-                                )
+                                (() => {
+                                    const val = meta.chefSignature || meta.chefSign;
+                                    const uri = resolvePreviewUri(val);
+                                    return uri ? <Image source={{ uri }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} /> : <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.chefSignature}</Text>;
+                                })()
                             )}
                         </View>
 
@@ -253,24 +306,22 @@ export default function ThawingTemperatureLog() {
                             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
                             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12, marginLeft: 16 }}>Complex Manager Signature:</Text>
                             {editMode ? (
-                                <SignatureField value={meta.complexManagerSignature} onChange={v => setMetaField('complexManagerSignature', v)} editable={editMode} width={220} height={80} />
-                            ) : (
-                                meta.complexManagerSignature ? (
-                                    <Image source={{ uri: String(meta.complexManagerSignature).startsWith('data:') ? meta.complexManagerSignature : `data:image/png;base64,${meta.complexManagerSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
+                                    <SignatureField value={meta.complexManagerSignature} onChange={v => setMetaField('complexManagerSignature', v)} editable={editMode} width={220} height={80} />
                                 ) : (
-                                    <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.complexManagerSignature}</Text>
-                                )
-                            )}
+                                    (() => {
+                                        const uri = resolvePreviewUri(meta.complexManagerSignature);
+                                        return uri ? <Image source={{ uri }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} /> : <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.complexManagerSignature}</Text>;
+                                    })()
+                                )}
 
                             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12, marginLeft: 16, marginTop: 8 }}>HSEQ Manager Signature:</Text>
                             {editMode ? (
                                 <SignatureField value={meta.hseqManagerSignature} onChange={v => setMetaField('hseqManagerSignature', v)} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
                             ) : (
-                                meta.hseqManagerSignature ? (
-                                    <Image source={{ uri: String(meta.hseqManagerSignature).startsWith('data:') ? meta.hseqManagerSignature : `data:image/png;base64,${meta.hseqManagerSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
-                                ) : (
-                                    <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.hseqManagerSignature}</Text>
-                                )
+                                (() => {
+                                    const uri = resolvePreviewUri(meta.hseqManagerSignature || meta.hseqManagerSign || meta.hseqSign);
+                                    return uri ? <Image source={{ uri }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} /> : <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.hseqManagerSignature}</Text>;
+                                })()
                             )}
                         </View>
                 </View>

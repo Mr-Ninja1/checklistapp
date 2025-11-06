@@ -29,6 +29,12 @@ export default function ReadOnlyKitchenWeeklyCleaningChecklist({ form }) {
         }
     };
 
+    // Prevent the generic read-only renderer from also printing the raw
+    // `form.meta` object (which may contain unrelated keys like
+    // "compiledBy" / "approvedBy"). We only want the curated `metadata`
+    // and `verification` shown for this adapted kitchen view.
+    if (adaptedForm.meta) adaptedForm.meta = undefined;
+
     return (
         <GenericReadOnlyForm
             form={adaptedForm}

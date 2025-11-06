@@ -24,6 +24,28 @@ export default function KitchenDailyCleaningPresentational({ payload }) {
   }
   const perTimeWidth = COL.TIME_SLOT || 56;
 
+  // normalize signature values into a previewable uri (data:..., http(s)://, file:, blob:, or {uri}/{data})
+  const resolveSignatureUri = (val) => {
+    if (!val) return null;
+    if (typeof val === 'object') {
+      if (val.uri && typeof val.uri === 'string') {
+        const u = val.uri.trim(); if (u) return u;
+      }
+      if (val.data && typeof val.data === 'string') {
+        const compact = val.data.replace(/\s+/g, '');
+        if (compact.length) return `data:image/png;base64,${compact}`;
+      }
+      return null;
+    }
+    if (typeof val !== 'string') return null;
+    const s = val.trim(); if (!s) return null;
+    if (s.startsWith('data:') || s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:') || s.startsWith('blob:')) return s;
+    const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+    const compact = s.replace(/\s+/g, '');
+    if (compact.length > 100 && base64ish.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container} nestedScrollEnabled={true}>
       <View style={styles.card}>
@@ -86,6 +108,18 @@ export default function KitchenDailyCleaningPresentational({ payload }) {
             ))}
           </View>
         </ScrollView>
+
+        {/* Footer: Verified by signature (show signature thumbnail if present, else text) */}
+        <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
+          <View style={{ marginRight: 24 }}>
+            <Text style={{ fontWeight: '700' }}>Verified By:</Text>
+            {(() => {
+              const raw = p.verifiedSign || metadata.verifiedSign || metadata.verified_by || metadata.verifiedBy || metadata.verified || null;
+              const uri = resolveSignatureUri(raw);
+              return uri ? <SignatureThumb uri={uri} width={(COL.SIGNATURE || 120) + 60} height={56} layers={8} spread={1.0} /> : <Text style={{ marginTop: 6 }}>{metadata.verifiedBy || ''}</Text>;
+            })()}
+          </View>
+        </View>
       </View>
     </ScrollView>
   );

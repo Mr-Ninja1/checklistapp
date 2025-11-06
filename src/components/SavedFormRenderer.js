@@ -215,6 +215,16 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // Fallback detection: some saved entries may not include the exact formType/title
   // but will contain a formData array where each item has a `days` map (Sun..Sat).
   // Detect that shape and render the bakery cleaning presentational.
+  // Ensure explicit Kitchen Weekly forms are handled before shape-based fallbacks
+  if (/KitchenWeeklyCleaningChecklist|Kitchen Weekly Cleaning Checklist|Kitchen_WeeklyCleaningChecklist/i.test(type)) {
+    return <KitchenWeeklyCleaningChecklistPresentational payload={payload} />;
+  }
+
+  // Ensure explicit Kitchen Daily (sanitizing) forms are handled before shape-based fallbacks
+  if (/Kitchen Daily Cleaning|Kitchen_DailyCleaningForm|Kitchen Daily Cleaning & Sanitizing|Food Contact Surface Cleaning and Sanitizing Log Sheet \(Kitchen\)/i.test(type)) {
+    return <KitchenDailyCleaningPresentational payload={payload} />;
+  }
+
   try {
     const first = Array.isArray(payload?.formData) && payload.formData.length ? payload.formData[0] : null;
     // Cold Room shape detection: rows contain a `checks` object keyed by days (Sun..Sat)
@@ -290,9 +300,7 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
     // ignore shape detection errors and continue to other matchers
   }
   // Kitchen Weekly Cleaning
-  if (/KitchenWeeklyCleaningChecklist|Kitchen Weekly Cleaning Checklist|Kitchen_WeeklyCleaningChecklist/i.test(type)) {
-    return <KitchenWeeklyCleaningChecklistPresentational payload={payload} />;
-  }
+  // (Handled earlier to avoid shape-based mis-detection)
   // Dry Storage Area Cleaning
   if (/DryStorageArea_CleaningChecklist|Dry Storage Area Cleaning Checklist|DRY STORAGE AREA CLEANING CHECKLIST/i.test(type)) {
     return <DryStorageArea_CleaningChecklistPresentational payload={payload} />;

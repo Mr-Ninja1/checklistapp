@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function CoolingTemperatureSavedPresentational({ payload }) {
   if (!payload) return null;
@@ -11,16 +12,59 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
   // prefer explicit widths saved in the payload; otherwise fallback to sensible defaults
   const raw = (layoutHints && layoutHints.WIDTHS) || {};
   const WIDTHS = {
-    INDEX: raw.INDEX || 40,
-    FOOD_ITEM: raw.FOOD_ITEM || 260,
-    TIME_INTO_UNIT: raw.TIME_INTO_UNIT || 120,
-    TIME: raw.TIME || 64,
-    TEMP: raw.TEMP || 48,
-    SIGN: raw.SIGN || 40,
-    STAFF_NAME: raw.STAFF_NAME || 160,
+    INDEX: raw.INDEX || 48,
+    FOOD_ITEM: raw.FOOD_ITEM || 300,
+    TIME_INTO_UNIT: raw.TIME_INTO_UNIT || 140,
+    TIME: raw.TIME || 72,
+    TEMP: raw.TEMP || 64,
+    SIGN: raw.SIGN || 140,
+    STAFF_NAME: raw.STAFF_NAME || 200,
   };
 
   const tableWidth = Number(_tableWidth) || 1000;
+
+  const resolveSignatureUri = (val) => {
+    if (!val) return null;
+    // Accept object shapes commonly produced by some image pickers: { uri: '...' }
+    if (typeof val === 'object') {
+      if (val.uri && typeof val.uri === 'string') {
+        const u = val.uri.trim();
+        if (u) return u;
+      }
+      // sometimes stored as { data: 'base64...' }
+      if (val.data && typeof val.data === 'string') {
+        const compact = val.data.replace(/\s+/g, '');
+        if (compact.length) return `data:image/png;base64,${compact}`;
+      }
+      return null;
+    }
+    if (typeof val !== 'string') return null;
+    const s = val.trim();
+    if (!s) return null;
+    // If it's already a data: URI or an http/file/blob URL, return directly so Image can render it
+    if (s.startsWith('data:') || s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:') || s.startsWith('blob:')) return s;
+    // heuristic: long base64-like strings -> image/png
+    const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+    const compact = s.replace(/\s+/g, '');
+    if (compact.length > 100 && base64ish.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  };
+
+  const renderSignatureCell = (val, cellWidth) => {
+    const uri = resolveSignatureUri(val);
+    if (!uri) return <Text style={styles.cellText}>{''}</Text>;
+    // Prefer a reasonably large thumb for saved forms. Use the provided cellWidth
+    // but ensure a comfortable minimum so signatures are legible on narrow tables.
+    const computedCell = Number(cellWidth) || 140;
+    const w = Math.max(84, computedCell - 12);
+    // Maintain an aspect for a signature rectangle that's wider than tall
+    const h = Math.max(56, Math.round(w * 0.55));
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <SignatureThumb uri={uri} width={w} height={h} layers={12} spread={1.4} />
+      </View>
+    );
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -89,15 +133,15 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
 
               <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
               <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign1 || ''}</Text></View>
+              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign1, WIDTHS.SIGN)}</View>
 
               <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
               <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign2 || ''}</Text></View>
+              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign2, WIDTHS.SIGN)}</View>
 
               <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
               <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign3 || ''}</Text></View>
+              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign3, WIDTHS.SIGN)}</View>
 
               <View style={[styles.cell, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
             </View>
@@ -110,16 +154,31 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
         <View style={styles.footerSection}>
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-            <Text style={styles.signatureLine}>{metadata.chefSignature || '______________________________'}</Text>
+            {(() => {
+              const uri = resolveSignatureUri(metadata.chefSignature);
+              return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={14} spread={1.6} /> : <Text style={styles.signatureLine}>{'______________________________'}</Text>;
+            })()}
           </View>
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Corrective Action:</Text>
             <Text style={styles.textarea}>{metadata.correctiveAction || ''}</Text>
           </View>
           <View style={{ marginBottom: 12 }}>
-            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
-            <Text style={{ marginTop: 8, fontSize: 12 }}>HSEQ Manager: {metadata.hseqManagerSignature || '______________________________'}</Text>
-            <Text style={{ marginTop: 8, fontSize: 12 }}>Complex Manager: {metadata.complexManagerSignature || '______________________________'}</Text>
+            {/* Sign-off section: HSEQ and Complex Manager signatures (no duplicate "Verified by" heading) */}
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700' }}>HSEQ Manager:</Text>
+              {(() => {
+                const uri = resolveSignatureUri(metadata.hseqManagerSignature || metadata.hseqSign);
+                return uri ? <SignatureThumb uri={uri} width={260} height={64} layers={12} spread={1.4} /> : <Text style={{ marginTop: 8, fontSize: 12 }}>{'______________________________'}</Text>;
+              })()}
+            </View>
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700' }}>Complex Manager:</Text>
+              {(() => {
+                const uri = resolveSignatureUri(metadata.complexManagerSignature);
+                return uri ? <SignatureThumb uri={uri} width={260} height={64} layers={12} spread={1.4} /> : <Text style={{ marginTop: 8, fontSize: 12 }}>{'______________________________'}</Text>;
+              })()}
+            </View>
           </View>
         </View>
 
