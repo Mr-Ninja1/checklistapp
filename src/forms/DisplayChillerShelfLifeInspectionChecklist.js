@@ -191,12 +191,12 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         {editMode ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={{ fontSize: 12, fontWeight: '700' }}>DATE:</Text>
-            <TextInput style={{ borderBottomWidth: 1, minWidth: 120, paddingVertical: 4 }} value={issueDate} onChangeText={setIssueDate} />
+            <TextInput style={{ borderBottomWidth: 0, minWidth: 120, paddingVertical: 4 }} value={issueDate} onChangeText={setIssueDate} />
             <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 12 }}>VERIFIED BY:</Text>
             <View style={{ marginLeft: 8 }}>
               <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={240} height={120} />
             </View>
-            <TextInput style={{ borderBottomWidth: 1, minWidth: 140, paddingVertical: 4, marginLeft: 8 }} value={verifiedBy} onChangeText={setVerifiedBy} />
+            <TextInput style={{ borderBottomWidth: 0, minWidth: 140, paddingVertical: 4, marginLeft: 8 }} value={verifiedBy} onChangeText={setVerifiedBy} />
             <Text style={{ fontSize: 12, fontWeight: '700', marginLeft: 12 }}>BARISTA SIGN:</Text>
             <View style={{ marginLeft: 8 }}>
               <SignatureField value={baristaSign} onChange={setBaristaSign} editable={editMode} width={320} height={160} />
