@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 // Exact numeric widths used by the editable form
 const columnWidths = {
@@ -44,8 +45,8 @@ export default function PersonalHygieneChecklistPresentational({ payload, embedd
 				<Text style={styles.subject}><Text style={styles.bold}>Subject:</Text> Personnel Hygiene Checklist</Text>
 
 			<View style={styles.infoRowTop}>
-				<Text style={styles.infoText}><Text style={styles.bold}>Compiled By:</Text> {meta.compiledBy || ''}</Text>
-				<Text style={styles.infoText}><Text style={styles.bold}>Approved By:</Text> {meta.approvedBy || ''}</Text>
+					<Text style={styles.infoText}><Text style={styles.bold}>Compiled By:</Text> {meta.compiledBy || ''}</Text>
+					<Text style={styles.infoText}><Text style={styles.bold}>Approved By:</Text> {meta.approvedBy || ''}</Text>
 			</View>
 
 					{/* make the table horizontally scrollable inside the saved-modal */}
@@ -88,7 +89,11 @@ export default function PersonalHygieneChecklistPresentational({ payload, embedd
     
 										{/* Footer signature */}
 										<View style={styles.footerSignatures}>
-											<Text style={styles.footerText}>HSEQ SIGN: ..................................</Text>
+											{meta.hseqSign ? (
+												<SignatureThumb uri={String(meta.hseqSign).startsWith('data:') ? meta.hseqSign : `data:image/png;base64,${meta.hseqSign}`} width={260} height={80} layers={6} spread={1.0} />
+											) : (
+												<Text style={styles.footerText}>HSEQ SIGN: ..................................</Text>
+											)}
 										</View>
 		</Root>
 	);

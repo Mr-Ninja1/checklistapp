@@ -1,5 +1,20 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+function normalizeSignature(v) {
+  if (!v) return null;
+  if (String(v).startsWith('data:')) return v;
+  const compact = String(v).replace(/\s+/g, '');
+  if (compact.length > 200) return `data:image/png;base64,${compact}`;
+  return null;
+}
+
+function renderMaybeSignature(v, style = {}) {
+  const uri = normalizeSignature(v);
+  if (uri) return <SignatureThumb uri={uri} style={style} />;
+  return <Text>{v || ''}</Text>;
+}
 
 const daysOfWeek = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -54,15 +69,15 @@ export default function BravoHealthStatusCheckPresentational({ payload }) {
       <View style={styles.signRow}>
         <View style={[styles.signBox, { flex: 1 }]}>
           <Text style={styles.signLabel}>Supervisor Name & Sign</Text>
-          <Text style={styles.signValue}>{payload?.metadata?.supervisorName || ''}</Text>
+          {renderMaybeSignature(payload?.metadata?.supervisorName || '', { width: 220, height: 60 })}
         </View>
         <View style={[styles.signBox, { flex: 1 }]}>
           <Text style={styles.signLabel}>Complex Manager Name &</Text>
-          <Text style={styles.signValue}>{payload?.metadata?.complexManagerSign || ''}</Text>
+          {renderMaybeSignature(payload?.metadata?.complexManagerSign || '', { width: 220, height: 60 })}
         </View>
         <View style={[styles.signBox, { flex: 1 }]}>
           <Text style={styles.signLabel}>HSEQ Manager Sign</Text>
-          <Text style={styles.signValue}>{payload?.metadata?.hseqManagerSign || ''}</Text>
+          {renderMaybeSignature(payload?.metadata?.hseqManagerSign || '', { width: 220, height: 60 })}
         </View>
       </View>
 
@@ -141,11 +156,11 @@ export default function BravoHealthStatusCheckPresentational({ payload }) {
       <View style={styles.signaturesRow}>
         <View style={styles.signatureBox}>
           <Text style={styles.signatureLabel}>HSEQ MANAGER</Text>
-          <Text style={styles.signatureValue}>{payload?.metadata?.hseqManagerSign || '..................................'}</Text>
+          {renderMaybeSignature(payload?.metadata?.hseqManagerSign || '', { width: 260, height: 80 })}
         </View>
         <View style={styles.signatureBox}>
           <Text style={styles.signatureLabel}>COMPLEX MANAGER</Text>
-          <Text style={styles.signatureValue}>{payload?.metadata?.complexManagerSign || '..................................'}</Text>
+          {renderMaybeSignature(payload?.metadata?.complexManagerSign || '', { width: 260, height: 80 })}
         </View>
       </View>
 

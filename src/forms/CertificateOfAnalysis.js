@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import SignatureField from '../components/SignatureField';
 
 const DRAFT_KEY = 'certificate_of_analysis_draft';
 
@@ -117,10 +118,22 @@ export default function CertificateOfAnalysis() {
           </View>
 
           <View style={styles.signatureArea}>
-            {renderInputLine('SAMPLED BY:', 'sampledBy', 'Signature')}
-            {renderInputLine('HSEQ Manager:', 'hseqManager', 'Signature')}
-            {renderInputLine('COMPLEX MANAGER:', 'complexManager', 'Signature')}
-            {renderInputLine('DATE:', 'date', '', 'default')}
+            <View style={{ width: '48%' }}>
+              <Text style={styles.inputLabel}>SAMPLED BY:</Text>
+              <SignatureField value={formData.sampledBy} onChange={(v) => handleChange('sampledBy', v)} editable={true} width={220} height={80} />
+            </View>
+            <View style={{ width: '48%' }}>
+              <Text style={styles.inputLabel}>HSEQ Manager:</Text>
+              <SignatureField value={formData.hseqManager} onChange={(v) => handleChange('hseqManager', v)} editable={true} width={220} height={80} />
+            </View>
+            <View style={{ width: '48%', marginTop: 8 }}>
+              <Text style={styles.inputLabel}>COMPLEX MANAGER:</Text>
+              <SignatureField value={formData.complexManager} onChange={(v) => handleChange('complexManager', v)} editable={true} width={220} height={80} />
+            </View>
+            <View style={{ width: '48%', marginTop: 8 }}>
+              <Text style={styles.inputLabel}>DATE:</Text>
+              <TextInput value={formData.date} onChangeText={t => handleChange('date', t)} placeholder="" style={styles.input} />
+            </View>
           </View>
 
           <View style={styles.resultArea}>

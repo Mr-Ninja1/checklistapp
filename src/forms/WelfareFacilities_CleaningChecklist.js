@@ -20,6 +20,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 const DRAFT_KEY = 'welfare_facilities_cleaning_checklist_draft';
 
@@ -267,7 +268,11 @@ export default function WelfareFacilitiesChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} editable={editMode} />
+              {editMode ? (
+                <SignatureField value={metadata.hseqManagerSign} onChange={(v) => handleMetadataChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Verified by: HSEQ Manager" />
+              ) : (
+                <Text style={styles.metaValue}>{metadata.hseqManagerSign || metadata.hseqManager || ''}</Text>
+              )}
             </View>
           </View>
 

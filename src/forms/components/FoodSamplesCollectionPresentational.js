@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function FoodSamplesCollectionPresentational({ payload }) {
   if (!payload) return null;
   // Support both legacy shapes and canonical saved payloads
-  const site = payload.site || '';
-  const location = payload.location || '';
-  const supervisor = payload.supervisor || '';
+  const site = payload.site || payload.formData?.site || '';
+  const location = payload.location || payload.formData?.location || '';
+  // Supervisor name/sign may be stored at top-level or inside formData in older saves
+  const supervisorName = payload.supervisorName || payload.supervisor || payload.formData?.supervisorName || payload.formData?.supervisor || '';
+  const supervisorSign = payload.supervisorSign || payload.formData?.supervisorSign || (payload.metadata && payload.metadata.supervisorSign) || '';
   const logEntries = (payload.formData && payload.formData.logEntries) || payload.logEntries || [];
   const specification = payload.specification || (payload.formData && payload.formData.specification) || '';
   const logoDataUri = payload.assets && payload.assets.logoDataUri;
@@ -51,7 +54,12 @@ export default function FoodSamplesCollectionPresentational({ payload }) {
         <View style={styles.metaRow}>
           <Text style={styles.meta}>Site: {site}</Text>
           <Text style={styles.meta}>Location: {location}</Text>
-          <Text style={styles.meta}>Name & Sign of Supervisor: {supervisor}</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.meta}>Name of Supervisor: {supervisorName}</Text>
+            {supervisorSign ? (
+              <SignatureThumb uri={String(supervisorSign).startsWith('data:') ? supervisorSign : `data:image/png;base64,${supervisorSign}`} width={200} height={64} layers={10} spread={1.2} />
+            ) : null}
+          </View>
         </View>
 
         {specification ? (

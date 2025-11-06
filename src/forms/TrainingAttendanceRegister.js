@@ -8,6 +8,7 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import formStorage from '../utils/formStorage';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
+import SignatureField from '../components/SignatureField';
 
 export default function TrainingAttendanceRegister() {
   // Use app logo from assets if available
@@ -259,14 +260,14 @@ export default function TrainingAttendanceRegister() {
                   <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n].name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" editable={editMode} /></View>
                   <View style={styles.colNrc}><TextInput style={styles.cellInput} value={cells.left[n].nrc} onChangeText={(t) => updateCell('left', n, 'nrc', t)} placeholder="" editable={editMode} /></View>
                   <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n].job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" editable={editMode} /></View>
-                  <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n].sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" editable={editMode} /></View>
+                  <View style={styles.colSign}><SignatureField value={cells.left[n].sign} onChange={v => updateCell('left', n, 'sign', v)} editable={editMode} width={140} height={60} /></View>
 
                 {/* Right Table Data (Rows 10-18) - separated by a gap */}
                 <View style={[styles.colSn, { marginLeft: 8 }]}><Text style={styles.cellText}>{n + 9}.</Text></View>
                 <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 9].name} onChangeText={(t) => updateCell('right', n + 9, 'name', t)} placeholder="" editable={editMode} /></View>
                 <View style={styles.colNrc}><TextInput style={styles.cellInput} value={cells.right[n + 9].nrc} onChangeText={(t) => updateCell('right', n + 9, 'nrc', t)} placeholder="" editable={editMode} /></View>
                 <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 9].job} onChangeText={(t) => updateCell('right', n + 9, 'job', t)} placeholder="" editable={editMode} /></View>
-                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 9].sign} onChangeText={(t) => updateCell('right', n + 9, 'sign', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colSign}><SignatureField value={cells.right[n + 9].sign} onChange={v => updateCell('right', n + 9, 'sign', v)} editable={editMode} width={140} height={60} /></View>
               </View>
             ))}
           </View>

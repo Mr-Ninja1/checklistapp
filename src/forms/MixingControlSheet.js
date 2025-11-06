@@ -9,6 +9,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import FormActionBar from '../components/FormActionBar';
+import SignatureField from '../components/SignatureField';
 
 const DRAFT_KEY = 'mixing_control_sheet_draft';
 
@@ -140,15 +141,27 @@ export default function MixingControlSheet() {
     <View key={index} style={styles.row}>
       {columnHeaders.map(col => (
         <View key={col.key} style={[styles.cell, { width: col.width }]}>
-          <TextInput
-            value={item[col.key]}
-            onChangeText={v => handleEntryChange(index, col.key, v)}
-            style={styles.input}
-            multiline={true}
-            numberOfLines={2}
-            textAlignVertical="top"
-            editable={editMode}
-          />
+          { (col.key === 'mixerManSign' || col.key === 'supSign') ? (
+            editMode ? (
+              <SignatureField value={item[col.key]} onChange={v => handleEntryChange(index, col.key, v)} editable={editMode} width={col.width - 20} height={80} placeholder="Tap to sign" />
+            ) : (
+              item[col.key] ? (
+                <Image source={{ uri: String(item[col.key]).startsWith('data:') ? item[col.key] : `data:image/png;base64,${item[col.key]}` }} style={{ width: col.width - 20, height: 80, resizeMode: 'contain' }} />
+              ) : (
+                <Text style={styles.cellText}>{String(item[col.key] ?? '')}</Text>
+              )
+            )
+          ) : (
+            <TextInput
+              value={item[col.key]}
+              onChangeText={v => handleEntryChange(index, col.key, v)}
+              style={styles.input}
+              multiline={true}
+              numberOfLines={2}
+              textAlignVertical="top"
+              editable={editMode}
+            />
+          )}
         </View>
       ))}
     </View>
@@ -187,13 +200,29 @@ export default function MixingControlSheet() {
 
         <View style={styles.verifyRow}>
           <View style={styles.verifyInput}>
-            <Text style={styles.verifyLabel}>VERIFIED BY:</Text>
-            <TextInput value={verification.mixerManSign} onChangeText={v => setVerification(prev => ({ ...prev, mixerManSign: v }))} style={styles.smallInput} />
-          </View>
-          <View style={styles.verifyInput}>
-            <Text style={styles.verifyLabel}>COMPLEX MANAGER SIGN:</Text>
-            <TextInput value={verification.complexManagerSign} onChangeText={v => setVerification(prev => ({ ...prev, complexManagerSign: v }))} style={styles.smallInput} />
-          </View>
+              <Text style={styles.verifyLabel}>VERIFIED BY:</Text>
+              {editMode ? (
+                <SignatureField value={verification.mixerManSign} onChange={v => setVerification(prev => ({ ...prev, mixerManSign: v }))} editable={editMode} width={220} height={80} />
+              ) : (
+                verification.mixerManSign ? (
+                  <Image source={{ uri: String(verification.mixerManSign).startsWith('data:') ? verification.mixerManSign : `data:image/png;base64,${verification.mixerManSign}` }} style={{ width: 220, height: 80, resizeMode: 'contain' }} />
+                ) : (
+                  <Text style={styles.metaSmall}>{verification.mixerManSign}</Text>
+                )
+              )}
+            </View>
+            <View style={styles.verifyInput}>
+              <Text style={styles.verifyLabel}>COMPLEX MANAGER SIGN:</Text>
+              {editMode ? (
+                <SignatureField value={verification.complexManagerSign} onChange={v => setVerification(prev => ({ ...prev, complexManagerSign: v }))} editable={editMode} width={220} height={80} />
+              ) : (
+                verification.complexManagerSign ? (
+                  <Image source={{ uri: String(verification.complexManagerSign).startsWith('data:') ? verification.complexManagerSign : `data:image/png;base64,${verification.complexManagerSign}` }} style={{ width: 220, height: 80, resizeMode: 'contain' }} />
+                ) : (
+                  <Text style={styles.metaSmall}>{verification.complexManagerSign}</Text>
+                )
+              )}
+            </View>
         </View>
 
         <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>

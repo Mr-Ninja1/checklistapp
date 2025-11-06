@@ -17,6 +17,7 @@ import formStorage from '../utils/formStorage';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 const DRAFT_KEY = 'front_of_house_cleaning_checklist_draft';
 
@@ -68,6 +69,7 @@ export default function FrontOfHouseChecklist() {
     month: '',
     year: '',
     hseqManager: '',
+    hseqManagerSign: '',
   });
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
@@ -275,7 +277,15 @@ export default function FrontOfHouseChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={(t) => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} />
+              {/* Use the SignatureField to capture and preview manager signature. */}
+              <SignatureField
+                value={metadata.hseqManagerSign}
+                onChange={(v) => handleMetadataChange('hseqManagerSign', v)}
+                editable={editMode}
+                width={220}
+                height={80}
+                placeholder="Tap to sign - HSEQ Manager"
+              />
             </View>
           </View>
 

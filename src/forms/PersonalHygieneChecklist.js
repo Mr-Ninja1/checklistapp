@@ -6,6 +6,8 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import { addFormHistory } from '../utils/formHistory';
 import NotificationModal from '../components/NotificationModal';
 import LoadingOverlay from '../components/LoadingOverlay';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +47,7 @@ const initialHygieneData = Array.from({ length: 13 }, (_, i) => ({
 const PersonalHygieneChecklist = () => {
     const [data, setData] = useState(initialHygieneData);
     const [editMode, setEditMode] = useState(false);
+    const [hseqSign, setHseqSign] = useState(null);
 
     // Compute issue date helper (we will set the canonical issueDate at save time)
     const formatIssueDate = (d = new Date()) => {
@@ -73,7 +76,7 @@ const PersonalHygieneChecklist = () => {
     const buildPayload = (status = 'draft') => ({
         formType: 'PersonalHygieneChecklist',
         title: 'Personal Hygiene Checklist',
-        metadata: { issueDate: formatIssueDate(), compiledBy: 'Michael Zulu C.' },
+        metadata: { issueDate: formatIssueDate(), compiledBy: 'Michael Zulu C.', hseqSign },
         formData: data,
         layoutHints: { columnWidths },
         savedAt: new Date().toISOString(),
@@ -233,10 +236,21 @@ const PersonalHygieneChecklist = () => {
                     />
 
                     {/* --- FOOTER SIGNATURES --- */}
-                    <View style={styles.footerSignatures}>
-                        {/* Only HSEQ SIGN is visible in the hygiene checklist image */}
-                        <Text style={styles.footerText}>HSEQ SIGN:..................................</Text>
-                    </View>
+                                        <View style={styles.footerSignatures}>
+                                                {/* HSEQ signature: show canvas in edit mode, thumbnail or label otherwise */}
+                                                <View>
+                                                    <Text style={styles.footerText}>HSEQ SIGN:</Text>
+                                                    {editMode ? (
+                                                        <SignatureField value={hseqSign} onChange={setHseqSign} editable={true} width={260} height={80} />
+                                                    ) : (
+                                                        (() => {
+                                                            const v = hseqSign;
+                                                            const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                                                            return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={6} spread={1.0} /> : <Text style={styles.footerText}>..................................</Text>;
+                                                        })()
+                                                    )}
+                                                </View>
+                                        </View>
 
                     {/* Inline action buttons placed here so they appear close to the end of the table */}
                     <View style={{ paddingVertical: 8 }}>

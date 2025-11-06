@@ -1,5 +1,21 @@
 import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+const normalizeSignature = (v) => {
+  if (!v) return null;
+  if (typeof v !== 'string') return null;
+  if (v.startsWith('data:')) return v;
+  const compact = v.replace(/\s+/g, '');
+  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  return null;
+};
+
+const renderSignature = (val, textStyle = {}, thumbProps = {}) => {
+  const uri = normalizeSignature(val);
+  if (uri) return <SignatureThumb uri={uri} {...thumbProps} />;
+  return <Text style={textStyle}>{val || ''}</Text>;
+};
 
 export default function ProductReleasePresentational({ payload }) {
   if (!payload) return null;
@@ -53,8 +69,8 @@ export default function ProductReleasePresentational({ payload }) {
             <Text style={[styles.dataCell, styles.batchNumberCol]}>{r.batchNumber}</Text>
             <Text style={[styles.dataCell, styles.productionDateCol]}>{r.productionDate}</Text>
             <Text style={[styles.dataCell, styles.expiryDateCol]}>{r.expiryDate}</Text>
-            <Text style={[styles.dataCell, styles.signatureCol]}>{r.signatureHead}</Text>
-            <Text style={[styles.dataCell, styles.approvedCol]}>{r.approvedHSEQ}</Text>
+            <View style={[styles.dataCell, styles.signatureCol]}>{renderSignature(r.signatureHead, styles.dataCell, { width: 160, height: 48 })}</View>
+            <View style={[styles.dataCell, styles.approvedCol]}>{renderSignature(r.approvedHSEQ, styles.dataCell, { width: 160, height: 48 })}</View>
           </View>
         ))}
       </View>

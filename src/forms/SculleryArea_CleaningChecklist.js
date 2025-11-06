@@ -10,6 +10,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import SignatureField from '../components/SignatureField';
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
@@ -267,7 +268,7 @@ export default function SculleryAreaChecklist() {
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
               {editMode ? (
-                <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} editable={editMode} />
+                <SignatureField value={metadata.hseqManager} onChange={v => handleMetadataChange('hseqManager', v)} editable={editMode} width={260} height={80} />
               ) : (
                 <Text style={styles.metaValue}>{metadata.hseqManager}</Text>
               )}

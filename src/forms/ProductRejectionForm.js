@@ -8,6 +8,7 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 export default function ProductRejectionForm() {
   const draftKey = 'product_rejection_form';
@@ -17,6 +18,10 @@ export default function ProductRejectionForm() {
   const [complexManager, setComplexManager] = useState('');
   const [financeStockController, setFinanceStockController] = useState('');
   const [rejectedProductCollector, setRejectedProductCollector] = useState('');
+  const [storeOfficerSign, setStoreOfficerSign] = useState('');
+  const [complexManagerSign, setComplexManagerSign] = useState('');
+  const [financeStockControllerSign, setFinanceStockControllerSign] = useState('');
+  const [rejectedProductCollectorSign, setRejectedProductCollectorSign] = useState('');
   const [editMode, setEditMode] = useState(false);
 
   // Load draft on mount
@@ -27,10 +32,14 @@ export default function ProductRejectionForm() {
         const d = await getDraft(draftKey);
         if (d && mounted) {
           if (d.rejectionEntries) setRejectionEntries(d.rejectionEntries);
-          if (d.storeOfficer) setStoreOfficer(d.storeOfficer);
-          if (d.complexManager) setComplexManager(d.complexManager);
-          if (d.financeStockController) setFinanceStockController(d.financeStockController);
-          if (d.rejectedProductCollector) setRejectedProductCollector(d.rejectedProductCollector);
+            if (d.storeOfficer) setStoreOfficer(d.storeOfficer);
+            if (d.complexManager) setComplexManager(d.complexManager);
+            if (d.financeStockController) setFinanceStockController(d.financeStockController);
+            if (d.rejectedProductCollector) setRejectedProductCollector(d.rejectedProductCollector);
+            if (d.storeOfficerSign) setStoreOfficerSign(d.storeOfficerSign);
+            if (d.complexManagerSign) setComplexManagerSign(d.complexManagerSign);
+            if (d.financeStockControllerSign) setFinanceStockControllerSign(d.financeStockControllerSign);
+            if (d.rejectedProductCollectorSign) setRejectedProductCollectorSign(d.rejectedProductCollectorSign);
         }
       } catch (e) {}
     })();
@@ -39,9 +48,9 @@ export default function ProductRejectionForm() {
 
   // Auto-save draft on change
   React.useEffect(() => {
-    const t = setTimeout(() => setDraft(draftKey, { rejectionEntries, storeOfficer, complexManager, financeStockController, rejectedProductCollector }), 700);
+    const t = setTimeout(() => setDraft(draftKey, { rejectionEntries, storeOfficer, complexManager, financeStockController, rejectedProductCollector, storeOfficerSign, complexManagerSign, financeStockControllerSign, rejectedProductCollectorSign }), 700);
     return () => clearTimeout(t);
-  }, [rejectionEntries, storeOfficer, complexManager, financeStockController, rejectedProductCollector]);
+  }, [rejectionEntries, storeOfficer, complexManager, financeStockController, rejectedProductCollector, storeOfficerSign, complexManagerSign, financeStockControllerSign, rejectedProductCollectorSign]);
 
   // Save canonical payload
   const handleSubmit = async () => {
@@ -66,6 +75,10 @@ export default function ProductRejectionForm() {
         complexManager,
         financeStockController,
         rejectedProductCollector,
+        storeOfficerSign,
+        complexManagerSign,
+        financeStockControllerSign,
+        rejectedProductCollectorSign,
         layoutHints: {
           SN: 40, NAME: 160, SUPPLIER: 120, INVOICE: 120, BATCH: 120, EXPIRY: 100, REASON: 180
         },
@@ -196,10 +209,41 @@ export default function ProductRejectionForm() {
           </View>
         </View>
         <View style={styles.signatures}> 
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Name & signature of stores Officer:</Text>{editMode ? <TextInput style={styles.sigInput} value={storeOfficer} onChangeText={setStoreOfficer} /> : <Text style={styles.sigInput}>{storeOfficer}</Text>}</View>
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Verified by complex manager (Name & signature):</Text>{editMode ? <TextInput style={styles.sigInput} value={complexManager} onChangeText={setComplexManager} /> : <Text style={styles.sigInput}>{complexManager}</Text>}</View>
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Approved by (Finance and stock controller):</Text>{editMode ? <TextInput style={styles.sigInput} value={financeStockController} onChangeText={setFinanceStockController} /> : <Text style={styles.sigInput}>{financeStockController}</Text>}</View>
-          <View style={styles.sigRow}><Text style={styles.sigLabel}>Rejected product collected by (Name & signature):</Text>{editMode ? <TextInput style={styles.sigInput} value={rejectedProductCollector} onChangeText={setRejectedProductCollector} /> : <Text style={styles.sigInput}>{rejectedProductCollector}</Text>}</View>
+          <View style={styles.sigRow}>
+            <Text style={styles.sigLabel}>Name & signature of stores Officer:</Text>
+            {editMode ? (
+              <SignatureField value={storeOfficerSign} onChange={setStoreOfficerSign} editable={editMode} width={240} height={80} />
+            ) : (
+              storeOfficerSign ? <Image source={{ uri: String(storeOfficerSign).startsWith('data:') ? storeOfficerSign : `data:image/png;base64,${storeOfficerSign}` }} style={{ width: 240, height: 80, resizeMode: 'contain' }} /> : <Text style={styles.sigInput}>{storeOfficer}</Text>
+            )}
+          </View>
+
+          <View style={styles.sigRow}>
+            <Text style={styles.sigLabel}>Verified by complex manager (Name & signature):</Text>
+            {editMode ? (
+              <SignatureField value={complexManagerSign} onChange={setComplexManagerSign} editable={editMode} width={240} height={80} />
+            ) : (
+              complexManagerSign ? <Image source={{ uri: String(complexManagerSign).startsWith('data:') ? complexManagerSign : `data:image/png;base64,${complexManagerSign}` }} style={{ width: 240, height: 80, resizeMode: 'contain' }} /> : <Text style={styles.sigInput}>{complexManager}</Text>
+            )}
+          </View>
+
+          <View style={styles.sigRow}>
+            <Text style={styles.sigLabel}>Approved by (Finance and stock controller):</Text>
+            {editMode ? (
+              <SignatureField value={financeStockControllerSign} onChange={setFinanceStockControllerSign} editable={editMode} width={240} height={80} />
+            ) : (
+              financeStockControllerSign ? <Image source={{ uri: String(financeStockControllerSign).startsWith('data:') ? financeStockControllerSign : `data:image/png;base64,${financeStockControllerSign}` }} style={{ width: 240, height: 80, resizeMode: 'contain' }} /> : <Text style={styles.sigInput}>{financeStockController}</Text>
+            )}
+          </View>
+
+          <View style={styles.sigRow}>
+            <Text style={styles.sigLabel}>Rejected product collected by (Name & signature):</Text>
+            {editMode ? (
+              <SignatureField value={rejectedProductCollectorSign} onChange={setRejectedProductCollectorSign} editable={editMode} width={240} height={80} />
+            ) : (
+              rejectedProductCollectorSign ? <Image source={{ uri: String(rejectedProductCollectorSign).startsWith('data:') ? rejectedProductCollectorSign : `data:image/png;base64,${rejectedProductCollectorSign}` }} style={{ width: 240, height: 80, resizeMode: 'contain' }} /> : <Text style={styles.sigInput}>{rejectedProductCollector}</Text>
+            )}
+          </View>
         </View>
         {/* Spacer for bottom area so content can scroll above the floating actionButtons */}
         <View style={{ height: 110 }} />

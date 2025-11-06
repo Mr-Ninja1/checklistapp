@@ -8,6 +8,7 @@ import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { useEffect, useRef } from 'react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 // TIME SLOTS and equipment list: match the scanned kitchen form (AM shift 06:00-16:00)
 const TIME_SLOTS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
@@ -162,9 +163,25 @@ export default function Kitchen_DailyCleaningForm() {
       <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="numeric" placeholder="0" /></DataCell>
       <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>{TIME_SLOTS.map(t => (<DataCell key={t} width={COL_WIDTHS.TIME_SLOT}><Checkbox checked={row.times[t]} onPress={()=>handleTimeToggle(row.id,t)} /></DataCell>))}</View>
       <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} /></DataCell>
-      <DataCell width={COL_WIDTHS.SIGNATURE}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.staffSign} onChangeText={(t)=>handleInput(row.id,'staffSign',t)} /></DataCell>
+      <DataCell width={COL_WIDTHS.SIGNATURE}>{editMode ? (
+        <SignatureField value={row.staffSign} onChange={(v) => handleInput(row.id, 'staffSign', v)} editable={editMode} width={COL_WIDTHS.SIGNATURE - 20} height={s(44)} placeholder="Tap to sign" />
+      ) : (
+        row.staffSign ? (
+          <Image source={{ uri: String(row.staffSign).startsWith('data:') ? row.staffSign : `data:image/png;base64,${row.staffSign}` }} style={{ width: COL_WIDTHS.SIGNATURE - 20, height: s(44), resizeMode: 'contain' }} />
+        ) : (
+          <Text style={styles.dataText}>{''}</Text>
+        )
+      )}</DataCell>
       <DataCell width={COL_WIDTHS.SLIP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.slipName} onChangeText={(t)=>handleInput(row.id,'slipName',t)} /></DataCell>
-      <DataCell width={COL_WIDTHS.SUP_SIGN}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.supSign} onChangeText={(t)=>handleInput(row.id,'supSign',t)} /></DataCell>
+      <DataCell width={COL_WIDTHS.SUP_SIGN}>{editMode ? (
+        <SignatureField value={row.supSign} onChange={(v) => handleInput(row.id, 'supSign', v)} editable={editMode} width={COL_WIDTHS.SUP_SIGN - 20} height={s(44)} placeholder="Tap to sign" />
+      ) : (
+        row.supSign ? (
+          <Image source={{ uri: String(row.supSign).startsWith('data:') ? row.supSign : `data:image/png;base64,${row.supSign}` }} style={{ width: COL_WIDTHS.SUP_SIGN - 20, height: s(44), resizeMode: 'contain' }} />
+        ) : (
+          <Text style={styles.dataText}>{''}</Text>
+        )
+      )}</DataCell>
     </View>
   );
 

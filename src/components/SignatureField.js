@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Image, Dimensions } from 'react-native';
 import Signature from 'react-native-signature-canvas';
 
-export default function SignatureField({ value, onChange, editable = true, height = 140, width = 200, placeholder = 'Sign here' }) {
+export default function SignatureField({ value, onChange, editable = true, height = 140, width = 200, placeholder = 'Sign here', debugMode = false }) {
   const [visible, setVisible] = useState(false);
   const ref = useRef(null);
   const { width: sw, height: sh } = Dimensions.get('window');
@@ -13,8 +13,14 @@ export default function SignatureField({ value, onChange, editable = true, heigh
   const handleOK = (base64Data) => {
     // react-native-signature-canvas typically returns a data URL (data:image/png;base64,...)
     const dataUri = base64Data && base64Data.startsWith('data:') ? base64Data : `data:image/png;base64,${base64Data}`;
-    onChange && onChange(dataUri);
-    setVisible(false);
+    try {
+      onChange && onChange(dataUri);
+    } catch (e) {
+      // swallow errors from parent handler to avoid leaving modal open
+      console.warn('SignatureField: onChange handler threw', e);
+    } finally {
+      setVisible(false);
+    }
   };
 
   const handleEmpty = () => {
@@ -41,16 +47,15 @@ export default function SignatureField({ value, onChange, editable = true, heigh
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <TouchableOpacity onPress={() => setVisible(true)} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8}>
+      <TouchableOpacity onPress={() => setVisible(true)} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8} accessible={true} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         {previewUri ? (
           <Image source={{ uri: previewUri }} style={{ width: width, height: height, resizeMode: 'contain' }} />
         ) : (
           <Text style={styles.placeholder}>Tap to sign</Text>
         )}
       </TouchableOpacity>
-
-      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
-        <View style={styles.overlay}>
+      <Modal visible={visible} transparent={!debugMode} animationType="fade" onRequestClose={() => setVisible(false)} onDismiss={() => setVisible(false)}>
+        <View style={[styles.overlay, debugMode ? styles.overlayDebug : null]}>
           <View style={[styles.modalBox, { width: modalWidth, height: modalHeight }] }>
             <Signature
               ref={ref}
@@ -73,6 +78,9 @@ export default function SignatureField({ value, onChange, editable = true, heigh
 
             <View style={styles.modalBtns}>
               <TouchableOpacity onPress={() => setVisible(false)} style={[styles.signBtn, { backgroundColor: '#6b7280' }]}><Text style={styles.btnText}>Cancel</Text></TouchableOpacity>
+              {debugMode && (
+                <TouchableOpacity onPress={() => setVisible(false)} style={[styles.signBtn, { backgroundColor: '#ef4444' }]}><Text style={styles.btnText}>Force Close</Text></TouchableOpacity>
+              )}
               <TouchableOpacity onPress={() => { ref.current && ref.current.readSignature(); }} style={styles.signBtn}><Text style={styles.btnText}>Save</Text></TouchableOpacity>
             </View>
           </View>
@@ -88,6 +96,7 @@ const styles = StyleSheet.create({
   signBtn: { backgroundColor: '#185a9d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 },
   btnText: { color: '#fff', fontWeight: '700' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
+  overlayDebug: { backgroundColor: 'rgba(0,0,0,0.85)' },
   modalBox: { backgroundColor: '#fff', borderRadius: 10, overflow: 'hidden' },
   modalBtns: { padding: 12, flexDirection: 'row', justifyContent: 'space-between' },
 });

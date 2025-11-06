@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
-import { Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
@@ -57,7 +57,17 @@ export default function WelfareFacilitiesPresentational({ payload }) {
           <View style={styles.verificationRow}>
             <View style={styles.verificationCell}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <Text style={styles.metaValue}>{meta.hseqManager || ''}</Text>
+              {(() => {
+                const s = meta.hseqManagerSign || meta.hseqManager;
+                // prefer sign data, but accept typed name
+                if (s) {
+                  if (typeof s === 'string') {
+                    const uri = (s.startsWith && s.startsWith('data:')) ? s : (s.length > 100 && !s.includes(' ') ? `data:image/png;base64,${s}` : null);
+                    if (uri) return <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} />;
+                  }
+                }
+                return <Text style={styles.metaValue}>{meta.hseqManager || ''}</Text>;
+              })()}
             </View>
           </View>
 
@@ -119,6 +129,7 @@ const styles = StyleSheet.create({
   verificationRow: { flexDirection: 'row', borderWidth: 1, borderColor: '#1F2937', marginBottom: 10, backgroundColor: '#E5E7EB' },
   verificationCell: { padding: 8, borderRightWidth: 1, borderRightColor: '#1F2937' },
   verificationLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4, color: '#1F2937' },
+  signThumb: { width: 140, height: 44, resizeMode: 'contain', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 4 },
   tableScroll: { borderWidth: 1, borderColor: '#1F2937', borderRadius: 4 },
   tableHeader: { flexDirection: 'row', backgroundColor: '#f3f4f6', paddingVertical: 6, alignItems: 'center' },
   headerText: { color: '#111827', fontWeight: '700', textAlign: 'center', fontSize: 11 },

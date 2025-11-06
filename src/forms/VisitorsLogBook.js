@@ -6,6 +6,7 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import NotificationModal from '../components/NotificationModal';
 import LoadingOverlay from '../components/LoadingOverlay';
 import { addFormHistory } from '../utils/formHistory';
+import SignatureField from '../components/SignatureField';
 
 // --- Child Components ---
 
@@ -74,8 +75,12 @@ const ManagerSignatureBlock = React.memo(({ siteManager, setSiteManager, verifie
         <Cell style={styles.sigVerifiedHeader}><Text style={styles.boldText}>VERIFIED BY HSEQ MANAGER</Text></Cell>
       </View>
       <View style={styles.row}>
-        <InputCell style={styles.sigManagerInput} value={siteManager} onChangeText={setSiteManager} />
-        <InputCell style={styles.sigVerifiedInput} value={verifiedManager} onChangeText={setVerifiedManager} />
+        <View style={[styles.cell, styles.sigManagerInput]}>
+          <SignatureField value={siteManager} onChange={setSiteManager} editable={true} width={240} height={72} />
+        </View>
+        <View style={[styles.cell, styles.sigVerifiedInput]}>
+          <SignatureField value={verifiedManager} onChange={setVerifiedManager} editable={true} width={240} height={72} />
+        </View>
       </View>
     </>
 ));

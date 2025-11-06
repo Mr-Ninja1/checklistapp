@@ -5,6 +5,8 @@ import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getDraft, removeDraft } from '../utils/formDrafts';
@@ -31,7 +33,7 @@ const initialMetadata = {
   location: 'CLEANING EQUIPMENT',
   week: '', month: '', year: '',
   issueDate: '',
-  compiledBy: 'Michael Zulu C.', approvedBy: 'Hassani Ali', hseqManager: ''
+  compiledBy: 'Michael Zulu C.', compiledBySign: '', approvedBy: 'Hassani Ali', approvedBySign: '', hseqManager: '', hseqSign: ''
 };
 
 const Checkbox = ({ checked, onPress }) => (
@@ -241,7 +243,43 @@ export default function CleaningEquipmentChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} />
+              {editMode ? (
+                <SignatureField value={metadata.hseqSign} onChange={v => handleMetadataChange('hseqSign', v)} editable={true} width={260} height={80} />
+              ) : (
+                metadata.hseqSign ? (
+                  <SignatureThumb uri={String(metadata.hseqSign).startsWith('data:') ? metadata.hseqSign : `data:image/png;base64,${metadata.hseqSign}`} width={260} height={80} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.metaValue}>{metadata.hseqManager || ''}</Text>
+                )
+              )}
+            </View>
+          </View>
+
+          <View style={{ height: 12 }} />
+          <View style={styles.signaturesRow}>
+            <View style={styles.signatureCell}>
+              <Text style={styles.signatureLabel}>Compiled By:</Text>
+              {editMode ? (
+                <SignatureField value={metadata.compiledBySign} onChange={v => handleMetadataChange('compiledBySign', v)} editable={true} width={220} height={80} />
+              ) : (
+                metadata.compiledBySign ? (
+                  <SignatureThumb uri={String(metadata.compiledBySign).startsWith('data:') ? metadata.compiledBySign : `data:image/png;base64,${metadata.compiledBySign}`} width={220} height={80} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.signatureValue}>{metadata.compiledBy || ''}</Text>
+                )
+              )}
+            </View>
+            <View style={styles.signatureCell}>
+              <Text style={styles.signatureLabel}>Approved By:</Text>
+              {editMode ? (
+                <SignatureField value={metadata.approvedBySign} onChange={v => handleMetadataChange('approvedBySign', v)} editable={true} width={220} height={80} />
+              ) : (
+                metadata.approvedBySign ? (
+                  <SignatureThumb uri={String(metadata.approvedBySign).startsWith('data:') ? metadata.approvedBySign : `data:image/png;base64,${metadata.approvedBySign}`} width={220} height={80} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.signatureValue}>{metadata.approvedBy || ''}</Text>
+                )
+              )}
             </View>
           </View>
 
@@ -321,4 +359,8 @@ const styles = StyleSheet.create({
   draftButton: { backgroundColor: '#FBBF24' },
   submitButton: { backgroundColor: '#4F46E5' },
   buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  signaturesRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, borderWidth: 1, borderColor: '#1F2937', backgroundColor: '#F8FAFC' },
+  signatureCell: { flex: 1, padding: 8, alignItems: 'center' },
+  signatureLabel: { fontSize: 12, fontWeight: '600', color: '#1F2937', marginBottom: 6 },
+  signatureValue: { fontSize: 13, color: '#1F2937' },
 });

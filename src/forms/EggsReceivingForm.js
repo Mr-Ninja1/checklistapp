@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView,
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -21,6 +22,8 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
 const EggsReceivingForm = () => {
     const [receivingData, setReceivingData] = useState(createInitialProductData(12));
     const [deliveryDetails, setDeliveryDetails] = useState({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+    const [verifiedBySign, setVerifiedBySign] = useState('');
+    const [hseqManagerSign, setHseqManagerSign] = useState('');
     const updateDeliveryDetail = (field, value) => { setDeliveryDetails(prev => ({ ...prev, [field]: value })); scheduleAutoSave(); };
 
     const today = new Date();
@@ -65,6 +68,8 @@ const EggsReceivingForm = () => {
     const clearForm = () => {
         setReceivingData(createInitialProductData(12));
         setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+        setVerifiedBySign('');
+        setHseqManagerSign('');
         setIssueDate(defaultIssueDate);
     };
 
@@ -72,7 +77,7 @@ const EggsReceivingForm = () => {
         formType: 'EggsReceiving',
         templateVersion: versionNo,
         title: 'Eggs Receiving Checklist',
-        metadata: { issueDate, versionNo, status, ...deliveryDetails },
+        metadata: { issueDate, versionNo, status, ...deliveryDetails, verifiedBySign, hseqManagerSign },
         formData: receivingData,
         layoutHints: {
             CATEGORY: 300,
@@ -229,8 +234,10 @@ const EggsReceivingForm = () => {
                             <View style={styles.deliveryRow}>
                                 <Text style={styles.deliveryLabel}>Vehicle Reg No.:</Text>
                                 <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => updateDeliveryDetail('vehicleRegNo', t)} />
-                                <Text style={styles.deliveryLabel}>Signature:</Text>
-                                <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={t => updateDeliveryDetail('signature', t)} />
+                                <View style={{ width: 260, alignItems: 'flex-start' }}>
+                                    <Text style={styles.deliveryLabel}>Signature:</Text>
+                                    <SignatureField value={deliveryDetails.signature} onChange={(v) => updateDeliveryDetail('signature', v)} editable={editMode} width={240} height={80} placeholder="Tap to sign" />
+                                </View>
                             </View>
                         </View>
 
@@ -269,7 +276,16 @@ const EggsReceivingForm = () => {
 
                         <View style={styles.verificationFooter}>
                             <Text style={styles.verificationText}>VERIFIED BY</Text>
-                            <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <View style={{ flex: 1, marginRight: 8 }}>
+                                    <Text style={{ fontWeight: '700', marginBottom: 6 }}>Verified by:</Text>
+                                    <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={220} height={80} placeholder="Tap to sign - Verified by" />
+                                </View>
+                                <View style={{ flex: 1, marginLeft: 8 }}>
+                                    <Text style={{ fontWeight: '700', marginBottom: 6 }}>HSEQ Manager:</Text>
+                                    <SignatureField value={hseqManagerSign} onChange={setHseqManagerSign} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
+                                </View>
+                            </View>
                         </View>
 
                     </View>

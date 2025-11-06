@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import useFormSave from '../hooks/useFormSave';
@@ -54,9 +56,11 @@ const initialState = () => {
         companyName: 'Bravo',
         companySubtitle: 'Food Safety Management System',
         subject: 'Pest Inspection Form',
-        compiledBy: '',
+        // compiledBy removed per request; approved and hseq manager use signatures
         approvedBy: '',
+        approvedBySign: '',
         hseqManager: '',
+        hseqManagerSign: '',
         issueDate: '',
         rows: hardcodedDayRows,
     };
@@ -106,15 +110,28 @@ const InspectionRow = React.memo(({ dateLabel, isHeader = false, row = null, set
             {/* Remaining Columns (Data Inputs) */}
             {columns.slice(1).map(col => (
                 <View key={col.key} style={[styles.dataCell, { flex: col.flex }]}>
-                    <TextInput
-                        style={styles.inputField}
-                        // Use row?.[col.key] for safe access
-                        value={row ? row[col.key] : ''} 
-                        // Use the passed setRowCallback but only when editable
-                        onChangeText={v => { if (row && editable) setRowCallback(row.id, col.key, v); }}
-                        editable={editable}
-                        textAlignVertical="center"
-                    />
+                    {col.key === 'sign' ? (
+                        // Signature column: show SignatureField in edit mode, otherwise a thumbnail or text
+                        editable ? (
+                            <SignatureField value={row ? row.sign : ''} onChange={v => { if (row) setRowCallback(row.id, 'sign', v); }} editable={editable} width={Math.max(120, col.flex * 40)} height={60} />
+                        ) : (
+                            (() => {
+                                const v = row?.sign;
+                                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                                return uri ? <SignatureThumb uri={uri} width={Math.max(120, col.flex * 40)} height={60} layers={4} spread={0.8} /> : <Text style={styles.inputField}>{v || ''}</Text>;
+                            })()
+                        )
+                    ) : (
+                        <TextInput
+                            style={styles.inputField}
+                            // Use row?.[col.key] for safe access
+                            value={row ? row[col.key] : ''} 
+                            // Use the passed setRowCallback but only when editable
+                            onChangeText={v => { if (row && editable) setRowCallback(row.id, col.key, v); }}
+                            editable={editable}
+                            textAlignVertical="center"
+                        />
+                    )}
                 </View>
             ))}
         </View>
@@ -139,9 +156,11 @@ export default function PastInspectionForm() {
             companyName: state.companyName,
             companySubtitle: state.companySubtitle,
             subject: state.subject,
-            compiledBy: state.compiledBy,
+            // keep textual legacy values but prefer signature fields where present
             approvedBy: state.approvedBy,
+            approvedBySign: state.approvedBySign,
             hseqManager: state.hseqManager,
+            hseqManagerSign: state.hseqManagerSign,
             issueDate: state.issueDate,
         },
         formData: state.rows,
@@ -257,11 +276,17 @@ export default function PastInspectionForm() {
                         </View>
 
                         <View style={styles.metaRow}>
-                            <Text style={styles.metaLabel}>Compiled by:</Text>
-                            <TextInput style={styles.metaInput} value={state.compiledBy} onChangeText={v => setField('compiledBy', v)} editable={editMode} />
-
+                            {/* Compiled by removed - per request */}
                             <Text style={styles.metaLabel}>Approved By:</Text>
-                            <TextInput style={styles.metaInput} value={state.approvedBy} onChangeText={v => setField('approvedBy', v)} editable={editMode} />
+                            {editMode ? (
+                                <SignatureField value={state.approvedBySign} onChange={(v) => setField('approvedBySign', v)} editable={editMode} width={200} height={60} />
+                            ) : (
+                                (() => {
+                                    const v = state.approvedBySign || state.approvedBy || '';
+                                    const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+                                    return uri ? <SignatureThumb uri={uri} width={200} height={60} layers={6} spread={1.0} /> : <Text style={styles.metaInput}>{String(state.approvedBy || '')}</Text>;
+                                })()
+                            )}
                             
                             {/* version/revision removed as requested */}
                         </View>
@@ -290,11 +315,15 @@ export default function PastInspectionForm() {
                         <View style={styles.hseqManagerRow}>
                             <Text style={styles.verifiedByText}>Verified by:</Text>
                             <Text style={styles.hseqLabel}>HSEQ Manager</Text>
-                            <TextInput 
-                                style={styles.hseqLineInput} 
-                                value={state.hseqManager || ''} 
-                                onChangeText={v => setField('hseqManager', v)} 
-                            />
+                            {editMode ? (
+                                <SignatureField value={state.hseqManagerSign} onChange={(v) => setField('hseqManagerSign', v)} editable={editMode} width={260} height={80} />
+                            ) : (
+                                (() => {
+                                    const v = state.hseqManagerSign || state.hseqManager || '';
+                                    const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+                                    return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={6} spread={1.0} /> : <Text style={styles.hseqLineInput}>{String(state.hseqManager || '')}</Text>;
+                                })()
+                            )}
                         </View>
                     </View>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function BakingControlSheetPresentational({ payload }) {
   if (!payload) return null;
@@ -19,11 +20,25 @@ export default function BakingControlSheetPresentational({ payload }) {
 
   const tableWidth = columnHeaders.reduce((s, c) => s + (c.width || 120), 0);
 
+  const normalizeSignature = (v) => {
+    if (!v || typeof v !== 'string') return null;
+    if (v.startsWith('data:')) return v;
+    const compact = v.replace(/\s+/g, '');
+    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  };
+
+  const renderMaybeSignature = (val, textStyle = {}) => {
+    const uri = normalizeSignature(val);
+    if (uri) return <SignatureThumb uri={uri} width={120} height={48} />;
+    return <Text style={textStyle}>{val || ''}</Text>;
+  };
+
   const renderRow = (item, index) => (
     <View key={index} style={styles.row}>
       {columnHeaders.map(col => (
         <View key={col.key} style={[styles.cell, { width: col.width }]}>
-          <Text style={styles.inputText}>{item[col.key]}</Text>
+          {(col.key === 'bakerSign' || col.key === 'supervisorSign') ? renderMaybeSignature(item[col.key], styles.inputText) : <Text style={styles.inputText}>{item[col.key]}</Text>}
         </View>
       ))}
     </View>
@@ -47,8 +62,14 @@ export default function BakingControlSheetPresentational({ payload }) {
           </View>
           <View style={styles.subjectRow}><Text style={styles.subjectText}>Subject: BAKING CONTROL SHEET</Text></View>
           <View style={styles.signRow}>
-            <Text style={styles.metaSmall}>Compiled By: {metadata.compiledBy}</Text>
-            <Text style={styles.metaSmall}>Approved By: {metadata.approvedBy}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.metaSmall}>Compiled By:</Text>
+              {renderMaybeSignature(metadata.compiledBy)}
+            </View>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <Text style={styles.metaSmall}>Approved By:</Text>
+              {renderMaybeSignature(metadata.approvedBy)}
+            </View>
           </View>
         </View>
 

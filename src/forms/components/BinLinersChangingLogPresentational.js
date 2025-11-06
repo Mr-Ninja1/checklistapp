@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function BinLinersChangingLogPresentational({ payload }) {
   const p = payload || {};
@@ -47,16 +48,43 @@ export default function BinLinersChangingLogPresentational({ payload }) {
               <View style={[styles.colDate, colDateStyle]}><Text>{e.date || ''}</Text></View>
               <View style={[styles.colChangedBy, colChangedByStyle]}><Text>{e.changedBy || ''}</Text></View>
               <View style={[styles.colArea, colAreaStyle]}><Text>{e.area || ''}</Text></View>
-              <View style={[styles.colStaffSign, colStaffSignStyle]}><Text>{e.staffSign || ''}</Text></View>
-              <View style={[styles.colSupervisorSign, colSupervisorSignStyle]}><Text>{e.supervisorSign || ''}</Text></View>
+              <View style={[styles.colStaffSign, colStaffSignStyle]}>
+                {(() => {
+                  const v = e.staffSign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={150} height={60} layers={5} spread={0.9} /> : <Text>{v || ''}</Text>;
+                })()}
+              </View>
+
+              <View style={[styles.colSupervisorSign, colSupervisorSignStyle]}>
+                {(() => {
+                  const v = e.supervisorSign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={150} height={60} layers={5} spread={0.9} /> : <Text>{v || ''}</Text>;
+                })()}
+              </View>
             </View>
           ))}
         </View>
       </ScrollView>
 
       <View style={styles.verificationBlock}>
-        <View style={styles.verifyRow}><Text style={styles.verifyLabel}>VERIFIED BY:</Text><Text style={styles.verifyValue}>{p.metadata?.verifiedBy || ''}</Text></View>
-        <View style={styles.verifyRow}><Text style={styles.verifyLabel}>HSEQ Manager:</Text><Text style={styles.verifyValue}>{p.metadata?.hseqManager || ''}</Text></View>
+        <View style={styles.verifyRow}>
+          <Text style={styles.verifyLabel}>VERIFIED BY:</Text>
+          {(() => {
+            const v = p.metadata?.verifiedBySign;
+            const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+            return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={styles.verifyValue}>{p.metadata?.verifiedBy || ''}</Text>;
+          })()}
+        </View>
+        <View style={styles.verifyRow}>
+          <Text style={styles.verifyLabel}>HSEQ Manager:</Text>
+          {(() => {
+            const v = p.metadata?.hseqManagerSign;
+            const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+            return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={styles.verifyValue}>{p.metadata?.hseqManager || ''}</Text>;
+          })()}
+        </View>
       </View>
     </ScrollView>
   );

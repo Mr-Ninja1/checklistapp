@@ -6,6 +6,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import { StyleSheet, View, Text, ScrollView, TextInput, Image } from 'react-native';
+import SignatureField from '../components/SignatureField';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
@@ -229,13 +230,13 @@ export default function ToolboxTalkRegister() {
                 <View style={styles.colSn}><Text style={styles.cellText}>{n}.</Text></View>
                 <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n]?.name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" editable={editMode} /></View>
                 <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n]?.job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" editable={editMode} /></View>
-                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n]?.sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colSign}><SignatureField value={cells.left[n]?.sign} onChange={(v) => updateCell('left', n, 'sign', v)} editable={editMode} width={160} height={44} placeholder="Sign" /></View>
 
                 {/* Right Table Data (Rows 11-20) - separated by a gap */}
                 <View style={[styles.colSn, { marginLeft: 8 }]}><Text style={styles.cellText}>{n + 10}.</Text></View>
                 <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.name} onChangeText={(t) => updateCell('right', n + 10, 'name', t)} placeholder="" editable={editMode} /></View>
                 <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.job} onChangeText={(t) => updateCell('right', n + 10, 'job', t)} placeholder="" editable={editMode} /></View>
-                <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.sign} onChangeText={(t) => updateCell('right', n + 10, 'sign', t)} placeholder="" editable={editMode} /></View>
+                <View style={styles.colSign}><SignatureField value={cells.right[n + 10]?.sign} onChange={(v) => updateCell('right', n + 10, 'sign', v)} editable={editMode} width={160} height={44} placeholder="Sign" /></View>
               </View>
             ))}
           </View>

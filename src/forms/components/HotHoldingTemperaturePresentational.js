@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function HotHoldingTemperaturePresentational({ payload }) {
   const rows = payload?.formData || [];
@@ -11,7 +12,8 @@ export default function HotHoldingTemperaturePresentational({ payload }) {
 
   const sumWidths = (...keys) => keys.reduce((s, k) => s + (widths[k] || 0), 0);
   // Use fixed TABLE_WIDTH and COL_FLEX from the editable form so presentational matches editor
-  const TABLE_WIDTH = 900; // A4-like deterministic width used by editor when saving
+  // Increase TABLE_WIDTH so drawn signatures fit into SIGN columns; horizontal scroll will allow viewing the full table
+  const TABLE_WIDTH = 1400; // widened table to accommodate signature thumbnails
   const COL_FLEX = { INDEX: 0.6, FOOD_ITEM: 2.5, TIME_INTO_HOLD: 1.5, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 2.0 };
 
   // Compute deterministic WIDTHS from COL_FLEX and TABLE_WIDTH (matching editor)
@@ -103,7 +105,7 @@ export default function HotHoldingTemperaturePresentational({ payload }) {
   // Enforce sensible minimums for TIME/TEMP/SIGN so they can contain at least ~4 chars
   const MIN_TIME = 64; // space for HH:MM and a bit more
   const MIN_TEMP = 48; // space for temperature like 63°C and sign
-  const MIN_SIGN = 40; // initials/sign
+  const MIN_SIGN = 110; // make signature column wide enough to display drawn signatures
   for (const k of ['TIME1','TIME2','TIME3']) {
     if (widths[k] < MIN_TIME) widths[k] = MIN_TIME;
   }
@@ -159,6 +161,16 @@ export default function HotHoldingTemperaturePresentational({ payload }) {
 
   // Reassign colWidths to colWidths2 for rendering
   for (let i = 0; i < colWidths.length; i++) colWidths[i] = colWidths2[i];
+  // Helper: normalize signature-ish values into data: URIs (safe fallback)
+  const normalizeSignature = (v) => {
+    if (!v) return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    if (s.startsWith('data:')) return s;
+    const compact = s.replace(/\s+/g, '');
+    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -183,7 +195,9 @@ export default function HotHoldingTemperaturePresentational({ payload }) {
 
       <View style={styles.tableTitleWrap}><Text style={styles.tableTitle}>HOT HOLDING TEMPERATURE LOG</Text></View>
 
-      <View style={styles.table}>
+      {/* Allow horizontal scrolling for wide table so signature thumbs can fit */}
+      <ScrollView horizontal={true} contentContainerStyle={{ minWidth: TABLE_WIDTH }} showsHorizontalScrollIndicator={true}>
+        <View style={styles.table}>
         {/* Group header: spans for 1st/2nd/3rd record */}
         <View style={[styles.row, styles.groupHeader]}>
           <View style={cellStyle(colWidths[0])} />
@@ -227,25 +241,58 @@ export default function HotHoldingTemperaturePresentational({ payload }) {
 
             <View style={cellStyle(widths.TIME1)}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
             <View style={cellStyle(widths.TEMP1)}><Text style={styles.cellText}>{r.temp1 || ''}</Text></View>
-            <View style={cellStyle(widths.SIGN1)}><Text style={styles.cellText}>{r.sign1 || ''}</Text></View>
+            <View style={cellStyle(widths.SIGN1)}>
+              {(() => {
+                const uri = normalizeSignature(r.sign1);
+                return uri ? (
+                  <SignatureThumb uri={uri} width={Math.max(120, (widths.SIGN1 || colWidths[5]) - 8)} height={56} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.cellText}>{r.sign1 || ''}</Text>
+                );
+              })()}
+            </View>
 
             <View style={cellStyle(widths.TIME2)}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
             <View style={cellStyle(widths.TEMP2)}><Text style={styles.cellText}>{r.temp2 || ''}</Text></View>
-            <View style={cellStyle(widths.SIGN2)}><Text style={styles.cellText}>{r.sign2 || ''}</Text></View>
+            <View style={cellStyle(widths.SIGN2)}>
+              {(() => {
+                const uri = normalizeSignature(r.sign2);
+                return uri ? (
+                  <SignatureThumb uri={uri} width={Math.max(120, (widths.SIGN2 || colWidths[8]) - 8)} height={56} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.cellText}>{r.sign2 || ''}</Text>
+                );
+              })()}
+            </View>
 
             <View style={cellStyle(widths.TIME3)}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
             <View style={cellStyle(widths.TEMP3)}><Text style={styles.cellText}>{r.temp3 || ''}</Text></View>
-            <View style={cellStyle(colWidths[11])}><Text style={styles.cellText}>{r.sign3 || ''}</Text></View>
+            <View style={cellStyle(colWidths[11])}>
+              {(() => {
+                const uri = normalizeSignature(r.sign3);
+                return uri ? (
+                  <SignatureThumb uri={uri} width={Math.max(120, (widths.SIGN3 || colWidths[11]) - 8)} height={56} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.cellText}>{r.sign3 || ''}</Text>
+                );
+              })()}
+            </View>
 
             <View style={[cellStyle(colWidths[12]), { borderRightWidth: 0 }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
           </View>
         ))}
-      </View>
+        </View>
+      </ScrollView>
 
       {/* Footer area to match editable form */}
       <View style={styles.footerWrap}>
         <View style={styles.footerRow}>
           <Text style={styles.footerLabel}>CHEF Signature:</Text>
+          {(() => {
+            const v = payload?.metadata?.chefSignature || payload?.metadata?.chefSign;
+            const uri = normalizeSignature(v);
+            return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={10} spread={1.2} /> : <Text style={styles.footerText}>{v || ''}</Text>;
+          })()}
         </View>
 
         <View style={styles.footerRowSmall}>
@@ -253,10 +300,24 @@ export default function HotHoldingTemperaturePresentational({ payload }) {
           <View style={styles.correctiveBox}><Text style={styles.correctiveText}>{payload?.metadata?.correctiveAction || ''}</Text></View>
         </View>
 
-        <View style={styles.footerRowSmall}>
-          <Text style={styles.footerLabel}>Verified by:</Text>
-          <Text style={[styles.footerLabel, { marginLeft: 12 }]}>Complex Manager Signature:</Text>
-          <View style={styles.signatureLine}><Text>{payload?.metadata?.complexManagerSignature || ''}</Text></View>
+        <View style={[styles.footerRowSmall, { flexDirection: 'row', alignItems: 'center' }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.footerLabel}>Verified by (HSEQ):</Text>
+            {(() => {
+              const v = payload?.metadata?.hseqManagerSignature || payload?.metadata?.hseqManagerSign || payload?.metadata?.hseqSign;
+              const uri = normalizeSignature(v);
+              return uri ? <SignatureThumb uri={uri} width={220} height={64} layers={8} spread={1.0} /> : <Text style={styles.footerText}>{v || ''}</Text>;
+            })()}
+          </View>
+
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.footerLabel}>Complex Manager Signature:</Text>
+            {(() => {
+              const v = payload?.metadata?.complexManagerSignature || payload?.metadata?.complexManagerSign || payload?.metadata?.complexManager;
+              const uri = normalizeSignature(v);
+              return uri ? <SignatureThumb uri={uri} width={220} height={64} layers={8} spread={1.0} /> : <Text style={styles.footerText}>{v || ''}</Text>;
+            })()}
+          </View>
         </View>
       </View>
     </ScrollView>

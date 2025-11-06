@@ -7,6 +7,7 @@ import NotificationModal from '../components/NotificationModal';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import FormActionBar from '../components/FormActionBar';
+import SignatureField from '../components/SignatureField';
 // Note: Delayed focus wrapper removed — using native TextInput for editability
 
 // --- Configuration Constants ---
@@ -15,8 +16,8 @@ const W_FIXED = {
   headerHeight: 40, // Height of one header band (total height of table header is 2 * 40 = 80)
   rowHeight: 35,
   dailyTimeCol: 60, // Increased from 45 to 60 for better space
-  dailySignCol: 45, // Increased from 35 to 45 for better space
-  supSignCol: 110, // Sup Sign (increased to allow two-line label)
+  dailySignCol: 90, // Increased to allow drawn signature capture
+  supSignCol: 160, // Sup Sign (increased to allow a clear signature thumbnail)
 };
 
 const DATA_ROWS = 15;
@@ -244,9 +245,13 @@ export default function FoodHandlersDailyShoweringForm() {
               )}
               <Text style={styles.labelText}>Verified By:</Text>
               {editMode ? (
-                <TextInput style={styles.underlineTextInput} editable={editMode} value={verifiedBy} onChangeText={setVerifiedBy} />
+                <SignatureField value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={220} height={60} placeholder="Tap to sign - Verified By" />
               ) : (
-                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{verifiedBy}</Text>
+                verifiedBy ? (
+                  <Image source={{ uri: String(verifiedBy).startsWith('data:') ? verifiedBy : `data:image/png;base64,${verifiedBy}` }} style={{ width: 220, height: 60, resizeMode: 'contain' }} />
+                ) : (
+                  <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{verifiedBy}</Text>
+                )
               )}
             </View>
           </View>
@@ -356,35 +361,69 @@ export default function FoodHandlersDailyShoweringForm() {
                 {Array.from({ length: DATA_ROWS }).map((_, rIdx) => (
                   <View key={`row-${rIdx}`} style={styles.dataRow}>
                     {/* The 17 columns of input fields */}
-                    {finalWidths.map((w, cIdx) => (
-                              <View 
-                                key={`cell-${rIdx}-${cIdx}`} 
-                                style={[
-                                  styles.cell, 
-                                  { width: w, height: W_FIXED.rowHeight },
-                                  styles.bottomBorder, // All data cells need a bottom border for separation
-                                  cIdx === finalWidths.length - 1 ? styles.lastCell : styles.rightBorder // Ensure right border is consistently applied
-                                ]}
-                              >
-                                {editMode ? (
-                                  <TextInput
-                                    style={styles.inputField}
-                                    editable={editMode}
-                                    value={logEntries[rIdx]?.[cIdx]}
-                                    onChangeText={(text) => {
-                                      setLogEntries(prev => {
-                                        const next = prev.map(row => row.slice());
-                                        next[rIdx][cIdx] = text;
-                                        return next;
-                                      });
-                                      scheduleAutoSave();
-                                    }}
-                                  />
-                                ) : (
-                                  <Text style={[styles.inputField, styles.readOnlyCell]}>{logEntries[rIdx]?.[cIdx]}</Text>
-                                )}
-                              </View>
-                    ))}
+                    {finalWidths.map((w, cIdx) => {
+                                // Determine whether this column is a sign column
+                                // Column mapping: 0=FullName,1=JobTitle, then pairs for 7 days (time, sign), last = sup sign
+                                const isSupSign = cIdx === finalWidths.length - 1;
+                                const dayIndex = cIdx - 2; // zero-based index into day columns
+                                const isDailySign = !isSupSign && dayIndex >= 0 && (dayIndex % 2 === 1);
+                                const cellValue = logEntries[rIdx]?.[cIdx];
+                                return (
+                                  <View 
+                                    key={`cell-${rIdx}-${cIdx}`} 
+                                    style={[
+                                      styles.cell, 
+                                      { width: w, height: W_FIXED.rowHeight },
+                                      styles.bottomBorder,
+                                      cIdx === finalWidths.length - 1 ? styles.lastCell : styles.rightBorder
+                                    ]}
+                                  >
+                                    {isDailySign || isSupSign ? (
+                                      editMode ? (
+                                        <SignatureField
+                                          value={cellValue}
+                                          onChange={(v) => {
+                                            setLogEntries(prev => {
+                                              const next = prev.map(row => row.slice());
+                                              next[rIdx][cIdx] = v;
+                                              return next;
+                                            });
+                                            scheduleAutoSave();
+                                          }}
+                                          editable={true}
+                                          width={Math.max(48, w - 8)}
+                                          height={Math.max(40, W_FIXED.rowHeight)}
+                                          placeholder="Tap to sign"
+                                        />
+                                      ) : (
+                                        cellValue ? (
+                                          <Image source={{ uri: String(cellValue).startsWith('data:') ? cellValue : `data:image/png;base64,${cellValue}` }} style={{ width: Math.max(48, w - 8), height: Math.max(40, W_FIXED.rowHeight), resizeMode: 'contain' }} />
+                                        ) : (
+                                          <Text style={[styles.inputField, styles.readOnlyCell]}>{cellValue || ''}</Text>
+                                        )
+                                      )
+                                    ) : (
+                                      editMode ? (
+                                        <TextInput
+                                          style={styles.inputField}
+                                          editable={editMode}
+                                          value={cellValue}
+                                          onChangeText={(text) => {
+                                            setLogEntries(prev => {
+                                              const next = prev.map(row => row.slice());
+                                              next[rIdx][cIdx] = text;
+                                              return next;
+                                            });
+                                            scheduleAutoSave();
+                                          }}
+                                        />
+                                      ) : (
+                                        <Text style={[styles.inputField, styles.readOnlyCell]}>{cellValue}</Text>
+                                      )
+                                    )}
+                                  </View>
+                                );
+                    })}
                   </View>
                 ))}
               </View>

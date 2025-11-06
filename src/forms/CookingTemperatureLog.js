@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 // Defensive text renderer: always returns a <Text> with a string value.
 // Use this for any dynamic values that may be undefined/null/objects to
@@ -300,8 +301,16 @@ export default function CookingTemperatureLog() {
                 {/* --- 3. Footer Section --- */}
                 <View style={styles.footerSection}>
                     <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 16 }}>CHEF Signature:</Text>
-                        <TextInput style={[styles.signatureInput, { fontSize: 14 }]} value={meta.chefSignature} onChangeText={v => setMetaField('chefSignature', v)} placeholder="" />
+                            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 16 }}>CHEF Signature:</Text>
+                            {editMode ? (
+                                <SignatureField value={meta.chefSignature} onChange={v => setMetaField('chefSignature', v)} editable={editMode} width={220} height={80} />
+                            ) : (
+                                meta.chefSignature ? (
+                                    <Image source={{ uri: String(meta.chefSignature).startsWith('data:') ? meta.chefSignature : `data:image/png;base64,${meta.chefSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
+                                ) : (
+                                    <Text style={[styles.signatureInput, { fontSize: 14 }]}>{meta.chefSignature}</Text>
+                                )
+                            )}
                     </View>
 
                     <View style={{ marginBottom: 12 }}>
@@ -311,7 +320,15 @@ export default function CookingTemperatureLog() {
 
                     <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 16 }}>COMPLEX Manager Signature:</Text>
-                        <TextInput style={[styles.signatureInput, { fontSize: 14 }]} value={meta.complexManagerSignature} onChangeText={v => setMetaField('complexManagerSignature', v)} placeholder="" />
+                        {editMode ? (
+                            <SignatureField value={meta.complexManagerSignature} onChange={v => setMetaField('complexManagerSignature', v)} editable={editMode} width={220} height={80} />
+                        ) : (
+                            meta.complexManagerSignature ? (
+                                <Image source={{ uri: String(meta.complexManagerSignature).startsWith('data:') ? meta.complexManagerSignature : `data:image/png;base64,${meta.complexManagerSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
+                            ) : (
+                                <Text style={[styles.signatureInput, { fontSize: 14 }]}>{meta.complexManagerSignature}</Text>
+                            )
+                        )}
                     </View>
 
                     {/* Verified by line (visual label as in the template image) */}

@@ -5,6 +5,8 @@ import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import ResponsiveTable from '../components/ResponsiveTable';
@@ -32,6 +34,8 @@ const BeverageReceivingForm = () => {
         const [deliveryDetails, setDeliveryDetails] = useState({
             dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: ''
         });
+        const [verifiedBySign, setVerifiedBySign] = useState('');
+        const [hseqManagerSign, setHseqManagerSign] = useState('');
         // preload logo as base64 for payload assets
         const [logoDataUri, setLogoDataUri] = React.useState(null);
         React.useEffect(() => {
@@ -59,7 +63,7 @@ const BeverageReceivingForm = () => {
                 templateVersion: 'v1.0',
                 title: 'Beverage and Water Receiving Checklist',
                 date: issueDate,
-                metadata: { ...deliveryDetails },
+                metadata: { ...deliveryDetails, verifiedBySign, hseqManagerSign },
                 formData: receivingData,
                 layoutHints,
                 _tableWidth,
@@ -72,6 +76,8 @@ const BeverageReceivingForm = () => {
         const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
             setReceivingData(createInitialProductData(10));
             setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+            setVerifiedBySign('');
+            setHseqManagerSign('');
             setIssueDate(defaultIssueDate);
         }});
 
@@ -84,7 +90,11 @@ const BeverageReceivingForm = () => {
                     const payload = wrapped?.payload || null;
                     if (payload && mounted) {
                         if (payload.formData) setReceivingData(payload.formData);
-                        if (payload.metadata) setDeliveryDetails(payload.metadata);
+                        if (payload.metadata) {
+                            setDeliveryDetails(payload.metadata);
+                            setVerifiedBySign(payload.metadata.verifiedBySign || payload.metadata.verifiedBy || '');
+                            setHseqManagerSign(payload.metadata.hseqManagerSign || payload.metadata.hseqManager || '');
+                        }
                         if (payload.date) setIssueDate(payload.date);
                     }
                 } catch (e) { /* ignore */ }
@@ -324,20 +334,24 @@ const BeverageReceivingForm = () => {
                                 <Text style={styles.deliveryInput}>{deliveryDetails.driversName}</Text>
                             )}
                         </View>
-                        <View style={styles.deliveryRow}>
-                            <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
-                            {editMode ? (
-                                <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => setDeliveryDetails(d => ({ ...d, vehicleRegNo: t }))} />
-                            ) : (
-                                <Text style={styles.deliveryInput}>{deliveryDetails.vehicleRegNo}</Text>
-                            )}
-                            <Text style={styles.deliveryLabel}>Signature:</Text>
-                            {editMode ? (
-                                <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={t => setDeliveryDetails(d => ({ ...d, signature: t }))} />
-                            ) : (
-                                <Text style={[styles.deliveryInput, { flex: 2 }]}>{deliveryDetails.signature}</Text>
-                            )}
-                        </View>
+                                        <View style={styles.deliveryRow}>
+                                            <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
+                                            {editMode ? (
+                                                <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => setDeliveryDetails(d => ({ ...d, vehicleRegNo: t }))} />
+                                            ) : (
+                                                <Text style={styles.deliveryInput}>{deliveryDetails.vehicleRegNo}</Text>
+                                            )}
+                                            <Text style={styles.deliveryLabel}>Signature:</Text>
+                                            {editMode ? (
+                                                <SignatureField value={deliveryDetails.signature} onChange={(v) => setDeliveryDetails(d => ({ ...d, signature: v }))} editable={editMode} width={240} height={80} placeholder="Tap to sign" />
+                                            ) : (
+                                                (() => {
+                                                    const v = deliveryDetails.signature;
+                                                    const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+                                                    return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={[styles.deliveryInput, { flex: 2 }]}>{v || ''}</Text>;
+                                                })()
+                                            )}
+                                        </View>
                     </View>
 
                     {/* --- 4. RECEIVING LOG TABLE --- */}
@@ -383,7 +397,16 @@ const BeverageReceivingForm = () => {
                     {/* --- 5. VERIFICATION FOOTER --- */}
                     <View style={styles.verificationFooter}>
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
-                        <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontWeight: '700', marginBottom: 6 }}>Verified by:</Text>
+                                <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={220} height={80} placeholder="Tap to sign - Verified by" />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={{ fontWeight: '700', marginBottom: 6 }}>HSEQ Manager:</Text>
+                                <SignatureField value={hseqManagerSign} onChange={setHseqManagerSign} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
+                            </View>
+                        </View>
                     </View>
 
                                 {/* Action buttons - Save Draft & Submit */}

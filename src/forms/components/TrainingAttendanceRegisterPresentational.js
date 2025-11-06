@@ -1,5 +1,34 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+function normalizeSignature(v) {
+    if (!v) return null;
+    if (String(v).startsWith('data:')) return v;
+    const compact = String(v).replace(/\s+/g, '');
+    if (compact.length > 200) return `data:image/png;base64,${compact}`;
+    return null;
+}
+
+function renderMaybeSignature(v, opts = {}) {
+    const uri = normalizeSignature(v);
+    // accept { width, height } in opts and fall back to sensible defaults
+    const width = opts.width || 110;
+    const height = opts.height || 40;
+    // Keep a container that reserves the same width so the table layout stays stable
+    if (uri) {
+        return (
+            <View style={{ width, paddingHorizontal: 6, justifyContent: 'center', borderRightWidth: 0 }}>
+                <SignatureThumb uri={uri} width={width} height={height} layers={8} spread={1.0} />
+            </View>
+        );
+    }
+    return (
+        <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width, borderRightWidth: 0 }]}>
+            {v || ''}
+        </Text>
+    );
+}
 
 // Normalizes different saved payload shapes into the canonical shape this renderer expects.
 function normalizePayload(payload) {
@@ -131,8 +160,9 @@ export default function TrainingAttendanceRegisterPresentational({ payload }) {
                 ))}
             </View>
 
-                    <View style={styles.tableOuter}>
-                        <View style={styles.tableHeaderRow}>
+                    <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1 }}>
+                        <View style={styles.tableOuter}>
+                            <View style={styles.tableHeaderRow}>
                             <Text style={[styles.colHeader, styles.columnBase, { width: 48 }]}>S/N</Text>
                             <Text style={[styles.colHeader, styles.columnBase, { width: 156 }]}>FULL NAME</Text>
                             <Text style={[styles.colHeader, styles.columnBase, { width: 132 }]}>NRC NUMBER</Text>
@@ -152,16 +182,17 @@ export default function TrainingAttendanceRegisterPresentational({ payload }) {
                             <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 156 }]}>{cells.left[n]?.name || ''}</Text>
                             <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 132 }]}>{cells.left[n]?.nrc || ''}</Text>
                             <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 160 }]}>{cells.left[n]?.job || ''}</Text>
-                            <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 110, borderRightWidth: 0 }]}>{cells.left[n]?.sign || ''}</Text>
+                            {renderMaybeSignature(cells.left[n]?.sign || '', { width: 110, height: 40 })}
 
                         <Text style={[styles.cellText, styles.columnBase, { width: 48 }]}>{n + 9}.</Text>
                         <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 156 }]}>{cells.right[n + 9]?.name || ''}</Text>
                         <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 132 }]}>{cells.right[n + 9]?.nrc || ''}</Text>
                         <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 160 }]}>{cells.right[n + 9]?.job || ''}</Text>
-                        <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 110, borderRightWidth: 0 }]}>{cells.right[n + 9]?.sign || ''}</Text>
+                        {renderMaybeSignature(cells.right[n + 9]?.sign || '', { width: 110, height: 40 })}
                     </View>
                 ))}
-            </View>
+                        </View>
+                    </ScrollView>
 
         </ScrollView>
     );

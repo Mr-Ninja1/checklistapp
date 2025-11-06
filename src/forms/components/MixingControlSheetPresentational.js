@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 // Dummy presentational used for debugging: ignores payload and renders static content
 export default function MixingControlSheetPresentational({ payload }) {
@@ -44,7 +45,7 @@ export default function MixingControlSheetPresentational({ payload }) {
             <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>MIXING TEMP</Text></View>
             <View style={[styles.headerCell, { width: 160 }]}><Text style={styles.headerText}>DOUGH DIVIDING/SCALING (kgs)</Text></View>
             <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>PRODUCT QUANTITY</Text></View>
-            <View style={[styles.headerCell, { width: 140 }]}><Text style={styles.headerText}>MIXER MAN SIGN</Text></View>
+              <View style={[styles.headerCell, { width: 140 }]}><Text style={styles.headerText}>MIXER MAN SIGN</Text></View>
             <View style={[styles.headerCell, { width: 140 }]}><Text style={styles.headerText}>SUP SIGN</Text></View>
           </View>
 
@@ -59,15 +60,33 @@ export default function MixingControlSheetPresentational({ payload }) {
               <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.mixingTemp ?? '')}</Text></View>
               <View style={[styles.cell, { width: 160 }]}><Text style={styles.cellText}>{String(row?.doughDividingScaling ?? '')}</Text></View>
               <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.productQuantity ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 140 }]}><Text style={styles.cellText}>{String(row?.mixerManSign ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 140 }]}><Text style={styles.cellText}>{String(row?.supSign ?? '')}</Text></View>
+              <View style={[styles.cell, { width: 140 }]}>
+                {row?.mixerManSign ? (
+                  <SignatureThumb uri={String(row.mixerManSign).startsWith('data:') ? row.mixerManSign : `data:image/png;base64,${row.mixerManSign}`} width={120} height={60} layers={6} spread={0.9} />
+                ) : <Text style={styles.cellText}>{String(row?.mixerManSign ?? '')}</Text>}
+              </View>
+              <View style={[styles.cell, { width: 140 }]}>
+                {row?.supSign ? (
+                  <SignatureThumb uri={String(row.supSign).startsWith('data:') ? row.supSign : `data:image/png;base64,${row.supSign}`} width={120} height={60} layers={6} spread={0.9} />
+                ) : <Text style={styles.cellText}>{String(row?.supSign ?? '')}</Text>}
+              </View>
             </View>
           ))}
           </View>
         </ScrollView>
         <View style={styles.footerRow}>
-          <View style={styles.footerCol}><Text style={styles.footerLabel}>VERIFIED BY: {String(payload?.verification?.mixerManSign || '')}</Text></View>
-          <View style={styles.footerCol}><Text style={styles.footerLabel}>COMPLEX MANAGER: {String(payload?.verification?.complexManagerSign || '')}</Text></View>
+          <View style={styles.footerCol}>
+            <Text style={styles.footerLabel}>VERIFIED BY:</Text>
+            {payload?.verification?.mixerManSign ? (
+              <SignatureThumb uri={String(payload.verification.mixerManSign).startsWith('data:') ? payload.verification.mixerManSign : `data:image/png;base64,${payload.verification.mixerManSign}`} width={220} height={80} layers={8} spread={1.0} />
+            ) : <Text style={styles.footerLabel}>{String(payload?.verification?.mixerManSign || '')}</Text>}
+          </View>
+          <View style={styles.footerCol}>
+            <Text style={styles.footerLabel}>COMPLEX MANAGER:</Text>
+            {payload?.verification?.complexManagerSign ? (
+              <SignatureThumb uri={String(payload.verification.complexManagerSign).startsWith('data:') ? payload.verification.complexManagerSign : `data:image/png;base64,${payload.verification.complexManagerSign}`} width={220} height={80} layers={8} spread={1.0} />
+            ) : <Text style={styles.footerLabel}>{String(payload?.verification?.complexManagerSign || '')}</Text>}
+          </View>
         </View>
       </ScrollView>
     </View>

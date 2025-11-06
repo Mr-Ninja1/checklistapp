@@ -8,6 +8,7 @@ import FormActionBar from '../components/FormActionBar';
 import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
+import SignatureField from '../components/SignatureField';
 
 export default function FoodSamplesCollectionLog() {
   // Added 'preparationMethod' to the initial log state — memoized and given stable ids
@@ -22,7 +23,9 @@ export default function FoodSamplesCollectionLog() {
   const [logEntries, setLogEntries] = useState(() => initialLog);
   const [site, setSite] = useState('');
   const [location, setLocation] = useState('');
-  const [supervisor, setSupervisor] = useState('');
+  // split supervisor into name + drawn signature
+  const [supervisorName, setSupervisorName] = useState('');
+  const [supervisorSign, setSupervisorSign] = useState('');
   const [editMode, setEditMode] = useState(false);
 
   // useFormSave integration
@@ -54,9 +57,10 @@ export default function FoodSamplesCollectionLog() {
     docNo: 'BBN-SHEQ-F-B.1',
     issueDate: (() => { const t=new Date(); return `${String(t.getDate()).padStart(2,'0')}/${String(t.getMonth()+1).padStart(2,'0')}/${t.getFullYear()}` })(),
     pageInfo: 'Page 1 of 1',
-    site,
-    location,
-    supervisor,
+  site,
+  location,
+  supervisorName,
+  supervisorSign,
     // canonical shape uses formData.logEntries
     formData: { logEntries },
     // include the specification text so saved presentational can reproduce the doc
@@ -75,7 +79,7 @@ export default function FoodSamplesCollectionLog() {
 
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
     setLogEntries(initialLog);
-    setSite(''); setLocation(''); setSupervisor('');
+    setSite(''); setLocation(''); setSupervisorName(''); setSupervisorSign('');
   } });
 
   const updateLogEntry = (index, field, value) => {
@@ -140,9 +144,19 @@ export default function FoodSamplesCollectionLog() {
   <View style={styles.supervisorRow}>
     <Text style={styles.smallLabel}>Name \& Sign of Supervisor:</Text>
     {editMode ? (
-      <TextInput style={styles.siteInput} value={supervisor} onChangeText={setSupervisor} editable={true} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <TextInput style={[styles.siteInput, { flex: 1 }]} value={supervisorName} onChangeText={text => { setSupervisorName(text); try { scheduleAutoSave(); } catch(e){} }} editable={true} placeholder="Supervisor name" />
+        <SignatureField value={supervisorSign} onChange={val => { setSupervisorSign(val); try { scheduleAutoSave(); } catch(e){} }} editable={true} width={120} height={48} />
+      </View>
     ) : (
-      <Text style={styles.siteInput}>{supervisor}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={styles.siteInput}>{supervisorName}</Text>
+        {(supervisorSign && typeof supervisorSign === 'string' && supervisorSign.startsWith('data:')) ? (
+          <Image source={{ uri: supervisorSign }} style={{ width: 120, height: 48, resizeMode: 'contain' }} />
+        ) : (
+          <Text style={[styles.siteInput, { marginLeft: 8 }]}>{supervisorSign}</Text>
+        )}
+      </View>
     )}
   </View>
 
@@ -202,7 +216,16 @@ export default function FoodSamplesCollectionLog() {
             ))}
           </View>
         </View>
-  <FormActionBar onBack={() => {}} onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }} onSubmit={() => { if (!editMode || isSaving) return; handleSubmit(); }} showSavePdf={false} />
+  {/*
+    Allow submit even when editMode has been toggled off (users often tap Done then Submit).
+    Only guard against an active saving operation. Keep Save Draft gated to editMode.
+  */}
+  <FormActionBar
+    onBack={() => {}}
+    onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }}
+    onSubmit={() => { if (isSaving) return; handleSubmit(); }}
+    showSavePdf={false}
+  />
 
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

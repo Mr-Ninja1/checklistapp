@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, SafeAreaView, ScrollView, TextInput, Image, Alert } from 'react-native';
+import SignatureField from '../components/SignatureField';
 import EditableFormContainer from '../components/EditableFormContainer';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
@@ -21,8 +22,8 @@ export default function BinLinersChangingLog() {
   }));
 
   const [logEntries, setLogEntries] = useState(initialLog);
-  const [verifiedBy, setVerifiedBy] = useState('');
-  const [hseqManager, setHseqManager] = useState('');
+  const [verifiedBySign, setVerifiedBySign] = useState('');
+  const [hseqManagerSign, setHseqManagerSign] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
@@ -51,8 +52,11 @@ export default function BinLinersChangingLog() {
         const d = await getDraft(DRAFT_KEY);
         if (d && mounted) {
           if (d.logEntries) setLogEntries(d.logEntries);
-          if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
-          if (d.hseqManager) setHseqManager(d.hseqManager);
+          // support older drafts (text) and new drafts (data-URL)
+          if (d.verifiedBySign) setVerifiedBySign(d.verifiedBySign);
+          else if (d.verifiedBy) setVerifiedBySign(d.verifiedBy);
+          if (d.hseqManagerSign) setHseqManagerSign(d.hseqManagerSign);
+          else if (d.hseqManager) setHseqManagerSign(d.hseqManager);
         }
       } catch (e) {}
     })();
@@ -61,13 +65,13 @@ export default function BinLinersChangingLog() {
 
   // Auto-save draft on change
   useEffect(() => {
-    const t = setTimeout(() => setDraft(DRAFT_KEY, { logEntries, verifiedBy, hseqManager }), 700);
+    const t = setTimeout(() => setDraft(DRAFT_KEY, { logEntries, verifiedBySign, hseqManagerSign }), 700);
     return () => clearTimeout(t);
-  }, [logEntries, verifiedBy, hseqManager]);
+  }, [logEntries, verifiedBySign, hseqManagerSign]);
 
   const handleSaveDraft = async () => {
     try {
-      await setDraft(DRAFT_KEY, { logEntries, verifiedBy, hseqManager });
+      await setDraft(DRAFT_KEY, { logEntries, verifiedBySign, hseqManagerSign });
       Alert.alert('Draft saved');
     } catch (e) { Alert.alert('Error', 'Failed to save draft'); }
   };
@@ -92,7 +96,7 @@ export default function BinLinersChangingLog() {
         templateVersion: 'v1.0',
         title: 'BIN LINERS CHANGING LOG',
         date: issueDate,
-        metadata: { },
+        metadata: { verifiedBySign: verifiedBySign, hseqManagerSign: hseqManagerSign },
         logEntries,
         layoutHints: { DATE: 100, CHANGED_BY: 240, AREA: 200, STAFF_SIGN: 200, SUP_SIGN: 200 },
         _tableWidth: 100+240+200+200+200,
@@ -101,11 +105,11 @@ export default function BinLinersChangingLog() {
       };
   const formId = `BinLinersChangingLog_${Date.now()}`;
   await formStorage.saveForm(formId, payload);
-      try { await removeDraft(DRAFT_KEY); } catch (e) {}
-      setLogEntries(initialLog);
-      setVerifiedBy('');
-      setHseqManager('');
-      Alert.alert('Saved', 'Form saved to history');
+  try { await removeDraft(DRAFT_KEY); } catch (e) {}
+  setLogEntries(initialLog);
+  setVerifiedBySign('');
+  setHseqManagerSign('');
+  Alert.alert('Saved', 'Form saved to history');
     } catch (e) {
       Alert.alert('Error', 'Failed to save form');
     } finally {
@@ -194,11 +198,11 @@ export default function BinLinersChangingLog() {
                 </View>
 
                 <View style={styles.colStaffSign}>
-                  <TextInput style={styles.cellInput} value={entry.staffSign} onChangeText={(t) => updateLogEntry(idx, 'staffSign', t)} placeholder="" editable={editMode} />
+                  <SignatureField value={entry.staffSign} onChange={(v) => updateLogEntry(idx, 'staffSign', v)} editable={editMode} width={150} height={60} placeholder="Tap to sign" />
                 </View>
 
                 <View style={styles.colSupervisorSign}>
-                  <TextInput style={styles.cellInput} value={entry.supervisorSign} onChangeText={(t) => updateLogEntry(idx, 'supervisorSign', t)} placeholder="" editable={editMode} />
+                  <SignatureField value={entry.supervisorSign} onChange={(v) => updateLogEntry(idx, 'supervisorSign', v)} editable={editMode} width={150} height={60} placeholder="Tap to sign" />
                 </View>
               </View>
             ))}
@@ -210,11 +214,11 @@ export default function BinLinersChangingLog() {
         <View style={styles.verificationBlock}>
           <View style={styles.verifyRow}>
             <Text style={styles.verifyLabel}>VERIFIED BY:</Text>
-            <TextInput style={[styles.verifyInput]} value={verifiedBy} onChangeText={setVerifiedBy} placeholder="" />
+            <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={220} height={80} placeholder="Tap to sign - Verified by" />
           </View>
           <View style={styles.verifyRow}>
             <Text style={styles.verifyLabel}>HSEQ Manager:</Text>
-            <TextInput style={[styles.verifyInput]} value={hseqManager} onChangeText={setHseqManager} placeholder="" />
+            <SignatureField value={hseqManagerSign} onChange={setHseqManagerSign} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
           </View>
         </View>
 

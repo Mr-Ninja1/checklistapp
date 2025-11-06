@@ -9,6 +9,8 @@ import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 
 const { width } = Dimensions.get('window');
 
@@ -111,26 +113,22 @@ const PPEIssuanceForm = () => {
                 <Text style={[styles.cell, styles.signCol]}>{item.staffNrc}</Text>
             )}
             {editMode ? (
-                <TextInput
-                    style={[styles.inputCell, styles.signCol]}
-                    value={item.staffSign}
-                    onChangeText={(t) => updateField(item.id, 'staffSign', t)}
-                    placeholder="Staff Sign"
-                    editable={true}
-                />
+                <SignatureField value={item.staffSign} onChange={(v) => updateField(item.id, 'staffSign', v)} editable={true} width={columnWidths.sign} height={60} />
             ) : (
-                <Text style={[styles.cell, styles.signCol]}>{item.staffSign}</Text>
+                (() => {
+                    const v = item.staffSign;
+                    const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                    return uri ? <SignatureThumb uri={uri} width={columnWidths.sign} height={60} layers={5} spread={0.9} /> : <Text style={[styles.cell, styles.signCol]}>{v || ''}</Text>;
+                })()
             )}
             {editMode ? (
-                <TextInput
-                    style={[styles.inputCell, styles.supSignCol]}
-                    value={item.supSign}
-                    onChangeText={(t) => updateField(item.id, 'supSign', t)}
-                    placeholder="Sup Sign"
-                    editable={true}
-                />
+                <SignatureField value={item.supSign} onChange={(v) => updateField(item.id, 'supSign', v)} editable={true} width={columnWidths.sign} height={60} />
             ) : (
-                <Text style={[styles.cell, styles.supSignCol]}>{item.supSign}</Text>
+                (() => {
+                    const v = item.supSign;
+                    const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                    return uri ? <SignatureThumb uri={uri} width={columnWidths.sign} height={60} layers={5} spread={0.9} /> : <Text style={[styles.cell, styles.supSignCol]}>{v || ''}</Text>;
+                })()
             )}
         </View>
     );

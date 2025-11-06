@@ -1,5 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+// normalizeSignature: accepts data: URIs or legacy base64 blobs and returns a data: URI or null
+const normalizeSignature = (v) => {
+  if (!v) return null;
+  if (typeof v !== 'string') return null;
+  if (v.startsWith('data:')) return v;
+  const compact = v.replace(/\s+/g, '');
+  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  return null;
+};
+
+const renderSignature = (val, textStyle, thumbProps = {}) => {
+  const uri = normalizeSignature(val);
+  if (uri) return <SignatureThumb uri={uri} {...thumbProps} />;
+  return <Text style={textStyle}>{val || ''}</Text>;
+};
 
 const PPEIssuancePresentational = ({ payload }) => {
   const p = payload || {};
@@ -68,16 +85,25 @@ const PPEIssuancePresentational = ({ payload }) => {
             <Text style={[styles.cell, styles.ppeCol]}>{r.golfTShirt ? '✓' : ''}</Text>
             <Text style={[styles.cell, styles.ppeCol]}>{r.workSuit ? '✓' : ''}</Text>
             <Text style={[styles.cell, styles.ppeCol]}>{r.chefCoat ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.signCol]}>{r.staffNrc || ''}</Text>
-            <Text style={[styles.cell, styles.signCol]}>{r.staffSign || ''}</Text>
-            <Text style={[styles.cell, styles.signCol]}>{r.supSign || ''}</Text>
+            <View style={[styles.cell, styles.signCol]}>{renderSignature(r.staffNrc, styles.cellText, { width: columnWidths.sign - 8, height: 32 })}</View>
+            <View style={[styles.cell, styles.signCol]}>{renderSignature(r.staffSign, styles.cellText, { width: columnWidths.sign - 8, height: 32 })}</View>
+            <View style={[styles.cell, styles.signCol]}>{renderSignature(r.supSign, styles.cellText, { width: columnWidths.sign - 8, height: 32 })}</View>
           </View>
         ))}
 
         <View style={styles.footerRow}>
-          <Text style={styles.footerText}>HSEQ MANAGER..................................</Text>
-          <Text style={styles.footerText}>COMPLEX MANAGER..................................</Text>
-          <Text style={styles.footerText}>FINANCIAL CONTROLLER..................................</Text>
+          {(() => {
+            const hseq = metadata.hseqManagerSignature || metadata.hseqManagerSign || metadata.hseqManager || '';
+            const complex = metadata.complexManagerSignature || metadata.complexManagerSign || metadata.complexManager || '';
+            const fin = metadata.financialControllerSignature || metadata.financialController || '';
+            return (
+              <>
+                <View style={{ flex: 1 }}>{renderSignature(hseq, styles.footerText, { width: 160, height: 48 })}</View>
+                <View style={{ flex: 1 }}>{renderSignature(complex, styles.footerText, { width: 160, height: 48 })}</View>
+                <View style={{ flex: 1 }}>{renderSignature(fin, styles.footerText, { width: 160, height: 48 })}</View>
+              </>
+            );
+          })()}
         </View>
       </View>
     </ScrollView>

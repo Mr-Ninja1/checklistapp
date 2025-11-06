@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import SignatureField from '../components/SignatureField';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
@@ -32,6 +33,8 @@ const PackagingMaterialsReceivingForm = () => {
     const versionNo = useMemo(() => '01', []);
     const revNo = useMemo(() => '00', []);
     const [deliveryDetails, setDeliveryDetails] = useState({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+    const [verifiedBySign, setVerifiedBySign] = useState('');
+    const [hseqManagerSign, setHseqManagerSign] = useState('');
 
     const updateReceivingField = (id, field, value) => {
         setReceivingData(prevData => prevData.map(item => item.id === id ? { ...item, [field]: value } : item));
@@ -47,7 +50,7 @@ const PackagingMaterialsReceivingForm = () => {
         formType: 'PackagingMaterialsReceiving',
         templateVersion: versionNo,
         title: 'Packaging Materials Receiving Checklist',
-        metadata: { ...deliveryDetails, issueDate, versionNo, revNo },
+    metadata: { ...deliveryDetails, issueDate, versionNo, revNo, verifiedBySign, hseqManagerSign },
         formData: receivingData,
         layoutHints: {
             NAME: dailyStyles.nameCol.width,
@@ -198,7 +201,9 @@ const PackagingMaterialsReceivingForm = () => {
                             <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
                             <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={(t) => { setDeliveryDetails(d => ({ ...d, vehicleRegNo: t })); autoSaveDraft(); }} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} editable={editMode} onChangeText={(t) => { if (!editMode) return; setDeliveryDetails(d => ({ ...d, signature: t })); autoSaveDraft(); }} />
+                            <View style={{ flex: 2 }}>
+                                <SignatureField value={deliveryDetails.signature} onChange={(v) => setDeliveryDetails(d => ({ ...d, signature: v }))} editable={editMode} width={240} height={80} placeholder="Tap to sign" />
+                            </View>
                         </View>
                     </View>
 
@@ -232,7 +237,16 @@ const PackagingMaterialsReceivingForm = () => {
 
                     <View style={styles.verificationFooter}>
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
-                        <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontWeight: '700' }}>Verified By</Text>
+                                <SignatureField value={verifiedBySign} onChange={(v) => { setVerifiedBySign(v); autoSaveDraft(); }} editable={editMode} width={220} height={80} placeholder="Tap to sign - Verified by" />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={{ fontWeight: '700' }}>HSEQ Manager</Text>
+                                <SignatureField value={hseqManagerSign} onChange={(v) => { setHseqManagerSign(v); autoSaveDraft(); }} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
+                            </View>
+                        </View>
                     </View>
                     <View style={{ marginTop: 12 }}>
                         <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={isSaving} />

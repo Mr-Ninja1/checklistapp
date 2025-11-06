@@ -7,6 +7,8 @@ import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import ResponsiveTable from '../components/ResponsiveTable';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image } from 'react-native';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -77,20 +79,29 @@ const ProductReleaseForm = () => {
                 onChangeText={(t) => updateProductField(item.id, 'expiryDate', t)}
                 placeholder="D/M/Y"
             />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.signatureCol]}
-                value={item.signatureHead}
-                editable={editMode}
-                onChangeText={(t) => updateProductField(item.id, 'signatureHead', t)}
-                placeholder="Signature"
-            />
-            <TextInput
-                style={[dailyStyles.dataCell, dailyStyles.approvedCol]}
-                value={item.approvedHSEQ}
-                editable={editMode}
-                onChangeText={(t) => updateProductField(item.id, 'approvedHSEQ', t)}
-                placeholder="Signature"
-            />
+            <View style={[dailyStyles.dataCell, dailyStyles.signatureCol, { justifyContent: 'center' }]}>
+                {editMode ? (
+                    <SignatureField value={item.signatureHead} onChange={(v) => updateProductField(item.id, 'signatureHead', v)} editable={true} width={140} height={60} />
+                ) : (
+                    item.signatureHead ? (
+                        <SignatureThumb uri={String(item.signatureHead).startsWith('data:') ? item.signatureHead : `data:image/png;base64,${item.signatureHead}`} width={140} height={60} layers={5} spread={0.9} />
+                    ) : (
+                        <Text />
+                    )
+                )}
+            </View>
+
+            <View style={[dailyStyles.dataCell, dailyStyles.approvedCol, { justifyContent: 'center' }]}>
+                {editMode ? (
+                    <SignatureField value={item.approvedHSEQ} onChange={(v) => updateProductField(item.id, 'approvedHSEQ', v)} editable={true} width={140} height={60} />
+                ) : (
+                    item.approvedHSEQ ? (
+                        <SignatureThumb uri={String(item.approvedHSEQ).startsWith('data:') ? item.approvedHSEQ : `data:image/png;base64,${item.approvedHSEQ}`} width={140} height={60} layers={5} spread={0.9} />
+                    ) : (
+                        <Text />
+                    )
+                )}
+            </View>
         </View>
     );
 

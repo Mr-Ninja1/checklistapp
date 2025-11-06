@@ -1,5 +1,20 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+const normalizeSignature = (v) => {
+  if (!v) return null;
+  // If already an object with uri, use it
+  if (typeof v === 'object' && v.uri) return v.uri;
+  if (typeof v !== 'string') return null;
+  const s = v;
+  // already a data URI or http/file URL
+  if (s.startsWith('data:') || s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:')) return s;
+  // compact base64 (legacy storage might contain raw base64 blobs)
+  const compact = s.replace(/\s+/g, '');
+  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  return null;
+};
 
 // Presentational (read-only) renderer for Food Handlers Daily Handwashing form
 // Accepts a `payload` prop that matches the shape produced by the editable form
@@ -19,10 +34,44 @@ export default function FoodHandlersPresentational({ payload }) {
     assets = {},
   } = payload;
 
+  const get = (key) => {
+    if (payload?.formData && Object.prototype.hasOwnProperty.call(payload.formData, key)) return payload.formData[key];
+    if (payload?.metadata && Object.prototype.hasOwnProperty.call(payload.metadata, key)) return payload.metadata[key];
+    if (Object.prototype.hasOwnProperty.call(payload, key)) return payload[key];
+    return '';
+  };
+
+  // Try several common places and alternate key names to find a signature value.
+  const findSignature = (baseKey) => {
+    const variants = [baseKey, `${baseKey}Sign`, `${baseKey}Signature`, `${baseKey}sign`, `${baseKey}signature`];
+    const containers = [payload, payload?.formData, payload?.metadata];
+    for (const c of containers) {
+      if (!c) continue;
+      for (const k of variants) {
+        if (Object.prototype.hasOwnProperty.call(c, k) && c[k]) return c[k];
+      }
+    }
+    // deep scan: sometimes signatures are nested under metadata.formData or similar
+    try {
+      const scan = JSON.stringify(payload || {});
+      // quick heuristic: if baseKey appears in JSON, try to extract it via regex for data: URIs
+      const re = new RegExp(`(data:[^\"]{50,})`, 'g');
+      const m = re.exec(scan);
+      if (m && m[1]) return m[1];
+    } catch (e) { /* ignore */ }
+    return '';
+  };
+
   // Use layoutHints when provided to better match saved proportions
   const nameW = layoutHints.nameW || 140;
   const jobW = layoutHints.jobW || 100;
   const signW = layoutHints.signW || 80;
+
+  const renderSignatureCell = (val, w = signW, h = 60) => {
+    const uri = normalizeSignature(val);
+    if (uri) return <SignatureThumb uri={uri} width={w} height={h} layers={6} spread={0.9} />;
+    return <Text style={styles.dataCell}>{''}</Text>;
+  };
 
   return (
     <ScrollView style={styles.container} horizontal={false} contentContainerStyle={{ padding: 12 }}>
@@ -60,7 +109,13 @@ export default function FoodHandlersPresentational({ payload }) {
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.label}>Verified By:</Text>
-          <Text style={styles.value}>{verifiedBy}</Text>
+          {/* Render verified signature as thumbnail when possible, otherwise show text */}
+          {(() => {
+            const v = findSignature('verifiedBy') || get('verifiedBy') || verifiedBy;
+            const uri = normalizeSignature(v);
+            if (uri) return <SignatureThumb uri={uri} width={140} height={60} layers={6} spread={0.9} />;
+            return <Text style={styles.value}>{v}</Text>;
+          })()}
         </View>
       </View>
 
@@ -85,16 +140,21 @@ export default function FoodHandlersPresentational({ payload }) {
             {timeSlots.map((time) => (
               <Text key={time} style={[styles.dataCell, styles.timeCell]}>{row.checks && row.checks[time] ? '\u2611' : '\u2610'}</Text>
             ))}
-            <Text style={[styles.dataCell, { minWidth: signW, width: signW }]}>{row.staffSign}</Text>
+            <View style={[{ minWidth: signW, width: signW, alignItems: 'center' }]}>{row.staffSign ? renderSignatureCell(row.staffSign, signW - 8, 44) : <Text style={styles.dataCell}>{''}</Text>}</View>
             <Text style={[styles.dataCell, { minWidth: signW, width: signW }]}>{row.supName}</Text>
-            <Text style={[styles.dataCell, { minWidth: signW, width: signW }]}>{row.supSign}</Text>
+            <View style={[{ minWidth: signW, width: signW, alignItems: 'center' }]}>{row.supSign ? renderSignatureCell(row.supSign, signW - 8, 44) : <Text style={styles.dataCell}>{''}</Text>}</View>
           </View>
         ))}
       </View>
 
       <View style={styles.footerRow}>
         <Text style={styles.footerLabel}>Complex Manager:</Text>
-        <Text style={styles.footerValue}>{complexManagerSign}</Text>
+        {(() => {
+          const cm = findSignature('complexManager') || findSignature('complexManagerSign') || get('complexManagerSign') || complexManagerSign;
+          const uri = normalizeSignature(cm);
+          if (uri) return <SignatureThumb uri={uri} width={200} height={80} layers={6} spread={0.9} />;
+          return <Text style={styles.footerValue}>{cm}</Text>;
+        })()}
       </View>
     </ScrollView>
   );

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
@@ -53,7 +54,11 @@ export default function DryStoragePresentational({ payload }) {
         {/* verification / HSEQ Manager */}
         <View style={styles.verificationRowView}>
           <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-          <Text style={styles.verificationValue}>{payload?.metadata?.hseqManager || ''}</Text>
+          {(() => {
+            const v = payload?.metadata?.hseqSign || payload?.metadata?.hseqManagerSign || payload?.metadata?.hseqManager || null;
+            const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+            return uri ? <SignatureThumb uri={uri} width={200} height={60} layers={6} spread={1.0} /> : <Text style={styles.verificationValue}>{payload?.metadata?.hseqManager || ''}</Text>;
+          })()}
         </View>
       </View>
 

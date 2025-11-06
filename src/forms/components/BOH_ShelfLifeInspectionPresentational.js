@@ -1,5 +1,20 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+const normalizeSignature = (v) => {
+  if (!v || typeof v !== 'string') return null;
+  if (v.startsWith('data:')) return v;
+  const compact = v.replace(/\s+/g, '');
+  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  return null;
+};
+
+const renderMaybeSignature = (val) => {
+  const uri = normalizeSignature(val);
+  if (uri) return <SignatureThumb uri={uri} width={180} height={60} />;
+  return <Text>{val || ''}</Text>;
+};
 
 export default function BOH_ShelfLifeInspectionPresentational({ payload }) {
   if (!payload) return null;
@@ -51,8 +66,14 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload }) {
       <View style={{ height: 12 }} />
       <View style={styles.footerRowMultiple}>
         <View style={styles.footerCol}><Text style={styles.footerLabel}>DATE: {payload?.metadata?.date || ''}</Text></View>
-        <View style={styles.footerCol}><Text style={styles.footerLabel}>VERIFIED BY: {verification?.hseqManagerSign || ''}</Text></View>
-        <View style={styles.footerCol}><Text style={styles.footerLabel}>COMPLEX MANAGER: {verification?.complexManagerSign || ''}</Text></View>
+        <View style={styles.footerCol}>
+          <Text style={styles.footerLabel}>VERIFIED BY:</Text>
+          {renderMaybeSignature(verification?.hseqManagerSign || verification?.hseqManager || verification?.hseqManagerSignature)}
+        </View>
+        <View style={styles.footerCol}>
+          <Text style={styles.footerLabel}>COMPLEX MANAGER:</Text>
+          {renderMaybeSignature(verification?.complexManagerSign || verification?.complexManager || verification?.complexManagerSignature)}
+        </View>
       </View>
     </ScrollView>
   );

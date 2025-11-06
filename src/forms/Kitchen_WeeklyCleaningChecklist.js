@@ -6,6 +6,8 @@ import useFormSave from '../hooks/useFormSave';
 import EditableFormContainer from '../components/EditableFormContainer';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import { useNavigation } from '@react-navigation/native';
 
 // Stubs / utilities (the project already has equivalents; these mirror them)
@@ -67,7 +69,7 @@ const Checkbox = ({ checked, onPress }) => (
 export default function KitchenWeeklyCleaningChecklist() {
   const navigation = useNavigation();
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', companyName: 'Bravo' });
+  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', hseqSign: '', complexManagerSign: '', companyName: 'Bravo' });
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
   const saveTimer = useRef(null);
@@ -83,7 +85,7 @@ export default function KitchenWeeklyCleaningChecklist() {
         const d = await getDraft(DRAFT_KEY);
         if (d && mounted) {
           if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
+          if (d.metadata) setMetadata(prev => ({ ...prev, ...d.metadata }));
         }
       } catch (e) {
         console.warn('load draft failed', e);
@@ -233,11 +235,27 @@ export default function KitchenWeeklyCleaningChecklist() {
           <View style={styles.verificationRow}>
             <View style={styles.verCell}>
               <Text style={styles.verLabel}>Verified By: HSEQ Manager:</Text>
-              {editMode ? <TextInput value={metadata.hseqManager} editable={true} onChangeText={(t)=>{ handleMetadataChange('hseqManager',t); }} style={styles.verInput} /> : <Text style={styles.readOnlyMeta}>{metadata.hseqManager}</Text>}
+              {editMode ? (
+                <SignatureField value={metadata.hseqSign} onChange={v => handleMetadataChange('hseqSign', v)} editable={true} width={260} height={80} />
+              ) : (
+                metadata.hseqSign ? (
+                  <SignatureThumb uri={String(metadata.hseqSign).startsWith('data:') ? metadata.hseqSign : `data:image/png;base64,${metadata.hseqSign}`} width={260} height={80} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.readOnlyMeta}>{metadata.hseqManager}</Text>
+                )
+              )}
             </View>
             <View style={styles.verCell}>
               <Text style={styles.verLabel}>Complex Manager:</Text>
-              {editMode ? <TextInput value={metadata.complexManager} editable={true} onChangeText={(t)=>{ handleMetadataChange('complexManager',t); }} style={styles.verInput} /> : <Text style={styles.readOnlyMeta}>{metadata.complexManager}</Text>}
+              {editMode ? (
+                <SignatureField value={metadata.complexManagerSign} onChange={v => handleMetadataChange('complexManagerSign', v)} editable={true} width={260} height={80} />
+              ) : (
+                metadata.complexManagerSign ? (
+                  <SignatureThumb uri={String(metadata.complexManagerSign).startsWith('data:') ? metadata.complexManagerSign : `data:image/png;base64,${metadata.complexManagerSign}`} width={260} height={80} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.readOnlyMeta}>{metadata.complexManager}</Text>
+                )
+              )}
             </View>
           </View>
 

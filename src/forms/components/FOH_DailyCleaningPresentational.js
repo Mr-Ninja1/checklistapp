@@ -7,8 +7,28 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
   const timeSlots = payload.timeSlots || ['15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
 
   const hints = layoutHints || {};
-  const tableW = payload._tableWidth || 900;
-  const col = (k, defaultW) => ({ width: hints[k] || defaultW });
+  // calculate a sensible table width based on column defaults so horizontal scroll
+  // will always allow viewing the last columns (eg. SUP SIGN)
+  const defaultWidths = {
+    EQUIPMENT: 140,
+    PPM: 60,
+    TIME_SLOT: 48,
+    STAFF_NAME: 120,
+    SIGNATURE: 120,
+    SUP_NAME: 90,
+    SUP_SIGN: 80,
+  };
+  const slotCount = (payload.timeSlots || timeSlots).length;
+  const computedTableW = (hints.EQUIPMENT || defaultWidths.EQUIPMENT)
+    + (hints.PPM || defaultWidths.PPM)
+    + slotCount * (hints.TIME_SLOT || defaultWidths.TIME_SLOT)
+    + (hints.STAFF_NAME || defaultWidths.STAFF_NAME)
+    + (hints.SIGNATURE || defaultWidths.SIGNATURE)
+    + (hints.SUP_NAME || defaultWidths.SUP_NAME)
+    + (hints.SUP_SIGN || defaultWidths.SUP_SIGN)
+    + 40; // padding
+  const tableW = payload._tableWidth || computedTableW;
+  const col = (k, defaultW) => ({ width: hints[k] || defaultWidths[k] || defaultW });
 
   // Flexible metadata extraction with safe fallbacks
   const md = metadata || {};
@@ -19,9 +39,18 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
   const managerSign = md.complexManagerSign || md.managerSign || md.complex_manager_sign || '';
   const tickAfterCleaning = md.tickAfterCleaning || md.tick || md.ticked || false;
 
+  const renderSignatureCell = (val, w = 120, h = 60) => {
+    if (!val) return <Text style={styles.metaValue}> </Text>;
+    const s = String(val);
+    const uri = s.startsWith('data:') ? s : `data:image/png;base64,${s}`;
+    return <Image source={{ uri }} style={{ width: w, height: h, resizeMode: 'contain' }} />;
+  };
+
   return (
-    <ScrollView style={styles.container} horizontal={true}>
-      <View style={{ minWidth: tableW }}>
+    // Page wrapper: vertical scrolling for the form. The table below is a
+    // dedicated horizontal ScrollView so horizontal drags are handled there.
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 24 }}>
+      <View style={{ width: '100%' }}>
         {/* Header: logo left, centered title */}
         <View style={styles.headerTop}>
           {payload.assets?.logoDataUri ? (
@@ -53,13 +82,28 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
             <Text style={styles.metaLabel}>Shift:</Text>
             <Text style={styles.metaValue}>{shift}</Text>
           </View>
-          <View style={styles.metaRight}>
-            <Text style={styles.metaLabel}>Verified By:</Text>
-            <Text style={styles.metaValue}>{verifiedBy}</Text>
+
+          {/* Verified By: render the signature inline next to the label/value */}
+          <View style={[styles.metaRight, styles.inlineSignatureRow]}>
+            <View style={{ flexDirection: 'column', flex: 1 }}>
+              <Text style={styles.metaLabel}>Verified By:</Text>
+              <Text style={styles.metaValue}>{verifiedBy}</Text>
+            </View>
+            {md.verifiedBySign ? (
+              <View style={{ marginLeft: 8, alignItems: 'center', justifyContent: 'center' }}>
+                {renderSignatureCell(md.verifiedBySign, 140, 60)}
+              </View>
+            ) : null}
           </View>
-          <View style={[styles.metaFull, { marginTop: 6 }]}>
-            <Text style={styles.metaLabel}>COMPLEX MANAGER SIGN:</Text>
-            <Text style={[styles.metaValue, styles.managerSign]}>{managerSign}</Text>
+
+          {/* Complex manager sign: show label and manager signature inline to the right */}
+          <View style={[styles.metaManagerInline]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.metaLabel}>COMPLEX MANAGER SIGN:</Text>
+            </View>
+            <View style={{ marginLeft: 8, alignItems: 'center', justifyContent: 'center' }}>
+              {managerSign ? renderSignatureCell(managerSign, 220, 80) : <Text style={[styles.metaValue, styles.managerSign]}>{managerSign}</Text>}
+            </View>
           </View>
           {tickAfterCleaning ? (
             <View style={styles.tickBadgeInline}>
@@ -68,30 +112,59 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
           ) : null}
         </View>
 
-        {/* Table header */}
-        <View style={[styles.headerRow, styles.tableBorder] }>
-          <Text style={[styles.headerCell, col('EQUIPMENT', 140)]}>EQUIPMENT</Text>
-          <Text style={[styles.headerCell, col('PPM', 60)]}>SANITIZER -VEG WASH (PPM?)</Text>
-          {timeSlots.map(t => <Text key={t} style={[styles.headerCell, col('TIME_SLOT', 48)]}>{t}</Text>)}
-          <Text style={[styles.headerCell, col('STAFF_NAME', 120)]}>STAFF NAME</Text>
-          <Text style={[styles.headerCell, col('SIGNATURE', 120)]}>STAFF SIGN</Text>
-          <Text style={[styles.headerCell, col('SUP_NAME', 90)]}>SUP NAME</Text>
-          <Text style={[styles.headerCell, col('SUP_SIGN', 80)]}>SUP SIGN</Text>
-        </View>
+        {/* Table area: horizontally scrollable table (draggable header and rows) */}
+        <ScrollView
+          horizontal
+          nestedScrollEnabled
+          showsHorizontalScrollIndicator={true}
+          directionalLockEnabled={true}
+          // capture start touches so dragging anywhere inside the table area
+          // (not only on the header) will begin horizontal scrolling
+          onStartShouldSetResponderCapture={() => true}
+          contentContainerStyle={{ width: tableW, alignItems: 'flex-start' }}
+          style={[styles.tableWrapper, { width: '100%' }]}
+        >
+          <View style={[styles.table, { width: tableW, alignSelf: 'flex-start' }]} pointerEvents="box-none">
+            <View style={[styles.headerRow, { width: tableW }]}>
+              <View style={[styles.hCell, { width: col('EQUIPMENT', 140).width }]}><Text style={styles.hText}>EQUIPMENT</Text></View>
+              <View style={[styles.hCell, { width: col('PPM', 60).width }]}><Text style={styles.hText}>SANITIZER (PPM)</Text></View>
+              <View style={{ width: (timeSlots.length || 0) * col('TIME_SLOT', 48).width }}>
+                <View style={[styles.hCellMainTime]}>
+                  <Text style={styles.hText}>TIME INTERVAL</Text>
+                </View>
+                <View style={[styles.timeSubRow, { flexDirection: 'row' }]}> 
+                  {timeSlots.map((t, i) => (
+                    <View key={i} style={[styles.hCell, { width: col('TIME_SLOT', 48).width }]}>
+                      <Text style={styles.hTextSmall}>{t.replace(/(AM|PM)/,'')}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+              <View style={[styles.hCell, { width: col('STAFF_NAME', 120).width }]}><Text style={styles.hText}>STAFF NAME</Text></View>
+              <View style={[styles.hCell, { width: col('SIGNATURE', 120).width }]}><Text style={styles.hText}>STAFF SIGN</Text></View>
+              <View style={[styles.hCell, { width: col('SUP_NAME', 90).width }]}><Text style={styles.hText}>SUP NAME</Text></View>
+              <View style={[styles.hCell, { width: col('SUP_SIGN', 80).width }]}><Text style={styles.hText}>SUP SIGN</Text></View>
+            </View>
 
-        {formData.map((row, idx) => (
-          <View key={row.id || idx} style={[styles.row, styles.tableBorderRow]}>
-            <Text style={[styles.cell, styles.left, col('EQUIPMENT', 140)]}>{row.name}</Text>
-            <Text style={[styles.cell, col('PPM', 60)]}>{row.ppm ?? ''}</Text>
-            {(timeSlots).map(t => (
-              <Text key={t} style={[styles.cell, col('TIME_SLOT', 48)]}>{row.times && row.times[t] ? '✓' : ''}</Text>
+            {(formData.length ? formData : Array.from({ length: 8 }).map((_,i)=>({ name: '', ppm: '', times: {}, staffName: '', staffSign: '', supName: '', supSign: '' }))).map((row, rIdx) => (
+              <View key={rIdx} style={[styles.row, { width: tableW }]}>
+                <View style={[styles.cell, { width: col('EQUIPMENT', 140).width }]}><Text style={styles.cellText}>{row.name}</Text></View>
+                <View style={[styles.cell, { width: col('PPM', 60).width }]}><Text style={styles.cellText}>{row.ppm ?? ''}</Text></View>
+                <View style={{ flexDirection: 'row', width: (timeSlots.length || 0) * col('TIME_SLOT', 48).width }}>{timeSlots.map((t, ti) => (
+                  <View key={ti} style={[styles.cell, { width: col('TIME_SLOT', 48).width }]}>
+                    <View style={[styles.checkbox, row.times && row.times[t] ? styles.checkboxChecked : null]}>
+                      {row.times && row.times[t] ? <Text style={styles.checkMark}>✓</Text> : null}
+                    </View>
+                  </View>
+                ))}</View>
+                <View style={[styles.cell, { width: col('STAFF_NAME', 120).width }]}><Text style={styles.cellText}>{row.staffName || ''}</Text></View>
+                <View style={[styles.cell, { width: col('SIGNATURE', 120).width, alignItems: 'center' }]}>{row.staffSign ? renderSignatureCell(row.staffSign, col('SIGNATURE', 120).width - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
+                <View style={[styles.cell, { width: col('SUP_NAME', 90).width }]}><Text style={styles.cellText}>{row.SUPName || row.slipName || row.supName || ''}</Text></View>
+                <View style={[styles.cell, { width: col('SUP_SIGN', 80).width, alignItems: 'center' }]}>{row.supSign ? renderSignatureCell(row.supSign, col('SUP_SIGN', 80).width - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
+              </View>
             ))}
-            <Text style={[styles.cell, col('STAFF_NAME', 120)]}>{row.staffName || ''}</Text>
-            <Text style={[styles.cell, col('SIGNATURE', 120)]}>{row.staffSign || ''}</Text>
-            <Text style={[styles.cell, col('SUP_NAME', 90)]}>{row.SUPName || row.slipName || row.supName || ''}</Text>
-            <Text style={[styles.cell, col('SUP_SIGN', 80)]}>{row.supSign || ''}</Text>
           </View>
-        ))}
+        </ScrollView>
       </View>
     </ScrollView>
   );
@@ -99,10 +172,11 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
 
 const styles = StyleSheet.create({
   container: { backgroundColor: '#fff' },
-  headerRow: { flexDirection: 'row', backgroundColor: '#eee', padding: 8, borderBottomWidth: 1, borderColor: '#ccc' },
+  headerRow: { flexDirection: 'row', backgroundColor: '#eee', padding: 8, borderBottomWidth: 1, borderColor: '#ccc', alignItems: 'center' },
   headerCell: { minWidth: 80, paddingHorizontal: 6, fontWeight: '700', textAlign: 'center' },
-  row: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: 0, borderColor: '#eee' },
-  cell: { minWidth: 80, paddingHorizontal: 6, textAlign: 'center' },
+  row: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#e5e7eb', minHeight: 40, alignItems: 'center' },
+  // center content so checkboxes align with header subcells; add right border to match header
+  cell: { padding: 6, borderRightWidth: 1, borderColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
   left: { textAlign: 'left', paddingLeft: 12 },
   headerTop: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderBottomWidth: 1, borderColor: '#eee' },
   logo: { width: 64, height: 48, marginRight: 12 },
@@ -123,4 +197,20 @@ const styles = StyleSheet.create({
   tickText: { color: '#1b8a3e', fontWeight: '700' },
   tableBorder: { borderWidth: 1, borderColor: '#ccc' },
   tableBorderRow: { borderBottomWidth: 1, borderColor: '#e6e6e6' },
+  inlineSignatureRow: { flexDirection: 'row', alignItems: 'center' },
+  metaManagerInline: { flexDirection: 'row', alignItems: 'center', width: '40%', paddingRight: 8 },
+  /* Additional table/header styles used by the horizontal table renderer */
+  tableWrapper: { marginTop: 12 },
+  table: { backgroundColor: '#fff' },
+  hCell: { padding: 6, borderRightWidth: 1, borderColor: '#4B5563', justifyContent: 'center', alignItems: 'center' },
+  hText: { fontSize: 12, fontWeight: '800', color: '#111827', textAlign: 'center' },
+  hTextSmall: { fontSize: 11, fontWeight: '700', color: '#111827', textAlign: 'center' },
+  hCellMainTime: { height: 28, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f7f7f7', borderRightWidth: 1, borderColor: '#eee' },
+  timeSubRow: { height: 36 },
+  cellText: { textAlign: 'left', paddingLeft: 6, color: '#111827' },
+  underline: { color: '#9CA3AF', fontWeight: '700' },
+  checkbox: { width: 28, height: 28, borderWidth: 1.5, borderColor: '#4B5563', borderRadius: 4, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6fff6' },
+  checkboxChecked: { backgroundColor: '#1f8f1f', borderColor: '#1f8f1f' },
+  checkMark: { color: '#fff', fontWeight: '800' },
 });
+

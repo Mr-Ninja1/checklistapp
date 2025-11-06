@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TextInput, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -118,9 +119,9 @@ export default function PreShiftMeetingRegister() {
   const [cells, setCells] = useState(() => {
     const state = { left: {}, right: {} };
     // Initialize 10 rows for the left table
-    for (let i = 1; i <= 10; i++) state.left[i] = { name: '', job: '', sign: '' }; 
+  for (let i = 1; i <= 10; i++) state.left[i] = { name: '', job: '', sign: '' }; 
     // Initialize 10 rows for the right table (indices 11 to 20)
-    for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' }; 
+  for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' }; 
     return state;
   });
 
@@ -262,13 +263,39 @@ export default function PreShiftMeetingRegister() {
               <View style={styles.colSn}><Text style={styles.cellText}>{n}.</Text></View>
               <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.left[n]?.name} onChangeText={(t) => updateCell('left', n, 'name', t)} placeholder="" editable={editMode} /></View>
               <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.left[n]?.job} onChangeText={(t) => updateCell('left', n, 'job', t)} placeholder="" editable={editMode} /></View>
-              <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.left[n]?.sign} onChangeText={(t) => updateCell('left', n, 'sign', t)} placeholder="" editable={editMode} /></View>
+              <View style={styles.colSign}>
+                {editMode ? (
+                  <SignatureField
+                    value={cells.left[n]?.sign}
+                    onChange={(v) => updateCell('left', n, 'sign', v)}
+                    editable={editMode}
+                    width={140}
+                    height={40}
+                    placeholder="Tap to sign"
+                  />
+                ) : (
+                  cells.left[n]?.sign ? <Image source={{ uri: (String(cells.left[n].sign).startsWith('data:') ? cells.left[n].sign : `data:image/png;base64,${cells.left[n].sign}`) }} style={{ width: 140, height: 40, resizeMode: 'contain' }} /> : <Text style={styles.cellText}>{cells.left[n]?.sign}</Text>
+                )}
+              </View>
 
               {/* Right Table Data (Rows 11-20) - separated by a gap */}
               <View style={[styles.colSn, styles.gap]}><Text style={styles.cellText}>{n + 10}.</Text></View>
               <View style={styles.colName}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.name} onChangeText={(t) => updateCell('right', n + 10, 'name', t)} placeholder="" editable={editMode} /></View>
               <View style={styles.colJob}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.job} onChangeText={(t) => updateCell('right', n + 10, 'job', t)} placeholder="" editable={editMode} /></View>
-              <View style={styles.colSign}><TextInput style={styles.cellInput} value={cells.right[n + 10]?.sign} onChangeText={(t) => updateCell('right', n + 10, 'sign', t)} placeholder="" editable={editMode} /></View>
+              <View style={styles.colSign}>
+                {editMode ? (
+                  <SignatureField
+                    value={cells.right[n + 10]?.sign}
+                    onChange={(v) => updateCell('right', n + 10, 'sign', v)}
+                    editable={editMode}
+                    width={140}
+                    height={40}
+                    placeholder="Tap to sign"
+                  />
+                ) : (
+                  cells.right[n + 10]?.sign ? <Image source={{ uri: (String(cells.right[n + 10].sign).startsWith('data:') ? cells.right[n + 10].sign : `data:image/png;base64,${cells.right[n + 10].sign}`) }} style={{ width: 140, height: 40, resizeMode: 'contain' }} /> : <Text style={styles.cellText}>{cells.right[n + 10]?.sign}</Text>
+                )}
+              </View>
             </View>
           ))}
         </View>

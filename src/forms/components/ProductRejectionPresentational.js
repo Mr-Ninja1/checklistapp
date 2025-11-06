@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import ResponsiveTable from '../../components/ResponsiveTable';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function ProductRejectionPresentational({ payload }) {
   if (!payload) return null;
@@ -41,8 +42,24 @@ export default function ProductRejectionPresentational({ payload }) {
         </View>
       </View>
       <View style={styles.compiledRow}>
-        <View style={styles.compiledItem}><Text style={styles.compiledLabel}>Compiled By:</Text><Text style={styles.compiledValue}>Michael Zulu C.</Text></View>
-        <View style={styles.compiledItem}><Text style={styles.compiledLabel}>Approved By:</Text><Text style={styles.compiledValue}>Hassani Ali</Text></View>
+        <View style={styles.compiledItem}>
+          <Text style={styles.compiledLabel}>Compiled By:</Text>
+          {(() => {
+            const v = payload.compiledBySign || (payload.metadata && payload.metadata.compiledBySign) || payload.compiledBy || (payload.metadata && payload.metadata.compiledBy) || '';
+            const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+            const name = payload.compiledBy || (payload.metadata && payload.metadata.compiledBy) || 'Michael Zulu C.';
+            return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.compiledValue}>{name}</Text>;
+          })()}
+        </View>
+        <View style={styles.compiledItem}>
+          <Text style={styles.compiledLabel}>Approved By:</Text>
+          {(() => {
+            const v = payload.approvedBySign || (payload.metadata && payload.metadata.approvedBySign) || payload.approvedBy || (payload.metadata && payload.metadata.approvedBy) || '';
+            const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+            const name = payload.approvedBy || (payload.metadata && payload.metadata.approvedBy) || 'Hassani Ali';
+            return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.compiledValue}>{name}</Text>;
+          })()}
+        </View>
       </View>
       <View style={styles.criteriaBox}>
         <Text style={styles.criteriaTitle}>Criteria for Rejecting the product</Text>
@@ -80,10 +97,57 @@ export default function ProductRejectionPresentational({ payload }) {
         </ResponsiveTable>
       </View>
       <View style={styles.signatures}>
-        <View style={styles.sigRow}><Text style={styles.sigLabel}>Name & signature of stores Officer:</Text><Text style={styles.sigInput}>{storeOfficer}</Text></View>
-        <View style={styles.sigRow}><Text style={styles.sigLabel}>Verified by complex manager (Name & signature):</Text><Text style={styles.sigInput}>{complexManager}</Text></View>
-        <View style={styles.sigRow}><Text style={styles.sigLabel}>Approved by (Finance and stock controller):</Text><Text style={styles.sigInput}>{financeStockController}</Text></View>
-        <View style={styles.sigRow}><Text style={styles.sigLabel}>Rejected product collected by (Name & signature):</Text><Text style={styles.sigInput}>{rejectedProductCollector}</Text></View>
+        <View style={styles.sigRow}>
+          <Text style={styles.sigLabel}>Name & signature of stores Officer:</Text>
+          {payload.storeOfficerSign ? (
+            (() => {
+              const v = payload.storeOfficerSign;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={styles.sigInput}>{v || ''}</Text>;
+            })()
+          ) : (
+            <Text style={styles.sigInput}>{storeOfficer}</Text>
+          )}
+        </View>
+
+        <View style={styles.sigRow}>
+          <Text style={styles.sigLabel}>Verified by complex manager (Name & signature):</Text>
+          {payload.complexManagerSign ? (
+            (() => {
+              const v = payload.complexManagerSign;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={styles.sigInput}>{v || ''}</Text>;
+            })()
+          ) : (
+            <Text style={styles.sigInput}>{complexManager}</Text>
+          )}
+        </View>
+
+        <View style={styles.sigRow}>
+          <Text style={styles.sigLabel}>Approved by (Finance and stock controller):</Text>
+          {payload.financeStockControllerSign ? (
+            (() => {
+              const v = payload.financeStockControllerSign;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={styles.sigInput}>{v || ''}</Text>;
+            })()
+          ) : (
+            <Text style={styles.sigInput}>{financeStockController}</Text>
+          )}
+        </View>
+
+        <View style={styles.sigRow}>
+          <Text style={styles.sigLabel}>Rejected product collected by (Name & signature):</Text>
+          {payload.rejectedProductCollectorSign ? (
+            (() => {
+              const v = payload.rejectedProductCollectorSign;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={styles.sigInput}>{v || ''}</Text>;
+            })()
+          ) : (
+            <Text style={styles.sigInput}>{rejectedProductCollector}</Text>
+          )}
+        </View>
       </View>
     </ScrollView>
   );

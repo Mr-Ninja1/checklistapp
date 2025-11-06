@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function EggsReceivingPresentational({ payload }) {
   if (!payload) return null;
@@ -105,7 +106,15 @@ export default function EggsReceivingPresentational({ payload }) {
             </View>
             <View style={styles.deliveryPair}>
               <Text style={styles.deliveryLabel}>Signature:</Text>
-              <Text style={[styles.deliveryValue, { flex: 1 }]}>{meta.signature || ''}</Text>
+              {meta.signature ? (
+                (() => {
+                  const v = meta.signature;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={[styles.deliveryValue, { flex: 1 }]}>{v || ''}</Text>;
+                })()
+              ) : (
+                <Text style={[styles.deliveryValue, { flex: 1 }]}>{meta.signature || ''}</Text>
+              )}
             </View>
           </View>
         </View>
@@ -148,7 +157,32 @@ export default function EggsReceivingPresentational({ payload }) {
 
         <View style={styles.verificationFooter}>
           <Text style={styles.verificationText}>VERIFIED BY</Text>
-          <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.deliveryLabel}>Verified By</Text>
+              {meta.verifiedBySign ? (
+                (() => {
+                  const v = meta.verifiedBySign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={220} height={80} layers={6} spread={1.0} /> : <Text style={styles.deliveryValue}>{v || ''}</Text>;
+                })()
+              ) : (
+                <Text style={styles.deliveryValue}>{meta.verifiedBy || ''}</Text>
+              )}
+            </View>
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={styles.deliveryLabel}>HSEQ Manager</Text>
+              {meta.hseqManagerSign ? (
+                (() => {
+                  const v = meta.hseqManagerSign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={220} height={80} layers={6} spread={1.0} /> : <Text style={styles.deliveryValue}>{v || ''}</Text>;
+                })()
+              ) : (
+                <Text style={styles.deliveryValue}>{meta.hseqManager || ''}</Text>
+              )}
+            </View>
+          </View>
         </View>
         </View>
       </ScrollView>

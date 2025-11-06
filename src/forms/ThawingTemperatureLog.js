@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import { Asset } from 'expo-asset';
@@ -24,7 +25,9 @@ const initialMeta = {
     issueDate: '',
     compiledBy: 'Michael C. Zulu',
     approvedBy: 'Hassani Ali',
+    chefSignature: '',
     complexManagerSignature: '',
+    hseqManagerSignature: '',
 };
 
 export default function ThawingTemperatureLog() {
@@ -228,21 +231,48 @@ export default function ThawingTemperatureLog() {
                 </View>
 
                 <View style={styles.footerSection}>
-                    <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-                        <TextInput style={styles.signatureInput} value={meta.chefSignature} onChangeText={v => setMetaField('chefSignature', v)} placeholder="" />
-                    </View>
+                        <View style={{ marginBottom: 12 }}>
+                            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
+                            {editMode ? (
+                                <SignatureField value={meta.chefSignature} onChange={v => setMetaField('chefSignature', v)} editable={editMode} width={220} height={80} />
+                            ) : (
+                                meta.chefSignature ? (
+                                    <Image source={{ uri: String(meta.chefSignature).startsWith('data:') ? meta.chefSignature : `data:image/png;base64,${meta.chefSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
+                                ) : (
+                                    <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.chefSignature}</Text>
+                                )
+                            )}
+                        </View>
 
-                    <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Corrective Action:</Text>
-                        <TextInput style={styles.textarea} value={meta.correctiveAction} onChangeText={v => setMetaField('correctiveAction', v)} placeholder="Document corrective action" multiline numberOfLines={4} />
-                    </View>
+                        <View style={{ marginBottom: 12 }}>
+                            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Corrective Action:</Text>
+                            <TextInput style={styles.textarea} value={meta.correctiveAction} onChangeText={v => setMetaField('correctiveAction', v)} placeholder="Document corrective action" multiline numberOfLines={4} />
+                        </View>
 
-                    <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12, marginLeft: 16 }}>Complex Manager Signature:</Text>
-                        <TextInput style={styles.signatureInput} value={meta.complexManagerSignature} onChangeText={v => setMetaField('complexManagerSignature', v)} placeholder="" />
-                    </View>
+                        <View style={{ marginBottom: 12 }}>
+                            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
+                            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12, marginLeft: 16 }}>Complex Manager Signature:</Text>
+                            {editMode ? (
+                                <SignatureField value={meta.complexManagerSignature} onChange={v => setMetaField('complexManagerSignature', v)} editable={editMode} width={220} height={80} />
+                            ) : (
+                                meta.complexManagerSignature ? (
+                                    <Image source={{ uri: String(meta.complexManagerSignature).startsWith('data:') ? meta.complexManagerSignature : `data:image/png;base64,${meta.complexManagerSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
+                                ) : (
+                                    <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.complexManagerSignature}</Text>
+                                )
+                            )}
+
+                            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12, marginLeft: 16, marginTop: 8 }}>HSEQ Manager Signature:</Text>
+                            {editMode ? (
+                                <SignatureField value={meta.hseqManagerSignature} onChange={v => setMetaField('hseqManagerSignature', v)} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
+                            ) : (
+                                meta.hseqManagerSignature ? (
+                                    <Image source={{ uri: String(meta.hseqManagerSignature).startsWith('data:') ? meta.hseqManagerSignature : `data:image/png;base64,${meta.hseqManagerSignature}` }} style={{ width: 220, height: 80, resizeMode: 'contain', marginTop: 6 }} />
+                                ) : (
+                                    <Text style={[styles.signatureInput, { fontSize: 12 }]}>{meta.hseqManagerSignature}</Text>
+                                )
+                            )}
+                        </View>
                 </View>
 
                 {/* spacer so content can scroll above the floating actionButtons */}

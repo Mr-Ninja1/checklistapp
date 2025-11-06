@@ -1,5 +1,21 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+const normalizeSignature = (v) => {
+  if (!v) return null;
+  if (typeof v !== 'string') return null;
+  if (v.startsWith('data:')) return v;
+  const compact = v.replace(/\s+/g, '');
+  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  return null;
+};
+
+const renderSignature = (val, textStyle = {}, thumbProps = {}) => {
+  const uri = normalizeSignature(val);
+  if (uri) return <SignatureThumb uri={uri} {...thumbProps} />;
+  return <Text style={textStyle}>{val || ''}</Text>;
+};
 
 const WEEK_DAYS = ['Sun','Mon','Tue','Wed','Thurs','Fri','Sat'];
 
@@ -55,9 +71,9 @@ export default function SculleryArea_CleaningChecklistPresentational({ payload }
 
           <View style={styles.verificationRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <Text style={styles.verificationValue}>{metadata.hseqManager || ''}</Text>
-            </View>
+                <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
+                {renderSignature(metadata.hseqManagerSignature || metadata.hseqManager || metadata.hseqManagerSign || '', styles.verificationValue, { width: 220, height: 44 })}
+              </View>
           </View>
 
           <ScrollView horizontal style={styles.tableScroll}>
@@ -107,13 +123,13 @@ export default function SculleryArea_CleaningChecklistPresentational({ payload }
           <View style={{ height: 24 }} />
           <View style={styles.signaturesRow}>
             <View style={styles.signatureCell}>
-              <Text style={styles.signatureLabel}>Compiled By:</Text>
-              <Text style={styles.signatureValue}>{metadata.compiledBy || ''}</Text>
-            </View>
-            <View style={styles.signatureCell}>
-              <Text style={styles.signatureLabel}>Approved By:</Text>
-              <Text style={styles.signatureValue}>{metadata.approvedBy || ''}</Text>
-            </View>
+                <Text style={styles.signatureLabel}>Compiled By:</Text>
+                {renderSignature(metadata.compiledBySignature || metadata.compiledBy || metadata.compiledBySign || '', styles.signatureValue, { width: 220, height: 48 })}
+              </View>
+              <View style={styles.signatureCell}>
+                <Text style={styles.signatureLabel}>Approved By:</Text>
+                {renderSignature(metadata.approvedBySignature || metadata.approvedBy || metadata.approvedBySign || '', styles.signatureValue, { width: 220, height: 48 })}
+              </View>
           </View>
         </View>
       </ScrollView>

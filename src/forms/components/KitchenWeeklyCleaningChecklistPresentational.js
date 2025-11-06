@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function KitchenWeeklyCleaningChecklistPresentational({ payload }) {
   if (!payload) return null;
@@ -66,8 +67,22 @@ export default function KitchenWeeklyCleaningChecklistPresentational({ payload }
         </ScrollView>
 
         <View style={styles.footerRow}>
-          <Text style={styles.footerText}>Verified By: {metadata.hseqManager || ''}</Text>
-          <Text style={styles.footerText}>Complex Manager: {metadata.complexManager || ''}</Text>
+          <View>
+            <Text style={[styles.footerText, { fontWeight: '700' }]}>Verified By:</Text>
+            {metadata.hseqSign ? (
+              <SignatureThumb uri={String(metadata.hseqSign).startsWith('data:') ? metadata.hseqSign : `data:image/png;base64,${metadata.hseqSign}`} width={160} height={60} layers={6} spread={0.9} />
+            ) : (
+              <Text style={styles.footerText}>{metadata.hseqManager || ''}</Text>
+            )}
+          </View>
+          <View>
+            <Text style={[styles.footerText, { fontWeight: '700' }]}>Complex Manager:</Text>
+            {metadata.complexManagerSign ? (
+              <SignatureThumb uri={String(metadata.complexManagerSign).startsWith('data:') ? metadata.complexManagerSign : `data:image/png;base64,${metadata.complexManagerSign}`} width={160} height={60} layers={6} spread={0.9} />
+            ) : (
+              <Text style={styles.footerText}>{metadata.complexManager || ''}</Text>
+            )}
+          </View>
         </View>
       </View>
     </ScrollView>

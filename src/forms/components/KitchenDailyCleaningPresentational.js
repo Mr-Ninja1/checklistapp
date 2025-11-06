@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function KitchenDailyCleaningPresentational({ payload }) {
   if (!payload) return null;
@@ -70,9 +71,17 @@ export default function KitchenDailyCleaningPresentational({ payload }) {
                   ))}
                 </View>
                 <View style={[styles.cell, { width: COL.STAFF_NAME || 120 }]}><Text>{row.staffName || ''}</Text></View>
-                <View style={[styles.cell, { width: COL.SIGNATURE || 120 }]}><Text>{row.staffSign || ''}</Text></View>
+                <View style={[styles.cell, { width: COL.SIGNATURE || 120 }]}>
+                  {row.staffSign ? (
+                    <SignatureThumb uri={String(row.staffSign).startsWith('data:') ? row.staffSign : `data:image/png;base64,${row.staffSign}`} width={(COL.SIGNATURE || 120) - 20} height={44} layers={6} spread={0.9} />
+                  ) : <Text>{''}</Text>}
+                </View>
                 <View style={[styles.cell, { width: COL.SLIP_NAME || 140 }]}><Text>{row.slipName || ''}</Text></View>
-                <View style={[styles.cell, { width: COL.SUP_SIGN || 140 }]}><Text>{row.supSign || ''}</Text></View>
+                <View style={[styles.cell, { width: COL.SUP_SIGN || 140 }]}>
+                  {row.supSign ? (
+                    <SignatureThumb uri={String(row.supSign).startsWith('data:') ? row.supSign : `data:image/png;base64,${row.supSign}`} width={(COL.SUP_SIGN || 140) - 20} height={44} layers={6} spread={0.9} />
+                  ) : <Text>{''}</Text>}
+                </View>
               </View>
             ))}
           </View>

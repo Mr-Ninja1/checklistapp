@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, Animated, Easing } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function PastInspectionFormPresentational({ payload }) {
   if (!payload) return null;
@@ -51,9 +52,16 @@ export default function PastInspectionFormPresentational({ payload }) {
         </View>
       </View>
 
-      <View style={styles.metaRow}>
-        <Text style={styles.metaLabel}>Compiled By: {meta.compiledBy || ''}</Text>
-        <Text style={styles.metaLabel}>Approved By: {meta.approvedBy || ''}</Text>
+      {/* Approved By display (show signature if available) */}
+      <View style={styles.headerMetaRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.metaLabel}>Approved By:</Text>
+          {(() => {
+            const v = meta.approvedBySign || meta.approvedBy || '';
+            const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+            return uri ? <SignatureThumb uri={uri} width={200} height={60} layers={6} spread={1.0} /> : <Text style={styles.metaLabel}>{String(meta.approvedBy || '')}</Text>;
+          })()}
+        </View>
       </View>
 
       <Animated.View style={[styles.table, { transform: [{ translateX }] }] }>
@@ -86,11 +94,28 @@ export default function PastInspectionFormPresentational({ payload }) {
                 <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{r.inspector}</Text>
               </View>
               <View style={[styles.dataCell, { width: widths[6], borderRightWidth: 0 }]}> 
-                <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{r.sign}</Text>
+                {(() => {
+                  const v = r.sign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={Math.max(72, widths[6] - 12)} height={60} layers={5} spread={0.8} /> : <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{r.sign}</Text>;
+                })()}
               </View>
           </View>
         ))}
       </Animated.View>
+      <View style={styles.verificationFooter}>
+        <Text style={styles.verificationText}>VERIFIED BY</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 6 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.metaLabel}>HSEQ Manager</Text>
+            {(() => {
+              const v = meta.hseqManagerSign || meta.hseqManager || '';
+              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+              return uri ? <SignatureThumb uri={uri} width={220} height={80} layers={6} spread={1.0} /> : <Text style={styles.metaLabel}>{String(meta.hseqManager || '')}</Text>;
+            })()}
+          </View>
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -103,6 +128,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   metaLabel: { fontSize: 12 },
+  headerMetaRow: { flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 8 },
+  verificationFooter: { marginTop: 12 },
+  verificationText: { fontWeight: '700', fontSize: 12, marginBottom: 6 },
 
   // table container: solid border around the table for print
   table: { borderWidth: 1, borderColor: '#000', overflow: 'hidden' },

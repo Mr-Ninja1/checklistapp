@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -30,7 +32,7 @@ const initialCleaningState = DRY_STORAGE_LIST.filter(i => i.isItem).map((item, i
 
 const initialMetadata = {
   location: 'WAREHOUSE AREA', week: '', month: '', year: '',
-  issueDate: '', compiledBy: 'Michael Zulu C.', approvedBy: 'Hassani Ali', hseqManager: ''
+  issueDate: '', compiledBy: 'Michael Zulu C.', compiledBySign: '', approvedBy: 'Hassani Ali', approvedBySign: '', hseqManager: '', hseqSign: ''
 };
 
 const Checkbox = ({ checked, onPress }) => (
@@ -228,7 +230,15 @@ export default function DryStorageChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} editable={editMode} />
+              {editMode ? (
+                <SignatureField value={metadata.hseqSign} onChange={v => handleMetadataChange('hseqSign', v)} editable={true} width={260} height={80} />
+              ) : (
+                metadata.hseqSign ? (
+                  <SignatureThumb uri={String(metadata.hseqSign).startsWith('data:') ? metadata.hseqSign : `data:image/png;base64,${metadata.hseqSign}`} width={260} height={80} layers={6} spread={1.0} />
+                ) : (
+                  <Text style={styles.verificationValue}>{metadata.hseqManager || ''}</Text>
+                )
+              )}
             </View>
           </View>
 

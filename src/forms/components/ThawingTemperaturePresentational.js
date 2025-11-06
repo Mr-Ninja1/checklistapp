@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function ThawingTemperaturePresentational({ payload }) {
   if (!payload) return null;
@@ -125,6 +126,33 @@ export default function ThawingTemperaturePresentational({ payload }) {
     WIDTHS.SIGN = (WIDTHS.SIGN || 40) + (transfer - perT * 2);
   }
 
+  // helper: resolve legacy base64 or data: URIs and render helper
+  const resolveSignatureUri = (val) => {
+    if (!val) return null;
+    if (typeof val !== 'string') return null;
+    const s = val.trim();
+    if (!s) return null;
+    if (s.startsWith('data:')) return s;
+    // heuristic: long, no-space base64 blob -> image/png
+    const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+    const compact = s.replace(/\s+/g, '');
+    if (compact.length > 100 && base64ish.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  };
+
+  const renderSignatureCell = (val, cellWidth) => {
+    const uri = resolveSignatureUri(val);
+    if (!uri) return <Text style={styles.cellText}>{''}</Text>;
+    // Make cell signatures much more visible: larger height and heavier layering
+    const w = Math.max(60, (cellWidth || 120) - 4);
+    const h = 56; // intentionally oversized for visibility
+    return (
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <SignatureThumb uri={uri} width={w} height={h} layers={14} spread={1.6} />
+      </View>
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
@@ -185,15 +213,15 @@ export default function ThawingTemperaturePresentational({ payload }) {
 
               <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
               <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign1 || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign1, WIDTHS.SIGN)}</View>
 
               <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
               <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign2 || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign2, WIDTHS.SIGN)}</View>
 
               <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
               <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.cellText}>{r.sign3 || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign3, WIDTHS.SIGN)}</View>
 
               <View style={[styles.cellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
             </View>
@@ -206,7 +234,11 @@ export default function ThawingTemperaturePresentational({ payload }) {
         <View style={styles.footerSection}>
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-            <Text style={styles.signatureLine}>{metadata.chefSignature || '______________________________'}</Text>
+              {(() => {
+                const val = metadata.chefSign || metadata.chefSignature;
+                const uri = resolveSignatureUri(val);
+                return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={16} spread={1.8} /> : <Text style={styles.signatureLine}>{'______________________________'}</Text>;
+              })()}
           </View>
 
           <View style={{ marginBottom: 12 }}>
@@ -216,8 +248,36 @@ export default function ThawingTemperaturePresentational({ payload }) {
 
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
-            <Text style={{ marginTop: 8, fontSize: 12 }}>HSEQ Manager: {metadata.hseqManagerSignature || '______________________________'}</Text>
-            <Text style={{ marginTop: 8, fontSize: 12 }}>Complex Manager: {metadata.complexManagerSignature || '______________________________'}</Text>
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700' }}>HSEQ Manager:</Text>
+              {(() => {
+                const val = metadata.hseqManagerSignature || metadata.hseqManagerSign || metadata.hseqSign;
+                if (val) {
+                  const s = String(val).trim();
+                  const compact = s.replace(/\s+/g, '');
+                  const isData = s.startsWith('data:');
+                  const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+                  const uri = isData ? s : (compact.length > 100 && base64ish.test(compact) ? `data:image/png;base64,${compact}` : null);
+                  if (uri) return <SignatureThumb uri={uri} width={260} height={64} layers={14} spread={1.6} />;
+                }
+                return <Text style={{ marginTop: 8, fontSize: 12 }}>{'______________________________'}</Text>;
+              })()}
+            </View>
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700' }}>Complex Manager:</Text>
+              {(() => {
+                const val = metadata.complexManagerSignature;
+                if (val) {
+                  const s = String(val).trim();
+                  const compact = s.replace(/\s+/g, '');
+                  const isData = s.startsWith('data:');
+                  const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+                  const uri = isData ? s : (compact.length > 100 && base64ish.test(compact) ? `data:image/png;base64,${compact}` : null);
+                  if (uri) return <SignatureThumb uri={uri} width={260} height={64} layers={14} spread={1.6} />;
+                }
+                return <Text style={{ marginTop: 8, fontSize: 12 }}>{'______________________________'}</Text>;
+              })()}
+            </View>
           </View>
         </View>
       </View>

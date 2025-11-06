@@ -15,6 +15,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { getDraft } from '../utils/formDrafts';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 // --- STUBBED ASYNC STORAGE AND API UTILITIES ---
 // NOTE: Since this environment cannot access native AsyncStorage, these functions
@@ -352,13 +353,7 @@ export default function BakeryCleaningChecklist() {
                         <View style={styles.verificationField}>
                             <Text style={styles.verificationLabel}>Verified by: HSEQ Manager:</Text>
                             {editMode ? (
-                                <TextInput
-                                    value={verification.hseqManager}
-                                    onChangeText={(text) => handleVerificationChange('hseqManager', text)}
-                                    style={styles.verificationInput}
-                                    placeholder="Signature/Name"
-                                    editable={editMode}
-                                />
+                                <SignatureField value={verification.hseqManager} onChange={v => handleVerificationChange('hseqManager', v)} editable={editMode} width={260} height={80} placeholder="Tap to sign - HSEQ Manager" />
                             ) : (
                                 <Text style={styles.cellReadText}>{verification.hseqManager}</Text>
                             )}
@@ -366,13 +361,7 @@ export default function BakeryCleaningChecklist() {
                         <View style={styles.verificationField}>
                             <Text style={styles.verificationLabel}>COMPLEX MANAGER SIGN:</Text>
                             {editMode ? (
-                                <TextInput
-                                    value={verification.complexManager}
-                                    onChangeText={(text) => handleVerificationChange('complexManager', text)}
-                                    style={styles.verificationInput}
-                                    placeholder="Signature/Name"
-                                    editable={editMode}
-                                />
+                                <SignatureField value={verification.complexManager} onChange={v => handleVerificationChange('complexManager', v)} editable={editMode} width={260} height={80} placeholder="Tap to sign - Complex Manager" />
                             ) : (
                                 <Text style={styles.cellReadText}>{verification.complexManager}</Text>
                             )}

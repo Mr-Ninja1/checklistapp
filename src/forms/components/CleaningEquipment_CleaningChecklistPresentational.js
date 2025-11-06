@@ -1,5 +1,20 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+function normalizeSignature(v) {
+  if (!v) return null;
+  if (String(v).startsWith('data:')) return v;
+  const compact = String(v).replace(/\s+/g, '');
+  if (compact.length > 200) return `data:image/png;base64,${compact}`;
+  return null;
+}
+
+function renderMaybeSignature(v, style = {}) {
+  const uri = normalizeSignature(v);
+  if (uri) return <SignatureThumb uri={uri} style={style} />;
+  return <Text>{v || ''}</Text>;
+}
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
@@ -51,7 +66,7 @@ export default function CleaningEquipment_CleaningChecklistPresentational({ payl
           <View style={styles.verificationRow}>
             <View style={styles.verificationCell}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <Text style={styles.metaValue}>{meta.hseqManager || ''}</Text>
+              {renderMaybeSignature(meta.hseqSign || meta.hseqManager || '', { width: 240, height: 60 })}
             </View>
           </View>
         </View>

@@ -19,6 +19,8 @@ import NotificationModal from '../components/NotificationModal';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 
 const DRAFT_KEY = 'coldroom_freezer_room_cleaning_checklist_draft';
 
@@ -57,7 +59,7 @@ const Checkbox = ({ checked, onPress }) => (
 export default function ColdRoomFreezerChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
   const currentYear = new Date().getFullYear().toString();
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '' });
+  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '', hseqSign: '' });
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
@@ -248,7 +250,15 @@ export default function ColdRoomFreezerChecklist() {
           <View style={styles.verificationRow}>
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              <TextInput value={metadata.hseqManager} onChangeText={t => handleMetadataChange('hseqManager', t)} style={styles.verificationInput} />
+              {editMode ? (
+                <SignatureField value={metadata.hseqSign} onChange={v => handleMetadataChange('hseqSign', v)} editable={true} width={260} height={80} />
+              ) : (
+                metadata.hseqSign ? (
+                  <SignatureThumb uri={String(metadata.hseqSign).startsWith('data:') ? metadata.hseqSign : `data:image/png;base64,${metadata.hseqSign}`} width={260} height={80} layers={6} spread={0.9} />
+                ) : (
+                  <Text style={styles.verificationValue}>{metadata.hseqManager}</Text>
+                )
+              )}
             </View>
           </View>
 

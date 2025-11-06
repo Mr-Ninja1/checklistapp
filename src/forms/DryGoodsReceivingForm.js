@@ -5,6 +5,7 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 import ResponsiveTable from '../components/ResponsiveTable';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +45,8 @@ const DryGoodsReceivingForm = () => {
         vehicleRegNo: '',
         signature: '',
     });
+    const [verifiedBySign, setVerifiedBySign] = useState('');
+    const [hseqManagerSign, setHseqManagerSign] = useState('');
 
     // Save status (hook-provided)
     const [editMode, setEditMode] = useState(false);
@@ -122,6 +125,8 @@ const DryGoodsReceivingForm = () => {
                 versionNo,
                 revNo,
                 ...deliveryDetails,
+                verifiedBySign,
+                hseqManagerSign,
                 status,
             },
             formData: receivingData,
@@ -161,6 +166,8 @@ const DryGoodsReceivingForm = () => {
             vehicleRegNo: '',
             signature: '',
         });
+        setVerifiedBySign('');
+        setHseqManagerSign('');
     };
 
     return (
@@ -244,10 +251,15 @@ const DryGoodsReceivingForm = () => {
                             <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={t => updateDeliveryDetail('driversName', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
-                            <Text style={styles.deliveryLabel}>Vehicle Reg No.:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => updateDeliveryDetail('vehicleRegNo', t)} />
-                            <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={t => updateDeliveryDetail('signature', t)} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.deliveryLabel}>Vehicle Reg No.:</Text>
+                                <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => updateDeliveryDetail('vehicleRegNo', t)} />
+                            </View>
+
+                            <View style={{ width: 260, alignItems: 'flex-start' }}>
+                                <Text style={styles.deliveryLabel}>Signature:</Text>
+                                <SignatureField value={deliveryDetails.signature} onChange={(v) => updateDeliveryDetail('signature', v)} editable={editMode} width={240} height={80} placeholder="Tap to sign" />
+                            </View>
                         </View>
                     </View>
                     {/* ...existing code... */}
@@ -283,7 +295,16 @@ const DryGoodsReceivingForm = () => {
                     </View>
                     <View style={styles.verificationFooter}>
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
-                        <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontWeight: '700', marginBottom: 6 }}>Verified by:</Text>
+                                <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={220} height={80} placeholder="Tap to sign - Verified by" />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={{ fontWeight: '700', marginBottom: 6 }}>HSEQ Manager:</Text>
+                                <SignatureField value={hseqManagerSign} onChange={setHseqManagerSign} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
+                            </View>
+                        </View>
                     </View>
                     {/* --- Action buttons --- */}
                         <View style={{ height: 18 }} />

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function CookingTemperaturePresentational({ payload }) {
   if (!payload) return null;
@@ -109,7 +110,11 @@ export default function CookingTemperaturePresentational({ payload }) {
         <View style={styles.footerSection}>
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-            <Text style={styles.signatureLine}>{metadata.chefSignature || '______________________________'}</Text>
+            {metadata.chefSignature ? (
+              <SignatureThumb uri={String(metadata.chefSignature).startsWith('data:') ? metadata.chefSignature : `data:image/png;base64,${metadata.chefSignature}`} width={220} height={80} layers={8} spread={1.0} />
+            ) : (
+              <Text style={styles.signatureLine}>{'______________________________'}</Text>
+            )}
           </View>
 
           <View style={{ marginBottom: 12 }}>
@@ -119,8 +124,22 @@ export default function CookingTemperaturePresentational({ payload }) {
 
           <View style={{ marginBottom: 12 }}>
             <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
-            <Text style={{ marginTop: 8, fontSize: 12 }}>HSEQ Manager: {metadata.hseqManagerSignature || '______________________________'}</Text>
-            <Text style={{ marginTop: 8, fontSize: 12 }}>Complex Manager: {metadata.complexManagerSignature || '______________________________'}</Text>
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700' }}>HSEQ Manager:</Text>
+              {metadata.hseqManagerSignature ? (
+                <SignatureThumb uri={String(metadata.hseqManagerSignature).startsWith('data:') ? metadata.hseqManagerSignature : `data:image/png;base64,${metadata.hseqManagerSignature}`} width={220} height={80} layers={8} spread={1.0} />
+              ) : (
+                <Text style={{ marginTop: 4 }}>{'______________________________'}</Text>
+              )}
+            </View>
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700' }}>Complex Manager:</Text>
+              {metadata.complexManagerSignature ? (
+                <SignatureThumb uri={String(metadata.complexManagerSignature).startsWith('data:') ? metadata.complexManagerSignature : `data:image/png;base64,${metadata.complexManagerSignature}`} width={220} height={80} layers={8} spread={1.0} />
+              ) : (
+                <Text style={{ marginTop: 4 }}>{'______________________________'}</Text>
+              )}
+            </View>
           </View>
         </View>
       </View>

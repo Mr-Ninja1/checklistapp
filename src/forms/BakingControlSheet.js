@@ -8,6 +8,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
+import SignatureField from '../components/SignatureField';
 
 const DRAFT_KEY = 'baking_control_sheet_draft';
 
@@ -148,8 +149,22 @@ export default function BakingControlSheet({ navigation }) {
               </View>
           <View style={styles.subjectRow}><Text style={styles.subjectText}>Subject: BAKING CONTROL SHEET</Text></View>
           <View style={styles.signRow}>
-            <Text style={styles.metaSmall}>Compiled By: {metadata.compiledBy}</Text>
-            <Text style={styles.metaSmall}>Approved By: {metadata.approvedBy}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.metaSmall}>Compiled By:</Text>
+              {editMode ? (
+                <SignatureField value={metadata.compiledBy} onChange={v => setMetadata(prev => ({ ...prev, compiledBy: v }))} editable={editMode} width={200} height={80} />
+              ) : (
+                <Text style={styles.metaSmall}>{metadata.compiledBy}</Text>
+              )}
+            </View>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <Text style={styles.metaSmall}>Approved By:</Text>
+              {editMode ? (
+                <SignatureField value={metadata.approvedBy} onChange={v => setMetadata(prev => ({ ...prev, approvedBy: v }))} editable={editMode} width={200} height={80} />
+              ) : (
+                <Text style={styles.metaSmall}>{metadata.approvedBy}</Text>
+              )}
+            </View>
           </View>
         </View>
 

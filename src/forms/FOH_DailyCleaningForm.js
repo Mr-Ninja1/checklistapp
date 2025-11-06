@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import LoadingOverlay from '../components/LoadingOverlay';
 import FormActionBar from '../components/FormActionBar';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 // --- DATA STRUCTURE ---
 const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
@@ -74,7 +75,7 @@ export default function FOH_DailyCleaningForm() {
   const now = new Date();
   const sysDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
-  const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+  const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '', verifiedBySign: '' });
   const [editMode, setEditMode] = useState(false);
 
   const handleMetadataChange = (key, value) => setMetadata(prev => ({ ...prev, [key]: value }));
@@ -162,9 +163,13 @@ export default function FOH_DailyCleaningForm() {
         ))}
       </View>
   <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffName', text)} value={item.staffName} editable={editMode} /></DataCell>
-  <DataCell width={COL_WIDTHS.SIGNATURE}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffSign', text)} value={item.staffSign} editable={editMode} /></DataCell>
+  <DataCell width={COL_WIDTHS.SIGNATURE} style={{ alignItems: 'center', justifyContent: 'center' }}>
+    <SignatureField value={item.staffSign} onChange={(v) => handleInputChange(item.id, 'staffSign', v)} editable={editMode} width={Math.max(80, COL_WIDTHS.SIGNATURE - 8)} height={56} />
+  </DataCell>
       <DataCell width={COL_WIDTHS.SUP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'SUPName', text)} value={item.SUPName} /></DataCell>
-      <DataCell width={COL_WIDTHS.SUP_SIGN}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'supSign', text)} value={item.supSign} /></DataCell>
+      <DataCell width={COL_WIDTHS.SUP_SIGN} style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <SignatureField value={item.supSign} onChange={(v) => handleInputChange(item.id, 'supSign', v)} editable={editMode} width={Math.max(80, COL_WIDTHS.SUP_SIGN - 8)} height={56} />
+      </DataCell>
     </View>
   );
 
@@ -211,7 +216,7 @@ export default function FOH_DailyCleaningForm() {
 
       // reset form to empty/default state
       setFormData(initialEquipmentState.map(i => ({ ...i, times: Object.keys(i.times).reduce((acc,k)=>({ ...acc, [k]: false }), {}) })));
-      setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+        setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '', verifiedBySign: '' });
 
       alert('Submitted and saved to history');
       navigation.navigate('Home');
@@ -267,37 +272,37 @@ export default function FOH_DailyCleaningForm() {
           </View>
         </View>
 
-        {/* Second row: Verified By and complex manager sign */}
+        {/* Second row: Verified By (with signature below) and complex manager sign */}
         <View style={styles.metaRowInlineSecond}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Verified By:</Text>
             <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.verifiedBy} onChangeText={(t) => handleMetadataChange('verifiedBy', t)} />
+            <View style={{ marginTop: 6 }}>
+              <SignatureField value={metadata.verifiedBySign} onChange={(v) => handleMetadataChange('verifiedBySign', v)} editable={editMode} width={240} height={80} />
+            </View>
           </View>
         </View>
 
         <View style={{ marginTop: 8 }}>
           <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>COMPLEX MANAGER SIGN:</Text>
-          <TextInput style={[styles.complexManagerInput]} value={metadata.managerSign || ''} onChangeText={(t) => handleMetadataChange('managerSign', t)} />
+          <View style={{ marginTop: 6 }}>
+            <SignatureField value={metadata.managerSign} onChange={(v) => handleMetadataChange('managerSign', v)} editable={editMode} width={260} height={100} />
+          </View>
         </View>
 
         <View style={styles.tickBadge}><Text style={{ color: '#085f1a', fontWeight: '700' }}>✓ TICK AFTER CLEANING</Text></View>
       </View>
 
-      {/* Table area: allow horizontal scroll when needed (wrap in responder-enabled View so horizontal swipes register) */}
-      <View
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderTerminationRequest={() => false}
+      {/* Table area: allow horizontal scroll when needed */}
+      <ScrollView
+        horizontal={true}
+        nestedScrollEnabled={true}
+        showsHorizontalScrollIndicator={true}
+        directionalLockEnabled={true}
+        contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          horizontal={true}
-          nestedScrollEnabled={true}
-          showsHorizontalScrollIndicator={true}
-          directionalLockEnabled={true}
-          contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
+        <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
           <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
             <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
             <HeaderCell width={COL_WIDTHS.PPM}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SANITIZER-VEG WASH (PPM?)</Text></HeaderCell>
@@ -314,7 +319,6 @@ export default function FOH_DailyCleaningForm() {
           {formData.map(renderLogRow)}
         </View>
       </ScrollView>
-  </View>
 
       <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All food handlers are required to clean and sanitize the equipment used every after use.</Text>
 

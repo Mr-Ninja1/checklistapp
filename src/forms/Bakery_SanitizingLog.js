@@ -4,6 +4,7 @@ import useResponsive from '../utils/responsive';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import FormActionBar from '../components/FormActionBar';
+import SignatureField from '../components/SignatureField';
 import useFormSave from '../hooks/useFormSave';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -39,6 +40,7 @@ export default function Bakery_SanitizingLog() {
   const sysDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
   const sysShift = now.getHours() >= 12 ? 'PM' : 'AM';
   const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+  const [verifiedBySign, setVerifiedBySign] = useState('');
   const [busy, setBusy] = useState(false);
   const [loadingDraft, setLoadingDraft] = useState(true);
   const [editMode, setEditMode] = React.useState(false);
@@ -86,7 +88,7 @@ export default function Bakery_SanitizingLog() {
       templateVersion: 'v1',
       title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery',
       date: metadata.date,
-      metadata,
+      metadata: { ...metadata, verifiedBySign },
       timeSlots: TIME_SLOTS,
       formData,
       layoutHints: COL_WIDTHS,
@@ -155,9 +157,15 @@ export default function Bakery_SanitizingLog() {
         {Object.keys(metadata).map(k => (
           <View key={k} style={styles.metaItem}>
             <Text style={styles.metaLabel}>{k.charAt(0).toUpperCase()+k.slice(1)}:</Text>
+            {/* keep simple text inputs for metadata fields (date/location/shift/verifiedBy) */}
             <TextInput value={metadata[k]} onChangeText={(t)=>handleMeta(k,t)} style={styles.metaInput} editable={editMode} />
           </View>
         ))}
+        {/* Render signature capture for verifiedBy separately so it uses the canvas-based SignatureField */}
+        <View style={[styles.metaItem, { alignItems: 'center' }]}>
+          <Text style={styles.metaLabel}>Verified By (signature):</Text>
+          <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={240} height={120} />
+        </View>
         <Text style={styles.tick}>✓ TICK AFTER CLEANING</Text>
       </View>
 
@@ -185,9 +193,13 @@ export default function Bakery_SanitizingLog() {
                 </View>
               ))}</View>
               <View style={[styles.cell, { width: COL_WIDTHS.STAFF }]}><TextInput value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} style={styles.smallInput} editable={editMode} /></View>
-              <View style={[styles.cell, { width: COL_WIDTHS.SIGN }]}><TextInput value={row.staffSign} onChangeText={(t)=>handleInput(row.id,'staffSign',t)} style={styles.smallInput} editable={editMode} /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.SIGN, alignItems: 'center', justifyContent: 'center' }]}>
+                <SignatureField value={row.staffSign} onChange={(v)=>handleInput(row.id,'staffSign',v)} editable={editMode} width={COL_WIDTHS.SIGN - 8} height={60} />
+              </View>
               <View style={[styles.cell, { width: COL_WIDTHS.SUP }]}><TextInput value={row.supName} onChangeText={(t)=>handleInput(row.id,'supName',t)} style={styles.smallInput} editable={editMode} /></View>
-              <View style={[styles.cell, { width: COL_WIDTHS.SUP }]}><TextInput value={row.supSign} onChangeText={(t)=>handleInput(row.id,'supSign',t)} style={styles.smallInput} editable={editMode} /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.SUP, alignItems: 'center', justifyContent: 'center' }]}>
+                <SignatureField value={row.supSign} onChange={(v)=>handleInput(row.id,'supSign',v)} editable={editMode} width={COL_WIDTHS.SUP - 8} height={60} />
+              </View>
             </View>
           ))}
         </View>

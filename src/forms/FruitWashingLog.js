@@ -6,6 +6,7 @@ import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 
@@ -39,6 +40,7 @@ const initialMetadata = {
   verification: {
     hseqManagerSign: '',
     complexManagerSign: '',
+    verifiedBySign: '',
   }
 };
 
@@ -126,7 +128,9 @@ export default function FruitWashingLog() {
 
   const handleEntryChange = useCallback((index, field, value) => {
     setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-  }, []);
+    // trigger autosave when entries change (including signature updates)
+    try { if (typeof scheduleAutoSave === 'function') scheduleAutoSave(); } catch (e) { /* ignore */ }
+  }, [scheduleAutoSave]);
 
   const handleVerificationChange = (key, value) => setMetadata(prev => ({ ...prev, verification: { ...prev.verification, [key]: value } }));
 
@@ -190,25 +194,81 @@ export default function FruitWashingLog() {
               <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.disinfectionEndTime} onChangeText={v => handleEntryChange(idx, 'disinfectionEndTime', v)} placeholder="HH:MM" editable={true} /> : <Text style={styles.readOnlyCell}>{item.disinfectionEndTime}</Text>}</View>
               <View style={[styles.cell, { flex: 1.5 }]}>{editMode ? <TextInput style={styles.input} value={item.rinsingDone} onChangeText={v => handleEntryChange(idx, 'rinsingDone', v)} placeholder="Y/N" editable={true} /> : <Text style={styles.readOnlyCell}>{item.rinsingDone}</Text>}</View>
               <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.personWashing} onChangeText={v => handleEntryChange(idx, 'personWashing', v)} placeholder="Name" editable={true} /> : <Text style={styles.readOnlyCell}>{item.personWashing}</Text>}</View>
-              <View style={[styles.cell, { flex: 1.5, borderRightWidth: 0 }]}>{editMode ? <TextInput style={styles.input} value={item.supSign} onChangeText={v => handleEntryChange(idx, 'supSign', v)} placeholder="Sign" editable={true} /> : <Text style={styles.readOnlyCell}>{item.supSign}</Text>}</View>
+              <View style={[styles.cell, { flex: 1.5, borderRightWidth: 0 }]}> 
+                {editMode ? (
+                  <SignatureField
+                    value={item.supSign}
+                    onChange={v => handleEntryChange(idx, 'supSign', v)}
+                    editable={true}
+                    width={100}
+                    height={40}
+                  />
+                ) : (
+                  (item.supSign && typeof item.supSign === 'string' && item.supSign.startsWith('data:')) ? (
+                    <Image source={{ uri: item.supSign }} style={{ width: 100, height: 40, resizeMode: 'contain' }} />
+                  ) : (
+                    <Text style={styles.readOnlyCell}>{item.supSign}</Text>
+                  )
+                )}
+              </View>
             </View>
           ))}
 
         </View>
 
         <View style={styles.verifyFooter}>
-          <View style={[styles.verifyCol, { flex: 0.5 }]}><Text style={styles.verifyLabel}>Verified by: ....................</Text></View>
-          <View style={styles.verifyCol}>
-            <View style={styles.verifyRow}>
-              <Text style={styles.verifyText}>HSEQ Manager:</Text>
-              <TextInput style={styles.verifyInput} value={metadata.verification?.hseqManagerSign || ''} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} placeholder="Sign" />
-            </View>
+          {/* Verified by column */}
+          <View style={[styles.verifyCol, { flex: 1 }]}>
+            <Text style={styles.verifyLabel}>Verified by</Text>
+            {editMode ? (
+              <SignatureField
+                value={metadata.verification?.verifiedBySign || ''}
+                onChange={v => handleVerificationChange('verifiedBySign', v)}
+                editable={true}
+                width={160}
+                height={48}
+              />
+            ) : (
+              (metadata.verification?.verifiedBySign && typeof metadata.verification.verifiedBySign === 'string' && metadata.verification.verifiedBySign.startsWith('data:'))
+                ? <Image source={{ uri: metadata.verification.verifiedBySign }} style={{ width: 160, height: 48, resizeMode: 'contain' }} />
+                : <Text style={styles.readOnlyCell}>{metadata.verification?.verifiedBySign}</Text>
+            )}
           </View>
-          <View style={styles.verifyCol}>
-            <View style={styles.verifyRow}>
-              <Text style={styles.verifyText}>COMPLEX manager sign:</Text>
-              <TextInput style={styles.verifyInput} value={metadata.verification?.complexManagerSign || ''} onChangeText={v => handleVerificationChange('complexManagerSign', v)} placeholder="Sign" />
-            </View>
+
+          {/* HSEQ Manager column */}
+          <View style={[styles.verifyCol, { flex: 1 }]}>
+            <Text style={styles.verifyLabel}>HSEQ Manager</Text>
+            {editMode ? (
+              <SignatureField
+                value={metadata.verification?.hseqManagerSign || ''}
+                onChange={v => handleVerificationChange('hseqManagerSign', v)}
+                editable={true}
+                width={160}
+                height={48}
+              />
+            ) : (
+              (metadata.verification?.hseqManagerSign && typeof metadata.verification.hseqManagerSign === 'string' && metadata.verification.hseqManagerSign.startsWith('data:'))
+                ? <Image source={{ uri: metadata.verification.hseqManagerSign }} style={{ width: 160, height: 48, resizeMode: 'contain' }} />
+                : <Text style={styles.readOnlyCell}>{metadata.verification?.hseqManagerSign}</Text>
+            )}
+          </View>
+
+          {/* Complex Manager column */}
+          <View style={[styles.verifyCol, { flex: 1 }]}>
+            <Text style={styles.verifyLabel}>Complex Manager</Text>
+            {editMode ? (
+              <SignatureField
+                value={metadata.verification?.complexManagerSign || ''}
+                onChange={v => handleVerificationChange('complexManagerSign', v)}
+                editable={true}
+                width={160}
+                height={48}
+              />
+            ) : (
+              (metadata.verification?.complexManagerSign && typeof metadata.verification.complexManagerSign === 'string' && metadata.verification.complexManagerSign.startsWith('data:'))
+                ? <Image source={{ uri: metadata.verification.complexManagerSign }} style={{ width: 160, height: 48, resizeMode: 'contain' }} />
+                : <Text style={styles.readOnlyCell}>{metadata.verification?.complexManagerSign}</Text>
+            )}
           </View>
         </View>
 

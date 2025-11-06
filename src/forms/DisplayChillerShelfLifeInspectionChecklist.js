@@ -7,6 +7,7 @@ import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 
 // items sourced from cat.md
 const checklistItems = [
@@ -203,7 +204,23 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
             </View>
           </View>
         ) : (
-          <Text style={{ fontSize: 12, color: '#333' }}>DATE: {issueDate}    VERIFIED BY: {verifiedBy || '______________________'}    BARISTA SIGN: {baristaSign || '____________________'}</Text>
+          <View style={{ flexDirection: 'column' }}>
+            <Text style={{ fontSize: 12, color: '#333' }}>DATE: {issueDate}    VERIFIED BY: {verifiedBy || '______________________'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+              <View style={{ flex: 1 }}>
+                {verifiedBySign ? (
+                  <SignatureThumb uri={String(verifiedBySign).startsWith('data:') ? verifiedBySign : `data:image/png;base64,${verifiedBySign}`} width={160} height={80} layers={5} spread={0.9} />
+                ) : null}
+              </View>
+              <View style={{ flex: 2, marginLeft: 12 }}>
+                {baristaSign ? (
+                  <SignatureThumb uri={String(baristaSign).startsWith('data:') ? baristaSign : `data:image/png;base64,${baristaSign}`} width={320} height={160} layers={6} spread={1.0} />
+                ) : (
+                  <Text style={{ color: '#666' }}>______________________</Text>
+                )}
+              </View>
+            </View>
+          </View>
         )}
 
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}

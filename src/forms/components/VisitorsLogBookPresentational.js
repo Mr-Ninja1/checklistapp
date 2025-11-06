@@ -1,5 +1,20 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+function normalizeSignature(v) {
+  if (!v) return null;
+  if (String(v).startsWith('data:')) return v;
+  const compact = String(v).replace(/\s+/g, '');
+  if (compact.length > 200) return `data:image/png;base64,${compact}`;
+  return null;
+}
+
+function renderMaybeSignature(v, style = {}) {
+  const uri = normalizeSignature(v);
+  if (uri) return <SignatureThumb uri={uri} style={style} />;
+  return <Text>{v || ''}</Text>;
+}
 
 // Presentational (read-only) renderer for saved Visitors Log Book payloads
 export default function VisitorsLogBookPresentational({ payload, embedded = false }) {
@@ -53,11 +68,11 @@ export default function VisitorsLogBookPresentational({ payload, embedded = fals
       <View style={styles.managerBlock}>
         <View style={styles.managerCol}>
           <Text style={styles.bold}>SITE MANAGER NAME & SIGNATURE</Text>
-          <Text>{meta.siteManager || payload.siteManager || ''}</Text>
+          {renderMaybeSignature(meta.siteManager || payload.siteManager || '', { width: 220, height: 60 })}
         </View>
         <View style={styles.managerCol}>
           <Text style={styles.bold}>VERIFIED BY HSEQ MANAGER</Text>
-          <Text>{meta.verifiedManager || payload.verifiedManager || ''}</Text>
+          {renderMaybeSignature(meta.verifiedManager || payload.verifiedManager || '', { width: 220, height: 60 })}
         </View>
       </View>
 
@@ -163,9 +178,9 @@ export default function VisitorsLogBookPresentational({ payload, embedded = fals
 
       <View style={styles.footer}>
         <Text style={styles.bold}>SITE MANAGER NAME & SIGNATURE</Text>
-        <Text>{meta.siteManager || payload.siteManager || ''}</Text>
+        {renderMaybeSignature(meta.siteManager || payload.siteManager || '', { width: 260, height: 80 })}
         <Text style={[styles.bold, { marginTop: 8 }]}>VERIFIED BY HSEQ MANAGER</Text>
-        <Text>{meta.verifiedManager || payload.verifiedManager || ''}</Text>
+        {renderMaybeSignature(meta.verifiedManager || payload.verifiedManager || '', { width: 260, height: 80 })}
       </View>
     </Root>
   );

@@ -17,6 +17,8 @@ import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 
 // Helper functions for dynamic details
+import SignatureField from '../components/SignatureField';
+
 function getCurrentDate() {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
@@ -93,6 +95,8 @@ export default function FoodHandlersHandwashingForm() {
     location: logDetails.location,
     shift: logDetails.shift,
     verifiedBy: logDetails.verifiedBy,
+    // include complex manager signature so presentational views can render it
+    complexManagerSign: logDetails.complexManagerSign,
     timeSlots: TIME_SLOTS,
     handlers: handlers.map((h, idx) => ({ id: idx + 1, ...h })),
     assets: logoDataUri ? { logoDataUri } : undefined,
@@ -129,6 +133,8 @@ export default function FoodHandlersHandwashingForm() {
           }
           if (payload.date || payload.date === 0) setLogDetails(prev => ({ ...prev, date: payload.date || prev.date }));
           if (payload.location || payload.location === '') setLogDetails(prev => ({ ...prev, location: payload.location || prev.location }));
+          if (payload.complexManagerSign) setLogDetails(prev => ({ ...prev, complexManagerSign: payload.complexManagerSign }));
+          if (payload.verifiedBy) setLogDetails(prev => ({ ...prev, verifiedBy: payload.verifiedBy }));
         }
       } catch (e) { /* ignore */ }
       if (mounted) setLoadingDraft(false);
@@ -219,6 +225,7 @@ export default function FoodHandlersHandwashingForm() {
         location: logDetails.location,
         shift: logDetails.shift,
         verifiedBy: logDetails.verifiedBy,
+        complexManagerSign: logDetails.complexManagerSign,
         timeSlots: TIME_SLOTS,
         handlers: handlersWithId,
         assets: logoDataUri ? { logoDataUri } : undefined,
@@ -305,28 +312,36 @@ export default function FoodHandlersHandwashingForm() {
           <View style={styles.detailItem}>
             <Text style={styles.label}>Verified By:</Text>
             {editMode ? (
-              <TextInput
-                style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
-                value={logDetails.verifiedBy}
-                onChangeText={text => setLogDetails(prev => ({ ...prev, verifiedBy: text }))}
-                editable={true}
-                placeholder="Enter Verifier Name"
-              />
-            ) : (
-              <Text style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.verifiedBy}</Text>
-            )}
+                <SignatureField
+                  value={logDetails.verifiedBy}
+                  onChange={val => { setLogDetails(prev => ({ ...prev, verifiedBy: val })); try { scheduleAutoSave(); } catch(e){} }}
+                  editable={true}
+                  width={dyn.managerWidth}
+                  height={60}
+                />
+              ) : (
+                (logDetails.verifiedBy && typeof logDetails.verifiedBy === 'string' && logDetails.verifiedBy.startsWith('data:'))
+                  ? <Image source={{ uri: logDetails.verifiedBy }} style={{ width: dyn.managerWidth, height: 60, resizeMode: 'contain' }} />
+                  : <Text style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.verifiedBy}</Text>
+              )}
           </View>
         </View>
         <View style={styles.detailRow}>
           <View style={styles.detailItemFull}>
             <Text style={styles.label}>Complex Manager Sign:</Text>
-            <TextInput
-              style={[styles.input, styles.managerSignInput, { width: dyn.managerWidth, minWidth: resp.s(80), maxWidth: resp.s(160), padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
-              value={logDetails.complexManagerSign}
-              onChangeText={text => setLogDetails(prev => ({ ...prev, complexManagerSign: text }))}
-              editable={editMode}
-              placeholder="Signature/Initials"
-            />
+              {editMode ? (
+                <SignatureField
+                  value={logDetails.complexManagerSign}
+                  onChange={val => { setLogDetails(prev => ({ ...prev, complexManagerSign: val })); try { scheduleAutoSave(); } catch(e){} }}
+                  editable={true}
+                  width={dyn.managerWidth}
+                  height={60}
+                />
+              ) : (
+                (logDetails.complexManagerSign && typeof logDetails.complexManagerSign === 'string' && logDetails.complexManagerSign.startsWith('data:'))
+                  ? <Image source={{ uri: logDetails.complexManagerSign }} style={{ width: dyn.managerWidth, height: 60, resizeMode: 'contain' }} />
+                  : <Text style={[styles.input, styles.managerSignInput, { width: dyn.managerWidth, minWidth: resp.s(80), maxWidth: resp.s(160), padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.complexManagerSign}</Text>
+              )}
           </View>
         </View>
 
@@ -388,15 +403,17 @@ export default function FoodHandlersHandwashingForm() {
                   )
                 ))}
                 {editMode ? (
-                  <TextInput
-                    style={[styles.inputCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
+                  <SignatureField
                     value={row.staffSign}
-                    onChangeText={text => updateHandlerField(rowIdx, 'staffSign', text)}
+                    onChange={val => updateHandlerField(rowIdx, 'staffSign', val)}
                     editable={true}
-                    placeholder="Sign"
+                    width={dyn.signW}
+                    height={48}
                   />
                 ) : (
-                  <Text style={[styles.dataCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW }]}>{row.staffSign}</Text>
+                  (row.staffSign && typeof row.staffSign === 'string' && row.staffSign.startsWith('data:'))
+                    ? <Image source={{ uri: row.staffSign }} style={{ width: dyn.signW, height: 48, resizeMode: 'contain' }} />
+                    : <Text style={[styles.dataCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW }]}>{row.staffSign}</Text>
                 )}
                 {editMode ? (
                   <TextInput
@@ -410,15 +427,17 @@ export default function FoodHandlersHandwashingForm() {
                   <Text style={[styles.dataCell, styles.supCell, { minWidth: dyn.signW, width: dyn.signW }]}>{row.supName}</Text>
                 )}
                 {editMode ? (
-                  <TextInput
-                    style={[styles.inputCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
+                  <SignatureField
                     value={row.supSign}
-                    onChangeText={text => updateHandlerField(rowIdx, 'supSign', text)}
+                    onChange={val => updateHandlerField(rowIdx, 'supSign', val)}
                     editable={true}
-                    placeholder="Sup Sign"
+                    width={dyn.signW}
+                    height={48}
                   />
                 ) : (
-                  <Text style={[styles.dataCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW }]}>{row.supSign}</Text>
+                  (row.supSign && typeof row.supSign === 'string' && row.supSign.startsWith('data:'))
+                    ? <Image source={{ uri: row.supSign }} style={{ width: dyn.signW, height: 48, resizeMode: 'contain' }} />
+                    : <Text style={[styles.dataCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW }]}>{row.supSign}</Text>
                 )}
               </View>
             ))}

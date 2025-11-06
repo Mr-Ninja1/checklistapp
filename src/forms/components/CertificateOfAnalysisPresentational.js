@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function CertificateOfAnalysisPresentational({ payload }) {
   if (!payload) return null;
@@ -52,9 +53,32 @@ export default function CertificateOfAnalysisPresentational({ payload }) {
         </View>
 
         <View style={styles.signatureArea}>
-          <View style={[styles.inputRow, { width: '32%' }]}><Text style={styles.inputLabel}>SAMPLED BY:</Text><Text style={styles.inputValue}>{data.sampledBy || ''}</Text></View>
-          <View style={[styles.inputRow, { width: '32%' }]}><Text style={styles.inputLabel}>HSEQ Manager:</Text><Text style={styles.inputValue}>{data.hseqManager || ''}</Text></View>
-          <View style={[styles.inputRow, { width: '32%' }]}><Text style={styles.inputLabel}>COMPLEX MANAGER:</Text><Text style={styles.inputValue}>{data.complexManager || ''}</Text></View>
+          <View style={[styles.inputRow, { width: '32%' }]}>
+            <Text style={styles.inputLabel}>SAMPLED BY:</Text>
+            {(() => {
+              const v = data.sampledBySign || data.sampledBy || '';
+              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={1.0} /> : <Text style={styles.inputValue}>{String(data.sampledBy || '')}</Text>;
+            })()}
+          </View>
+
+          <View style={[styles.inputRow, { width: '32%' }]}>
+            <Text style={styles.inputLabel}>HSEQ Manager:</Text>
+            {(() => {
+              const v = data.hseqManagerSign || data.hseqManager || '';
+              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={1.0} /> : <Text style={styles.inputValue}>{String(data.hseqManager || '')}</Text>;
+            })()}
+          </View>
+
+          <View style={[styles.inputRow, { width: '32%' }]}>
+            <Text style={styles.inputLabel}>COMPLEX MANAGER:</Text>
+            {(() => {
+              const v = data.complexManagerSign || data.complexManager || '';
+              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={1.0} /> : <Text style={styles.inputValue}>{String(data.complexManager || '')}</Text>;
+            })()}
+          </View>
         </View>
 
         <View style={styles.resultArea}>

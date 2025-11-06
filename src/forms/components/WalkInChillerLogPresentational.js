@@ -1,7 +1,17 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 const TIME_SLOTS = ['Morning', 'Afternoon', 'Evening'];
+
+function resolveSignatureUri(val) {
+  if (!val) return null;
+  if (typeof val !== 'string') return null;
+  if (val.startsWith('data:')) return val;
+  // legacy raw base64 without data: prefix
+  if (val.length > 100 && !val.includes(' ')) return `data:image/png;base64,${val}`;
+  return null;
+}
 
 export default function WalkInChillerLogPresentational({ payload }) {
   if (!payload) return null;
@@ -65,12 +75,22 @@ export default function WalkInChillerLogPresentational({ payload }) {
                   <View style={styles.slotRow}>
                     <Text style={styles.slotValue}>{item[slot]?.temp || ''}</Text>
                     <Text style={styles.slotValue}>{item[slot]?.time || ''}</Text>
-                    <Text style={styles.slotValue}>{item[slot]?.sign || ''}</Text>
+                    { (() => {
+                      const s = item[slot]?.sign;
+                      const uri = resolveSignatureUri(s);
+                      return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.slotValue}>{s || ''}</Text>;
+                    })() }
                   </View>
                 </View>
               ))}
               <View style={[styles.cell, { width: ACTION }]}><Text style={styles.cellText}>{item.correctiveAction || ''}</Text></View>
-              <View style={[styles.cell, { width: SIGNATURE }]}><Text style={styles.cellText}>{item.supNameSign || ''}</Text></View>
+              <View style={[styles.cell, { width: SIGNATURE }]}>
+                { (() => {
+                  const s = item.supNameSign;
+                  const uri = resolveSignatureUri(s);
+                  return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.cellText}>{s || ''}</Text>;
+                })() }
+              </View>
             </View>
           ))}
         </View>
@@ -107,4 +127,5 @@ const styles = StyleSheet.create({
   recordSlot: { borderRightWidth: 1, borderRightColor: '#E5E7EB', padding: 4 },
   slotRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   slotValue: { flex: 1, textAlign: 'center' },
+  signThumb: { width: 140, height: 44, resizeMode: 'contain', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 4 },
 });

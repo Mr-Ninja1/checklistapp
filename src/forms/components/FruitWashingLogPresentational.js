@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function FruitWashingLogPresentational({ payload }) {
   if (!payload) return null;
@@ -10,7 +11,11 @@ export default function FruitWashingLogPresentational({ payload }) {
   const hints = p.layoutHints || {};
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={[styles.content, { flexGrow: 1 }]}
+      showsVerticalScrollIndicator={true}
+    >
       <View style={styles.headerBox}>
         <View style={styles.brandRow}>
           {logoDataUri ? (
@@ -30,8 +35,9 @@ export default function FruitWashingLogPresentational({ payload }) {
       {/* Site row (read-only) */}
       <View style={styles.siteRow}><Text style={styles.siteLabel}>SITE:</Text><Text style={styles.siteValue}>{metadata.site || ''}</Text></View>
 
-      <View style={styles.tableWrap}>
-        <View style={styles.tableHeader}>
+      <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={styles.tableWrap}>
+          <View style={styles.tableHeader}>
           <View style={[styles.headerCell, { width: hints.DATE || 80 }]}><Text style={styles.headerText}>Date</Text></View>
           <View style={[styles.headerCell, { width: hints.NAME || 220 }]}><Text style={styles.headerText}>Product being washed</Text></View>
           <View style={[styles.headerCell, { width: hints.SANITIZER || 180 }]}><Text style={styles.headerText}>Name of Sanitizer Used</Text></View>
@@ -56,25 +62,43 @@ export default function FruitWashingLogPresentational({ payload }) {
               <View style={[styles.cell, { width: hints.END || 100 }]}><Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{row.disinfectionEndTime}</Text></View>
               <View style={[styles.cell, { width: hints.RINSING || 80 }]}><Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{row.rinsingDone}</Text></View>
               <View style={[styles.cell, { width: hints.PERSON || 160 }]}><Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{row.personWashing}</Text></View>
-              <View style={[styles.cell, { width: hints.SIGN || 100, borderRightWidth: 0 }]}><Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{row.supSign}</Text></View>
+              <View style={[styles.cell, { width: hints.SIGN || 100, borderRightWidth: 0 }]}>
+                {row.supSign ? (
+                  <SignatureThumb uri={String(row.supSign).startsWith('data:') ? row.supSign : `data:image/png;base64,${row.supSign}`} width={hints.SIGN || 100} height={48} layers={8} spread={1.0} />
+                ) : (
+                  <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">{''}</Text>
+                )}
+              </View>
             </View>
           ))
         )}
-      </View>
+        </View>
+      </ScrollView>
 
       <View style={styles.verifyFooter}>
-        <View style={[styles.verifyCol, { flex: 0.5 }]}><Text style={styles.verifyLabel}>Verified by: ....................</Text></View>
-        <View style={styles.verifyCol}>
-          <View style={styles.verifyRow}>
-            <Text style={styles.verifyText}>HSEQ Manager:</Text>
-            <Text style={styles.verifyValue}>{metadata.verification?.hseqManagerSign || ''}</Text>
-          </View>
+        <View style={[styles.verifyCol, { flex: 1 }]}> 
+          <Text style={styles.verifyLabel}>Verified by</Text>
+          {metadata.verification?.verifiedBySign ? (
+            <SignatureThumb uri={String(metadata.verification.verifiedBySign).startsWith('data:') ? metadata.verification.verifiedBySign : `data:image/png;base64,${metadata.verification.verifiedBySign}`} width={160} height={60} layers={8} spread={1.0} />
+          ) : (
+            <Text style={styles.verifyValue}>{metadata.verification?.verifiedBySign || ''}</Text>
+          )}
         </View>
-        <View style={styles.verifyCol}>
-          <View style={styles.verifyRow}>
-            <Text style={styles.verifyText}>COMPLEX manager sign:</Text>
+        <View style={[styles.verifyCol, { flex: 1 }]}> 
+          <Text style={styles.verifyLabel}>HSEQ Manager</Text>
+          {metadata.verification?.hseqManagerSign ? (
+            <SignatureThumb uri={String(metadata.verification.hseqManagerSign).startsWith('data:') ? metadata.verification.hseqManagerSign : `data:image/png;base64,${metadata.verification.hseqManagerSign}`} width={160} height={60} layers={8} spread={1.0} />
+          ) : (
+            <Text style={styles.verifyValue}>{metadata.verification?.hseqManagerSign || ''}</Text>
+          )}
+        </View>
+        <View style={[styles.verifyCol, { flex: 1 }]}> 
+          <Text style={styles.verifyLabel}>Complex Manager</Text>
+          {metadata.verification?.complexManagerSign ? (
+            <SignatureThumb uri={String(metadata.verification.complexManagerSign).startsWith('data:') ? metadata.verification.complexManagerSign : `data:image/png;base64,${metadata.verification.complexManagerSign}`} width={160} height={60} layers={8} spread={1.0} />
+          ) : (
             <Text style={styles.verifyValue}>{metadata.verification?.complexManagerSign || ''}</Text>
-          </View>
+          )}
         </View>
       </View>
     </ScrollView>

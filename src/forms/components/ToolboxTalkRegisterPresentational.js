@@ -1,13 +1,24 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function ToolboxTalkRegisterPresentational({ payload }) {
   if (!payload) return null;
-  const meta = payload.metadata || {};
-  const issues = (payload.formData && payload.formData.issues) || [];
-  const cells = (payload.formData && payload.formData.cells) || { left: {}, right: {} };
+  const p = payload.payload || payload;
+  const meta = p.metadata || {};
+  const formData = p.formData || {};
+  const issues = formData.issues || [];
+  const cells = formData.cells || { left: {}, right: {} };
 
   const rows = Array.from({ length: 10 }, (_, i) => i + 1);
+
+  const resolveSignatureUri = (val) => {
+    if (!val) return null;
+    const s = String(val);
+    if (s.startsWith('data:')) return s;
+    if (s.length > 100 && !s.includes(' ')) return `data:image/png;base64,${s}`;
+    return null;
+  };
 
   const logo = () => (
     <Image source={require('../../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
@@ -79,24 +90,40 @@ export default function ToolboxTalkRegisterPresentational({ payload }) {
             <Text style={[styles.colHeader, styles.columnBase, { width: 48 }]}>S/N</Text>
             <Text style={[styles.colHeader, styles.columnBase, { width: 156 }]}>FULL NAME (Print)</Text>
             <Text style={[styles.colHeader, styles.columnBase, { width: 132 }]}>JOB TITLE/DEPT</Text>
-            <Text style={[styles.colHeader, styles.columnBase, { width: 110, borderRightWidth: 0 }]}>SIGNATURE</Text>
+            <Text style={[styles.colHeader, styles.columnBase, { width: 140, borderRightWidth: 0 }]}>SIGNATURE</Text>
 
             <Text style={[styles.colHeader, styles.columnBase, { width: 48 }]}>S/N</Text>
             <Text style={[styles.colHeader, styles.columnBase, { width: 156 }]}>FULL NAME (Print)</Text>
             <Text style={[styles.colHeader, styles.columnBase, { width: 132 }]}>JOB TITLE/DEPT</Text>
-            <Text style={[styles.colHeader, styles.columnBase, { width: 110, borderRightWidth: 0 }]}>SIGNATURE</Text>
+            <Text style={[styles.colHeader, styles.columnBase, { width: 140, borderRightWidth: 0 }]}>SIGNATURE</Text>
           </View>
           {rows.map((n) => (
             <View key={`row-${n}`} style={styles.tableRow}>
               <Text style={[styles.cellText, styles.columnBase, { width: 48 }]}>{n}.</Text>
               <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 156 }]}>{cells.left[n]?.name || ''}</Text>
               <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 132 }]}>{cells.left[n]?.job || ''}</Text>
-              <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 110, borderRightWidth: 0 }]}>{cells.left[n]?.sign || ''}</Text>
+              {(() => {
+                const s = cells.left[n]?.sign;
+                const uri = resolveSignatureUri(s);
+                return uri ? (
+                  <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} />
+                ) : (
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 140, borderRightWidth: 0 }]}>{s || ''}</Text>
+                );
+              })()}
 
               <Text style={[styles.cellText, styles.columnBase, { width: 48 }]}>{n + 10}.</Text>
               <Text numberOfLines={2} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 156 }]}>{cells.right[n + 10]?.name || ''}</Text>
               <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 132 }]}>{cells.right[n + 10]?.job || ''}</Text>
-              <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 110, borderRightWidth: 0 }]}>{cells.right[n + 10]?.sign || ''}</Text>
+              {(() => {
+                const s = cells.right[n + 10]?.sign;
+                const uri = resolveSignatureUri(s);
+                return uri ? (
+                  <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} />
+                ) : (
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.cellInput, styles.columnBase, { width: 140, borderRightWidth: 0 }]}>{s || ''}</Text>
+                );
+              })()}
             </View>
           ))}
         </View>
@@ -217,7 +244,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   cellInput: {
-    flex: 1,
     paddingHorizontal: 6,
     paddingVertical: 4,
     textAlignVertical: 'center',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function BeverageReceivingPresentational({ payload }) {
   const p = payload || {};
@@ -45,8 +46,24 @@ export default function BeverageReceivingPresentational({ payload }) {
         <View style={styles.versionDetails}><Text style={styles.versionText}>Version No: v1.0</Text></View>
       </View>
       <View style={styles.subDetailRow}>
-        <View style={styles.subDetailItem}><Text style={styles.subDetailLabel}>Compiled By:</Text><Text style={styles.subDetailValue}>Patrnan</Text></View>
-        <View style={styles.subDetailItem}><Text style={styles.subDetailLabel}>Approved By:</Text><Text style={styles.subDetailValue}>Hassani Ali</Text></View>
+        <View style={styles.subDetailItem}>
+          <Text style={styles.subDetailLabel}>Compiled By:</Text>
+          {(() => {
+            const v = meta.compiledBySign || meta.compiledBy || '';
+            const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+            const name = meta.compiledBy || 'Patrnan';
+            return uri ? <SignatureThumb uri={uri} width={200} height={60} layers={6} spread={1.0} /> : <Text style={styles.subDetailValue}>{name}</Text>;
+          })()}
+        </View>
+        <View style={styles.subDetailItem}>
+          <Text style={styles.subDetailLabel}>Approved By:</Text>
+          {(() => {
+            const v = meta.approvedBySign || meta.approvedBy || '';
+            const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+            const name = meta.approvedBy || 'Hassani Ali';
+            return uri ? <SignatureThumb uri={uri} width={200} height={60} layers={6} spread={1.0} /> : <Text style={styles.subDetailValue}>{name}</Text>;
+          })()}
+        </View>
       </View>
       <View style={styles.specificationSection}>
         <Text style={styles.specLabel}>Specification:</Text>
@@ -65,8 +82,19 @@ export default function BeverageReceivingPresentational({ payload }) {
           <Text style={styles.deliveryLabel}>Drivers Name:</Text><Text style={styles.deliveryValue}>{meta.driversName || ''}</Text>
         </View>
         <View style={styles.deliveryRow}>
-          <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text><Text style={styles.deliveryValue}>{meta.vehicleRegNo || ''}</Text>
-          <Text style={styles.deliveryLabel}>Signature:</Text><Text style={styles.deliveryValue}>{meta.signature || ''}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
+            <Text style={styles.deliveryValue}>{meta.vehicleRegNo || ''}</Text>
+          </View>
+
+          <View style={{ width: 260, alignItems: 'flex-start' }}>
+            <Text style={styles.deliveryLabel}>Signature:</Text>
+            {(() => {
+              const v = meta.signature;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={6} spread={1.0} /> : <Text style={styles.deliveryValue}>{v || ''}</Text>;
+            })()}
+          </View>
         </View>
       </View>
       {/* Table: horizontal scroll, fixed widths */}
@@ -98,8 +126,35 @@ export default function BeverageReceivingPresentational({ payload }) {
       </ScrollView>
       {/* Verification Footer */}
       <View style={styles.verificationFooter}>
-        <Text style={styles.verificationText}>VERIFIED BY</Text>
-        <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
+        <View style={{ marginTop: 6 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.deliveryLabel}>Verified By</Text>
+              {meta.verifiedBySign ? (
+                (() => {
+                  const v = meta.verifiedBySign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={220} height={80} layers={6} spread={1.0} /> : <Text style={styles.deliveryValue}>{v || ''}</Text>;
+                })()
+              ) : (
+                <Text style={styles.deliveryValue}>{meta.verifiedBy || ''}</Text>
+              )}
+            </View>
+
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={styles.deliveryLabel}>HSEQ Manager</Text>
+              {meta.hseqManagerSign ? (
+                (() => {
+                  const v = meta.hseqManagerSign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={220} height={80} layers={6} spread={1.0} /> : <Text style={styles.deliveryValue}>{v || ''}</Text>;
+                })()
+              ) : (
+                <Text style={styles.deliveryValue}>{meta.hseqManager || ''}</Text>
+              )}
+            </View>
+          </View>
+        </View>
       </View>
     </ScrollView>
   );

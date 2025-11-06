@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function PreShiftMeetingAttendancePresentational({ payload }) {
   if (!payload) return null;
@@ -36,9 +37,19 @@ export default function PreShiftMeetingAttendancePresentational({ payload }) {
           </View>
           <View style={[styles.docRow, { marginTop: 8, borderTopWidth: 1, borderColor: '#000', paddingTop: 4 }]}>
             <Text style={styles.docLabel}>Compiled By:</Text>
-            <Text style={styles.docValue}>Michael C. Zulu</Text>
+            {(() => {
+              const v = metadata.compiledBySign || metadata.compiledBy || (payload && payload.compiledBy) || '';
+              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+              const name = metadata.compiledBy || (payload && payload.compiledBy) || 'Michael C. Zulu';
+              return uri ? <SignatureThumb uri={uri} width={160} height={50} layers={6} spread={0.9} /> : <Text style={styles.docValue}>{name}</Text>;
+            })()}
             <Text style={[styles.docLabel, { marginLeft: 12 }]}>Approved By:</Text>
-            <Text style={styles.docValue}>Hasani Al</Text>
+            {(() => {
+              const v = metadata.approvedBySign || metadata.approvedBy || (payload && payload.approvedBy) || '';
+              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
+              const name = metadata.approvedBy || (payload && payload.approvedBy) || 'Hasani Al';
+              return uri ? <SignatureThumb uri={uri} width={160} height={50} layers={6} spread={0.9} /> : <Text style={styles.docValue}>{name}</Text>;
+            })()}
           </View>
           <View style={styles.docRow}>
             <Text style={styles.docLabel}>Version No:</Text>
@@ -73,22 +84,34 @@ export default function PreShiftMeetingAttendancePresentational({ payload }) {
           <Text style={[styles.colHeader, { width: 48 }]}>S/N</Text>
           <Text style={[styles.colHeader, { width: 156 }]}>FULL NAME</Text>
           <Text style={[styles.colHeader, { width: 132 }]}>JOB TITLE</Text>
-          <Text style={[styles.colHeader, { width: 110, borderRightWidth: 0 }]}>SIGNATURE</Text>
+          <Text style={[styles.colHeader, { width: 160, borderRightWidth: 0 }]}>SIGNATURE</Text>
           <Text style={[styles.colHeader, { width: 48 }]}>S/N</Text>
           <Text style={[styles.colHeader, { width: 156 }]}>FULL NAME</Text>
           <Text style={[styles.colHeader, { width: 132 }]}>JOB TITLE</Text>
-          <Text style={[styles.colHeader, { width: 110, borderRightWidth: 0 }]}>SIGNATURE</Text>
+          <Text style={[styles.colHeader, { width: 160, borderRightWidth: 0 }]}>SIGNATURE</Text>
         </View>
         {rows.map((n) => (
           <View key={`row-${n}`} style={styles.tableRow}>
             <Text style={[styles.cellText, { width: 48 }]}>{n}.</Text>
             <Text style={[styles.cellInput, { width: 156 }]}>{left[n]?.name}</Text>
             <Text style={[styles.cellInput, { width: 132 }]}>{left[n]?.job}</Text>
-            <Text style={[styles.cellInput, { width: 110, borderRightWidth: 0 }]}>{left[n]?.sign}</Text>
+                <View style={{ width: 160, alignItems: 'center', justifyContent: 'center' }}>
+                  {(() => {
+                    const v = left[n]?.sign;
+                    const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                    return uri ? <SignatureThumb uri={uri} width={150} height={60} layers={6} spread={0.9} /> : <Text style={[styles.cellInput, { borderRightWidth: 0 }]}>{v || ''}</Text>;
+                  })()}
+                </View>
             <Text style={[styles.cellText, { width: 48 }]}>{n + 10}.</Text>
             <Text style={[styles.cellInput, { width: 156 }]}>{right[n + 10]?.name}</Text>
             <Text style={[styles.cellInput, { width: 132 }]}>{right[n + 10]?.job}</Text>
-            <Text style={[styles.cellInput, { width: 110, borderRightWidth: 0 }]}>{right[n + 10]?.sign}</Text>
+            <View style={{ width: 160, alignItems: 'center', justifyContent: 'center' }}>
+              {(() => {
+                const v = right[n + 10]?.sign;
+                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                return uri ? <SignatureThumb uri={uri} width={150} height={60} layers={6} spread={0.9} /> : <Text style={[styles.cellInput, { borderRightWidth: 0 }]}>{v || ''}</Text>;
+              })()}
+            </View>
           </View>
         ))}
       </View>
@@ -196,7 +219,7 @@ const styles = StyleSheet.create({
   colHeader: { fontWeight: '700', textAlign: 'center', fontSize: 10, borderRightWidth: 1, borderRightColor: '#000', paddingHorizontal: 2 },
   tableRow: { 
     flexDirection: 'row', 
-    minHeight: 36, 
+    minHeight: 72, 
     alignItems: 'stretch', 
     borderBottomWidth: 1, 
     borderBottomColor: '#000' 

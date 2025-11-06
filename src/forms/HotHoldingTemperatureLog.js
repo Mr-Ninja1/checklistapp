@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 
 const DRAFT_KEY = 'hot_holding_temperature_log_draft';
 const MAX_ROWS = 20;
@@ -118,10 +119,16 @@ export default function HotHoldingTemperatureLog() {
                 templateVersion: '1.0',
                 title: 'Hot Holding Temperature Log',
                 date: meta.issueDate || getTodayDate(),
+                // include signature and corrective fields from meta so presentational views can render them
                 metadata: {
                     companyName: 'BRAVO BRANDS LIMITED',
                     compiledBy: meta.compiledBy,
                     approvedBy: meta.approvedBy,
+                    chefSignature: meta.chefSignature || '',
+                    complexManagerSignature: meta.complexManagerSignature || '',
+                    correctiveAction: meta.correctiveAction || '',
+                    // support hseq key if present
+                    hseqManagerSignature: meta.hseqManagerSignature || meta.hseqManagerSign || '',
                 },
                 // Save all rows (including empty ones) so presentational rendering matches the editor
                 formData: rows,
@@ -247,15 +254,15 @@ export default function HotHoldingTemperatureLog() {
 
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time1}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp1}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign1} onChangeText={v => setCell(ri, 'sign1', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign1} onChange={v => setCell(ri, 'sign1', v)} editable={true} width={120} height={40} /> : (row.sign1 && typeof row.sign1 === 'string' && row.sign1.startsWith('data:') ? <Image source={{ uri: row.sign1 }} style={{ width: 120, height: 40, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyCell}>{row.sign1}</Text>)}</View>
 
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time2}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp2}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign2} onChangeText={v => setCell(ri, 'sign2', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign2} onChange={v => setCell(ri, 'sign2', v)} editable={true} width={120} height={40} /> : (row.sign2 && typeof row.sign2 === 'string' && row.sign2.startsWith('data:') ? <Image source={{ uri: row.sign2 }} style={{ width: 120, height: 40, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyCell}>{row.sign2}</Text>)}</View>
 
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time3}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp3}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.sign3} onChangeText={v => setCell(ri, 'sign3', v)} placeholder="Sign" /> : <Text style={styles.readOnlyCell}>{row.sign3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign3} onChange={v => setCell(ri, 'sign3', v)} editable={true} width={120} height={40} /> : (row.sign3 && typeof row.sign3 === 'string' && row.sign3.startsWith('data:') ? <Image source={{ uri: row.sign3 }} style={{ width: 120, height: 40, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyCell}>{row.sign3}</Text>)}</View>
 
                             <View style={[styles.cell, { flex: COL_FLEX.STAFF_NAME }]}>
                                 {editMode ? (
@@ -269,14 +276,14 @@ export default function HotHoldingTemperatureLog() {
                 </View>
 
                 <View style={styles.footerSection}>
-                    <View style={{ marginBottom: 12 }}>
-                        <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
-                        {editMode ? (
-                            <TextInput style={styles.signatureInput} value={meta.chefSignature} onChangeText={v => setMetaField('chefSignature', v)} placeholder="" />
-                        ) : (
-                            <Text style={styles.readOnlyMeta}>{meta.chefSignature}</Text>
-                        )}
-                    </View>
+                        <View style={{ marginBottom: 12 }}>
+                            <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>CHEF Signature:</Text>
+                            {editMode ? (
+                                <SignatureField value={meta.chefSignature} onChange={v => setMetaField('chefSignature', v)} editable={true} width={220} height={60} />
+                            ) : (
+                                (meta.chefSignature && typeof meta.chefSignature === 'string' && meta.chefSignature.startsWith('data:')) ? <Image source={{ uri: meta.chefSignature }} style={{ width: 220, height: 60, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyMeta}>{meta.chefSignature}</Text>
+                            )}
+                        </View>
 
                     <View style={{ marginBottom: 12 }}>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Corrective Action:</Text>
@@ -291,9 +298,9 @@ export default function HotHoldingTemperatureLog() {
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>Verified by:</Text>
                         <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12, marginLeft: 16 }}>Complex Manager Signature:</Text>
                         {editMode ? (
-                            <TextInput style={styles.signatureInput} value={meta.complexManagerSignature} onChangeText={v => setMetaField('complexManagerSignature', v)} placeholder="" />
+                            <SignatureField value={meta.complexManagerSignature} onChange={v => setMetaField('complexManagerSignature', v)} editable={true} width={220} height={60} />
                         ) : (
-                            <Text style={styles.readOnlyMeta}>{meta.complexManagerSignature}</Text>
+                            (meta.complexManagerSignature && typeof meta.complexManagerSignature === 'string' && meta.complexManagerSignature.startsWith('data:')) ? <Image source={{ uri: meta.complexManagerSignature }} style={{ width: 220, height: 60, resizeMode: 'contain' }} /> : <Text style={styles.readOnlyMeta}>{meta.complexManagerSignature}</Text>
                         )}
                     </View>
                 </View>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -241,20 +243,26 @@ export default function ProductsNetContentChecklist() {
           <View style={styles.verifyCol}><Text style={styles.verifyLabel}>Verified By</Text></View>
           <View style={styles.verifyCol}>
             {editMode ? (
-              <TextInput style={styles.verifyInput} value={verification.supervisorSign} onChangeText={v => handleVerificationChange('supervisorSign', v)} placeholder="Supervisor" />
-            ) : (
-              <Text style={styles.readOnlyText}>{verification.supervisorSign}</Text>
-            )}
+              <SignatureField value={verification.supervisorSign} onChange={v => handleVerificationChange('supervisorSign', v)} editable={editMode} width={220} height={60} placeholder="Supervisor" />
+            ) : (() => {
+              const v = verification.supervisorSign;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>;
+            })()}
             {editMode ? (
-              <TextInput style={styles.verifyInput} value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} placeholder="HSEQ Manager" />
-            ) : (
-              <Text style={styles.readOnlyText}>{verification.hseqManagerSign}</Text>
-            )}
+              <SignatureField value={verification.hseqManagerSign} onChange={v => handleVerificationChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="HSEQ Manager" />
+            ) : (() => {
+              const v = verification.hseqManagerSign;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>;
+            })()}
             {editMode ? (
-              <TextInput style={styles.verifyInput} value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} placeholder="Complex Manager" />
-            ) : (
-              <Text style={styles.readOnlyText}>{verification.complexManagerSign}</Text>
-            )}
+              <SignatureField value={verification.complexManagerSign} onChange={v => handleVerificationChange('complexManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Complex Manager" />
+            ) : (() => {
+              const v = verification.complexManagerSign;
+              const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+              return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyText}>{v || ''}</Text>;
+            })()}
           </View>
         </View>
 

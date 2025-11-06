@@ -1,5 +1,20 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+function normalizeSignature(v) {
+  if (!v) return null;
+  if (String(v).startsWith('data:')) return v;
+  const compact = String(v).replace(/\s+/g, '');
+  if (compact.length > 200) return `data:image/png;base64,${compact}`;
+  return null;
+}
+
+function renderMaybeSignature(v, style = {}) {
+  const uri = normalizeSignature(v);
+  if (uri) return <SignatureThumb uri={uri} style={style} />;
+  return <Text>{v || ''}</Text>;
+}
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
@@ -52,7 +67,7 @@ export default function ColdRoom_FreezerRoomCleaningChecklistPresentational({ pa
 
       <View style={styles.verificationRowView}>
         <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-        <Text style={styles.verificationValue}>{payload?.metadata?.hseqManager || ''}</Text>
+        {renderMaybeSignature(payload?.metadata?.hseqSign || payload?.metadata?.hseqManager || '', { width: 240, height: 60 })}
       </View>
 
       <ScrollView horizontal contentContainerStyle={{ minWidth: TABLE_WIDTH }}>
@@ -90,11 +105,11 @@ export default function ColdRoom_FreezerRoomCleaningChecklistPresentational({ pa
       <View style={styles.signaturesRow}>
         <View style={styles.signatureCell}>
           <Text style={styles.signatureLabel}>Compiled By:</Text>
-          <Text style={styles.signatureValue}>{payload?.metadata?.compiledBy || ''}</Text>
+          {renderMaybeSignature(payload?.metadata?.compiledBySign || payload?.metadata?.compiledBy || '', { width: 220, height: 60 })}
         </View>
         <View style={styles.signatureCell}>
           <Text style={styles.signatureLabel}>Approved By:</Text>
-          <Text style={styles.signatureValue}>{payload?.metadata?.approvedBy || ''}</Text>
+          {renderMaybeSignature(payload?.metadata?.approvedBySign || payload?.metadata?.approvedBy || '', { width: 220, height: 60 })}
         </View>
       </View>
     </ScrollView>

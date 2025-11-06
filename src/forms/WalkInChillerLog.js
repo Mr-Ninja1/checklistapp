@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import useFormSave from '../hooks/useFormSave';
 import EditableFormContainer from '../components/EditableFormContainer';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -23,7 +25,6 @@ const initialMetadata = {
   compiledBy: 'Michael Zulu C.',
   approvedBy: 'Hassani Ali',
   month: '',
-  year: '',
   location: '',
   hseqManagerSign: '',
   complexManagerSign: ''
@@ -161,9 +162,13 @@ export default function WalkInChillerLog() {
       </View>
       <View style={[styles.cell, { width: COL_WIDTHS.SIGNATURE }]}>
         {editMode ? (
-          <TextInput value={item.supNameSign} onChangeText={t => handleDailyChange(item.day, 'supNameSign', t)} placeholder="Name & Sign" style={styles.signatureInput} />
+            <SignatureField value={item.supNameSign} onChange={(v) => handleDailyChange(item.day, 'supNameSign', v)} editable={editMode} width={COL_WIDTHS.SIGNATURE - 20} height={44} placeholder="Sup sign" />
         ) : (
-          <Text style={styles.slotReadText}>{item.supNameSign}</Text>
+          (() => {
+            const v = item.supNameSign;
+            const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+            return uri ? <SignatureThumb uri={uri} width={COL_WIDTHS.SIGNATURE - 20} height={44} layers={6} spread={0.9} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
+          })()
         )}
       </View>
     </View>
@@ -225,14 +230,22 @@ export default function WalkInChillerLog() {
 
           <View style={styles.footerSign}>
             {editMode ? (
-              <TextInput value={metadata.hseqManagerSign} onChangeText={t => handleMetadataChange('hseqManagerSign', t)} placeholder="Verified by: HSEQ Manager Sign" style={styles.signInput} />
+              <SignatureField value={metadata.hseqManagerSign} onChange={(v) => handleMetadataChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Verified by: HSEQ Manager" />
             ) : (
-              <Text style={styles.slotReadText}>{metadata.hseqManagerSign}</Text>
+              (() => {
+                const v = metadata.hseqManagerSign;
+                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
+              })()
             )}
             {editMode ? (
-              <TextInput value={metadata.complexManagerSign} onChangeText={t => handleMetadataChange('complexManagerSign', t)} placeholder="Complex Manager Sign" style={styles.signInput} />
+              <SignatureField value={metadata.complexManagerSign} onChange={(v) => handleMetadataChange('complexManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Complex Manager Sign" />
             ) : (
-              <Text style={styles.slotReadText}>{metadata.complexManagerSign}</Text>
+              (() => {
+                const v = metadata.complexManagerSign;
+                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
+              })()
             )}
           </View>
 

@@ -1,5 +1,21 @@
 import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+const normalizeSignature = (v) => {
+  if (!v) return null;
+  if (typeof v !== 'string') return null;
+  if (v.startsWith('data:')) return v;
+  const compact = v.replace(/\s+/g, '');
+  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  return null;
+};
+
+const renderMaybeSignature = (val, textStyle = {}) => {
+  const uri = normalizeSignature(val);
+  if (uri) return <SignatureThumb uri={uri} width={140} height={44} />;
+  return <Text style={textStyle}>{val || ''}</Text>;
+};
 
 export default function ProcessQualityOutOfControlPresentational({ payload }) {
   if (!payload) return null;
@@ -49,7 +65,7 @@ export default function ProcessQualityOutOfControlPresentational({ payload }) {
             <View style={styles.sectionHeader}><Text style={styles.sectionHeaderText}>PROCESS AND QUALITY OUT OF CONTROL</Text></View>
 
             <View style={styles.gridRow}>
-              <View style={[styles.cell, { flex: 1.5 }]}>
+                <View style={[styles.cell, { flex: 1.5 }]}>
                 <Text style={styles.labelText}>Number:</Text>
                 <Text>{get('number')}</Text>
               </View>
@@ -57,9 +73,9 @@ export default function ProcessQualityOutOfControlPresentational({ payload }) {
                 <Text style={styles.labelText}>Reported by:</Text>
                 <Text>{get('reportedBy')}</Text>
               </View>
-              <View style={styles.cell}>
+                <View style={styles.cell}>
                 <Text style={styles.labelText}>Sign:</Text>
-                <Text>{get('reportedBySign')}</Text>
+                {renderMaybeSignature(get('reportedBySign'))}
               </View>
               <View style={[styles.cell, { borderRightWidth: 0 }]}> 
                 <Text style={styles.labelText}>Time:</Text>
@@ -78,7 +94,7 @@ export default function ProcessQualityOutOfControlPresentational({ payload }) {
               </View>
               <View style={styles.cell}>
                 <Text style={styles.labelText}>Sign:</Text>
-                <Text>{get('notifiedSign')}</Text>
+                {renderMaybeSignature(get('notifiedSign'))}
               </View>
               <View style={[styles.cell, { borderRightWidth: 0 }]}> 
                 <Text style={styles.labelText}>Time:</Text>
@@ -87,7 +103,7 @@ export default function ProcessQualityOutOfControlPresentational({ payload }) {
             </View>
 
             <View style={styles.gridRow}>
-              <View style={[styles.cell, { flex: 4, borderRightWidth: 0 }]}>
+                <View style={[styles.cell, { flex: 4, borderRightWidth: 0 }]}>
                 <Text style={styles.labelText}>Out of control description</Text>
                 <Text>{get('outOfControlDescription')}</Text>
               </View>
@@ -109,7 +125,7 @@ export default function ProcessQualityOutOfControlPresentational({ payload }) {
             ))}
 
             <View style={styles.gridRow}>
-              <View style={[styles.cell, { flex: 1 }]}>
+                <View style={[styles.cell, { flex: 1 }]}>
                 <Text style={styles.labelText}>Out of Control Issued by:</Text>
                 <Text>{get('outOfControlIssuedBy')}</Text>
               </View>
@@ -127,12 +143,12 @@ export default function ProcessQualityOutOfControlPresentational({ payload }) {
             ))}
 
             <View style={styles.signatureContainer}>
-              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Signed:</Text><Text>{get('signed1')}</Text></View>
-              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>HSEQ MANAGER:</Text><Text>{get('hseqManagerSign')}</Text></View>
-              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Signed:</Text><Text>{get('signed2')}</Text></View>
-              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Head of Section:</Text><Text>{get('headOfSectionSign')}</Text></View>
-              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Signed:</Text><Text>{get('signed3')}</Text></View>
-              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Complex manager:</Text><Text>{get('complexManagerSign')}</Text></View>
+              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Signed:</Text>{renderMaybeSignature(get('signed1'))}</View>
+              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>HSEQ MANAGER:</Text>{renderMaybeSignature(get('hseqManagerSign') || get('hseqManager') || get('hseqManagerSignature'))}</View>
+              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Signed:</Text>{renderMaybeSignature(get('signed2'))}</View>
+              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Head of Section:</Text>{renderMaybeSignature(get('headOfSectionSign'))}</View>
+              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Signed:</Text>{renderMaybeSignature(get('signed3'))}</View>
+              <View style={styles.signatureRow}><Text style={styles.signatureTitle}>Complex manager:</Text>{renderMaybeSignature(get('complexManagerSign') || get('complexManager') || get('complexManagerSignature'))}</View>
             </View>
           </View>
 

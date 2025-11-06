@@ -36,6 +36,13 @@ export default function BakerySanitizingPresentational({ payload = {}, embedded 
     return <Text style={styles.cellText}>{String(text)}</Text>;
   };
 
+  const renderSignatureCell = (val, w, h) => {
+    if (!val) return renderUnderline(val);
+    const v = String(val);
+    const uri = v.startsWith('data:') ? v : `data:image/png;base64,${v}`;
+    return <Image source={{ uri }} style={{ width: w || (COL.SIGN - 8), height: h || 60, resizeMode: 'contain' }} />;
+  };
+
   const formatTime = (t) => {
     if (!t && t !== 0) return '';
     const s = String(t);
@@ -64,6 +71,10 @@ export default function BakerySanitizingPresentational({ payload = {}, embedded 
           <View style={{ flex: 1 }}>
             <Text style={styles.metaLabel}>Verified By:</Text>
             {renderUnderline(metadata.verifiedBy)}
+          </View>
+          <View style={{ width: 260, alignItems: 'center', marginLeft: 12 }}>
+            {/* render signature image if present */}
+            {metadata && metadata.verifiedBySign ? renderSignatureCell(metadata.verifiedBySign, 240, 80) : null}
           </View>
         </View>
         <Text style={styles.tickBadge}>✓ TICK AFTER CLEANING</Text>
@@ -113,9 +124,9 @@ export default function BakerySanitizingPresentational({ payload = {}, embedded 
                 ))}
               </View>
               <View style={[styles.cell, { width: COL.STAFF }]}>{renderUnderline(row.staffName)}</View>
-              <View style={[styles.cell, { width: COL.SIGN }]}>{renderUnderline(row.staffSign)}</View>
+              <View style={[styles.cell, { width: COL.SIGN }]}>{renderSignatureCell(row.staffSign, COL.SIGN - 8, 60)}</View>
               <View style={[styles.cell, { width: COL.SUP }]}>{renderUnderline(row.supName)}</View>
-              <View style={[styles.cell, { width: COL.SUP }]}>{renderUnderline(row.supSign)}</View>
+              <View style={[styles.cell, { width: COL.SUP }]}>{renderSignatureCell(row.supSign, COL.SUP - 8, 60)}</View>
             </View>
           ))}
         </View>

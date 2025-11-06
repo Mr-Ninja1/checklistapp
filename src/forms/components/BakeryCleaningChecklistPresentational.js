@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 const DAYS_OF_WEEK = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
@@ -17,6 +18,20 @@ export default function BakeryCleaningChecklistPresentational({ payload }) {
   };
 
   const TABLE_WIDTH = _tableWidth || (COL.AREA + COL.FREQ + (DAYS_OF_WEEK.length * COL.DAY));
+
+  const normalizeSignature = (v) => {
+    if (!v || typeof v !== 'string') return null;
+    if (v.startsWith('data:')) return v;
+    const compact = v.replace(/\s+/g, '');
+    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  };
+
+  const renderMaybeSignature = (val, textStyle = {}) => {
+    const uri = normalizeSignature(val);
+    if (uri) return <SignatureThumb uri={uri} width={140} height={44} />;
+    return <Text style={textStyle}>{val || ''}</Text>;
+  };
 
   const renderDayCell = (item, day) => {
     const dayObj = item.days && item.days[day] ? item.days[day] : { checked: false, cleanedBy: '' };
@@ -77,8 +92,14 @@ export default function BakeryCleaningChecklistPresentational({ payload }) {
       </ScrollView>
 
       <View style={styles.verificationContainer}>
-        <Text style={styles.verificationLabel}>Verified by (HSEQ): {verification.hseqManager || ''}</Text>
-        <Text style={styles.verificationLabel}>Complex Manager: {verification.complexManager || ''}</Text>
+        <View style={styles.verificationRow}>
+          <Text style={styles.verificationLabel}>Verified by (HSEQ):</Text>
+          {renderMaybeSignature(verification.hseqManager || verification.hseqManagerSign || verification.hseqManagerSignature, styles.verificationVal)}
+        </View>
+        <View style={styles.verificationRow}>
+          <Text style={styles.verificationLabel}>Complex Manager:</Text>
+          {renderMaybeSignature(verification.complexManager || verification.complexManagerSign || verification.complexManagerSignature, styles.verificationVal)}
+        </View>
       </View>
     </ScrollView>
   );
@@ -122,4 +143,6 @@ const styles = StyleSheet.create({
 
   verificationContainer: { marginTop: 12 },
   verificationLabel: { fontWeight: '700', color: '#374151', marginBottom: 6 },
+  verificationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  verificationVal: { marginLeft: 8, color: '#111827' },
 });

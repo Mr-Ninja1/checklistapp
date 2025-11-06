@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import SignatureField from '../components/SignatureField';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import useFormSave from '../hooks/useFormSave';
@@ -70,7 +71,14 @@ export default function ProcessQualityOutOfControlReport() {
     formType: 'ProcessQualityOutOfControlReport',
     templateVersion: '01',
     title: 'Process & Quality Out of Control Report',
-    metadata: { date: formData.date, number: formData.number },
+    metadata: {
+      date: formData.date,
+      number: formData.number,
+      // persist signature fields for presentational rendering (keep backwards/alternate keys)
+      hseqManagerSignature: formData.hseqManagerSign || formData.hseqManagerSignature || '',
+      complexManagerSignature: formData.complexManagerSign || formData.complexManagerSignature || '',
+      headOfSectionSignature: formData.headOfSectionSign || formData.headOfSectionSignature || '',
+    },
     // include header fields so presentational can reproduce editable header
     companyName: formData.companyName || 'Bravo',
     companySubtitle: formData.companySubtitle || 'Food Safety Management System',
@@ -95,8 +103,15 @@ export default function ProcessQualityOutOfControlReport() {
       try {
         const wrapped = await formStorage.loadForm(DRAFT_KEY);
         const d = wrapped?.payload || null;
-        if (d && mounted) setFormData(d);
-        if (mounted && (!d || !d.date)) setFormData(prev => ({ ...prev, date: getToday() }));
+        if (d && mounted) {
+          // formStorage may return a wrapped payload (with payload.formData) or
+          // older saved data where the payload is the formData itself. Prefer
+          // the inner `formData` when present to avoid accidentally setting
+          // the component state to the entire wrapper object.
+          const loaded = d.formData && typeof d.formData === 'object' ? d.formData : d;
+          setFormData(prev => ({ ...prev, ...loaded }));
+        }
+        if (mounted && (!d || !(d.formData || d).date)) setFormData(prev => ({ ...prev, date: getToday() }));
       } catch (e) { console.warn('load draft', e); }
     })();
     return () => { mounted = false; };
@@ -162,7 +177,7 @@ export default function ProcessQualityOutOfControlReport() {
               </View>
               <View style={styles.cell}>
                 <Text style={styles.labelText}>Sign:</Text>
-                <TextInput style={styles.input} value={formData.reportedBySign} onChangeText={v => setField('reportedBySign', v)} editable={editMode} />
+                <SignatureField value={formData.reportedBySign} onChange={v => setField('reportedBySign', v)} editable={editMode} width={140} height={44} placeholder="Tap to sign - Reported by" />
               </View>
               <View style={[styles.cell, { borderRightWidth: 0 }]}>
                 <Text style={styles.labelText}>Time:</Text>
@@ -182,7 +197,7 @@ export default function ProcessQualityOutOfControlReport() {
               </View>
               <View style={styles.cell}>
                 <Text style={styles.labelText}>Sign:</Text>
-                <TextInput style={styles.input} value={formData.notifiedSign} onChangeText={v => setField('notifiedSign', v)} editable={editMode} />
+                <SignatureField value={formData.notifiedSign} onChange={v => setField('notifiedSign', v)} editable={editMode} width={140} height={44} placeholder="Tap to sign - Notified" />
               </View>
               <View style={[styles.cell, { borderRightWidth: 0 }]}>
                 <Text style={styles.labelText}>Time:</Text>
@@ -258,7 +273,7 @@ export default function ProcessQualityOutOfControlReport() {
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>HSEQ MANAGER:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.hseqManagerSign} onChangeText={v => setField('hseqManagerSign', v)} placeholder="" editable={editMode} />
+                  <SignatureField value={formData.hseqManagerSign} onChange={v => setField('hseqManagerSign', v)} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
                 </View>
               </View>
 
@@ -272,7 +287,7 @@ export default function ProcessQualityOutOfControlReport() {
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>Head of Section:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.headOfSectionSign} onChangeText={v => setField('headOfSectionSign', v)} placeholder="" editable={editMode} />
+                  <SignatureField value={formData.headOfSectionSign} onChange={v => setField('headOfSectionSign', v)} editable={editMode} width={220} height={80} placeholder="Tap to sign - Head of Section" />
                 </View>
               </View>
 
@@ -286,7 +301,7 @@ export default function ProcessQualityOutOfControlReport() {
               <View style={styles.signatureRow}>
                 <Text style={styles.signatureTitle}>Complex manager:</Text>
                 <View style={styles.signatureInputContainer}>
-                  <TextInput style={[styles.signatureInput, styles.signatureLineInput]} value={formData.complexManagerSign} onChangeText={v => setField('complexManagerSign', v)} placeholder="" editable={editMode} />
+                  <SignatureField value={formData.complexManagerSign} onChange={v => setField('complexManagerSign', v)} editable={editMode} width={220} height={80} placeholder="Tap to sign - Complex Manager" />
                 </View>
               </View>
             </View>

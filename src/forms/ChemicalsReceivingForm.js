@@ -4,6 +4,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import FormActionBar from '../components/FormActionBar';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
 
@@ -31,6 +32,8 @@ const ChemicalsReceivingForm = () => {
         vehicleRegNo: '',
         signature: '',
     });
+    const [verifiedBySign, setVerifiedBySign] = useState('');
+    const [hseqManagerSign, setHseqManagerSign] = useState('');
     const updateDeliveryDetail = (field, value) => {
         setDeliveryDetails(prev => ({ ...prev, [field]: value }));
         scheduleAutoSave();
@@ -102,7 +105,7 @@ const ChemicalsReceivingForm = () => {
         formType: 'ChemicalsReceiving',
         templateVersion: versionNo,
         title: 'Chemicals Receiving Checklist',
-        metadata: { issueDate, versionNo, revNo, ...deliveryDetails },
+        metadata: { issueDate, versionNo, revNo, ...deliveryDetails, verifiedBySign, hseqManagerSign },
         formData: receivingData,
         layoutHints: {
             NAME: dailyStyles.nameCol.width,
@@ -123,6 +126,8 @@ const ChemicalsReceivingForm = () => {
     const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload: buildCanonicalPayload, draftId, clearOnSubmit: () => {
         setReceivingData(createInitialProductData(10));
         setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+        setVerifiedBySign('');
+        setHseqManagerSign('');
         setIssueDate(defaultIssueDate);
     }});
 
@@ -135,7 +140,11 @@ const ChemicalsReceivingForm = () => {
                 const payload = wrapped?.payload || null;
                 if (payload && mounted) {
                     if (payload.formData) setReceivingData(payload.formData);
-                    if (payload.metadata) setDeliveryDetails(payload.metadata);
+                    if (payload.metadata) {
+                        setDeliveryDetails(payload.metadata);
+                        setVerifiedBySign(payload.metadata.verifiedBySign || payload.metadata.verifiedBy || '');
+                        setHseqManagerSign(payload.metadata.hseqManagerSign || payload.metadata.hseqManager || '');
+                    }
                     if (payload.issueDate || payload.metadata?.issueDate) setIssueDate(payload.issueDate || payload.metadata?.issueDate);
                 }
             } catch (e) { /* ignore */ }
@@ -222,10 +231,15 @@ const ChemicalsReceivingForm = () => {
                             <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={(t) => updateDeliveryDetail('driversName', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
-                            <Text style={styles.deliveryLabel}>Vehicle Reg No.:</Text>
-                            <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={(t) => updateDeliveryDetail('vehicleRegNo', t)} />
-                            <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} onChangeText={(t) => updateDeliveryDetail('signature', t)} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.deliveryLabel}>Vehicle Reg No.:</Text>
+                                <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={(t) => updateDeliveryDetail('vehicleRegNo', t)} />
+                            </View>
+
+                            <View style={{ width: 260, alignItems: 'flex-start' }}>
+                                <Text style={styles.deliveryLabel}>Signature:</Text>
+                                <SignatureField value={deliveryDetails.signature} onChange={(v) => updateDeliveryDetail('signature', v)} editable={editMode} width={240} height={80} placeholder="Tap to sign" />
+                            </View>
                         </View>
                     </View>
 
@@ -261,7 +275,16 @@ const ChemicalsReceivingForm = () => {
 
                     <View style={styles.verificationFooter}>
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
-                        <Text style={styles.verificationSignature}>HSEQ MANAGER..................................</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontWeight: '700', marginBottom: 6 }}>Verified by:</Text>
+                                <SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={220} height={80} placeholder="Tap to sign - Verified by" />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={{ fontWeight: '700', marginBottom: 6 }}>HSEQ Manager:</Text>
+                                <SignatureField value={hseqManagerSign} onChange={setHseqManagerSign} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
+                            </View>
+                        </View>
                     </View>
 
                     <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => {})} showSavePdf={false} />

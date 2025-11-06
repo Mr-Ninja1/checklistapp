@@ -3,6 +3,8 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Activi
 
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import useFormSave from '../hooks/useFormSave';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -60,19 +62,31 @@ const useFormState = (initialState, initialMeta) => {
   return { formData, setFormData, metadata, setMetadata, busy, setBusy };
 };
 
-const Slot = React.memo(({ value, onChange, editable }) => (
+const resolveSignatureUri = (val) => {
+  if (!val) return null;
+  if (typeof val !== 'string') return null;
+  if (val.startsWith('data:')) return val;
+  // legacy raw base64 without data: prefix
+  if (val.length > 100 && !val.includes(' ')) return `data:image/png;base64,${val}`;
+  return null;
+};
+
+const Slot = React.memo(({ value, onChange, editable, signWidth = 140, signHeight = 44 }) => (
   <View style={styles.slotRow}>
     {editable ? (
       <>
         <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
         <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
-        <TextInput value={value.sign} onChangeText={t => onChange('sign', t)} placeholder="Initials" style={[styles.slotInput, { flex: 1 }]} />
+        <SignatureField value={value.sign} onChange={(v) => onChange('sign', v)} editable={editable} width={signWidth} height={signHeight} placeholder="Sign" debugMode={true} />
       </>
     ) : (
       <>
         <Text style={[styles.slotReadText, { flex: 1 }]}>{value.temp}</Text>
         <Text style={[styles.slotReadText, { flex: 1 }]}>{value.time}</Text>
-        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.sign}</Text>
+        {(() => {
+          const uri = resolveSignatureUri(value.sign);
+          return uri ? <Image source={{ uri }} style={{ width: signWidth, height: signHeight, resizeMode: 'contain' }} /> : <Text style={[styles.slotReadText, { flex: 1 }]}>{value.sign}</Text>;
+        })()}
       </>
     )}
   </View>
@@ -157,10 +171,13 @@ export default function WalkInFreezerLog() {
       </View>
       <View style={[styles.cell, { width: COL_WIDTHS.SIGNATURE }]}>
         {editMode ? (
-          <TextInput value={item.supNameSign} onChangeText={t => handleDailyChange(item.day, 'supNameSign', t)} placeholder="Name & Sign" style={styles.signatureInput} />
-        ) : (
-          <Text style={styles.slotReadText}>{item.supNameSign}</Text>
-        )}
+            <SignatureField value={item.supNameSign} onChange={(v) => handleDailyChange(item.day, 'supNameSign', v)} editable={editMode} width={COL_WIDTHS.SIGNATURE - 20} height={44} placeholder="Sup sign" debugMode={true} />
+    ) : (() => {
+      const v = item.supNameSign;
+      const uri = resolveSignatureUri(v);
+      // Sup Name & Sign is a single signature column — show signature image only in read-only mode.
+      return uri ? <SignatureThumb uri={uri} width={COL_WIDTHS.SIGNATURE - 20} height={44} layers={6} spread={0.9} /> : <Text style={styles.slotReadText}>{''}</Text>;
+    })()}
       </View>
     </View>
   );
@@ -227,18 +244,22 @@ export default function WalkInFreezerLog() {
             <View style={styles.footerSignField}>
               <Text style={styles.signLabel}>Verified by: HSEQ Manager</Text>
               {editMode ? (
-                <TextInput value={metadata.hseqManagerSign} onChangeText={t => handleMetadataChangeWithAuto('hseqManagerSign', t)} placeholder="Verified by: HSEQ Manager Sign" style={styles.signDisplay} />
-              ) : (
-                <Text style={styles.slotReadText}>{metadata.hseqManagerSign}</Text>
-              )}
+                <SignatureField value={metadata.hseqManagerSign} onChange={(v) => handleMetadataChangeWithAuto('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Verified by: HSEQ Manager" debugMode={true} />
+              ) : (() => {
+                  const v = metadata.hseqManagerSign;
+                  const uri = resolveSignatureUri(v);
+                  return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
+              })()}
             </View>
             <View style={styles.footerSignField}>
               <Text style={styles.signLabel}>Complex Manager</Text>
               {editMode ? (
-                <TextInput value={metadata.complexManagerSign} onChangeText={t => handleMetadataChangeWithAuto('complexManagerSign', t)} placeholder="Complex Manager Sign" style={styles.signDisplay} />
-              ) : (
-                <Text style={styles.slotReadText}>{metadata.complexManagerSign}</Text>
-              )}
+                <SignatureField value={metadata.complexManagerSign} onChange={(v) => handleMetadataChangeWithAuto('complexManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Complex Manager Sign" debugMode={true} />
+              ) : (() => {
+                  const v = metadata.complexManagerSign;
+                  const uri = resolveSignatureUri(v);
+                  return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
+              })()}
             </View>
           </View>
 

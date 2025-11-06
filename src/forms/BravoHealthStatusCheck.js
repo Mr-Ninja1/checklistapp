@@ -7,6 +7,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import ResponsiveTable from '../components/ResponsiveTable';
+import SignatureField from '../components/SignatureField';
 import { addFormHistory } from '../utils/formHistory';
 
 const { width, height: windowHeight } = Dimensions.get('window');
@@ -54,6 +55,7 @@ const HealthStatusCheck = () => {
     const [month, setMonth] = useState('');
     const [year, setYear] = useState('');
     const [supervisorName, setSupervisorName] = useState('');
+    const [supervisorSign, setSupervisorSign] = useState('');
     const [complexManagerSign, setComplexManagerSign] = useState('');
     const [hseqManagerSign, setHseqManagerSign] = useState('');
     const [logoDataUri, setLogoDataUri] = useState(null);
@@ -243,16 +245,18 @@ const HealthStatusCheck = () => {
                         </View>
                         <View style={styles.detailRow}>
                             <View style={[styles.detailBox, styles.wideBox]}>
-                                <Text style={styles.detailLabel}>Supervisor Name & Sign</Text>
-                                <TextInput style={styles.detailInput} placeholder="Name & Sign" value={supervisorName} onChangeText={t => { setSupervisorName(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
+                                <Text style={styles.detailLabel}>Supervisor Name</Text>
+                                <TextInput style={styles.detailInput} placeholder="Supervisor name" value={supervisorName} onChangeText={t => { setSupervisorName(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
+                                <Text style={[styles.detailLabel, { marginTop: 8 }]}>Supervisor Signature</Text>
+                                <SignatureField value={supervisorSign} onChange={v => { setSupervisorSign(v); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} width={220} height={80} />
                             </View>
                             <View style={[styles.detailBox, styles.wideBox]}>
-                                <Text style={styles.detailLabel}>Complex Manager Name &</Text>
-                                <TextInput style={styles.detailInput} placeholder="Name & Sign" value={complexManagerSign} onChangeText={t => { setComplexManagerSign(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
+                                <Text style={styles.detailLabel}>Complex Manager</Text>
+                                <SignatureField value={complexManagerSign} onChange={v => { setComplexManagerSign(v); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} width={220} height={80} />
                             </View>
                             <View style={[styles.detailBox, styles.wideBox]}>
-                                <Text style={styles.detailLabel}>HSEQ Manager Sign</Text>
-                                <TextInput style={styles.detailInput} placeholder="Sign" value={hseqManagerSign} onChangeText={t => { setHseqManagerSign(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
+                                <Text style={styles.detailLabel}>HSEQ Manager</Text>
+                                <SignatureField value={hseqManagerSign} onChange={v => { setHseqManagerSign(v); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} width={220} height={80} />
                             </View>
                         </View>
                     </View>

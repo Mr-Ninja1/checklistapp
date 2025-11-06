@@ -1,7 +1,16 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 const TIME_SLOTS = ['Morning', 'Afternoon', 'Evening'];
+
+function resolveSignatureUri(val) {
+  if (!val) return null;
+  if (typeof val !== 'string') return null;
+  if (val.startsWith('data:')) return val;
+  if (val.length > 100 && !val.includes(' ')) return `data:image/png;base64,${val}`;
+  return null;
+}
 
 export default function WalkInFreezerLogPresentational({ payload }) {
   if (!payload) return null;
@@ -65,24 +74,42 @@ export default function WalkInFreezerLogPresentational({ payload }) {
                   <View style={styles.slotRow}>
                     <Text style={styles.slotValue}>{item[slot]?.temp || ''}</Text>
                     <Text style={styles.slotValue}>{item[slot]?.time || ''}</Text>
-                    <Text style={styles.slotValue}>{item[slot]?.sign || ''}</Text>
+                    { (() => {
+                      const s = item[slot]?.sign;
+                      const uri = resolveSignatureUri(s);
+                      return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.slotValue}>{s || ''}</Text>;
+                    })() }
                   </View>
                 </View>
               ))}
               <View style={[styles.cell, { width: ACTION }]}><Text style={styles.cellText}>{item.correctiveAction || ''}</Text></View>
-              <View style={[styles.cell, { width: SIGNATURE }]}><Text style={styles.cellText}>{item.supNameSign || ''}</Text></View>
+              <View style={[styles.cell, { width: SIGNATURE }]}>
+                { (() => {
+                  const s = item.supNameSign;
+                  const uri = resolveSignatureUri(s);
+                  return uri ? <Image source={{ uri }} style={styles.signThumb} /> : <Text style={styles.cellText}>{s || ''}</Text>;
+                })() }
+              </View>
             </View>
           ))}
         </View>
       </ScrollView>
       <View style={styles.footerSignRow}>
-        <View style={styles.footerSignField}>
+            <View style={[styles.footerSignField]}>
           <Text style={styles.signLabel}>Verified by: HSEQ Manager</Text>
-          <Text style={styles.signDisplay}>{payload?.metadata?.hseqManagerSign || ''}</Text>
+          { (() => {
+            const s = payload?.metadata?.hseqManagerSign;
+            const uri = resolveSignatureUri(s);
+            return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.signDisplay}>{s || ''}</Text>;
+          })() }
         </View>
         <View style={styles.footerSignField}>
           <Text style={styles.signLabel}>Complex Manager</Text>
-          <Text style={styles.signDisplay}>{payload?.metadata?.complexManagerSign || ''}</Text>
+          { (() => {
+            const s = payload?.metadata?.complexManagerSign;
+            const uri = resolveSignatureUri(s);
+            return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.signDisplay}>{s || ''}</Text>;
+          })() }
         </View>
       </View>
 
@@ -121,4 +148,5 @@ const styles = StyleSheet.create({
   footerSignField: { flex: 1, marginRight: 8 },
   signLabel: { fontSize: 12, color: '#374151', marginBottom: 6, fontWeight: '700' },
   signDisplay: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, fontSize: 14, minHeight: 42 },
+  signThumb: { width: 140, height: 44, resizeMode: 'contain', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 4 },
 });

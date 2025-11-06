@@ -18,6 +18,14 @@ export default function FOH_FrontOfHouseCleaningPresentational({ payload }) {
   const month = md.month || '';
   const year = md.year || '';
   const hseqManager = md.hseqManager || '';
+  const hseqManagerSign = md.hseqManagerSign || '';
+
+  const renderSignature = (val, w = 220, h = 80) => {
+    if (!val) return null;
+    const s = String(val);
+    const uri = s.startsWith('data:') ? s : `data:image/png;base64,${s}`;
+    return <Image source={{ uri }} style={{ width: w, height: h, resizeMode: 'contain' }} />;
+  };
 
   return (
     <ScrollView style={styles.container} horizontal={true}>
@@ -43,7 +51,10 @@ export default function FOH_FrontOfHouseCleaningPresentational({ payload }) {
           <View style={styles.metaCol}><Text style={styles.metaLabel}>WEEK:</Text><Text style={styles.metaValue}>{week}</Text></View>
           <View style={styles.metaCol}><Text style={styles.metaLabel}>MONTH:</Text><Text style={styles.metaValue}>{month}</Text></View>
           <View style={styles.metaCol}><Text style={styles.metaLabel}>YEAR:</Text><Text style={styles.metaValue}>{year}</Text></View>
-          <View style={[styles.metaFull]}><Text style={styles.metaLabel}>Verified By: HSEQ Manager:</Text><Text style={styles.metaValue}>{hseqManager}</Text></View>
+          <View style={[styles.metaFull]}>
+            <Text style={styles.metaLabel}>Verified By: HSEQ Manager:</Text>
+            {hseqManagerSign ? renderSignature(hseqManagerSign) : <Text style={styles.metaValue}>{hseqManager}</Text>}
+          </View>
         </View>
 
         <View style={[styles.tableHeader, styles.tableBorder]}>

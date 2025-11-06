@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function DisplayChillerShelfLifeInspectionPresentational({ payload }) {
   if (!payload) return null;
@@ -41,35 +42,41 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
               <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
               <Text style={[styles.td, { width: 220 }]}>{r.staffName}</Text>
               <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
-              <View style={[styles.td, { width: 180, alignItems: 'center', justifyContent: 'center' }]}>
-                {r.sign ? (
-                  <Image source={{ uri: r.sign.startsWith('data:') ? r.sign : `data:image/png;base64,${r.sign}` }} style={{ width: 160, height: 120, resizeMode: 'contain' }} />
-                ) : (
-                  <Text style={{ color: '#333' }}>{r.sign}</Text>
-                )}
+              <View style={[styles.td, { width: 180, alignItems: 'center', justifyContent: 'center' }]}> 
+                {(() => {
+                  const val = r.sign;
+                  const uri = val ? (String(val).startsWith('data:') ? val : `data:image/png;base64,${val}`) : null;
+                  return uri ? (
+                    <SignatureThumb uri={uri} width={160} height={120} layers={5} spread={0.8} />
+                  ) : (
+                    <Text style={{ color: '#333' }}>{val || ''}</Text>
+                  );
+                })()}
               </View>
             </View>
           ))}
         </View>
       </ScrollView>
 
-  <View style={{ height: 12 }} />
+    <View style={{ height: 12 }} />
   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
     <Text style={styles.footer}>DATE: {date || '______________________'}    VERIFIED BY: {verifiedBy || '______________________'}</Text>
     <View style={{ marginLeft: 12 }}>
-      {verifiedBySign ? (
-        <Image source={{ uri: verifiedBySign.startsWith('data:') ? verifiedBySign : `data:image/png;base64,${verifiedBySign}` }} style={{ width: 160, height: 80, resizeMode: 'contain' }} />
-      ) : null}
+      {(() => {
+        const v = verifiedBySign;
+        const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+        return uri ? <SignatureThumb uri={uri} width={160} height={80} layers={5} spread={0.9} /> : null;
+      })()}
     </View>
   </View>
   <View style={{ marginTop: 8 }}>
     <Text style={{ fontSize: 12, fontWeight: '700' }}>BARISTA SIGN:</Text>
     <View style={{ marginTop: 6 }}>
-      {baristaSign ? (
-        <Image source={{ uri: baristaSign.startsWith('data:') ? baristaSign : `data:image/png;base64,${baristaSign}` }} style={{ width: 320, height: 160, resizeMode: 'contain' }} />
-      ) : (
-        <Text style={{ color: '#666' }}>______________________</Text>
-      )}
+      {(() => {
+        const v = baristaSign;
+        const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+        return uri ? <SignatureThumb uri={uri} width={320} height={160} layers={6} spread={1.0} /> : <Text style={{ color: '#666' }}>______________________</Text>;
+      })()}
     </View>
   </View>
     </ScrollView>

@@ -5,6 +5,7 @@ import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
+import SignatureField from '../components/SignatureField';
 // history registration is handled by the save hook via formStorage.saveForm
 
 const DRAFT_KEY = 'boh_shelf_life_inspection_draft';
@@ -209,10 +210,10 @@ export default function BOH_ShelfLifeInspectionChecklist() {
         {/* Re-add signature inputs (kept for printing/saved view) */}
         <View style={styles.verificationBox}>
           <Text style={styles.verLabel}>HSEQ Manager (Verified by)</Text>
-          <TextInput value={verification.hseqManagerSign} onChangeText={v => handleVerificationChange('hseqManagerSign', v)} style={styles.signatureInput} placeholder="HSEQ Manager name/sign" editable={editMode} />
+          <SignatureField value={verification.hseqManagerSign} onChange={v => handleVerificationChange('hseqManagerSign', v)} editable={editMode} width={240} height={80} />
 
           <Text style={styles.verLabel}>Complex Manager</Text>
-          <TextInput value={verification.complexManagerSign} onChangeText={v => handleVerificationChange('complexManagerSign', v)} style={styles.signatureInput} placeholder="Complex Manager name/sign" editable={editMode} />
+          <SignatureField value={verification.complexManagerSign} onChange={v => handleVerificationChange('complexManagerSign', v)} editable={editMode} width={240} height={80} />
         </View>
 
         {/* Buttons are provided via the `actionButtons` prop to EditableFormContainer so

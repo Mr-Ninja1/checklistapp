@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
@@ -302,15 +304,39 @@ export default function UnderbarChillerTemperatureLog() {
 
               {/* Morning Record */}
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempMorning} onChangeText={v => setCell(ri, 'tempMorning', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempMorning}</Text>}</View>
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.staffSignMorning} onChangeText={v => setCell(ri, 'staffSignMorning', v)} placeholder="Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.staffSignMorning}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>
+                {editMode ? (
+                  <SignatureField value={row.staffSignMorning} onChange={(v) => setCell(ri, 'staffSignMorning', v)} editable={editMode} width={140} height={40} placeholder="Sign" />
+                ) : (() => {
+                  const v = row.staffSignMorning;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={140} height={40} layers={5} spread={0.8} /> : <Text style={styles.readOnlyCell}>{v || ''}</Text>;
+                })()}
+              </View>
 
               {/* Afternoon Record */}
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempAfternoon} onChangeText={v => setCell(ri, 'tempAfternoon', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempAfternoon}</Text>}</View>
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.staffSignAfternoon} onChangeText={v => setCell(ri, 'staffSignAfternoon', v)} placeholder="Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.staffSignAfternoon}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>
+                {editMode ? (
+                  <SignatureField value={row.staffSignAfternoon} onChange={(v) => setCell(ri, 'staffSignAfternoon', v)} editable={editMode} width={140} height={40} placeholder="Sign" />
+                ) : (() => {
+                  const v = row.staffSignAfternoon;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={140} height={40} layers={5} spread={0.8} /> : <Text style={styles.readOnlyCell}>{v || ''}</Text>;
+                })()}
+              </View>
 
               {/* Evening Record */}
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempEvening} onChangeText={v => setCell(ri, 'tempEvening', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempEvening}</Text>}</View>
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.staffSignEvening} onChangeText={v => setCell(ri, 'staffSignEvening', v)} placeholder="Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.staffSignEvening}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>
+                {editMode ? (
+                  <SignatureField value={row.staffSignEvening} onChange={(v) => setCell(ri, 'staffSignEvening', v)} editable={editMode} width={140} height={40} placeholder="Sign" />
+                ) : (() => {
+                  const v = row.staffSignEvening;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={140} height={40} layers={5} spread={0.8} /> : <Text style={styles.readOnlyCell}>{v || ''}</Text>;
+                })()}
+              </View>
 
               {/* Corrective Action */}
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.CORRECTIVE_ACTION }]}>
@@ -319,7 +345,13 @@ export default function UnderbarChillerTemperatureLog() {
 
               {/* Supervisor Name & Sign */}
               <View style={[styles.cell, { flex: COL_FLEX.SUP_NAME_SIGN }]}>
-                {editMode ? <TextInput style={styles.input} value={row.supNameSign} onChangeText={v => setCell(ri, 'supNameSign', v)} placeholder="Name / Sign" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.supNameSign}</Text>}
+                {editMode ? (
+                  <SignatureField value={row.supNameSign} onChange={(v) => setCell(ri, 'supNameSign', v)} editable={editMode} width={220} height={44} placeholder="Name / Sign" />
+                ) : (() => {
+                  const v = row.supNameSign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureThumb uri={uri} width={220} height={44} layers={6} spread={0.9} /> : <Text style={styles.readOnlyCell}>{v || ''}</Text>;
+                })()}
               </View>
             </View>
           ))}
@@ -333,11 +365,23 @@ export default function UnderbarChillerTemperatureLog() {
           <View style={styles.verificationRow}>
             <View style={{ flex: 1, marginRight: 16 }}>
               <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>HSEQ Manager:</Text>
-              <TextInput style={styles.signatureInput} value={meta.hseqManagerSign} onChangeText={v => setMetaField('hseqManagerSign', v)} placeholder="" editable={editMode} />
+              {editMode ? (
+                <SignatureField value={meta.hseqManagerSign} onChange={v => setMetaField('hseqManagerSign', v)} editable={editMode} width={220} height={60} />
+              ) : (() => {
+                const v = meta.hseqManagerSign;
+                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyCell}>{meta.hseqManager || ''}</Text>;
+              })()}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>COMPLEX Manager:</Text>
-              <TextInput style={styles.signatureInput} value={meta.complexManagerSign} onChangeText={v => setMetaField('complexManagerSign', v)} placeholder="" editable={editMode} />
+              {editMode ? (
+                <SignatureField value={meta.complexManagerSign} onChange={v => setMetaField('complexManagerSign', v)} editable={editMode} width={220} height={60} />
+              ) : (() => {
+                const v = meta.complexManagerSign;
+                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyCell}>{meta.complexManager || ''}</Text>;
+              })()}
             </View>
           </View>
         </View>

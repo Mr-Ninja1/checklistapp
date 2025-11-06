@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
 
 export default function UnderbarChillerTemperaturePresentational({ payload }) {
   if (!payload) return null;
@@ -23,6 +24,18 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
   // Render 31 rows if no data so presentational matches editable layout
   const rowsToRender = rows && rows.length ? rows : Array.from({ length: 31 }, (_, i) => ({ day: i + 1 }));
 
+  // Helper: determine whether a stored value looks like a signature and normalize to data: URI
+  const normalizeSignature = (v) => {
+    if (!v) return null;
+    const s = String(v).trim();
+    if (!s) return null;
+    if (s.startsWith('data:')) return s;
+    // Heuristic: treat as base64 image only if it's long and composed of base64 chars
+    const compact = s.replace(/\s+/g, '');
+    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  };
+
   // Compute total table width for presentational rendering (sum of column widths)
   const TABLE_WIDTH = COL.DATE + (COL.TEMP + COL.SIGN) * 3 + COL.CORRECTIVE_ACTION + COL.SUP_NAME_SIGN;
 
@@ -38,11 +51,21 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
           <View style={styles.compiledBox}>
             <View style={styles.compiledRow}>
               <Text style={styles.compiledLabel}>COMPILED BY:</Text>
-              <Text style={styles.compiledValue}>{metadata.compiledBy || ''}</Text>
+              {(() => {
+                const v = metadata.compiledBySign || metadata.compiledBy || '';
+                const uri = normalizeSignature(v);
+                const name = metadata.compiledBy || '';
+                return uri ? <SignatureThumb uri={uri} width={160} height={50} layers={6} spread={0.9} /> : <Text style={styles.compiledValue}>{name}</Text>;
+              })()}
             </View>
             <View style={styles.compiledRow}>
               <Text style={styles.compiledLabel}>APPROVED BY:</Text>
-              <Text style={styles.compiledValue}>{metadata.approvedBy || ''}</Text>
+              {(() => {
+                const v = metadata.approvedBySign || metadata.approvedBy || '';
+                const uri = normalizeSignature(v);
+                const name = metadata.approvedBy || '';
+                return uri ? <SignatureThumb uri={uri} width={160} height={50} layers={6} spread={0.9} /> : <Text style={styles.compiledValue}>{name}</Text>;
+              })()}
             </View>
           </View>
         </View>
@@ -103,20 +126,68 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
               <View style={[styles.cellFixed, { width: COL.DATE }]}><Text style={styles.cellText}>{r.day || (ri + 1)}</Text></View>
 
               <View style={[styles.cellFixed, { width: COL.TEMP }]}><Text style={styles.cellText}>{r.tempMorning || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: COL.SIGN }]}><Text style={styles.cellText}>{r.staffSignMorning || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: COL.SIGN }]}>{(() => {
+                const v = r.staffSignMorning;
+                const uri = normalizeSignature(v);
+                return uri ? <SignatureThumb uri={uri} width={Math.max(72, COL.SIGN - 20)} height={44} layers={5} spread={0.8} /> : <Text style={styles.cellText}>{v || ''}</Text>;
+              })()}</View>
 
               <View style={[styles.cellFixed, { width: COL.TEMP }]}><Text style={styles.cellText}>{r.tempAfternoon || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: COL.SIGN }]}><Text style={styles.cellText}>{r.staffSignAfternoon || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: COL.SIGN }]}>{(() => {
+                const v = r.staffSignAfternoon;
+                const uri = normalizeSignature(v);
+                return uri ? <SignatureThumb uri={uri} width={Math.max(72, COL.SIGN - 20)} height={44} layers={5} spread={0.8} /> : <Text style={styles.cellText}>{v || ''}</Text>;
+              })()}</View>
 
               <View style={[styles.cellFixed, { width: COL.TEMP }]}><Text style={styles.cellText}>{r.tempEvening || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: COL.SIGN }]}><Text style={styles.cellText}>{r.staffSignEvening || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: COL.SIGN }]}>{(() => {
+                const v = r.staffSignEvening;
+                const uri = normalizeSignature(v);
+                return uri ? <SignatureThumb uri={uri} width={Math.max(72, COL.SIGN - 20)} height={44} layers={5} spread={0.8} /> : <Text style={styles.cellText}>{v || ''}</Text>;
+              })()}</View>
 
               <View style={[styles.cellFixed, { width: COL.CORRECTIVE_ACTION }]}><Text style={styles.cellText}>{r.outOfSpecAction || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: COL.SUP_NAME_SIGN }]}><Text style={styles.cellText}>{r.supNameSign || ''}</Text></View>
+              <View style={[styles.cellFixed, { width: COL.SUP_NAME_SIGN }]}>{(() => {
+                const v = r.supNameSign;
+                const uri = normalizeSignature(v);
+                return uri ? <SignatureThumb uri={uri} width={Math.max(120, COL.SUP_NAME_SIGN - 20)} height={44} layers={6} spread={0.9} /> : <Text style={styles.cellText}>{v || ''}</Text>;
+              })()}</View>
             </View>
           ))}
           </View>
         </ScrollView>
+        {/* Footer: render verification / manager signatures (support multiple metadata keys for backwards compatibility) */}
+        <View style={styles.footerRow}>
+          <View style={styles.footerItem}>
+            {(() => {
+              const v = metadata.verifiedBySign || metadata.verifiedBySignature || metadata.verifiedBy || (metadata.verification && metadata.verification.verifiedBySign);
+              const name = metadata.verifiedBy || (metadata.verification && metadata.verification.verifiedBy) || '';
+              const uri = normalizeSignature(v);
+              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={0.9} /> : <Text style={styles.footerText}>{name || ''}</Text>;
+            })()}
+            <Text style={styles.footerLabel}>Verified By</Text>
+          </View>
+
+          <View style={styles.footerItem}>
+            {(() => {
+              const v = metadata.hseqManagerSign || metadata.hseqSign || metadata.hseqManager || (metadata.verification && metadata.verification.hseqManagerSign);
+              const name = metadata.hseqManager || (metadata.verification && metadata.verification.hseqManager) || '';
+              const uri = normalizeSignature(v);
+              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={0.9} /> : <Text style={styles.footerText}>{name || ''}</Text>;
+            })()}
+            <Text style={styles.footerLabel}>HSEQ Manager</Text>
+          </View>
+
+          <View style={styles.footerItem}>
+            {(() => {
+              const v = metadata.complexManagerSign || metadata.complexManager || (metadata.verification && metadata.verification.complexManagerSign);
+              const name = metadata.complexManager || (metadata.verification && metadata.verification.complexManager) || '';
+              const uri = normalizeSignature(v);
+              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={0.9} /> : <Text style={styles.footerText}>{name || ''}</Text>;
+            })()}
+            <Text style={styles.footerLabel}>Complex Manager</Text>
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -162,4 +233,9 @@ const styles = StyleSheet.create({
   savedBadge: { paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#10B981', borderRadius: 6 },
   savedText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   cellText: { fontSize: 12, color: '#111827' }
+  ,
+  footerRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#e6e6e6' },
+  footerItem: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  footerLabel: { marginTop: 6, fontSize: 12, fontWeight: '700', color: '#374151' },
+  footerText: { fontSize: 12, color: '#111827' },
 });

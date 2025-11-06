@@ -1,5 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import SignatureThumb from '../../components/SignatureThumb';
+
+const normalizeSignature = (v) => {
+  if (!v) return null;
+  if (typeof v !== 'string') return null;
+  if (v.startsWith('data:')) return v;
+  const compact = v.replace(/\s+/g, '');
+  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  return null;
+};
+
+const renderSignature = (val, textStyle = {}, thumbProps = {}) => {
+  const uri = normalizeSignature(val);
+  if (uri) return <SignatureThumb uri={uri} {...thumbProps} />;
+  return <Text style={textStyle}>{val || ''}</Text>;
+};
 
 /**
  * Read-only presentational renderer for Products Net Content Checklist saved payloads.
@@ -94,9 +110,18 @@ const ProductsNetContentChecklistPresentational = ({ payload }) => {
         <View style={styles.verifyFooter}>
           <View style={styles.verifyCol}><Text style={styles.verifyLabel}>Verified By</Text></View>
           <View style={styles.verifyCol}>
-            <Text style={styles.verifyValue}>Supervisor: {verification.supervisorSign || ''}</Text>
-            <Text style={styles.verifyValue}>HSEQ Manager: {verification.hseqManagerSign || ''}</Text>
-            <Text style={styles.verifyValue}>Complex Manager: {verification.complexManagerSign || ''}</Text>
+            <View style={{ marginBottom: 6 }}>
+              <Text style={{ fontWeight: '700' }}>Supervisor:</Text>
+              {renderSignature(verification.supervisorSign || verification.supervisor || '', styles.verifyValue, { width: 160, height: 44 })}
+            </View>
+            <View style={{ marginBottom: 6 }}>
+              <Text style={{ fontWeight: '700' }}>HSEQ Manager:</Text>
+              {renderSignature(verification.hseqManagerSign || verification.hseqManager || '', styles.verifyValue, { width: 160, height: 44 })}
+            </View>
+            <View style={{ marginBottom: 6 }}>
+              <Text style={{ fontWeight: '700' }}>Complex Manager:</Text>
+              {renderSignature(verification.complexManagerSign || verification.complexManager || '', styles.verifyValue, { width: 160, height: 44 })}
+            </View>
           </View>
         </View>
       </View>

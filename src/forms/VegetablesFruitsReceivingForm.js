@@ -8,6 +8,7 @@ import NotificationModal from '../components/NotificationModal';
 import formStorage from '../utils/formStorage';
 import ResponsiveTable from '../components/ResponsiveTable';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import SignatureField from '../components/SignatureField';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -26,6 +27,8 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
 const VegetablesFruitsReceivingForm = () => {
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
     const [deliveryDetails, setDeliveryDetails] = useState({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+    const [verifiedBySign, setVerifiedBySign] = useState('');
+    const [hseqManagerSign, setHseqManagerSign] = useState('');
     const updateDeliveryDetail = (field, value) => { setDeliveryDetails(prev => ({ ...prev, [field]: value })); scheduleAutoSave(); };
 
     const today = new Date();
@@ -49,7 +52,7 @@ const VegetablesFruitsReceivingForm = () => {
         formType: 'VegetablesFruitsReceiving',
         templateVersion: '01',
         title: 'Vegetables and Fruits Receiving Checklist',
-        metadata: { issueDate, templateVersion: '01', status, ...deliveryDetails },
+        metadata: { issueDate, templateVersion: '01', status, ...deliveryDetails, verifiedBySign, hseqManagerSign },
         formData: receivingData,
         layoutHints: {},
         assets: { logoDataUri: null },
@@ -79,6 +82,10 @@ const VegetablesFruitsReceivingForm = () => {
                     if (payload.metadata) {
                         setIssueDate(payload.metadata.issueDate || defaultIssueDate);
                         setDeliveryDetails(prev => ({ ...prev, ...payload.metadata }));
+                        if (payload.metadata.verifiedBySign) setVerifiedBySign(payload.metadata.verifiedBySign);
+                        else if (payload.metadata.verifiedBy) setVerifiedBySign(payload.metadata.verifiedBy);
+                        if (payload.metadata.hseqManagerSign) setHseqManagerSign(payload.metadata.hseqManagerSign);
+                        else if (payload.metadata.hseqManager) setHseqManagerSign(payload.metadata.hseqManager);
                     }
                     if (payload.formData) {
                         setReceivingData(payload.formData || createInitialProductData(10));
@@ -211,7 +218,9 @@ const VegetablesFruitsReceivingForm = () => {
                             <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
                             <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={t => updateDeliveryDetail('vehicleRegNo', t)} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
-                            <TextInput style={[styles.deliveryInput, { flex: 2 }]} value={deliveryDetails.signature} editable={editMode} onChangeText={t => { if (!editMode) return; updateDeliveryDetail('signature', t); }} />
+                            <View style={{ flex: 2 }}>
+                                <SignatureField value={deliveryDetails.signature} onChange={(v) => updateDeliveryDetail('signature', v)} editable={editMode} width={240} height={80} placeholder="Tap to sign" />
+                            </View>
                         </View>
                     </View>
 
@@ -245,7 +254,16 @@ const VegetablesFruitsReceivingForm = () => {
 
                     <View style={styles.verificationFooter}>
                         <Text style={styles.verificationText}>VERIFIED BY</Text>
-                        <Text style={styles.verificationSignature}>QA MANAGER..................................</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                            <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontWeight: '700' }}>Verified By</Text>
+                                <SignatureField value={verifiedBySign} onChange={(v) => { setVerifiedBySign(v); scheduleAutoSave(); }} editable={editMode} width={220} height={80} placeholder="Tap to sign - Verified by" />
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={{ fontWeight: '700' }}>HSEQ Manager</Text>
+                                <SignatureField value={hseqManagerSign} onChange={(v) => { setHseqManagerSign(v); scheduleAutoSave(); }} editable={editMode} width={220} height={80} placeholder="Tap to sign - HSEQ Manager" />
+                            </View>
+                        </View>
                     </View>
                         <View style={{ height: 18 }} />
                         <View style={{ marginTop: 12 }}>
