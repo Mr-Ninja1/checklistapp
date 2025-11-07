@@ -3,7 +3,14 @@ import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
 const normalizeSignature = (v) => {
-  if (!v || typeof v !== 'string') return null;
+  if (!v) return null;
+  // If it's an object with uri/data fields
+  if (typeof v === 'object') {
+    if (v.uri && typeof v.uri === 'string') return v.uri;
+    if (v.data && typeof v.data === 'string') return v.data.startsWith('data:') ? v.data : `data:image/png;base64,${v.data.replace(/\s+/g, '')}`;
+    return null;
+  }
+  if (typeof v !== 'string') return null;
   if (v.startsWith('data:')) return v;
   const compact = v.replace(/\s+/g, '');
   if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
@@ -12,7 +19,7 @@ const normalizeSignature = (v) => {
 
 const renderMaybeSignature = (val) => {
   const uri = normalizeSignature(val);
-  if (uri) return <SignatureThumb uri={uri} width={180} height={60} />;
+  if (uri) return <SignatureThumb uri={uri} width={240} height={80} layers={8} spread={1.2} />;
   return <Text>{val || ''}</Text>;
 };
 
@@ -57,7 +64,9 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload }) {
               <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
               <Text style={[styles.td, { width: 220 }]}>{r.bakerChefName}</Text>
               <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
-              <Text style={[styles.td, { width: 80 }]}>{r.sign}</Text>
+              <View style={[styles.td, { width: 80, justifyContent: 'center', alignItems: 'center' }]}>
+                {renderMaybeSignature(r.sign)}
+              </View>
             </View>
           ))}
         </View>

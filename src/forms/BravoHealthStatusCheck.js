@@ -54,7 +54,6 @@ const HealthStatusCheck = () => {
     const [week, setWeek] = useState('');
     const [month, setMonth] = useState('');
     const [year, setYear] = useState('');
-    const [supervisorName, setSupervisorName] = useState('');
     const [supervisorSign, setSupervisorSign] = useState('');
     const [complexManagerSign, setComplexManagerSign] = useState('');
     const [hseqManagerSign, setHseqManagerSign] = useState('');
@@ -176,7 +175,8 @@ const HealthStatusCheck = () => {
             templateVersion: '01',
             title: 'BRAVO BRANDS HEALTH STATUS CHECK',
             date: issueDate,
-            metadata: { docRef: 'BBN-SHEQ-P-R-72', issueDate, site, week, month, year, supervisorName, complexManagerSign, hseqManagerSign },
+            // include both supervisorName (text) and supervisorSign (signature payload)
+            metadata: { docRef: 'BBN-SHEQ-P-R-72', issueDate, site, week, month, year, supervisorSign, complexManagerSign, hseqManagerSign },
             formData: weeklyData,
             layoutHints,
             _tableWidth: tableWidth,
@@ -187,7 +187,7 @@ const HealthStatusCheck = () => {
     };
 
     const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: 'HealthStatusCheck_draft', clearOnSubmit: () => {
-        setWeeklyData(createInitialWeeklyData(10)); setSite(''); setWeek(''); setMonth(''); setYear(''); setSupervisorName(''); setComplexManagerSign(''); setHseqManagerSign('');
+        setWeeklyData(createInitialWeeklyData(10)); setSite(''); setWeek(''); setMonth(''); setYear(''); setSupervisorSign(''); setComplexManagerSign(''); setHseqManagerSign('');
     }, waitForSave: false });
 
     // Clear local UI saving flags when the background save completes
@@ -245,8 +245,6 @@ const HealthStatusCheck = () => {
                         </View>
                         <View style={styles.detailRow}>
                             <View style={[styles.detailBox, styles.wideBox]}>
-                                <Text style={styles.detailLabel}>Supervisor Name</Text>
-                                <TextInput style={styles.detailInput} placeholder="Supervisor name" value={supervisorName} onChangeText={t => { setSupervisorName(t); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} />
                                 <Text style={[styles.detailLabel, { marginTop: 8 }]}>Supervisor Signature</Text>
                                 <SignatureField value={supervisorSign} onChange={v => { setSupervisorSign(v); try { scheduleAutoSave(); } catch (e) {} }} editable={editMode} width={220} height={80} />
                             </View>
@@ -324,11 +322,7 @@ const HealthStatusCheck = () => {
                     </View>
                     
 
-                    <View style={styles.footerSignatures}>
-                        <Text style={styles.footerText}>HSEQ MANAGER..................................</Text>
-                        <Text style={styles.footerText}>COMPLEX MANAGER..................................</Text>
-                        <Text style={styles.footerText}>FINANCIAL CONTROLLER..................................</Text>
-                    </View>
+                    {/* footer labels removed as they are redundant */}
 
                     {/* Buttons placed under Complex Manager - stacked full-width bars */}
                     <View style={styles.stackActionsWrap}>
@@ -396,8 +390,7 @@ const styles = StyleSheet.create({
     nestedChecklist: { marginLeft: 10, marginBottom: 5 },
     checkItem: { fontSize: 9, marginLeft: 5 },
     weeklyLogTitle: { fontSize: 10, marginBottom: 5, borderBottomWidth: 1, borderBottomColor: '#000', paddingBottom: 3 },
-    footerSignatures: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
-    footerText: { fontSize: 10, fontWeight: 'bold', marginRight: 20 },
+    // footer labels removed — kept styles minimal
     footerSticky: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', paddingHorizontal: 10, borderTopWidth: 1, borderTopColor: '#ddd', elevation: 6, zIndex: 50 },
     saveBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
     stackActionsWrap: { marginTop: 8, width: '100%', alignSelf: 'stretch', alignItems: 'center' },

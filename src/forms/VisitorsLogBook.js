@@ -260,6 +260,7 @@ export default function VisitorsLogBook() {
   const [year, setYear] = useState('');
   const [siteManager, setSiteManager] = useState('');
   const [verifiedManager, setVerifiedManager] = useState('');
+  const [authorizedBySign, setAuthorizedBySign] = useState(null);
 
   const initialHealthAnswers = {
     unwell: '',
@@ -311,7 +312,7 @@ export default function VisitorsLogBook() {
     return {
       formType: 'VisitorsLogBook',
       title: 'Visitors Log Book',
-      metadata: { docRef, issueDate: currentIssueDate, site, section, month, year, siteManager, verifiedManager },
+      metadata: { docRef, issueDate: currentIssueDate, site, section, month, year, siteManager, verifiedManager, authorizedBySign },
       formData: visitorEntries,
       healthAnswers,
       layoutHints: {},
@@ -323,6 +324,7 @@ export default function VisitorsLogBook() {
   const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'VisitorsLogBook_draft', clearOnSubmit: () => {
     setVisitorEntries(initialVisitorLog);
     setSite(''); setSection(''); setMonth(''); setYear(''); setSiteManager(''); setVerifiedManager('');
+    setAuthorizedBySign(null);
     setHealthAnswers(initialHealthAnswers);
   } });
 
@@ -343,6 +345,21 @@ export default function VisitorsLogBook() {
           </View>
           <InstructionAndNoteBlock />
           <VisitorsTable visitorEntries={visitorEntries} updateVisitorEntry={(idx, field, value) => updateVisitorEntry(idx, field, value)} editable={editMode} />
+          {/* Authorized by signature under the table */}
+          <View style={{ marginTop: 12, flexDirection: 'row', gap: 16 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '700', marginBottom: 6 }}>AUTHORIZED BY</Text>
+              {editMode ? (
+                <SignatureField value={authorizedBySign} onChange={setAuthorizedBySign} editable={true} width={320} height={80} />
+              ) : (
+                (() => {
+                  const v = authorizedBySign;
+                  const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                  return uri ? <SignatureField value={authorizedBySign} onChange={setAuthorizedBySign} editable={false} width={320} height={80} /> : <Text style={{ fontWeight: '700' }}>AUTHORIZED BY: ..................................</Text>;
+                })()
+              )}
+            </View>
+          </View>
           
           <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 }}>
             <TouchableOpacity

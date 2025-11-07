@@ -46,7 +46,7 @@ export default function PersonalHygieneChecklistPresentational({ payload, embedd
 
 			<View style={styles.infoRowTop}>
 					<Text style={styles.infoText}><Text style={styles.bold}>Compiled By:</Text> {meta.compiledBy || ''}</Text>
-					<Text style={styles.infoText}><Text style={styles.bold}>Approved By:</Text> {meta.approvedBy || ''}</Text>
+					<Text style={styles.infoText}><Text style={styles.bold}>Approved By:</Text> {meta.approvedBy || 'Hassani Ali'}</Text>
 			</View>
 
 					{/* make the table horizontally scrollable inside the saved-modal */}
@@ -87,13 +87,25 @@ export default function PersonalHygieneChecklistPresentational({ payload, embedd
 							</View>
 						</ScrollView>
     
-										{/* Footer signature */}
-										<View style={styles.footerSignatures}>
-											{meta.hseqSign ? (
-												<SignatureThumb uri={String(meta.hseqSign).startsWith('data:') ? meta.hseqSign : `data:image/png;base64,${meta.hseqSign}`} width={260} height={80} layers={6} spread={1.0} />
-											) : (
-												<Text style={styles.footerText}>HSEQ SIGN: ..................................</Text>
-											)}
+										{/* Footer signatures: HSEQ MANAGER and Supervisor */}
+										<View style={styles.footerSignaturesRow}>
+											<View style={styles.signatureBlock}>
+												<Text style={styles.footerLabel}>HSEQ MANAGER SIGN</Text>
+												{meta.hseqSign ? (
+													<SignatureThumb uri={String(meta.hseqSign).startsWith('data:') ? meta.hseqSign : `data:image/png;base64,${meta.hseqSign}`} width={260} height={80} layers={6} spread={1.0} />
+												) : (
+													<Text style={styles.footerText}>..................................</Text>
+												)}
+											</View>
+
+											<View style={styles.signatureBlock}>
+												<Text style={styles.footerLabel}>SUPERVISOR SIGN</Text>
+												{meta.supervisorSign ? (
+													<SignatureThumb uri={String(meta.supervisorSign).startsWith('data:') ? meta.supervisorSign : `data:image/png;base64,${meta.supervisorSign}`} width={260} height={80} layers={6} spread={1.0} />
+												) : (
+													<Text style={styles.footerText}>..................................</Text>
+												)}
+											</View>
 										</View>
 		</Root>
 	);
@@ -126,5 +138,9 @@ const styles = StyleSheet.create({
 	cell: { padding: 6, borderRightWidth: 1, borderRightColor: '#000', textAlign: 'center', fontSize: 12 },
 	cellLeft: { padding: 6, borderRightWidth: 1, borderRightColor: '#000', textAlign: 'left', fontSize: 12 },
 	bold: { fontWeight: '700' },
+	footerSignaturesRow: { flexDirection: 'row', justifyContent: 'flex-start', marginTop: 12, gap: 24 },
+	signatureBlock: { flexDirection: 'column', alignItems: 'flex-start' },
+	footerLabel: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
+	footerText: { fontSize: 12 },
 });
 

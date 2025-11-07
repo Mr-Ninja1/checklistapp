@@ -4,17 +4,27 @@ import SignatureThumb from '../../components/SignatureThumb';
 
 const normalizeSignature = (v) => {
   if (!v) return null;
-  if (typeof v !== 'string') return null;
-  if (v.startsWith('data:')) return v;
-  const compact = v.replace(/\s+/g, '');
-  if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  // already a data uri
+  if (typeof v === 'string') {
+    if (v.startsWith('data:')) return v;
+    const compact = v.replace(/\s+/g, '');
+    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  }
+  // object shaped signature (uri, data, signature, base64)
+  if (typeof v === 'object') {
+    if (v.uri && typeof v.uri === 'string') return v.uri;
+    if (v.data && typeof v.data === 'string') return v.data.startsWith('data:') ? v.data : `data:image/png;base64,${v.data}`;
+    if (v.signature && typeof v.signature === 'string') return v.signature.startsWith('data:') ? v.signature : `data:image/png;base64,${v.signature}`;
+    if (v.base64 && typeof v.base64 === 'string') return `data:image/png;base64,${v.base64}`;
+  }
   return null;
 };
 
 const renderSignature = (val, textStyle = {}, thumbProps = {}) => {
   const uri = normalizeSignature(val);
   if (uri) return <SignatureThumb uri={uri} {...thumbProps} />;
-  return <Text style={textStyle}>{val || ''}</Text>;
+  return null; // no fallback text — render only the thumbnail when present
 };
 
 const WEEK_DAYS = ['Sun','Mon','Tue','Wed','Thurs','Fri','Sat'];
@@ -72,7 +82,10 @@ export default function SculleryArea_CleaningChecklistPresentational({ payload }
           <View style={styles.verificationRow}>
             <View style={{ flex: 1 }}>
                 <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-                {renderSignature(metadata.hseqManagerSignature || metadata.hseqManager || metadata.hseqManagerSign || '', styles.verificationValue, { width: 220, height: 44 })}
+                {(() => {
+                  const v = metadata.hseqSign || metadata.hseqManagerSign || metadata.hseqManagerSignature || metadata.hseqManager || '';
+                  return renderSignature(v, styles.verificationValue, { width: 220, height: 44 });
+                })()}
               </View>
           </View>
 
@@ -120,12 +133,8 @@ export default function SculleryArea_CleaningChecklistPresentational({ payload }
             </View>
           </ScrollView>
 
-          <View style={{ height: 24 }} />
+          <View style={{ height: 12 }} />
           <View style={styles.signaturesRow}>
-            <View style={styles.signatureCell}>
-                <Text style={styles.signatureLabel}>Compiled By:</Text>
-                {renderSignature(metadata.compiledBySignature || metadata.compiledBy || metadata.compiledBySign || '', styles.signatureValue, { width: 220, height: 48 })}
-              </View>
               <View style={styles.signatureCell}>
                 <Text style={styles.signatureLabel}>Approved By:</Text>
                 {renderSignature(metadata.approvedBySignature || metadata.approvedBy || metadata.approvedBySign || '', styles.signatureValue, { width: 220, height: 48 })}

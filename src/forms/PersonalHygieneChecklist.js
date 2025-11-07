@@ -48,6 +48,7 @@ const PersonalHygieneChecklist = () => {
     const [data, setData] = useState(initialHygieneData);
     const [editMode, setEditMode] = useState(false);
     const [hseqSign, setHseqSign] = useState(null);
+    const [supervisorSign, setSupervisorSign] = useState(null);
 
     // Compute issue date helper (we will set the canonical issueDate at save time)
     const formatIssueDate = (d = new Date()) => {
@@ -76,14 +77,14 @@ const PersonalHygieneChecklist = () => {
     const buildPayload = (status = 'draft') => ({
         formType: 'PersonalHygieneChecklist',
         title: 'Personal Hygiene Checklist',
-        metadata: { issueDate: formatIssueDate(), compiledBy: 'Michael Zulu C.', hseqSign },
+        metadata: { issueDate: formatIssueDate(), compiledBy: 'Michael Zulu C.', hseqSign, supervisorSign },
         formData: data,
         layoutHints: { columnWidths },
         savedAt: new Date().toISOString(),
         status,
     });
 
-    const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PersonalHygieneChecklist_draft', clearOnSubmit: () => setData(initialHygieneData) });
+    const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PersonalHygieneChecklist_draft', clearOnSubmit: () => { setData(initialHygieneData); setHseqSign(null); setSupervisorSign(null); } });
 
     // --- Table Row Renderer for FlatList ---
     const renderItem = ({ item }) => (
@@ -237,19 +238,47 @@ const PersonalHygieneChecklist = () => {
 
                     {/* --- FOOTER SIGNATURES --- */}
                                         <View style={styles.footerSignatures}>
-                                                {/* HSEQ signature: show canvas in edit mode, thumbnail or label otherwise */}
-                                                <View>
-                                                    <Text style={styles.footerText}>HSEQ SIGN:</Text>
-                                                    {editMode ? (
+                                            {/* HSEQ Manager signature */}
+                                            <View style={{ marginRight: 24 }}>
+                                                {editMode ? (
+                                                    <View style={{ alignItems: 'flex-start' }}>
+                                                        <Text style={styles.footerLabel}>HSEQ MANAGER SIGN</Text>
                                                         <SignatureField value={hseqSign} onChange={setHseqSign} editable={true} width={260} height={80} />
-                                                    ) : (
-                                                        (() => {
-                                                            const v = hseqSign;
-                                                            const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-                                                            return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={6} spread={1.0} /> : <Text style={styles.footerText}>..................................</Text>;
-                                                        })()
-                                                    )}
-                                                </View>
+                                                    </View>
+                                                ) : (
+                                                    (() => {
+                                                        const v = hseqSign;
+                                                        const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                                                        return uri ? (
+                                                            <View style={{ alignItems: 'flex-start' }}>
+                                                                <Text style={styles.footerLabel}>HSEQ MANAGER SIGN</Text>
+                                                                <SignatureThumb uri={uri} width={260} height={80} layers={6} spread={1.0} />
+                                                            </View>
+                                                        ) : <Text style={styles.footerText}>HSEQ MANAGER SIGN: ..................................</Text>;
+                                                    })()
+                                                )}
+                                            </View>
+
+                                            {/* Supervisor signature */}
+                                            <View>
+                                                {editMode ? (
+                                                    <View style={{ alignItems: 'flex-start' }}>
+                                                        <Text style={styles.footerLabel}>SUPERVISOR SIGN</Text>
+                                                        <SignatureField value={supervisorSign} onChange={setSupervisorSign} editable={true} width={260} height={80} />
+                                                    </View>
+                                                ) : (
+                                                    (() => {
+                                                        const v = supervisorSign;
+                                                        const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+                                                        return uri ? (
+                                                            <View style={{ alignItems: 'flex-start' }}>
+                                                                <Text style={styles.footerLabel}>SUPERVISOR SIGN</Text>
+                                                                <SignatureThumb uri={uri} width={260} height={80} layers={6} spread={1.0} />
+                                                            </View>
+                                                        ) : <Text style={styles.footerText}>SUPERVISOR SIGN: ..................................</Text>;
+                                                    })()
+                                                )}
+                                            </View>
                                         </View>
 
                     {/* Inline action buttons placed here so they appear close to the end of the table */}
@@ -481,6 +510,11 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
         marginRight: 20,
+    },
+    footerLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        marginBottom: 6,
     },
 });
 

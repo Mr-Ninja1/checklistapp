@@ -101,12 +101,8 @@ export default function ColdRoom_FreezerRoomCleaningChecklistPresentational({ pa
         </View>
       </ScrollView>
 
-      <View style={{ height: 24 }} />
+      <View style={{ height: 12 }} />
       <View style={styles.signaturesRow}>
-        <View style={styles.signatureCell}>
-          <Text style={styles.signatureLabel}>Compiled By:</Text>
-          {renderMaybeSignature(payload?.metadata?.compiledBySign || payload?.metadata?.compiledBy || '', { width: 220, height: 60 })}
-        </View>
         <View style={styles.signatureCell}>
           <Text style={styles.signatureLabel}>Approved By:</Text>
           {renderMaybeSignature(payload?.metadata?.approvedBySign || payload?.metadata?.approvedBy || '', { width: 220, height: 60 })}

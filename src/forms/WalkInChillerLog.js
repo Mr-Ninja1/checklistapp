@@ -65,19 +65,41 @@ const useFormState = (initialState, initialMeta) => {
   return { formData, setFormData, metadata, setMetadata, busy, setBusy };
 };
 
-const Slot = React.memo(({ value, onChange, editable }) => (
+function normalizeSignatureToDataUri(v) {
+  if (!v) return null;
+  // already a data URI
+  if (typeof v === 'string' && v.startsWith('data:')) return v;
+  // object-shaped signature: { uri } or { data } or { signature } or { base64 }
+  if (typeof v === 'object') {
+    if (v.uri && typeof v.uri === 'string') return v.uri;
+    if (v.data && typeof v.data === 'string') return v.data.startsWith('data:') ? v.data : `data:image/png;base64,${v.data}`;
+    if (v.signature && typeof v.signature === 'string') return v.signature.startsWith('data:') ? v.signature : `data:image/png;base64,${v.signature}`;
+    if (v.base64 && typeof v.base64 === 'string') return `data:image/png;base64,${v.base64}`;
+  }
+  // legacy compact base64 string
+  if (typeof v === 'string') {
+    const compact = v.replace(/\s+/g, '');
+    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  }
+  return null;
+}
+
+const Slot = React.memo(({ value, onChange, editable, signatureWidth = 140, signatureHeight = 44 }) => (
   <View style={styles.slotRow}>
     {editable ? (
       <>
         <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
         <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
-        <TextInput value={value.sign} onChangeText={t => onChange('sign', t)} placeholder="Initials" style={[styles.slotInput, { flex: 1 }]} />
+        <SignatureField value={value.sign} onChange={(v) => onChange('sign', v)} editable={editable} width={signatureWidth} height={signatureHeight} placeholder="Sign" />
       </>
     ) : (
       <>
         <Text style={[styles.slotReadText, { flex: 1 }]}>{value.temp}</Text>
         <Text style={[styles.slotReadText, { flex: 1 }]}>{value.time}</Text>
-        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.sign}</Text>
+        {(() => {
+          const uri = normalizeSignatureToDataUri(value.sign);
+          return uri ? <SignatureThumb uri={uri} width={signatureWidth} height={signatureHeight} layers={6} spread={0.9} /> : <Text style={[styles.slotReadText, { flex: 1 }]}>{value.sign || ''}</Text>;
+        })()}
       </>
     )}
   </View>
@@ -166,7 +188,7 @@ export default function WalkInChillerLog() {
         ) : (
           (() => {
             const v = item.supNameSign;
-            const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
+            const uri = normalizeSignatureToDataUri(v);
             return uri ? <SignatureThumb uri={uri} width={COL_WIDTHS.SIGNATURE - 20} height={44} layers={6} spread={0.9} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
           })()
         )}
@@ -228,25 +250,31 @@ export default function WalkInChillerLog() {
             </View>
           </ScrollView>
 
-          <View style={styles.footerSign}>
-            {editMode ? (
-              <SignatureField value={metadata.hseqManagerSign} onChange={(v) => handleMetadataChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Verified by: HSEQ Manager" />
-            ) : (
-              (() => {
-                const v = metadata.hseqManagerSign;
-                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
-              })()
-            )}
-            {editMode ? (
-              <SignatureField value={metadata.complexManagerSign} onChange={(v) => handleMetadataChange('complexManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Complex Manager Sign" />
-            ) : (
-              (() => {
-                const v = metadata.complexManagerSign;
-                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.slotReadText}>{v || ''}</Text>;
-              })()
-            )}
+          <View style={styles.signaturesRow}>
+            <View style={styles.signatureCell}>
+              <Text style={styles.signatureLabel}>Verified By: HSEQ Manager</Text>
+              {editMode ? (
+                <SignatureField value={metadata.hseqManagerSign} onChange={(v) => handleMetadataChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Verified by: HSEQ Manager" />
+              ) : (
+                (() => {
+                  const v = metadata.hseqManagerSign || metadata.hseqManager;
+                  const uri = normalizeSignatureToDataUri(v);
+                  return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.signatureValue}>{v || ''}</Text>;
+                })()
+              )}
+            </View>
+            <View style={styles.signatureCell}>
+              <Text style={styles.signatureLabel}>Complex Manager</Text>
+              {editMode ? (
+                <SignatureField value={metadata.complexManagerSign} onChange={(v) => handleMetadataChange('complexManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Complex Manager Sign" />
+              ) : (
+                (() => {
+                  const v = metadata.complexManagerSign || metadata.complexManager;
+                  const uri = normalizeSignatureToDataUri(v);
+                  return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.signatureValue}>{v || ''}</Text>;
+                })()
+              )}
+            </View>
           </View>
 
           <View style={styles.buttonRow}>
@@ -292,6 +320,10 @@ const styles = StyleSheet.create({
   actionInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, fontSize: 14 },
   signatureInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, textAlign: 'center', fontSize: 14 },
   footerSign: { marginTop: 12 },
+  signaturesRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  signatureCell: { flex: 1, padding: 8 },
+  signatureLabel: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
+  signatureValue: { fontSize: 14, color: '#1F2937', marginTop: 6 },
   signInput: { borderBottomWidth: 1, borderBottomColor: '#9CA3AF', paddingVertical: 6, marginBottom: 8 },
   slotReadText: { paddingVertical: 10, paddingHorizontal: 6, textAlign: 'center', fontSize: 14, color: '#111827' },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },

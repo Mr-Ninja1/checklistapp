@@ -33,7 +33,7 @@ const initialMetadata = {
   location: 'CLEANING EQUIPMENT',
   week: '', month: '', year: '',
   issueDate: '',
-  compiledBy: 'Michael Zulu C.', compiledBySign: '', approvedBy: 'Hassani Ali', approvedBySign: '', hseqManager: '', hseqSign: ''
+  approvedBy: 'Hassani Ali', approvedBySign: '', hseqManager: '', hseqSign: ''
 };
 
 const Checkbox = ({ checked, onPress }) => (
@@ -257,18 +257,6 @@ export default function CleaningEquipmentChecklist() {
 
           <View style={{ height: 12 }} />
           <View style={styles.signaturesRow}>
-            <View style={styles.signatureCell}>
-              <Text style={styles.signatureLabel}>Compiled By:</Text>
-              {editMode ? (
-                <SignatureField value={metadata.compiledBySign} onChange={v => handleMetadataChange('compiledBySign', v)} editable={true} width={220} height={80} />
-              ) : (
-                metadata.compiledBySign ? (
-                  <SignatureThumb uri={String(metadata.compiledBySign).startsWith('data:') ? metadata.compiledBySign : `data:image/png;base64,${metadata.compiledBySign}`} width={220} height={80} layers={6} spread={0.9} />
-                ) : (
-                  <Text style={styles.signatureValue}>{metadata.compiledBy || ''}</Text>
-                )
-              )}
-            </View>
             <View style={styles.signatureCell}>
               <Text style={styles.signatureLabel}>Approved By:</Text>
               {editMode ? (

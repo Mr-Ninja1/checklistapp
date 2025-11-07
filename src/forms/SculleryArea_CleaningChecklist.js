@@ -82,7 +82,7 @@ const CleaningCell = React.memo(({ item, day, colWidths, handleCellChange, canIn
 
 export default function SculleryAreaChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
-  const [metadata, setMetadata] = useState({ location: 'SCULLERY', week: '', month: '', year: '', issueDate: '', compiledBy: '', approvedBy: '', hseqManager: '' });
+  const [metadata, setMetadata] = useState({ location: 'SCULLERY', week: '', month: '', year: '', issueDate: '', approvedBy: '', approvedBySign: '', hseqManager: '', hseqManagerSign: '' });
   const [editMode, setEditMode] = useState(false);
   const [busy, setBusy] = useState(false);
   const saveTimer = useRef(null);
@@ -92,12 +92,18 @@ export default function SculleryAreaChecklist() {
     const COL_WIDTHS = { AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 };
     const tableWidth = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
     const layoutHints = { area: COL_WIDTHS.AREA, frequency: COL_WIDTHS.FREQUENCY, dayGroup: COL_WIDTHS.DAY_GROUP_WIDTH, checkWidth: COL_WIDTHS.CHECK, cleanedByWidth: COL_WIDTHS.CLEANED_BY };
+    // ensure signature keys are available under common names so presentational
+    // components can reliably pick them (some presentational files expect `hseqSign`)
+    const metadataOut = { ...metadata };
+    if (!metadataOut.hseqSign && metadataOut.hseqManagerSign) metadataOut.hseqSign = metadataOut.hseqManagerSign;
+    if (!metadataOut.hseqManagerSign && metadataOut.hseqSign) metadataOut.hseqManagerSign = metadataOut.hseqSign;
+
     return {
       formType: 'SculleryArea_CleaningChecklist',
       templateVersion: '01',
       title: 'SCULLERY AREA CLEANING CHECKLIST',
       date: metadata.issueDate || new Date().toLocaleDateString(),
-      metadata,
+      metadata: metadataOut,
       formData,
       layoutHints,
       _tableWidth: tableWidth,
@@ -136,6 +142,22 @@ export default function SculleryAreaChecklist() {
       }
     })();
   }, []);
+
+  function normalizeSignatureToDataUri(v) {
+    if (!v) return null;
+    if (typeof v === 'string' && v.startsWith('data:')) return v;
+    if (typeof v === 'object') {
+      if (v.uri && typeof v.uri === 'string') return v.uri;
+      if (v.data && typeof v.data === 'string') return v.data.startsWith('data:') ? v.data : `data:image/png;base64,${v.data}`;
+      if (v.signature && typeof v.signature === 'string') return v.signature.startsWith('data:') ? v.signature : `data:image/png;base64,${v.signature}`;
+      if (v.base64 && typeof v.base64 === 'string') return `data:image/png;base64,${v.base64}`;
+    }
+    if (typeof v === 'string') {
+      const compact = v.replace(/\s+/g, '');
+      if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    }
+    return null;
+  }
 
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -268,9 +290,12 @@ export default function SculleryAreaChecklist() {
             <View style={[styles.verificationCell, { flex: 1 }]}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
               {editMode ? (
-                <SignatureField value={metadata.hseqManager} onChange={v => handleMetadataChange('hseqManager', v)} editable={editMode} width={260} height={80} />
+                <SignatureField value={metadata.hseqManagerSign} onChange={v => handleMetadataChange('hseqManagerSign', v)} editable={editMode} width={260} height={80} />
               ) : (
-                <Text style={styles.metaValue}>{metadata.hseqManager}</Text>
+                (() => {
+                  const uri = normalizeSignatureToDataUri(metadata.hseqManagerSign || metadata.hseqManager);
+                  return uri ? <Image source={{ uri }} style={{ width: 260, height: 80, resizeMode: 'contain' }} /> : <Text style={styles.metaValue}>{metadata.hseqManager}</Text>;
+                })()
               )}
             </View>
           </View>
@@ -306,6 +331,20 @@ export default function SculleryAreaChecklist() {
             </View>
           </ScrollView>
 
+          <View style={{ height: 12 }} />
+          <View style={styles.signaturesRow}>
+            <View style={styles.signatureCell}>
+              <Text style={styles.signatureLabel}>Approved By:</Text>
+              {editMode ? (
+                <SignatureField value={metadata.approvedBySign} onChange={v => handleMetadataChange('approvedBySign', v)} editable={editMode} width={220} height={60} />
+              ) : (
+                (() => {
+                  const uri = normalizeSignatureToDataUri(metadata.approvedBySign || metadata.approvedBy);
+                  return uri ? <Image source={{ uri }} style={{ width: 220, height: 60, resizeMode: 'contain' }} /> : <Text style={styles.signatureValue}>{metadata.approvedBy || ''}</Text>;
+                })()
+              )}
+            </View>
+          </View>
           <View style={styles.buttonContainer}>
             <TouchableOpacity onPress={handleSaveDraftLocal} style={[styles.button, styles.draftButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
@@ -360,4 +399,8 @@ const styles = StyleSheet.create({
   draftButton: { backgroundColor: '#FBBF24' },
   submitButton: { backgroundColor: '#4F46E5' },
   buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  signaturesRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  signatureCell: { flex: 1, padding: 8 },
+  signatureLabel: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
+  signatureValue: { fontSize: 14, color: '#1F2937', marginTop: 6 }
 });

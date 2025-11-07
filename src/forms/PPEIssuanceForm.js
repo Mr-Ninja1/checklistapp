@@ -259,12 +259,7 @@ const PPEIssuanceForm = () => {
                                         </TouchableOpacity>
                                     </View>
 
-                                    {/* --- FOOTER SIGNATURES --- */}
-                                    <View style={styles.footerSignatures}>
-                                        <Text style={styles.footerText}>HSEQ MANAGER..................................</Text>
-                                        <Text style={styles.footerText}>COMPLEX MANAGER..................................</Text>
-                                        <Text style={styles.footerText}>FINANCIAL CONTROLLER..................................</Text>
-                                    </View>
+                                  
                 <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                 <LoadingOverlay visible={isSaving} />
                 </View>

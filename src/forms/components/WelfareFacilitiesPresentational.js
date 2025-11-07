@@ -4,6 +4,33 @@ import SignatureThumb from '../../components/SignatureThumb';
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
+const normalizeSignature = (v) => {
+  if (!v && v !== '') return null;
+  if (v && typeof v === 'object') {
+    const maybe = v.uri || v.data || v.base64 || v.signature || v.dataUri;
+    if (!maybe || typeof maybe !== 'string') return null;
+    const s = maybe.trim();
+    if (!s) return null;
+    if (s.indexOf('data:') >= 0) return s;
+    const compact = s.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+    return null;
+  }
+  if (typeof v !== 'string') return null;
+  const s = v.trim();
+  if (!s) return null;
+  if (s.indexOf('data:') >= 0) return s;
+  const compact = s.replace(/\s+/g, '');
+  if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+  return null;
+};
+
+const renderMaybeSignature = (val, props = {}) => {
+  const uri = normalizeSignature(val);
+  if (uri) return <SignatureThumb uri={uri} {...props} />;
+  return <Text>{val || ''}</Text>;
+};
+
 export default function WelfareFacilitiesPresentational({ payload }) {
   if (!payload) return null;
   const meta = payload.metadata || {};
@@ -57,17 +84,7 @@ export default function WelfareFacilitiesPresentational({ payload }) {
           <View style={styles.verificationRow}>
             <View style={styles.verificationCell}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              {(() => {
-                const s = meta.hseqManagerSign || meta.hseqManager;
-                // prefer sign data, but accept typed name
-                if (s) {
-                  if (typeof s === 'string') {
-                    const uri = (s.startsWith && s.startsWith('data:')) ? s : (s.length > 100 && !s.includes(' ') ? `data:image/png;base64,${s}` : null);
-                    if (uri) return <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} />;
-                  }
-                }
-                return <Text style={styles.metaValue}>{meta.hseqManager || ''}</Text>;
-              })()}
+              {renderMaybeSignature(meta.hseqManagerSign || meta.hseqManager, { width: 140, height: 44, layers: 7, spread: 0.8 })}
             </View>
           </View>
 

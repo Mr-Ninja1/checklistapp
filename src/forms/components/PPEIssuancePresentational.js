@@ -14,7 +14,13 @@ const normalizeSignature = (v) => {
 
 const renderSignature = (val, textStyle, thumbProps = {}) => {
   const uri = normalizeSignature(val);
-  if (uri) return <SignatureThumb uri={uri} {...thumbProps} />;
+  if (uri) {
+    // Provide stronger defaults for this presentational so signatures appear
+    // visually bolder. Callers may override by passing explicit thumbProps.
+    const strongDefaults = { layers: 7, spread: 1.2 };
+    const finalThumbProps = Object.assign({}, strongDefaults, thumbProps);
+    return <SignatureThumb uri={uri} {...finalThumbProps} />;
+  }
   return <Text style={textStyle}>{val || ''}</Text>;
 };
 

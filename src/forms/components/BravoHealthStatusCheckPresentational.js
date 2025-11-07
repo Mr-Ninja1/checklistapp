@@ -4,15 +4,32 @@ import SignatureThumb from '../../components/SignatureThumb';
 
 function normalizeSignature(v) {
   if (!v) return null;
-  if (String(v).startsWith('data:')) return v;
-  const compact = String(v).replace(/\s+/g, '');
-  if (compact.length > 200) return `data:image/png;base64,${compact}`;
+  // string cases
+  if (typeof v === 'string') {
+    const s = v.trim();
+    // data URI
+    if (s.startsWith('data:')) return s;
+    // http(s) or file or content URIs
+    if (/^https?:\/\//i.test(s) || /^file:\/\//i.test(s) || /^content:\/\//i.test(s) || s.startsWith('/')) return s;
+    // compact base64
+    const compact = s.replace(/\s+/g, '');
+    if (compact.length > 200 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    return null;
+  }
+
+  // object-shaped signature
+  if (typeof v === 'object') {
+    if (v.uri && typeof v.uri === 'string') return v.uri;
+    if (v.data && typeof v.data === 'string') return v.data.startsWith('data:') ? v.data : `data:image/png;base64,${v.data}`;
+    if (v.signature && typeof v.signature === 'string') return v.signature.startsWith('data:') ? v.signature : `data:image/png;base64,${v.signature}`;
+    if (v.base64 && typeof v.base64 === 'string') return `data:image/png;base64,${v.base64}`;
+  }
   return null;
 }
 
-function renderMaybeSignature(v, style = {}) {
+function renderMaybeSignature(v, thumbProps = {}) {
   const uri = normalizeSignature(v);
-  if (uri) return <SignatureThumb uri={uri} style={style} />;
+  if (uri) return <SignatureThumb uri={uri} {...thumbProps} />;
   return <Text>{v || ''}</Text>;
 }
 
@@ -20,6 +37,8 @@ const daysOfWeek = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 export default function BravoHealthStatusCheckPresentational({ payload }) {
   if (!payload) return null;
+  // DEBUG: inspect metadata keys when rendering saved form (temporary)
+  try { console.log('BravoHealth payload metadata:', payload?.metadata); console.log('keys:', { supervisorSign: payload?.metadata?.supervisorSign, supervisorName: payload?.metadata?.supervisorName, complexManagerSign: payload?.metadata?.complexManagerSign, hseqManagerSign: payload?.metadata?.hseqManagerSign }); } catch (e) {}
   const layout = payload.layoutHints || {};
   const nameW = layout.name || 140;
   const positionW = layout.position || 100;
@@ -68,16 +87,19 @@ export default function BravoHealthStatusCheckPresentational({ payload }) {
 
       <View style={styles.signRow}>
         <View style={[styles.signBox, { flex: 1 }]}>
-          <Text style={styles.signLabel}>Supervisor Name & Sign</Text>
-          {renderMaybeSignature(payload?.metadata?.supervisorName || '', { width: 220, height: 60 })}
+          <Text style={styles.signLabel}>Supervisor  Sign</Text>
+          {(() => {
+            const v = payload?.metadata?.supervisorSign || payload?.metadata?.supervisorSignature || payload?.metadata?.supervisor || payload?.metadata?.supervisorName || '';
+            return renderMaybeSignature(v, { width: 220, height: 60 });
+          })()}
         </View>
         <View style={[styles.signBox, { flex: 1 }]}>
           <Text style={styles.signLabel}>Complex Manager Name &</Text>
-          {renderMaybeSignature(payload?.metadata?.complexManagerSign || '', { width: 220, height: 60 })}
+          {renderMaybeSignature(payload?.metadata?.complexManagerSign || payload?.metadata?.complexManager || '', { width: 220, height: 60 })}
         </View>
         <View style={[styles.signBox, { flex: 1 }]}>
           <Text style={styles.signLabel}>HSEQ Manager Sign</Text>
-          {renderMaybeSignature(payload?.metadata?.hseqManagerSign || '', { width: 220, height: 60 })}
+          {renderMaybeSignature(payload?.metadata?.hseqManagerSign || payload?.metadata?.hseqManager || payload?.metadata?.hseqSign || '', { width: 220, height: 60 })}
         </View>
       </View>
 
@@ -153,16 +175,7 @@ export default function BravoHealthStatusCheckPresentational({ payload }) {
         </View>
       </ScrollView>
 
-      <View style={styles.signaturesRow}>
-        <View style={styles.signatureBox}>
-          <Text style={styles.signatureLabel}>HSEQ MANAGER</Text>
-          {renderMaybeSignature(payload?.metadata?.hseqManagerSign || '', { width: 260, height: 80 })}
-        </View>
-        <View style={styles.signatureBox}>
-          <Text style={styles.signatureLabel}>COMPLEX MANAGER</Text>
-          {renderMaybeSignature(payload?.metadata?.complexManagerSign || '', { width: 260, height: 80 })}
-        </View>
-      </View>
+      {/* Removed duplicate signature block that appeared below the table */}
 
     </ScrollView>
   );

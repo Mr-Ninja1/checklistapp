@@ -21,6 +21,7 @@ import NotificationModal from '../components/NotificationModal';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 
 const DRAFT_KEY = 'welfare_facilities_cleaning_checklist_draft';
 
@@ -117,6 +118,27 @@ export default function WelfareFacilitiesChecklist() {
     savedAt: new Date().toISOString(),
     status,
   });
+
+  const normalizeSignature = (v) => {
+    if (!v && v !== '') return null;
+    if (v && typeof v === 'object') {
+      const maybe = v.uri || v.data || v.base64 || v.signature || v.dataUri;
+      if (!maybe || typeof maybe !== 'string') return null;
+      const s = maybe.trim();
+      if (!s) return null;
+      if (s.indexOf('data:') >= 0) return s;
+      const compact = s.replace(/\s+/g, '');
+      if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+      return null;
+    }
+    if (typeof v !== 'string') return null;
+    const s = v.trim();
+    if (!s) return null;
+    if (s.indexOf('data:') >= 0) return s;
+    const compact = s.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+    return null;
+  };
 
   const draftId = DRAFT_KEY;
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, waitForSave: true });
@@ -271,7 +293,12 @@ export default function WelfareFacilitiesChecklist() {
               {editMode ? (
                 <SignatureField value={metadata.hseqManagerSign} onChange={(v) => handleMetadataChange('hseqManagerSign', v)} editable={editMode} width={220} height={60} placeholder="Verified by: HSEQ Manager" />
               ) : (
-                <Text style={styles.metaValue}>{metadata.hseqManagerSign || metadata.hseqManager || ''}</Text>
+                (() => {
+                  const v = metadata.hseqManagerSign || metadata.hseqManager || '';
+                  const uri = normalizeSignature(v);
+                  if (uri) return <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={0.9} />;
+                  return <Text style={styles.metaValue}>{metadata.hseqManager || ''}</Text>;
+                })()
               )}
             </View>
           </View>

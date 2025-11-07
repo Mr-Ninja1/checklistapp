@@ -177,10 +177,9 @@ export default function VisitorsLogBookPresentational({ payload, embedded = fals
       ))}
 
       <View style={styles.footer}>
-        <Text style={styles.bold}>SITE MANAGER NAME & SIGNATURE</Text>
-        {renderMaybeSignature(meta.siteManager || payload.siteManager || '', { width: 260, height: 80 })}
-        <Text style={[styles.bold, { marginTop: 8 }]}>VERIFIED BY HSEQ MANAGER</Text>
-        {renderMaybeSignature(meta.verifiedManager || payload.verifiedManager || '', { width: 260, height: 80 })}
+      
+        <Text style={[styles.bold, { marginTop: 8 }]}>AUTHORIZED BY</Text>
+        {renderMaybeSignature(meta.authorizedBySign || payload.authorizedBySign || '', { width: 260, height: 80 })}
       </View>
     </Root>
   );

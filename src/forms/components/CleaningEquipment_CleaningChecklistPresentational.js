@@ -3,10 +3,24 @@ import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
 function normalizeSignature(v) {
-  if (!v) return null;
-  if (String(v).startsWith('data:')) return v;
-  const compact = String(v).replace(/\s+/g, '');
-  if (compact.length > 200) return `data:image/png;base64,${compact}`;
+  if (!v && v !== '') return null;
+  // support object-shaped signatures saved as { uri } or { data }
+  if (v && typeof v === 'object') {
+    const maybe = v.uri || v.data || v.base64 || v.signature || v.dataUri;
+    if (!maybe || typeof maybe !== 'string') return null;
+    const s = maybe.trim();
+    if (!s) return null;
+    if (s.indexOf('data:') >= 0) return s;
+    const compact = s.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+    return null;
+  }
+
+  const str = String(v).trim();
+  if (!str) return null;
+  if (str.indexOf('data:') >= 0) return str;
+  const compact = str.replace(/\s+/g, '');
+  if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
   return null;
 }
 
@@ -14,6 +28,13 @@ function renderMaybeSignature(v, style = {}) {
   const uri = normalizeSignature(v);
   if (uri) return <SignatureThumb uri={uri} style={style} />;
   return <Text>{v || ''}</Text>;
+}
+
+function renderSignatureOnly(v, style = {}) {
+  const uri = normalizeSignature(v);
+  if (uri) return <SignatureThumb uri={uri} style={style} />;
+  // explicitly render nothing if no signature available
+  return null;
 }
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
@@ -66,7 +87,11 @@ export default function CleaningEquipment_CleaningChecklistPresentational({ payl
           <View style={styles.verificationRow}>
             <View style={styles.verificationCell}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              {renderMaybeSignature(meta.hseqSign || meta.hseqManager || '', { width: 240, height: 60 })}
+              {renderSignatureOnly(meta.hseqSign || meta.hseqManager || '', { width: 240, height: 60 })}
+            </View>
+            <View style={styles.verificationCell}>
+              <Text style={styles.verificationLabel}>Approved By:</Text>
+              {renderSignatureOnly(meta.approvedBySign || meta.approvedBy || '', { width: 240, height: 60 })}
             </View>
           </View>
         </View>

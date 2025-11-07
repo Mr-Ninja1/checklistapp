@@ -4,12 +4,22 @@ import SignatureThumb from '../../components/SignatureThumb';
 
 const TIME_SLOTS = ['Morning', 'Afternoon', 'Evening'];
 
-function resolveSignatureUri(val) {
+function normalizeSignature(val) {
   if (!val) return null;
-  if (typeof val !== 'string') return null;
-  if (val.startsWith('data:')) return val;
-  // legacy raw base64 without data: prefix
-  if (val.length > 100 && !val.includes(' ')) return `data:image/png;base64,${val}`;
+  // already a data uri
+  if (typeof val === 'string' && val.startsWith('data:')) return val;
+  // object shaped
+  if (typeof val === 'object') {
+    if (val.uri && typeof val.uri === 'string') return val.uri;
+    if (val.data && typeof val.data === 'string') return val.data.startsWith('data:') ? val.data : `data:image/png;base64,${val.data}`;
+    if (val.signature && typeof val.signature === 'string') return val.signature.startsWith('data:') ? val.signature : `data:image/png;base64,${val.signature}`;
+    if (val.base64 && typeof val.base64 === 'string') return `data:image/png;base64,${val.base64}`;
+  }
+  // legacy compact base64 string
+  if (typeof val === 'string') {
+    const compact = val.replace(/\s+/g, '');
+    if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+  }
   return null;
 }
 
@@ -77,7 +87,7 @@ export default function WalkInChillerLogPresentational({ payload }) {
                     <Text style={styles.slotValue}>{item[slot]?.time || ''}</Text>
                     { (() => {
                       const s = item[slot]?.sign;
-                      const uri = resolveSignatureUri(s);
+                      const uri = normalizeSignature(s);
                       return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.slotValue}>{s || ''}</Text>;
                     })() }
                   </View>
@@ -87,7 +97,7 @@ export default function WalkInChillerLogPresentational({ payload }) {
               <View style={[styles.cell, { width: SIGNATURE }]}>
                 { (() => {
                   const s = item.supNameSign;
-                  const uri = resolveSignatureUri(s);
+                  const uri = normalizeSignature(s);
                   return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.cellText}>{s || ''}</Text>;
                 })() }
               </View>
@@ -95,6 +105,26 @@ export default function WalkInChillerLogPresentational({ payload }) {
           ))}
         </View>
       </ScrollView>
+
+      <View style={{ height: 24 }} />
+      <View style={styles.signaturesRow}>
+        <View style={styles.signatureCell}>
+          <Text style={styles.signatureLabel}>Verified By: HSEQ Manager</Text>
+          {(() => {
+            const v = payload?.metadata?.hseqManagerSign || payload?.metadata?.hseqManager || '';
+            const uri = normalizeSignature(v);
+            return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={7} spread={1.0} /> : <Text style={styles.signatureValue}>{v || ''}</Text>;
+          })()}
+        </View>
+        <View style={styles.signatureCell}>
+          <Text style={styles.signatureLabel}>Complex Manager</Text>
+          {(() => {
+            const v = payload?.metadata?.complexManagerSign || payload?.metadata?.complexManager || '';
+            const uri = normalizeSignature(v);
+            return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={7} spread={1.0} /> : <Text style={styles.signatureValue}>{v || ''}</Text>;
+          })()}
+        </View>
+      </View>
 
     </ScrollView>
   );
@@ -128,4 +158,8 @@ const styles = StyleSheet.create({
   slotRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   slotValue: { flex: 1, textAlign: 'center' },
   signThumb: { width: 140, height: 44, resizeMode: 'contain', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 4 },
+  signaturesRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  signatureCell: { flex: 1, padding: 8 },
+  signatureLabel: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
+  signatureValue: { fontSize: 14, color: '#1F2937', marginTop: 6 }
 });

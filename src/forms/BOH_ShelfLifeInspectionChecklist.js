@@ -6,6 +6,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
+import SignatureThumb from '../components/SignatureThumb';
 // history registration is handled by the save hook via formStorage.saveForm
 
 const DRAFT_KEY = 'boh_shelf_life_inspection_draft';
@@ -152,6 +153,38 @@ export default function BOH_ShelfLifeInspectionChecklist() {
   const tableAvailableWidth = Math.max(windowWidth - 32, 600); // leave some margin; ensure minimum width
   const colPixel = (flex) => Math.floor((flex / totalFlex) * tableAvailableWidth);
 
+  // Normalize various signature shapes to a data:image URI when possible.
+  // Accepts:
+  // - data URIs (already usable)
+  // - compact base64 strings (no data: prefix)
+  // - object shapes like { uri }, { data }, { base64 } where the value may
+  //   be a data URI or compact base64
+  const normalizeSignatureToDataUri = (sig) => {
+    if (!sig && sig !== '') return null;
+    // If it's an object, prefer .uri, .data, .base64, .signature, or .dataUri
+    if (sig && typeof sig === 'object') {
+      const maybe = sig.uri || sig.data || sig.base64 || sig.signature || sig.dataUri;
+      if (!maybe || typeof maybe !== 'string') return null;
+      const s = maybe.trim();
+      if (!s) return null;
+      if (s.indexOf('data:') >= 0) return s; // allow data: anywhere (robust against whitespace/newlines)
+      const compact = s.replace(/\s+/g, '');
+      if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+      return null;
+    }
+
+    if (typeof sig === 'string') {
+      const s = sig.trim();
+      if (!s) return null;
+      if (s.indexOf('data:') >= 0) return s;
+      const compact = s.replace(/\s+/g, '');
+      if (/^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 100) return `data:image/png;base64,${compact}`;
+      return null;
+    }
+
+    return null;
+  };
+
   const renderRow = (item, index) => (
     <View key={index} style={styles.row}>
       {columnHeaders.map(col => {
@@ -163,6 +196,25 @@ export default function BOH_ShelfLifeInspectionChecklist() {
             </View>
           );
         }
+        if (col.key === 'sign') {
+          return (
+            <View key={col.key} style={[styles.cell, { width: w }]}> 
+              {editMode ? (
+                <SignatureField value={item.sign} onChange={v => handleEntryChange(index, 'sign', v)} editable={editMode} width={Math.max(w - 8, 120)} height={60} />
+              ) : (() => {
+                const v = item.sign;
+                const uri = normalizeSignatureToDataUri(v);
+                if (uri) {
+                  return <SignatureThumb uri={uri} width={Math.max(w - 8, 120)} height={60} layers={6} spread={1.0} />;
+                }
+                // Fallback: show a readable string (for plain text or object shapes)
+                const asText = v == null ? '' : (typeof v === 'string' ? v : JSON.stringify(v));
+                return <Text style={styles.readOnlyText}>{asText || ''}</Text>;
+              })()}
+            </View>
+          );
+        }
+
         return (
           <View key={col.key} style={[styles.cell, { width: w }]}> 
             <TextInput
@@ -207,13 +259,33 @@ export default function BOH_ShelfLifeInspectionChecklist() {
 
         {/* Verification footer removed per UI update; Issue Date moved to header */}
 
-        {/* Re-add signature inputs (kept for printing/saved view) */}
+        {/* Signature inputs / read-only thumbs */}
         <View style={styles.verificationBox}>
-          <Text style={styles.verLabel}>HSEQ Manager (Verified by)</Text>
-          <SignatureField value={verification.hseqManagerSign} onChange={v => handleVerificationChange('hseqManagerSign', v)} editable={editMode} width={240} height={80} />
+          {/* HSEQ Manager */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={styles.verLabel}>HSEQ Manager</Text>
+            {editMode ? (
+              <SignatureField value={verification.hseqManagerSign} onChange={v => handleVerificationChange('hseqManagerSign', v)} editable={editMode} width={240} height={80} />
+            ) : (() => {
+              const v = verification.hseqManagerSign || verification.hseqManager || verification.hseqManagerSignature || '';
+              const asString = v ? String(v) : '';
+              const uri = asString.startsWith('data:') ? asString : (asString.replace(/\s+/g, '') && /^[A-Za-z0-9+/=]+$/.test(asString.replace(/\s+/g, '')) && asString.replace(/\s+/g, '').length > 100 ? `data:image/png;base64,${asString.replace(/\s+/g, '')}` : null);
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={8} spread={1.2} /> : <Text style={styles.metaText}>{v || ''}</Text>;
+            })()}
+          </View>
 
-          <Text style={styles.verLabel}>Complex Manager</Text>
-          <SignatureField value={verification.complexManagerSign} onChange={v => handleVerificationChange('complexManagerSign', v)} editable={editMode} width={240} height={80} />
+          {/* Complex Manager */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={styles.verLabel}>Complex Manager</Text>
+            {editMode ? (
+              <SignatureField value={verification.complexManagerSign} onChange={v => handleVerificationChange('complexManagerSign', v)} editable={editMode} width={240} height={80} />
+            ) : (() => {
+              const v = verification.complexManagerSign || verification.complexManager || verification.complexManagerSignature || '';
+              const asString = v ? String(v) : '';
+              const uri = asString.startsWith('data:') ? asString : (asString.replace(/\s+/g, '') && /^[A-Za-z0-9+/=]+$/.test(asString.replace(/\s+/g, '')) && asString.replace(/\s+/g, '').length > 100 ? `data:image/png;base64,${asString.replace(/\s+/g, '')}` : null);
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={8} spread={1.2} /> : <Text style={styles.metaText}>{v || ''}</Text>;
+            })()}
+          </View>
         </View>
 
         {/* Buttons are provided via the `actionButtons` prop to EditableFormContainer so

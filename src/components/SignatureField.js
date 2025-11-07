@@ -73,14 +73,16 @@ export default function SignatureField({ value, onChange, editable = true, heigh
                     confirmText="Save"
                     webStyle={webStyle}
                     autoClear={false}
-                    penColor="#000000"
-                    backgroundColor="rgba(255,255,255,1)"
-                    // request slightly thicker strokes (props are passed to the inner signaturePad)
-                    minWidth={2}
-                    maxWidth={4}
-                    dotSize={1}
-                    // let the canvas size be driven by container height
-                    height={Math.max(200, modalHeight - 120)}
+                      penColor="#000000"
+                      backgroundColor="rgba(255,255,255,1)"
+                      // Request thicker strokes: raise min/max width, increase dot size,
+                      // and reduce velocity-based thinning for more consistent thickness.
+                      minWidth={4}
+                      maxWidth={10}
+                      dotSize={2}
+                      velocityFilterWeight={0.7}
+                      // let the canvas size be driven by container height
+                      height={Math.max(200, modalHeight - 120)}
                   />
                 </View>
               </ScrollView>

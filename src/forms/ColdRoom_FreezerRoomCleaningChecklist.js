@@ -59,7 +59,7 @@ const Checkbox = ({ checked, onPress }) => (
 export default function ColdRoomFreezerChecklist() {
   const [formData, setFormData] = useState(initialCleaningState);
   const currentYear = new Date().getFullYear().toString();
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '', hseqSign: '' });
+  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '', hseqSign: '', approvedBy: '', approvedBySign: '' });
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
@@ -97,6 +97,22 @@ export default function ColdRoomFreezerChecklist() {
     })();
     return () => { mounted = false; };
   }, []);
+
+  function normalizeSignatureToDataUri(v) {
+    if (!v) return null;
+    if (typeof v === 'string' && v.startsWith('data:')) return v;
+    if (typeof v === 'object') {
+      if (v.uri && typeof v.uri === 'string') return v.uri;
+      if (v.data && typeof v.data === 'string') return v.data.startsWith('data:') ? v.data : `data:image/png;base64,${v.data}`;
+      if (v.signature && typeof v.signature === 'string') return v.signature.startsWith('data:') ? v.signature : `data:image/png;base64,${v.signature}`;
+      if (v.base64 && typeof v.base64 === 'string') return `data:image/png;base64,${v.base64}`;
+    }
+    if (typeof v === 'string') {
+      const compact = v.replace(/\s+/g, '');
+      if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
+    }
+    return null;
+  }
 
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -211,7 +227,7 @@ export default function ColdRoomFreezerChecklist() {
   return (
     <View style={styles.container}>
       <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
-          <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)), flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast"> 
+          <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(120, Math.round(windowHeight * 0.25)), flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast"> 
           <View style={styles.card}>
           <View style={styles.header}>
             <View style={styles.brandRow}>
@@ -253,11 +269,10 @@ export default function ColdRoomFreezerChecklist() {
               {editMode ? (
                 <SignatureField value={metadata.hseqSign} onChange={v => handleMetadataChange('hseqSign', v)} editable={true} width={260} height={80} />
               ) : (
-                metadata.hseqSign ? (
-                  <SignatureThumb uri={String(metadata.hseqSign).startsWith('data:') ? metadata.hseqSign : `data:image/png;base64,${metadata.hseqSign}`} width={260} height={80} layers={6} spread={0.9} />
-                ) : (
-                  <Text style={styles.verificationValue}>{metadata.hseqManager}</Text>
-                )
+                (() => {
+                  const uri = normalizeSignatureToDataUri(metadata.hseqSign || metadata.hseqManager);
+                  return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={6} spread={0.9} /> : <Text style={styles.verificationValue}>{metadata.hseqManager}</Text>;
+                })()
               )}
             </View>
           </View>
@@ -286,6 +301,20 @@ export default function ColdRoomFreezerChecklist() {
             </View>
           </ScrollView>
 
+          <View style={{ height: 12 }} />
+          <View style={styles.signaturesRow}>
+            <View style={styles.signatureCell}>
+              <Text style={styles.signatureLabel}>Approved By:</Text>
+              {editMode ? (
+                <SignatureField value={metadata.approvedBySign} onChange={v => handleMetadataChange('approvedBySign', v)} editable={true} width={220} height={60} />
+              ) : (
+                (() => {
+                  const uri = normalizeSignatureToDataUri(metadata.approvedBySign || metadata.approvedBy);
+                  return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={0.9} /> : <Text style={styles.signatureValue}>{metadata.approvedBy || ''}</Text>;
+                })()
+              )}
+            </View>
+          </View>
           {/* buttons moved into EditableFormContainer via actionButtons prop */}
             <LoadingOverlay visible={isSaving} />
             <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
@@ -339,4 +368,8 @@ const styles = StyleSheet.create({
   draftButton: { backgroundColor: '#FBBF24' },
   submitButton: { backgroundColor: '#4F46E5' },
   buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  signaturesRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  signatureCell: { flex: 1, padding: 8 },
+  signatureLabel: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
+  signatureValue: { fontSize: 14, color: '#1F2937', marginTop: 6 }
 });
