@@ -1,0 +1,18 @@
+{
+  "formType": "FoodHandlersHandwashing",
+  "templateVersion": "v1.0",
+  "title": "Food Handlers Daily Handwashing Tracking Log Sheet",
+  "date": "11/07/2025",
+  "location": "Front Counter",
+  "shift": "AM",
+  "verifiedBy": "Maria",
+  "complexManagerSign": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+  "timeSlots": ["06:00AM","07:00AM","08:00AM","09:00AM"],
+  "handlers": [
+    { "id": 1, "fullName": "Alice", "jobTitle": "Barista", "checks": { "06:00AM": true, "07:00AM": false, "08:00AM": true, "09:00AM": false }, "staffSign": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQ", "supName": "Supervisor", "supSign": "" },
+    { "id": 2, "fullName": "Bob", "jobTitle": "Cook", "checks": { "06:00AM": false, "07:00AM": true, "08:00AM": true, "09:00AM": false }, "staffSign": "", "supName": "Supervisor", "supSign": "" }
+  ],
+  "assets": { "logoDataUri": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxISEBUSEhIVFhUVFRUVFRUVFRUWFhUVFhUVFRUYHSggGBolHRUVITEhJSkrLi4uFx8zODMtNygtLisBCgoKDg0OGxAQGy0lICYtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAKABJQMBIgACEQEDEQH/xAAXAAEBAQEAAAAAAAAAAAAAAAAAAQID/8QAFwEBAQEBAAAAAAAAAAAAAAAAAQACEf/aAAwDAQACEAMQAAAByR//EABkQAQEBAQEBAAAAAAAAAAAAAAERAhMxUf/aAAgBAQABPwCqWq4lq9f/8QAGhEAAwADAQAAAAAAAAAAAAAAAQIREgMhQf/aAAgBAgEBPwE3q8g3Q3//xAAXEQADAQAAAAAAAAAAAAAAAAAAAREh/9oACAEDAQE/AVnG/9k=" },
+  "layoutHints": { "nameW": 160, "jobW": 120, "signW": 100, "checkboxW": 50 },
+  "savedAt": 1700
+}

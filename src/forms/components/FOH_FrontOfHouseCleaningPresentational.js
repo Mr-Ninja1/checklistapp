@@ -3,14 +3,33 @@ import { View, Text, ScrollView, Image, StyleSheet } from 'react-native';
 
 const DEFAULT_DAYS = ['Sun','Mon','Tue','Wed','Thurs','Fri','Sat'];
 
-export default function FOH_FrontOfHouseCleaningPresentational({ payload }) {
+const EXPORT_WIDTH = 900;
+export default function FOH_FrontOfHouseCleaningPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const { metadata = {}, formData = [], layoutHints = {} } = payload;
   const days = payload.weekDays || payload.timeSlots || DEFAULT_DAYS;
 
   const hints = layoutHints || {};
   const tableW = payload._tableWidth || 1000;
-  const col = (k, defaultW) => ({ width: hints[k] || defaultW });
+  let scale = 1;
+  let adjustedTableW = tableW;
+  if (exportingWide && tableW > EXPORT_WIDTH) {
+    scale = EXPORT_WIDTH / tableW;
+    adjustedTableW = EXPORT_WIDTH;
+  }
+  // Adjust column widths for export
+  const defaultWidths = {
+    AREA: 300,
+    FREQUENCY: 150,
+    DAY_GROUP_WIDTH: 150,
+  };
+  const adjustedWidths = exportingWide ? {
+    AREA: Math.round(defaultWidths.AREA * scale),
+    FREQUENCY: Math.round(defaultWidths.FREQUENCY * scale),
+    DAY_GROUP_WIDTH: Math.round(defaultWidths.DAY_GROUP_WIDTH * scale),
+  } : defaultWidths;
+  const exportStyle = exportingWide ? { width: EXPORT_WIDTH, maxWidth: EXPORT_WIDTH, alignSelf: 'center' } : {};
+  const col = (k, defaultW) => ({ width: exportingWide ? adjustedWidths[k] : (hints[k] || defaultW) });
 
   const md = metadata || {};
   const location = md.location || '';
@@ -28,8 +47,8 @@ export default function FOH_FrontOfHouseCleaningPresentational({ payload }) {
   };
 
   return (
-    <ScrollView style={styles.container} horizontal={true}>
-      <View style={{ minWidth: tableW }}>
+    exportingWide ? (
+      <View style={[styles.container, exportStyle]}>
         <View style={styles.headerTop}>
           {payload.assets?.logoDataUri ? (
             <Image source={{ uri: payload.assets.logoDataUri }} style={styles.logo} />
@@ -57,11 +76,11 @@ export default function FOH_FrontOfHouseCleaningPresentational({ payload }) {
           </View>
         </View>
 
-        <View style={[styles.tableHeader, styles.tableBorder]}>
-          <Text style={[styles.th, col('AREA', 300)]}>Area to be cleaned</Text>
-          <Text style={[styles.th, col('FREQUENCY', 150)]}>Frequency (Per Week)</Text>
+        <View style={[styles.tableHeader, styles.tableBorder, exportStyle]}>
+          <Text style={[styles.th, { width: adjustedWidths.AREA }]}>Area to be cleaned</Text>
+          <Text style={[styles.th, { width: adjustedWidths.FREQUENCY }]}>Frequency (Per Week)</Text>
           {days.map(d => (
-            <View key={d} style={[styles.dayGroup, col('DAY_GROUP_WIDTH', 150)]}>
+            <View key={d} style={[styles.dayGroup, { width: adjustedWidths.DAY_GROUP_WIDTH }]}>
               <Text style={styles.th}>{d}</Text>
               <Text style={styles.thSmall}>Cleaned BY</Text>
             </View>
@@ -69,13 +88,13 @@ export default function FOH_FrontOfHouseCleaningPresentational({ payload }) {
         </View>
 
         {formData.map((row, idx) => (
-          <View key={row.id || idx} style={[styles.row, styles.tableBorderRow]}>
-            <Text style={[styles.td, col('AREA', 300)]}>{row.name}</Text>
-            <Text style={[styles.td, col('FREQUENCY', 150)]}>{row.frequency}</Text>
+          <View key={row.id || idx} style={[styles.row, styles.tableBorderRow, exportStyle]}>
+            <Text style={[styles.td, { width: adjustedWidths.AREA }]}>{row.name}</Text>
+            <Text style={[styles.td, { width: adjustedWidths.FREQUENCY }]}>{row.frequency}</Text>
             {days.map(d => {
               const cell = (row.checks && row.checks[d]) || {};
               return (
-                <View key={d} style={[styles.dayGroupCell, col('DAY_GROUP_WIDTH', 150)]}>
+                <View key={d} style={[styles.dayGroupCell, { width: adjustedWidths.DAY_GROUP_WIDTH }]}>
                   <Text style={[styles.td, { width: 50, textAlign: 'center' }]}>{cell.checked ? '✓' : ''}</Text>
                   <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>{cell.cleanedBy || ''}</Text>
                 </View>
@@ -84,7 +103,65 @@ export default function FOH_FrontOfHouseCleaningPresentational({ payload }) {
           </View>
         ))}
       </View>
-    </ScrollView>
+    ) : (
+      <ScrollView style={styles.container} horizontal={true}>
+        <View style={{ minWidth: tableW }}>
+          <View style={styles.headerTop}>
+            {payload.assets?.logoDataUri ? (
+              <Image source={{ uri: payload.assets.logoDataUri }} style={styles.logo} />
+            ) : (
+              <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />
+            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <Text style={styles.companyNameLarge}>Bravo</Text>
+            </View>
+            <View style={{ width: 80 }} />
+          </View>
+
+          <View style={styles.titleRow}>
+            <Text style={styles.formTitle}>FRONT OF HOUSE CLEANING CHECKLIST</Text>
+          </View>
+
+          <View style={styles.metaInline}>
+            <View style={styles.metaCol}><Text style={styles.metaLabel}>LOCATION:</Text><Text style={styles.metaValue}>{location}</Text></View>
+            <View style={styles.metaCol}><Text style={styles.metaLabel}>WEEK:</Text><Text style={styles.metaValue}>{week}</Text></View>
+            <View style={styles.metaCol}><Text style={styles.metaLabel}>MONTH:</Text><Text style={styles.metaValue}>{month}</Text></View>
+            <View style={styles.metaCol}><Text style={styles.metaLabel}>YEAR:</Text><Text style={styles.metaValue}>{year}</Text></View>
+            <View style={[styles.metaFull]}>
+              <Text style={styles.metaLabel}>Verified By: HSEQ Manager:</Text>
+              {hseqManagerSign ? renderSignature(hseqManagerSign) : <Text style={styles.metaValue}>{hseqManager}</Text>}
+            </View>
+          </View>
+
+          <View style={[styles.tableHeader, styles.tableBorder]}>
+            <Text style={[styles.th, col('AREA', 300)]}>Area to be cleaned</Text>
+            <Text style={[styles.th, col('FREQUENCY', 150)]}>Frequency (Per Week)</Text>
+            {days.map(d => (
+              <View key={d} style={[styles.dayGroup, col('DAY_GROUP_WIDTH', 150)]}>
+                <Text style={styles.th}>{d}</Text>
+                <Text style={styles.thSmall}>Cleaned BY</Text>
+              </View>
+            ))}
+          </View>
+
+          {formData.map((row, idx) => (
+            <View key={row.id || idx} style={[styles.row, styles.tableBorderRow]}>
+              <Text style={[styles.td, col('AREA', 300)]}>{row.name}</Text>
+              <Text style={[styles.td, col('FREQUENCY', 150)]}>{row.frequency}</Text>
+              {days.map(d => {
+                const cell = (row.checks && row.checks[d]) || {};
+                return (
+                  <View key={d} style={[styles.dayGroupCell, col('DAY_GROUP_WIDTH', 150)]}>
+                    <Text style={[styles.td, { width: 50, textAlign: 'center' }]}>{cell.checked ? '✓' : ''}</Text>
+                    <Text style={[styles.td, { flex: 1, textAlign: 'center' }]}>{cell.cleanedBy || ''}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    )
   );
 }
 

@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CoolingTemperatureLog - export skeleton</title>
+<style>
+  table, tbody, tr { page-break-inside: avoid !important; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; padding: 16px; }
+  .form-title { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 12px }
+  .header-block { border: 1px solid #ccc; padding: 8px; margin-bottom: 12px; }
+  .hdr-row { margin: 4px 0 }
+  .field-row { margin: 6px 0 }
+  .label { font-weight: 600 }
+  .sign-box { width: 220px; height: 80px; border: 1px dashed #888; }
+  table.data { width: 100%; border-collapse: collapse; margin-top: 12px }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 6px; font-size: 12px }
+  </style>
+</head>
+<body>
+<div class="form-title">CoolingTemperatureLog</div>
+<div class="header-block">
+<div class="hdr-row"><strong>location</strong>: <!-- {{location}} --></div>
+<div class="hdr-row"><strong>shift</strong>: <!-- {{shift}} --></div>
+<div class="hdr-row"><strong>date</strong>: <!-- {{date}} --></div>
+<div class="hdr-row"><strong>verifiedBy</strong>: <!-- {{verifiedBy}} --></div>
+<div class="hdr-row"><strong>verifiedBySign</strong>: <!-- {{verifiedBySign}} --></div>
+<div class="hdr-row"><strong>managerSign</strong>: <!-- {{managerSign}} --></div>
+<div class="hdr-row"><strong>complexManagerSign</strong>: <!-- {{complexManagerSign}} --></div>
+</div>
+<div class="body-block">
+
+
+
+
+
+
+<table class="data">
+  <thead>
+    <tr>
+      <th>Col 1</th>
+      <th>Col 2</th>
+      <th>Col 3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><!-- {{row.0.col1}} --></td>
+      <td><!-- {{row.0.col2}} --></td>
+      <td><!-- {{row.0.col3}} --></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</body>
+</html>

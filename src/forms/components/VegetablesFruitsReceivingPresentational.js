@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, Image, StyleSheet } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function VegetablesFruitsReceivingPresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function VegetablesFruitsReceivingPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   // normalize wrapper payloads saved by formStorage
   const p = payload.payload || payload;
@@ -22,9 +23,11 @@ export default function VegetablesFruitsReceivingPresentational({ payload }) {
   const verifiedUri = resolveSignatureUri(meta.verifiedBySign) || resolveSignatureUri(meta.verifiedBy);
   const hseqUri = resolveSignatureUri(meta.hseqManagerSign) || resolveSignatureUri(meta.hseqManager);
 
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
+
   return (
-    <ScrollView contentContainerStyle={styles.outerContainer}>
-      <View style={styles.docHeader}>
+    <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.outerContainer}>
+      <View style={[styles.docHeader, exportA4Style]}>
         <View style={styles.logoAndSystem}>
           <Image source={require('../../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
           <View style={styles.systemDetailsWrap}>
@@ -110,43 +113,83 @@ export default function VegetablesFruitsReceivingPresentational({ payload }) {
         </View>
       </View>
 
-      <ScrollView horizontal contentContainerStyle={{ minWidth: 1123 }}>
-        <View style={dailyStyles.tableContainer}>
-          <View style={dailyStyles.tableHeader}>
-            <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Type of Veg / Fruit</Text>
-            <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
+      {exportingWide ? (
+        <View style={{ width: A4_WIDTH }}>
+          <View style={dailyStyles.tableContainer}>
+            <View style={dailyStyles.tableHeader}>
+              <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Type of Veg / Fruit</Text>
+              <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
 
-            <View style={dailyStyles.groupHeaderCol}>
-              <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
-              <View style={dailyStyles.subHeaderRow}>
-                <Text style={[dailyStyles.subHeaderCell, dailyStyles.cleanCol]}>Clean</Text>
-                <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempCol, dailyStyles.lastSubHeaderCell]}>Temp</Text>
+              <View style={dailyStyles.groupHeaderCol}>
+                <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
+                <View style={dailyStyles.subHeaderRow}>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.cleanCol]}>Clean</Text>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempCol, dailyStyles.lastSubHeaderCell]}>Temp</Text>
+                </View>
+              </View>
+
+              <View style={[dailyStyles.groupHeaderCol, dailyStyles.lastGroupHeaderCol]}>
+                <Text style={dailyStyles.groupHeaderTitle}>Product</Text>
+                <View style={dailyStyles.subHeaderRow}>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.stateOfProductCol]}>State of{"\n"}Product</Text>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
+                </View>
               </View>
             </View>
 
-            <View style={[dailyStyles.groupHeaderCol, dailyStyles.lastGroupHeaderCol]}>
-              <Text style={dailyStyles.groupHeaderTitle}>Product</Text>
-              <View style={dailyStyles.subHeaderRow}>
-                <Text style={[dailyStyles.subHeaderCell, dailyStyles.stateOfProductCol]}>State of{"\n"}Product</Text>
-                <Text style={[dailyStyles.subHeaderCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
-                <Text style={[dailyStyles.subHeaderCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
+            {rows.map((r, idx) => (
+              <View style={dailyStyles.tableRow} key={r.id || r._id || `row-${idx}`}>
+                <Text style={[dailyStyles.dataCell, dailyStyles.nameCol]}>{r.typeOfVegFruit}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{r.supplier}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>{r.clean ? '✓' : ''}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{r.temp}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{r.stateOfProduct}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{r.expiryDate}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{r.remarks}</Text>
               </View>
-            </View>
+            ))}
           </View>
-
-          {rows.map((r, idx) => (
-            <View style={dailyStyles.tableRow} key={r.id || r._id || `row-${idx}`}>
-              <Text style={[dailyStyles.dataCell, dailyStyles.nameCol]}>{r.typeOfVegFruit}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{r.supplier}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>{r.clean ? '✓' : ''}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{r.temp}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{r.stateOfProduct}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{r.expiryDate}</Text>
-              <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{r.remarks}</Text>
-            </View>
-          ))}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView horizontal contentContainerStyle={{ minWidth: 1123 }}>
+          <View style={dailyStyles.tableContainer}>
+            <View style={dailyStyles.tableHeader}>
+              <Text style={[dailyStyles.headerCell, dailyStyles.nameCol, dailyStyles.spanTwoRows]}>Type of Veg / Fruit</Text>
+              <Text style={[dailyStyles.headerCell, dailyStyles.supplierCol, dailyStyles.spanTwoRows]}>Supplier</Text>
+
+              <View style={dailyStyles.groupHeaderCol}>
+                <Text style={dailyStyles.groupHeaderTitle}>Delivery Vehicle</Text>
+                <View style={dailyStyles.subHeaderRow}>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.cleanCol]}>Clean</Text>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.tempCol, dailyStyles.lastSubHeaderCell]}>Temp</Text>
+                </View>
+              </View>
+
+              <View style={[dailyStyles.groupHeaderCol, dailyStyles.lastGroupHeaderCol]}>
+                <Text style={dailyStyles.groupHeaderTitle}>Product</Text>
+                <View style={dailyStyles.subHeaderRow}>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.stateOfProductCol]}>State of{"\n"}Product</Text>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.expiryDateCol]}>Expiry Date</Text>
+                  <Text style={[dailyStyles.subHeaderCell, dailyStyles.remarksCol, dailyStyles.lastSubHeaderCell]}>Remarks</Text>
+                </View>
+              </View>
+            </View>
+
+            {rows.map((r, idx) => (
+              <View style={dailyStyles.tableRow} key={r.id || r._id || `row-${idx}`}>
+                <Text style={[dailyStyles.dataCell, dailyStyles.nameCol]}>{r.typeOfVegFruit}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.supplierCol]}>{r.supplier}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.cleanCol, dailyStyles.checkboxCell]}>{r.clean ? '✓' : ''}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{r.temp}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.stateOfProductCol]}>{r.stateOfProduct}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.expiryDateCol]}>{r.expiryDate}</Text>
+                <Text style={[dailyStyles.dataCell, dailyStyles.remarksCol]}>{r.remarks}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
       <View style={styles.verificationFooter}>
         <Text style={styles.verificationText}>VERIFIED BY</Text>

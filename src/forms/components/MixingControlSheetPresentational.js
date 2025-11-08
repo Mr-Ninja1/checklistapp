@@ -3,21 +3,34 @@ import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
 // Dummy presentational used for debugging: ignores payload and renders static content
-export default function MixingControlSheetPresentational({ payload }) {
+// A4 width in pixels at 96dpi: ~794
+const A4_WIDTH = 794;
+
+export default function MixingControlSheetPresentational({ payload, exportingWide = false }) {
   const rows = Array.isArray(payload?.formData) ? payload.formData : [];
-  const tableWidth = payload?._tableWidth || 1500;
+  // Calculate table width from column widths
+  const columnWidths = [120, 180, 100, 220, 160, 120, 120, 160, 120, 140, 140];
+  const tableWidth = columnWidths.reduce((a, b) => a + b, 0);
   const metadata = payload?.metadata || {};
-  // Prefer savedAt (ISO or timestamp) then metadata.issueDate
   let issueDate = '';
   if (payload?.savedAt) {
     try { issueDate = new Date(payload.savedAt).toLocaleDateString(); } catch (e) { issueDate = String(payload.savedAt); }
   } else if (metadata.issueDate) issueDate = String(metadata.issueDate);
 
+  // Shrink table and form to A4 width during export
+  let scale = 1;
+  if (exportingWide && tableWidth > A4_WIDTH) {
+    scale = A4_WIDTH / tableWidth;
+  }
+  const adjustedWidths = columnWidths.map(w => Math.round(w * scale));
+  const adjustedTableWidth = exportingWide ? Math.round(tableWidth * scale) : tableWidth;
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
+
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.headerBox}>
-          <View style={styles.headerTop}>
+    <View style={[styles.container, exportA4Style]}>
+      <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.content}>
+        <View style={[styles.headerBox, exportA4Style]}>
+          <View style={[styles.headerTop, exportA4Style]}>
             <View style={styles.logoWrap}>
               <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />
               <View>
@@ -32,49 +45,91 @@ export default function MixingControlSheetPresentational({ payload }) {
           <View style={styles.subjectRow}><Text style={styles.subjectText}>Subject: MIXING CONTROL SHEET</Text></View>
         </View>
 
-        {/* make table horizontally scrollable to fit wide columns */}
-        <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>
-          <View style={[styles.tableWrap, { width: tableWidth }]}> 
+        {/* Table: shrink to A4 width and disable horizontal scroll during export */}
+        {exportingWide ? (
+          <View style={[styles.tableWrap, { width: adjustedTableWidth }]}> 
             <View style={styles.tableHeader}>
-            <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>PRODUCTION DATE</Text></View>
-            <View style={[styles.headerCell, { width: 180 }]}><Text style={styles.headerText}>PRODUCT NAME</Text></View>
-            <View style={[styles.headerCell, { width: 100 }]}><Text style={styles.headerText}>BATCH NO.</Text></View>
-            <View style={[styles.headerCell, { width: 220 }]}><Text style={styles.headerText}>INGREDIENTS</Text></View>
-            <View style={[styles.headerCell, { width: 160 }]}><Text style={styles.headerText}>INGREDIENTS WEIGHT (kgs)</Text></View>
-            <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>MIXING TIME</Text></View>
-            <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>MIXING TEMP</Text></View>
-            <View style={[styles.headerCell, { width: 160 }]}><Text style={styles.headerText}>DOUGH DIVIDING/SCALING (kgs)</Text></View>
-            <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>PRODUCT QUANTITY</Text></View>
-              <View style={[styles.headerCell, { width: 140 }]}><Text style={styles.headerText}>MIXER MAN SIGN</Text></View>
-            <View style={[styles.headerCell, { width: 140 }]}><Text style={styles.headerText}>SUP SIGN</Text></View>
-          </View>
-
-          {rows.map((row, idx) => (
-            <View key={idx} style={styles.row}>
-              <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.prodDate ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 180 }]}><Text style={styles.cellText}>{String(row?.prodName ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 100 }]}><Text style={styles.cellText}>{String(row?.batchNo ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 220 }]}><Text style={styles.cellText}>{String(row?.ingredients ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 160 }]}><Text style={styles.cellText}>{String(row?.ingredientsWeight ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.mixingTime ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.mixingTemp ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 160 }]}><Text style={styles.cellText}>{String(row?.doughDividingScaling ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.productQuantity ?? '')}</Text></View>
-              <View style={[styles.cell, { width: 140 }]}>
-                {row?.mixerManSign ? (
-                  <SignatureThumb uri={String(row.mixerManSign).startsWith('data:') ? row.mixerManSign : `data:image/png;base64,${row.mixerManSign}`} width={120} height={60} layers={6} spread={0.9} />
-                ) : <Text style={styles.cellText}>{String(row?.mixerManSign ?? '')}</Text>}
-              </View>
-              <View style={[styles.cell, { width: 140 }]}>
-                {row?.supSign ? (
-                  <SignatureThumb uri={String(row.supSign).startsWith('data:') ? row.supSign : `data:image/png;base64,${row.supSign}`} width={120} height={60} layers={6} spread={0.9} />
-                ) : <Text style={styles.cellText}>{String(row?.supSign ?? '')}</Text>}
-              </View>
+              <View style={[styles.headerCell, { width: adjustedWidths[0] }]}><Text style={styles.headerText}>PRODUCTION DATE</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[1] }]}><Text style={styles.headerText}>PRODUCT NAME</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[2] }]}><Text style={styles.headerText}>BATCH NO.</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[3] }]}><Text style={styles.headerText}>INGREDIENTS</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[4] }]}><Text style={styles.headerText}>INGREDIENTS WEIGHT (kgs)</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[5] }]}><Text style={styles.headerText}>MIXING TIME</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[6] }]}><Text style={styles.headerText}>MIXING TEMP</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[7] }]}><Text style={styles.headerText}>DOUGH DIVIDING/SCALING (kgs)</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[8] }]}><Text style={styles.headerText}>PRODUCT QUANTITY</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[9] }]}><Text style={styles.headerText}>MIXER MAN SIGN</Text></View>
+              <View style={[styles.headerCell, { width: adjustedWidths[10] }]}><Text style={styles.headerText}>SUP SIGN</Text></View>
             </View>
-          ))}
+
+            {rows.map((row, idx) => (
+              <View key={idx} style={styles.row}>
+                <View style={[styles.cell, { width: adjustedWidths[0] }]}><Text style={styles.cellText}>{String(row?.prodDate ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[1] }]}><Text style={styles.cellText}>{String(row?.prodName ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[2] }]}><Text style={styles.cellText}>{String(row?.batchNo ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[3] }]}><Text style={styles.cellText}>{String(row?.ingredients ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[4] }]}><Text style={styles.cellText}>{String(row?.ingredientsWeight ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[5] }]}><Text style={styles.cellText}>{String(row?.mixingTime ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[6] }]}><Text style={styles.cellText}>{String(row?.mixingTemp ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[7] }]}><Text style={styles.cellText}>{String(row?.doughDividingScaling ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[8] }]}><Text style={styles.cellText}>{String(row?.productQuantity ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[9] }]}>
+                  {row?.mixerManSign ? (
+                    <SignatureThumb uri={String(row.mixerManSign).startsWith('data:') ? row.mixerManSign : `data:image/png;base64,${row.mixerManSign}`} width={120} height={60} layers={6} spread={0.9} />
+                  ) : <Text style={styles.cellText}>{String(row?.mixerManSign ?? '')}</Text>}
+                </View>
+                <View style={[styles.cell, { width: adjustedWidths[10] }]}>
+                  {row?.supSign ? (
+                    <SignatureThumb uri={String(row.supSign).startsWith('data:') ? row.supSign : `data:image/png;base64,${row.supSign}`} width={120} height={60} layers={6} spread={0.9} />
+                  ) : <Text style={styles.cellText}>{String(row?.supSign ?? '')}</Text>}
+                </View>
+              </View>
+            ))}
           </View>
-        </ScrollView>
-        <View style={styles.footerRow}>
+        ) : (
+          <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>
+            <View style={[styles.tableWrap, { width: tableWidth }]}> 
+              <View style={styles.tableHeader}>
+                <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>PRODUCTION DATE</Text></View>
+                <View style={[styles.headerCell, { width: 180 }]}><Text style={styles.headerText}>PRODUCT NAME</Text></View>
+                <View style={[styles.headerCell, { width: 100 }]}><Text style={styles.headerText}>BATCH NO.</Text></View>
+                <View style={[styles.headerCell, { width: 220 }]}><Text style={styles.headerText}>INGREDIENTS</Text></View>
+                <View style={[styles.headerCell, { width: 160 }]}><Text style={styles.headerText}>INGREDIENTS WEIGHT (kgs)</Text></View>
+                <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>MIXING TIME</Text></View>
+                <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>MIXING TEMP</Text></View>
+                <View style={[styles.headerCell, { width: 160 }]}><Text style={styles.headerText}>DOUGH DIVIDING/SCALING (kgs)</Text></View>
+                <View style={[styles.headerCell, { width: 120 }]}><Text style={styles.headerText}>PRODUCT QUANTITY</Text></View>
+                <View style={[styles.headerCell, { width: 140 }]}><Text style={styles.headerText}>MIXER MAN SIGN</Text></View>
+                <View style={[styles.headerCell, { width: 140 }]}><Text style={styles.headerText}>SUP SIGN</Text></View>
+              </View>
+
+              {rows.map((row, idx) => (
+                <View key={idx} style={styles.row}>
+                  <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.prodDate ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 180 }]}><Text style={styles.cellText}>{String(row?.prodName ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 100 }]}><Text style={styles.cellText}>{String(row?.batchNo ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 220 }]}><Text style={styles.cellText}>{String(row?.ingredients ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 160 }]}><Text style={styles.cellText}>{String(row?.ingredientsWeight ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.mixingTime ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.mixingTemp ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 160 }]}><Text style={styles.cellText}>{String(row?.doughDividingScaling ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.productQuantity ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 140 }]}>
+                    {row?.mixerManSign ? (
+                      <SignatureThumb uri={String(row.mixerManSign).startsWith('data:') ? row.mixerManSign : `data:image/png;base64,${row.mixerManSign}`} width={120} height={60} layers={6} spread={0.9} />
+                    ) : <Text style={styles.cellText}>{String(row?.mixerManSign ?? '')}</Text>}
+                  </View>
+                  <View style={[styles.cell, { width: 140 }]}>
+                    {row?.supSign ? (
+                      <SignatureThumb uri={String(row.supSign).startsWith('data:') ? row.supSign : `data:image/png;base64,${row.supSign}`} width={120} height={60} layers={6} spread={0.9} />
+                    ) : <Text style={styles.cellText}>{String(row?.supSign ?? '')}</Text>}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
+        <View style={[styles.footerRow, exportA4Style]}>
           <View style={styles.footerCol}>
             <Text style={styles.footerLabel}>VERIFIED BY:</Text>
             {payload?.verification?.mixerManSign ? (

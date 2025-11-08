@@ -2,14 +2,16 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function DisplayChillerShelfLifeInspectionPresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function DisplayChillerShelfLifeInspectionPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const { title = 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST', frequency = 'DAILY', formData = [], layoutHints = {}, assets = {}, date = '', verifiedBy = '', verifiedBySign = '', baristaSign = '' } = payload;
 
   const tableW = payload._tableWidth || 1000;
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
 
   return (
-    <ScrollView style={styles.container} horizontal={false} contentContainerStyle={{ padding: 12 }}>
+    <ScrollView style={styles.container} horizontal={false} contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : { padding: 12 }}>
       <View style={styles.headerRow}>
         {assets?.logoDataUri ? (
           <Image source={{ uri: assets.logoDataUri }} style={styles.logo} />
@@ -22,32 +24,32 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
       </View>
       <View style={styles.titleRow}><Text style={styles.title}>{title}</Text><Text style={styles.frequency}>FREQUENCY: {frequency}</Text></View>
 
-      <ScrollView horizontal={true} nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: tableW }}>
-        <View style={[styles.tableContainer, { minWidth: tableW }]}> 
+      {exportingWide ? (
+        <View style={[styles.tableContainer, exportA4Style]}> 
           <View style={styles.thead}>
-            <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
-            <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
-            <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
-            <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
-            <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
-            <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
-            <Text style={[styles.th, { width: 180 }]}>SIGN</Text>
+            <Text style={[styles.th, { width: 320 }]}>ITEMS</Text>
+            <Text style={[styles.th, { width: 80 }]}>DATE IN</Text>
+            <Text style={[styles.th, { width: 80 }]}>TIME IN</Text>
+            <Text style={[styles.th, { width: 100 }]}>USED BY</Text>
+            <Text style={[styles.th, { width: 160 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
+            <Text style={[styles.th, { width: 60 }]}>QUANTITY</Text>
+            <Text style={[styles.th, { width: 120 }]}>SIGN</Text>
           </View>
 
           {formData.map((r, idx) => (
             <View key={r.id || idx} style={styles.trow}>
-              <Text style={[styles.td, { width: 420 }]}>{r.item}</Text>
-              <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
-              <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
-              <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
-              <Text style={[styles.td, { width: 220 }]}>{r.staffName}</Text>
-              <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
-              <View style={[styles.td, { width: 180, alignItems: 'center', justifyContent: 'center' }]}> 
+              <Text style={[styles.td, { width: 320 }]}>{r.item}</Text>
+              <Text style={[styles.td, { width: 80 }]}>{r.dateIn}</Text>
+              <Text style={[styles.td, { width: 80 }]}>{r.timeIn}</Text>
+              <Text style={[styles.td, { width: 100 }]}>{r.usedBy}</Text>
+              <Text style={[styles.td, { width: 160 }]}>{r.staffName}</Text>
+              <Text style={[styles.td, { width: 60 }]}>{r.quantity}</Text>
+              <View style={[styles.td, { width: 120, alignItems: 'center', justifyContent: 'center' }]}> 
                 {(() => {
                   const val = r.sign;
                   const uri = val ? (String(val).startsWith('data:') ? val : `data:image/png;base64,${val}`) : null;
                   return uri ? (
-                    <SignatureThumb uri={uri} width={160} height={120} layers={5} spread={0.8} />
+                    <SignatureThumb uri={uri} width={120} height={80} layers={5} spread={0.8} />
                   ) : (
                     <Text style={{ color: '#333' }}>{val || ''}</Text>
                   );
@@ -56,7 +58,43 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
             </View>
           ))}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView horizontal={true} nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: tableW }}>
+          <View style={[styles.tableContainer, { minWidth: tableW }]}> 
+            <View style={styles.thead}>
+              <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
+              <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
+              <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
+              <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
+              <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
+              <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
+              <Text style={[styles.th, { width: 180 }]}>SIGN</Text>
+            </View>
+
+            {formData.map((r, idx) => (
+              <View key={r.id || idx} style={styles.trow}>
+                <Text style={[styles.td, { width: 420 }]}>{r.item}</Text>
+                <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
+                <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
+                <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
+                <Text style={[styles.td, { width: 220 }]}>{r.staffName}</Text>
+                <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
+                <View style={[styles.td, { width: 180, alignItems: 'center', justifyContent: 'center' }]}> 
+                  {(() => {
+                    const val = r.sign;
+                    const uri = val ? (String(val).startsWith('data:') ? val : `data:image/png;base64,${val}`) : null;
+                    return uri ? (
+                      <SignatureThumb uri={uri} width={160} height={120} layers={5} spread={0.8} />
+                    ) : (
+                      <Text style={{ color: '#333' }}>{val || ''}</Text>
+                    );
+                  })()}
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
     <View style={{ height: 12 }} />
   <View style={{ flexDirection: 'row', alignItems: 'center' }}>

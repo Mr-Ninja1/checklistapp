@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 
-export default function FOH_DailyCleaningPresentational({ payload }) {
+const EXPORT_WIDTH = 1000;
+export default function FOH_DailyCleaningPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const { metadata = {}, formData = [], layoutHints = {} } = payload;
   const timeSlots = payload.timeSlots || ['15:00','16:00','17:00','18:00','19:00','20:00','21:00'];
@@ -28,7 +30,23 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
     + (hints.SUP_SIGN || defaultWidths.SUP_SIGN)
     + 40; // padding
   const tableW = payload._tableWidth || computedTableW;
-  const col = (k, defaultW) => ({ width: hints[k] || defaultWidths[k] || defaultW });
+  let scale = 1;
+  let adjustedTableW = tableW;
+  if (exportingWide && tableW > EXPORT_WIDTH) {
+    scale = EXPORT_WIDTH / tableW;
+    adjustedTableW = EXPORT_WIDTH;
+  }
+  const adjustedWidths = exportingWide ? {
+    EQUIPMENT: Math.round(defaultWidths.EQUIPMENT * scale),
+    PPM: Math.round(defaultWidths.PPM * scale),
+    TIME_SLOT: Math.round(defaultWidths.TIME_SLOT * scale),
+    STAFF_NAME: Math.round(defaultWidths.STAFF_NAME * scale),
+    SIGNATURE: Math.round(defaultWidths.SIGNATURE * scale),
+    SUP_NAME: Math.round(defaultWidths.SUP_NAME * scale),
+    SUP_SIGN: Math.round(defaultWidths.SUP_SIGN * scale),
+  } : defaultWidths;
+  const exportA4Style = exportingWide ? { width: EXPORT_WIDTH, maxWidth: EXPORT_WIDTH, alignSelf: 'center' } : {};
+  const col = (k, defaultW) => ({ width: exportingWide ? adjustedWidths[k] : (hints[k] || defaultWidths[k] || defaultW) });
 
   // Flexible metadata extraction with safe fallbacks
   const md = metadata || {};
@@ -47,10 +65,8 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
   };
 
   return (
-    // Page wrapper: vertical scrolling for the form. The table below is a
-    // dedicated horizontal ScrollView so horizontal drags are handled there.
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 24 }}>
-      <View style={{ width: '100%' }}>
+    <ScrollView style={styles.container} contentContainerStyle={exportingWide ? { paddingBottom: 24, backgroundColor: '#fff', margin: 0 } : { paddingBottom: 24 }}>
+      <View style={exportingWide ? exportA4Style : { width: '100%' }}>
         {/* Header: logo left, centered title */}
         <View style={styles.headerTop}>
           {payload.assets?.logoDataUri ? (
@@ -112,59 +128,102 @@ export default function FOH_DailyCleaningPresentational({ payload }) {
           ) : null}
         </View>
 
-        {/* Table area: horizontally scrollable table (draggable header and rows) */}
-        <ScrollView
-          horizontal
-          nestedScrollEnabled
-          showsHorizontalScrollIndicator={true}
-          directionalLockEnabled={true}
-          // capture start touches so dragging anywhere inside the table area
-          // (not only on the header) will begin horizontal scrolling
-          onStartShouldSetResponderCapture={() => true}
-          contentContainerStyle={{ width: tableW, alignItems: 'flex-start' }}
-          style={[styles.tableWrapper, { width: '100%' }]}
-        >
-          <View style={[styles.table, { width: tableW, alignSelf: 'flex-start' }]} pointerEvents="box-none">
-            <View style={[styles.headerRow, { width: tableW }]}>
-              <View style={[styles.hCell, { width: col('EQUIPMENT', 140).width }]}><Text style={styles.hText}>EQUIPMENT</Text></View>
-              <View style={[styles.hCell, { width: col('PPM', 60).width }]}><Text style={styles.hText}>SANITIZER (PPM)</Text></View>
-              <View style={{ width: (timeSlots.length || 0) * col('TIME_SLOT', 48).width }}>
-                <View style={[styles.hCellMainTime]}>
-                  <Text style={styles.hText}>TIME INTERVAL</Text>
-                </View>
-                <View style={[styles.timeSubRow, { flexDirection: 'row' }]}> 
-                  {timeSlots.map((t, i) => (
-                    <View key={i} style={[styles.hCell, { width: col('TIME_SLOT', 48).width }]}>
-                      <Text style={styles.hTextSmall}>{t.replace(/(AM|PM)/,'')}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-              <View style={[styles.hCell, { width: col('STAFF_NAME', 120).width }]}><Text style={styles.hText}>STAFF NAME</Text></View>
-              <View style={[styles.hCell, { width: col('SIGNATURE', 120).width }]}><Text style={styles.hText}>STAFF SIGN</Text></View>
-              <View style={[styles.hCell, { width: col('SUP_NAME', 90).width }]}><Text style={styles.hText}>SUP NAME</Text></View>
-              <View style={[styles.hCell, { width: col('SUP_SIGN', 80).width }]}><Text style={styles.hText}>SUP SIGN</Text></View>
-            </View>
-
-            {(formData.length ? formData : Array.from({ length: 8 }).map((_,i)=>({ name: '', ppm: '', times: {}, staffName: '', staffSign: '', supName: '', supSign: '' }))).map((row, rIdx) => (
-              <View key={rIdx} style={[styles.row, { width: tableW }]}>
-                <View style={[styles.cell, { width: col('EQUIPMENT', 140).width }]}><Text style={styles.cellText}>{row.name}</Text></View>
-                <View style={[styles.cell, { width: col('PPM', 60).width }]}><Text style={styles.cellText}>{row.ppm ?? ''}</Text></View>
-                <View style={{ flexDirection: 'row', width: (timeSlots.length || 0) * col('TIME_SLOT', 48).width }}>{timeSlots.map((t, ti) => (
-                  <View key={ti} style={[styles.cell, { width: col('TIME_SLOT', 48).width }]}>
-                    <View style={[styles.checkbox, row.times && row.times[t] ? styles.checkboxChecked : null]}>
-                      {row.times && row.times[t] ? <Text style={styles.checkMark}>✓</Text> : null}
-                    </View>
+        {/* Table area: shrink to A4 width and disable horizontal scroll during export */}
+        {exportingWide ? (
+          <View style={[styles.tableWrapper, exportA4Style]}>
+            <View style={[styles.table, exportA4Style]} pointerEvents="box-none">
+              <View style={[styles.headerRow, exportA4Style]}> 
+                <View style={[styles.hCell, { width: adjustedWidths.EQUIPMENT }]}><Text style={styles.hText}>EQUIPMENT</Text></View>
+                <View style={[styles.hCell, { width: adjustedWidths.PPM }]}><Text style={styles.hText}>SANITIZER (PPM)</Text></View>
+                <View style={{ width: (timeSlots.length || 0) * adjustedWidths.TIME_SLOT }}>
+                  <View style={[styles.hCellMainTime]}>
+                    <Text style={styles.hText}>TIME INTERVAL</Text>
                   </View>
-                ))}</View>
-                <View style={[styles.cell, { width: col('STAFF_NAME', 120).width }]}><Text style={styles.cellText}>{row.staffName || ''}</Text></View>
-                <View style={[styles.cell, { width: col('SIGNATURE', 120).width, alignItems: 'center' }]}>{row.staffSign ? renderSignatureCell(row.staffSign, col('SIGNATURE', 120).width - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
-                <View style={[styles.cell, { width: col('SUP_NAME', 90).width }]}><Text style={styles.cellText}>{row.SUPName || row.slipName || row.supName || ''}</Text></View>
-                <View style={[styles.cell, { width: col('SUP_SIGN', 80).width, alignItems: 'center' }]}>{row.supSign ? renderSignatureCell(row.supSign, col('SUP_SIGN', 80).width - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
+                  <View style={[styles.timeSubRow, { flexDirection: 'row' }]}> 
+                    {timeSlots.map((t, i) => (
+                      <View key={i} style={[styles.hCell, { width: adjustedWidths.TIME_SLOT }]}>
+                        <Text style={styles.hTextSmall}>{t.replace(/(AM|PM)/,'')}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <View style={[styles.hCell, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.hText}>STAFF NAME</Text></View>
+                <View style={[styles.hCell, { width: adjustedWidths.SIGNATURE }]}><Text style={styles.hText}>STAFF SIGN</Text></View>
+                <View style={[styles.hCell, { width: adjustedWidths.SUP_NAME }]}><Text style={styles.hText}>SUP NAME</Text></View>
+                <View style={[styles.hCell, { width: adjustedWidths.SUP_SIGN }]}><Text style={styles.hText}>SUP SIGN</Text></View>
               </View>
-            ))}
+
+              {(formData.length ? formData : Array.from({ length: 8 }).map((_,i)=>({ name: '', ppm: '', times: {}, staffName: '', staffSign: '', supName: '', supSign: '' }))).map((row, rIdx) => (
+                <View key={rIdx} style={[styles.row, exportA4Style]}> 
+                  <View style={[styles.cell, { width: adjustedWidths.EQUIPMENT }]}><Text style={styles.cellText}>{row.name}</Text></View>
+                  <View style={[styles.cell, { width: adjustedWidths.PPM }]}><Text style={styles.cellText}>{row.ppm ?? ''}</Text></View>
+                  <View style={{ flexDirection: 'row', width: (timeSlots.length || 0) * adjustedWidths.TIME_SLOT }}>{timeSlots.map((t, ti) => (
+                    <View key={ti} style={[styles.cell, { width: adjustedWidths.TIME_SLOT }]}>
+                      <View style={[styles.checkbox, row.times && row.times[t] ? styles.checkboxChecked : null]}>
+                        {row.times && row.times[t] ? <Text style={styles.checkMark}>✓</Text> : null}
+                      </View>
+                    </View>
+                  ))}</View>
+                  <View style={[styles.cell, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.cellText}>{row.staffName || ''}</Text></View>
+                  <View style={[styles.cell, { width: adjustedWidths.SIGNATURE, alignItems: 'center' }]}>{row.staffSign ? renderSignatureCell(row.staffSign, adjustedWidths.SIGNATURE - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
+                  <View style={[styles.cell, { width: adjustedWidths.SUP_NAME }]}><Text style={styles.cellText}>{row.SUPName || row.slipName || row.supName || ''}</Text></View>
+                  <View style={[styles.cell, { width: adjustedWidths.SUP_SIGN, alignItems: 'center' }]}>{row.supSign ? renderSignatureCell(row.supSign, adjustedWidths.SUP_SIGN - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
+                </View>
+              ))}
+            </View>
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView
+            horizontal
+            nestedScrollEnabled
+            showsHorizontalScrollIndicator={true}
+            directionalLockEnabled={true}
+            onStartShouldSetResponderCapture={() => true}
+            contentContainerStyle={{ width: tableW, alignItems: 'flex-start' }}
+            style={[styles.tableWrapper, { width: '100%' }]}
+          >
+            <View style={[styles.table, { width: tableW, alignSelf: 'flex-start' }]} pointerEvents="box-none">
+              <View style={[styles.headerRow, { width: tableW }]}> 
+                <View style={[styles.hCell, { width: col('EQUIPMENT', 140).width }]}><Text style={styles.hText}>EQUIPMENT</Text></View>
+                <View style={[styles.hCell, { width: col('PPM', 60).width }]}><Text style={styles.hText}>SANITIZER (PPM)</Text></View>
+                <View style={{ width: (timeSlots.length || 0) * col('TIME_SLOT', 48).width }}>
+                  <View style={[styles.hCellMainTime]}>
+                    <Text style={styles.hText}>TIME INTERVAL</Text>
+                  </View>
+                  <View style={[styles.timeSubRow, { flexDirection: 'row' }]}> 
+                    {timeSlots.map((t, i) => (
+                      <View key={i} style={[styles.hCell, { width: col('TIME_SLOT', 48).width }]}>
+                        <Text style={styles.hTextSmall}>{t.replace(/(AM|PM)/,'')}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+                <View style={[styles.hCell, { width: col('STAFF_NAME', 120).width }]}><Text style={styles.hText}>STAFF NAME</Text></View>
+                <View style={[styles.hCell, { width: col('SIGNATURE', 120).width }]}><Text style={styles.hText}>STAFF SIGN</Text></View>
+                <View style={[styles.hCell, { width: col('SUP_NAME', 90).width }]}><Text style={styles.hText}>SUP NAME</Text></View>
+                <View style={[styles.hCell, { width: col('SUP_SIGN', 80).width }]}><Text style={styles.hText}>SUP SIGN</Text></View>
+              </View>
+
+              {(formData.length ? formData : Array.from({ length: 8 }).map((_,i)=>({ name: '', ppm: '', times: {}, staffName: '', staffSign: '', supName: '', supSign: '' }))).map((row, rIdx) => (
+                <View key={rIdx} style={[styles.row, { width: tableW }]}> 
+                  <View style={[styles.cell, { width: col('EQUIPMENT', 140).width }]}><Text style={styles.cellText}>{row.name}</Text></View>
+                  <View style={[styles.cell, { width: col('PPM', 60).width }]}><Text style={styles.cellText}>{row.ppm ?? ''}</Text></View>
+                  <View style={{ flexDirection: 'row', width: (timeSlots.length || 0) * col('TIME_SLOT', 48).width }}>{timeSlots.map((t, ti) => (
+                    <View key={ti} style={[styles.cell, { width: col('TIME_SLOT', 48).width }]}>
+                      <View style={[styles.checkbox, row.times && row.times[t] ? styles.checkboxChecked : null]}>
+                        {row.times && row.times[t] ? <Text style={styles.checkMark}>✓</Text> : null}
+                      </View>
+                    </View>
+                  ))}</View>
+                  <View style={[styles.cell, { width: col('STAFF_NAME', 120).width }]}><Text style={styles.cellText}>{row.staffName || ''}</Text></View>
+                  <View style={[styles.cell, { width: col('SIGNATURE', 120).width, alignItems: 'center' }]}>{row.staffSign ? renderSignatureCell(row.staffSign, col('SIGNATURE', 120).width - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
+                  <View style={[styles.cell, { width: col('SUP_NAME', 90).width }]}><Text style={styles.cellText}>{row.SUPName || row.slipName || row.supName || ''}</Text></View>
+                  <View style={[styles.cell, { width: col('SUP_SIGN', 80).width, alignItems: 'center' }]}>{row.supSign ? renderSignatureCell(row.supSign, col('SUP_SIGN', 80).width - 8, 60) : <Text style={styles.underline}>______</Text>}</View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </ScrollView>
   );

@@ -2,26 +2,47 @@ import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function BeverageReceivingPresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function BeverageReceivingPresentational({ payload, exportingWide = false }) {
   const p = payload || {};
   const rows = p.formData || [];
   const logoSource = p.assets?.logoDataUri ? { uri: p.assets.logoDataUri } : require('../../assets/logo.jpeg');
   const hints = p.layoutHints || {};
-  const tableWidth = p._tableWidth || 1200;
   const meta = p.metadata || {};
 
-  // Column style overrides
-  const colName = hints.NAME ? { width: hints.NAME, flex: 0 } : null;
-  const colSupplier = hints.SUPPLIER ? { width: hints.SUPPLIER, flex: 0 } : null;
-  const colClean = hints.CLEAN ? { width: hints.CLEAN, flex: 0 } : null;
-  const colTemp = hints.TEMP ? { width: hints.TEMP, flex: 0 } : null;
-  const colTempOfBeverage = hints.TEMP_OF_BEVERAGE ? { width: hints.TEMP_OF_BEVERAGE, flex: 0 } : null;
-  const colStateOfProduct = hints.STATE_OF_PRODUCT ? { width: hints.STATE_OF_PRODUCT, flex: 0 } : null;
-  const colExpiryDate = hints.EXPIRY_DATE ? { width: hints.EXPIRY_DATE, flex: 0 } : null;
-  const colRemarks = hints.REMARKS ? { width: hints.REMARKS, flex: 0 } : null;
+  // Column widths
+  const colWidths = {
+    name: hints.NAME || 260,
+    supplier: hints.SUPPLIER || 180,
+    clean: hints.CLEAN || 90,
+    temp: hints.TEMP || 90,
+    tempOfBeverage: hints.TEMP_OF_BEVERAGE || 120,
+    stateOfProduct: hints.STATE_OF_PRODUCT || 140,
+    expiryDate: hints.EXPIRY_DATE || 120,
+    remarks: hints.REMARKS || 300,
+  };
+  const totalWidth = colWidths.name + colWidths.supplier + colWidths.clean + colWidths.temp + colWidths.tempOfBeverage + colWidths.stateOfProduct + colWidths.expiryDate + colWidths.remarks;
+
+  // Calculate scale and adjusted column widths for export
+  let scale = 1;
+  if (exportingWide && totalWidth > A4_WIDTH) {
+    scale = A4_WIDTH / totalWidth;
+  }
+  const adjustedWidths = {
+    name: Math.round(colWidths.name * scale),
+    supplier: Math.round(colWidths.supplier * scale),
+    clean: Math.round(colWidths.clean * scale),
+    temp: Math.round(colWidths.temp * scale),
+    tempOfBeverage: Math.round(colWidths.tempOfBeverage * scale),
+    stateOfProduct: Math.round(colWidths.stateOfProduct * scale),
+    expiryDate: Math.round(colWidths.expiryDate * scale),
+    remarks: Math.round(colWidths.remarks * scale),
+  };
+  const adjustedTableWidth = exportingWide ? Math.round(totalWidth * scale) : totalWidth;
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.container}>
       {/* Header */}
       <View style={styles.docHeader}>
         <View style={styles.logoAndSystem}>
@@ -97,33 +118,60 @@ export default function BeverageReceivingPresentational({ payload }) {
           </View>
         </View>
       </View>
-      {/* Table: horizontal scroll, fixed widths */}
-      <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>
-        <View style={[tableStyles.tableContainer, { width: tableWidth }]}>
+      {/* Table: shrink to A4 width and disable horizontal scroll during export */}
+      {exportingWide ? (
+        <View style={[tableStyles.tableContainer, exportA4Style, { width: adjustedTableWidth }]}> 
           <View style={tableStyles.tableHeader}>
-            <Text style={[tableStyles.headerCell, tableStyles.nameCol, colName]}>Name of Product</Text>
-            <Text style={[tableStyles.headerCell, tableStyles.supplierCol, colSupplier]}>Supplier</Text>
-            <Text style={[tableStyles.headerCell, tableStyles.cleanCol, colClean]}>Clean</Text>
-            <Text style={[tableStyles.headerCell, tableStyles.tempCol, colTemp]}>Temp</Text>
-            <Text style={[tableStyles.headerCell, tableStyles.tempOfBeverageCol, colTempOfBeverage]}>Temp of Beverage</Text>
-            <Text style={[tableStyles.headerCell, tableStyles.stateOfProductCol, colStateOfProduct]}>State of Product</Text>
-            <Text style={[tableStyles.headerCell, tableStyles.expiryDateCol, colExpiryDate]}>Expiry Date</Text>
-            <Text style={[tableStyles.headerCell, tableStyles.remarksCol, colRemarks]}>Remarks</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.name }]}>Name of Product</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.supplier }]}>Supplier</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.clean }]}>Clean</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.temp }]}>Temp</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.tempOfBeverage }]}>Temp of Beverage</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.stateOfProduct }]}>State of Product</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.expiryDate }]}>Expiry Date</Text>
+            <Text style={[tableStyles.headerCell, { width: adjustedWidths.remarks }]}>Remarks</Text>
           </View>
           {rows.map((row, i) => (
             <View key={i} style={tableStyles.tableRow}>
-              <Text style={[tableStyles.dataCell, tableStyles.nameCol, colName]}>{row.nameOfProduct || ''}</Text>
-              <Text style={[tableStyles.dataCell, tableStyles.supplierCol, colSupplier]}>{row.supplier || ''}</Text>
-              <Text style={[tableStyles.dataCell, tableStyles.cleanCol, colClean]}>{row.clean ? '✓' : ''}</Text>
-              <Text style={[tableStyles.dataCell, tableStyles.tempCol, colTemp]}>{row.temp || ''}</Text>
-              <Text style={[tableStyles.dataCell, tableStyles.tempOfBeverageCol, colTempOfBeverage]}>{row.tempOfBeverage || ''}</Text>
-              <Text style={[tableStyles.dataCell, tableStyles.stateOfProductCol, colStateOfProduct]}>{row.stateOfProduct || ''}</Text>
-              <Text style={[tableStyles.dataCell, tableStyles.expiryDateCol, colExpiryDate]}>{row.expiryDate || ''}</Text>
-              <Text style={[tableStyles.dataCell, tableStyles.remarksCol, colRemarks]}>{row.remarks || ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.name }]}>{row.nameOfProduct || ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.supplier }]}>{row.supplier || ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.clean }]}>{row.clean ? '✓' : ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.temp }]}>{row.temp || ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.tempOfBeverage }]}>{row.tempOfBeverage || ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.stateOfProduct }]}>{row.stateOfProduct || ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.expiryDate }]}>{row.expiryDate || ''}</Text>
+              <Text style={[tableStyles.dataCell, { width: adjustedWidths.remarks }]}>{row.remarks || ''}</Text>
             </View>
           ))}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView horizontal contentContainerStyle={{ minWidth: totalWidth }}>
+          <View style={[tableStyles.tableContainer, { width: totalWidth }]}> 
+            <View style={tableStyles.tableHeader}>
+              <Text style={[tableStyles.headerCell, tableStyles.nameCol, hints.NAME ? { width: hints.NAME, flex: 0 } : null]}>Name of Product</Text>
+              <Text style={[tableStyles.headerCell, tableStyles.supplierCol, hints.SUPPLIER ? { width: hints.SUPPLIER, flex: 0 } : null]}>Supplier</Text>
+              <Text style={[tableStyles.headerCell, tableStyles.cleanCol, hints.CLEAN ? { width: hints.CLEAN, flex: 0 } : null]}>Clean</Text>
+              <Text style={[tableStyles.headerCell, tableStyles.tempCol, hints.TEMP ? { width: hints.TEMP, flex: 0 } : null]}>Temp</Text>
+              <Text style={[tableStyles.headerCell, tableStyles.tempOfBeverageCol, hints.TEMP_OF_BEVERAGE ? { width: hints.TEMP_OF_BEVERAGE, flex: 0 } : null]}>Temp of Beverage</Text>
+              <Text style={[tableStyles.headerCell, tableStyles.stateOfProductCol, hints.STATE_OF_PRODUCT ? { width: hints.STATE_OF_PRODUCT, flex: 0 } : null]}>State of Product</Text>
+              <Text style={[tableStyles.headerCell, tableStyles.expiryDateCol, hints.EXPIRY_DATE ? { width: hints.EXPIRY_DATE, flex: 0 } : null]}>Expiry Date</Text>
+              <Text style={[tableStyles.headerCell, tableStyles.remarksCol, hints.REMARKS ? { width: hints.REMARKS, flex: 0 } : null]}>Remarks</Text>
+            </View>
+            {rows.map((row, i) => (
+              <View key={i} style={tableStyles.tableRow}>
+                <Text style={[tableStyles.dataCell, tableStyles.nameCol, hints.NAME ? { width: hints.NAME, flex: 0 } : null]}>{row.nameOfProduct || ''}</Text>
+                <Text style={[tableStyles.dataCell, tableStyles.supplierCol, hints.SUPPLIER ? { width: hints.SUPPLIER, flex: 0 } : null]}>{row.supplier || ''}</Text>
+                <Text style={[tableStyles.dataCell, tableStyles.cleanCol, hints.CLEAN ? { width: hints.CLEAN, flex: 0 } : null]}>{row.clean ? '✓' : ''}</Text>
+                <Text style={[tableStyles.dataCell, tableStyles.tempCol, hints.TEMP ? { width: hints.TEMP, flex: 0 } : null]}>{row.temp || ''}</Text>
+                <Text style={[tableStyles.dataCell, tableStyles.tempOfBeverageCol, hints.TEMP_OF_BEVERAGE ? { width: hints.TEMP_OF_BEVERAGE, flex: 0 } : null]}>{row.tempOfBeverage || ''}</Text>
+                <Text style={[tableStyles.dataCell, tableStyles.stateOfProductCol, hints.STATE_OF_PRODUCT ? { width: hints.STATE_OF_PRODUCT, flex: 0 } : null]}>{row.stateOfProduct || ''}</Text>
+                <Text style={[tableStyles.dataCell, tableStyles.expiryDateCol, hints.EXPIRY_DATE ? { width: hints.EXPIRY_DATE, flex: 0 } : null]}>{row.expiryDate || ''}</Text>
+                <Text style={[tableStyles.dataCell, tableStyles.remarksCol, hints.REMARKS ? { width: hints.REMARKS, flex: 0 } : null]}>{row.remarks || ''}</Text>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
       {/* Verification Footer */}
       <View style={styles.verificationFooter}>
         <View style={{ marginTop: 6 }}>

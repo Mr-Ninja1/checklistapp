@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import * as Print from 'expo-print';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
-import generateFoodHandlersHtml from './generateFoodHandlersHtml';
+import generatePdfHtml from './generatePdfHtml';
 import { addFormHistory } from './formHistory';
 
 // Vector-only export hook (single implementation)
@@ -21,9 +21,10 @@ export function useExportFormAsPDF() {
       await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
       const baseName = `Form_${new Date().toISOString().slice(0,10)}_${Date.now()}`;
 
-      const payload = formData || {};
-      const bodyHtml = generateFoodHandlersHtml(payload);
-      const html = `<!doctype html><html><head><meta charset='utf-8'><style>@page{size:297mm 210mm;margin:8mm;}body{margin:0;padding:0;font-family: Arial, Helvetica, sans-serif;}</style></head><body>${bodyHtml}</body></html>`;
+  const payload = formData || {};
+  // generatePdfHtml returns a full, print-ready HTML document (including @page).
+  // Do not wrap it again; pass it directly to the print API so only a single @page rule exists.
+  const html = generatePdfHtml(payload, { title, date, shift });
 
       if (Platform.OS === 'web') {
         const { base64 } = await Print.printToFileAsync({ html, base64: true });

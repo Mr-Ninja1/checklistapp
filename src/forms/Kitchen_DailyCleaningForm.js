@@ -276,85 +276,88 @@ export default function Kitchen_DailyCleaningForm() {
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
       <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: s(180) }} alwaysBounceVertical>
-      <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
-      <View style={styles.headerTop}>
-        <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.companyName}>Bravo</Text>
-        <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET (KITCHEN)</Text>
-        {/* top action buttons removed to avoid duplication; bottom action bar remains */}
-      </View>
-
-      <View style={styles.metadataContainer}>
-        <View style={styles.metadataRow}>
-          {/* Render generic metadata keys except verified (we render verified separately) */}
-          {Object.keys(metadata).filter(k => !/^verified/i.test(k)).map(key => (
-            <View key={key} style={styles.metadataItem}>
-              <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>{key.charAt(0).toUpperCase()+key.slice(1)}:</Text>
-              <TextInput style={[styles.metadataInput, { minWidth: s(80), height: s(28), fontSize: ms(10) }]} value={metadata[key]} onChangeText={(t)=>handleMetadataChange(key,t)} />
-            </View>
-          ))}
-
-          {/* Verified By: prefer a signature. In edit mode the user can tap to sign; when viewing we show the saved signature or fallback to text. */}
-          <View key="verified" style={styles.metadataItem}>
-            <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>Verified By:</Text>
-            {editMode ? (
-              <SignatureField
-                value={metadata.verifiedSign || metadata.verifiedBy || ''}
-                onChange={(v) => handleMetadataChange('verifiedSign', v)}
-                editable={true}
-                width={s(180)}
-                height={s(56)}
-                placeholder="Tap to sign"
-              />
-            ) : (
-              metadata.verifiedSign ? (
-                <Image source={{ uri: String(metadata.verifiedSign).startsWith('data:') ? metadata.verifiedSign : `data:image/png;base64,${metadata.verifiedSign}` }} style={{ width: s(180), height: s(56), resizeMode: 'contain' }} />
-              ) : (
-                <Text style={styles.dataText}>{metadata.verifiedBy || ''}</Text>
-              )
-            )}
-          </View>
+        <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
+        <View style={styles.headerTop}>
+          <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.companyName}>Bravo</Text>
+          <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET (KITCHEN)</Text>
+          {/* top action buttons removed to avoid duplication; bottom action bar remains */}
         </View>
-        <Text style={[styles.tickInstruction, { fontSize: ms(11) }]}>✓ TICK AFTER CLEANING</Text>
-      </View>
 
-      <View onStartShouldSetResponder={()=>true} onMoveShouldSetResponder={()=>true} onResponderTerminationRequest={()=>false}>
-        <ScrollView
-          horizontal
-          nestedScrollEnabled={true}
-          showsHorizontalScrollIndicator={true}
-          directionalLockEnabled={false}
-          contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
-          keyboardShouldPersistTaps="handled"
-          alwaysBounceHorizontal
-          ref={scrollRef}
-          onScroll={(e) => { scrollXRef.current = e.nativeEvent.contentOffset.x || 0; }}
-          scrollEventThrottle={16}
-          // attach pan handlers to allow dragging from anywhere in the enclosing view
+        <View style={styles.metadataContainer}>
+          <View style={styles.metadataRow}>
+            {/* Render generic metadata keys except verified (we render verified separately) */}
+            {Object.keys(metadata).filter(k => !/^verified/i.test(k)).map(key => (
+              <View key={key} style={styles.metadataItem}>
+                <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>{key.charAt(0).toUpperCase()+key.slice(1)}:</Text>
+                <TextInput style={[styles.metadataInput, { minWidth: s(80), height: s(28), fontSize: ms(10) }]} value={metadata[key]} onChangeText={(t)=>handleMetadataChange(key,t)} />
+              </View>
+            ))}
+
+            {/* Verified By: prefer a signature. In edit mode the user can tap to sign; when viewing we show the saved signature or fallback to text. */}
+            <View key="verified" style={styles.metadataItem}>
+              <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>Verified By:</Text>
+              {editMode ? (
+                <SignatureField
+                  value={metadata.verifiedSign || metadata.verifiedBy || ''}
+                  onChange={(v) => handleMetadataChange('verifiedSign', v)}
+                  editable={true}
+                  width={s(180)}
+                  height={s(56)}
+                  placeholder="Tap to sign"
+                />
+              ) : (
+                metadata.verifiedSign ? (
+                  <Image source={{ uri: String(metadata.verifiedSign).startsWith('data:') ? metadata.verifiedSign : `data:image/png;base64,${metadata.verifiedSign}` }} style={{ width: s(180), height: s(56), resizeMode: 'contain' }} />
+                ) : (
+                  <Text style={styles.dataText}>{metadata.verifiedBy || ''}</Text>
+                )
+              )}
+            </View>
+          </View>
+          <Text style={[styles.tickInstruction, { fontSize: ms(11) }]}>✓ TICK AFTER CLEANING</Text>
+        </View>
+
+        {/* Always enable pointer events for the table area to allow drag-to-scroll in read-only mode */}
+        <View
+          pointerEvents="box-none"
+          style={{ flex: 1 }}
           {...panResponder.panHandlers}
         >
-          <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
-            <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
-              <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
-              <HeaderCell width={COL_WIDTHS.PPM}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SANITIZER-VEG WASH </Text></HeaderCell>
-              <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
-                <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}><Text style={[styles.headerText, { fontSize: ms(10) }]}>TIME INTERVAL</Text></HeaderCell>
-                <View style={{ flexDirection: 'row' }}>{TIME_SLOTS.map((time, idx)=> (<HeaderCell key={idx} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}><Text numberOfLines={1} style={{ fontSize: ms(9), flexShrink: 1 }}>{time}</Text></HeaderCell>))}</View>
+          <ScrollView
+            horizontal
+            nestedScrollEnabled={true}
+            showsHorizontalScrollIndicator={true}
+            directionalLockEnabled={false}
+            contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
+            keyboardShouldPersistTaps="handled"
+            alwaysBounceHorizontal
+            ref={scrollRef}
+            onScroll={(e) => { scrollXRef.current = e.nativeEvent.contentOffset.x || 0; }}
+            scrollEventThrottle={16}
+          >
+            <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
+              <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
+                <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
+                <HeaderCell width={COL_WIDTHS.PPM}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SANITIZER-VEG WASH </Text></HeaderCell>
+                <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
+                  <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}><Text style={[styles.headerText, { fontSize: ms(10) }]}>TIME INTERVAL</Text></HeaderCell>
+                  <View style={{ flexDirection: 'row' }}>{TIME_SLOTS.map((time, idx)=> (<HeaderCell key={idx} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}><Text numberOfLines={1} style={{ fontSize: ms(9), flexShrink: 1 }}>{time}</Text></HeaderCell>))}</View>
+                </View>
+                <HeaderCell width={COL_WIDTHS.STAFF_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF NAME</Text></HeaderCell>
+                <HeaderCell width={COL_WIDTHS.SIGNATURE}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF SIGN</Text></HeaderCell>
+                <HeaderCell width={COL_WIDTHS.SLIP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP NAME</Text></HeaderCell>
+                <HeaderCell width={COL_WIDTHS.SUP_SIGN}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP SIGN</Text></HeaderCell>
               </View>
-              <HeaderCell width={COL_WIDTHS.STAFF_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF NAME</Text></HeaderCell>
-              <HeaderCell width={COL_WIDTHS.SIGNATURE}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF SIGN</Text></HeaderCell>
-              <HeaderCell width={COL_WIDTHS.SLIP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP NAME</Text></HeaderCell>
-              <HeaderCell width={COL_WIDTHS.SUP_SIGN}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP SIGN</Text></HeaderCell>
+
+              {formData.map(renderRow)}
             </View>
+          </ScrollView>
+        </View>
 
-            {formData.map(renderRow)}
-          </View>
-        </ScrollView>
-      </View>
+        <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All kitchen staff must clean and sanitize the listed areas after use.</Text>
 
-      <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All kitchen staff must clean and sanitize the listed areas after use.</Text>
-
-      {/* buttons moved into EditableFormContainer via actionButtons prop */}
+        {/* buttons moved into EditableFormContainer via actionButtons prop */}
       </ScrollView>
     </EditableFormContainer>
   );

@@ -23,7 +23,8 @@ function normalizeSignature(val) {
   return null;
 }
 
-export default function WalkInChillerLogPresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function WalkInChillerLogPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const layout = payload.layoutHints || {};
   const DATE = layout.DATE || 80;
@@ -33,10 +34,17 @@ export default function WalkInChillerLogPresentational({ payload }) {
   const TABLE_WIDTH = payload._tableWidth || (DATE + (TIME_SLOTS.length * RECORD_SLOT_WIDTH) + ACTION + SIGNATURE);
 
   const rows = Array.isArray(payload.formData) ? payload.formData : [];
+  let scale = 1;
+  let adjustedTableWidth = TABLE_WIDTH;
+  if (exportingWide && TABLE_WIDTH > A4_WIDTH) {
+    scale = A4_WIDTH / TABLE_WIDTH;
+    adjustedTableWidth = A4_WIDTH;
+  }
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 8 }}>
-      <View style={styles.header}>
+    <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : { padding: 8 }}>
+      <View style={[styles.header, exportA4Style]}>
         <View style={styles.brandRow}>
           <Image source={require('../../assets/logo.jpeg')} style={styles.brandLogo} />
           <View style={{ flex: 1 }}>
@@ -63,12 +71,12 @@ export default function WalkInChillerLogPresentational({ payload }) {
       <Text style={styles.subject}>{payload.title}</Text>
       <Text style={styles.instruction}>Instruction: The temperature of the Walk-in Chiller should be between 0° C and 4° C</Text>
 
-      <ScrollView horizontal contentContainerStyle={{ minWidth: TABLE_WIDTH }}>
-        <View>
+      {exportingWide ? (
+        <View style={{ width: adjustedTableWidth }}>
           <View style={styles.headerRow}>
             <View style={[styles.headerCell, { width: DATE }]}><Text style={styles.headerText}>Date</Text></View>
             {TIME_SLOTS.map(slot => (
-              <View key={slot} style={[styles.headerCell, { width: RECORD_SLOT_WIDTH }]}>
+              <View key={slot} style={[styles.headerCell, { width: RECORD_SLOT_WIDTH }]}> 
                 <Text style={styles.headerText}>{slot}</Text>
                 <View style={styles.slotHeaderRow}><Text style={styles.slotHeaderText}>Temp</Text><Text style={styles.slotHeaderText}>Time</Text><Text style={styles.slotHeaderText}>Sign</Text></View>
               </View>
@@ -104,7 +112,50 @@ export default function WalkInChillerLogPresentational({ payload }) {
             </View>
           ))}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView horizontal contentContainerStyle={{ minWidth: TABLE_WIDTH }}>
+          <View>
+            <View style={styles.headerRow}>
+              <View style={[styles.headerCell, { width: DATE }]}><Text style={styles.headerText}>Date</Text></View>
+              {TIME_SLOTS.map(slot => (
+                <View key={slot} style={[styles.headerCell, { width: RECORD_SLOT_WIDTH }]}> 
+                  <Text style={styles.headerText}>{slot}</Text>
+                  <View style={styles.slotHeaderRow}><Text style={styles.slotHeaderText}>Temp</Text><Text style={styles.slotHeaderText}>Time</Text><Text style={styles.slotHeaderText}>Sign</Text></View>
+                </View>
+              ))}
+              <View style={[styles.headerCell, { width: ACTION }]}><Text style={styles.headerText}>If temp out of spec - what was done?</Text></View>
+              <View style={[styles.headerCell, { width: SIGNATURE }]}><Text style={styles.headerText}>Sup Name & Sign</Text></View>
+            </View>
+
+            {rows.map((item, idx) => (
+              <View key={item.day || idx} style={styles.row}>
+                <View style={[styles.cell, { width: DATE }]}><Text style={styles.cellText}>{item.day}</Text></View>
+                {TIME_SLOTS.map(slot => (
+                  <View key={slot} style={[styles.recordSlot, { width: RECORD_SLOT_WIDTH }]}> 
+                    <View style={styles.slotRow}>
+                      <Text style={styles.slotValue}>{item[slot]?.temp || ''}</Text>
+                      <Text style={styles.slotValue}>{item[slot]?.time || ''}</Text>
+                      { (() => {
+                        const s = item[slot]?.sign;
+                        const uri = normalizeSignature(s);
+                        return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.slotValue}>{s || ''}</Text>;
+                      })() }
+                    </View>
+                  </View>
+                ))}
+                <View style={[styles.cell, { width: ACTION }]}><Text style={styles.cellText}>{item.correctiveAction || ''}</Text></View>
+                <View style={[styles.cell, { width: SIGNATURE }]}>
+                  { (() => {
+                    const s = item.supNameSign;
+                    const uri = normalizeSignature(s);
+                    return uri ? <SignatureThumb uri={uri} width={140} height={44} layers={7} spread={0.8} /> : <Text style={styles.cellText}>{s || ''}</Text>;
+                  })() }
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
       <View style={{ height: 24 }} />
       <View style={styles.signaturesRow}>

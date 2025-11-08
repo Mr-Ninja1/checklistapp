@@ -2,7 +2,10 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function BakingControlSheetPresentational({ payload }) {
+// A4 width in pixels at 72dpi: 595, at 96dpi: 794, at 300dpi: 2480. For RN, use ~794 for web, ~595 for PDF, but can be tuned.
+const A4_WIDTH = 794;
+
+export default function BakingControlSheetPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const { metadata, formData } = payload;
 
@@ -18,7 +21,17 @@ export default function BakingControlSheetPresentational({ payload }) {
     { key: 'supervisorSign', label: 'SUPERVISOR SIGN', width: 160 },
   ];
 
+  // Calculate table width
   const tableWidth = columnHeaders.reduce((s, c) => s + (c.width || 120), 0);
+
+  // If exportingWide, shrink columns proportionally to fit A4
+  let adjustedHeaders = columnHeaders;
+  let adjustedTableWidth = tableWidth;
+  if (exportingWide && tableWidth > A4_WIDTH) {
+    const scale = A4_WIDTH / tableWidth;
+    adjustedHeaders = columnHeaders.map(col => ({ ...col, width: Math.round((col.width || 120) * scale) }));
+    adjustedTableWidth = A4_WIDTH;
+  }
 
   const normalizeSignature = (v) => {
     if (!v) return null;
@@ -48,7 +61,7 @@ export default function BakingControlSheetPresentational({ payload }) {
 
   const renderRow = (item, index) => (
     <View key={index} style={styles.row}>
-      {columnHeaders.map(col => (
+      {adjustedHeaders.map(col => (
         <View key={col.key} style={[styles.cell, { width: col.width }]}>
           {(col.key === 'bakerSign' || col.key === 'supervisorSign') ? renderMaybeSignature(item[col.key], styles.inputText) : <Text style={styles.inputText}>{item[col.key]}</Text>}
         </View>
@@ -90,10 +103,11 @@ export default function BakingControlSheetPresentational({ payload }) {
           <Text style={styles.noteText}>This form should be completed daily by both Baker Man and Supervisor. File this form as evidence of performing the controls.</Text>
         </View>
 
-        <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>
-          <View style={[styles.tableWrap, { width: tableWidth }]}> 
+        {/* If exportingWide, disable horizontal scroll and shrink table to A4 width */}
+        {exportingWide ? (
+          <View style={[styles.tableWrap, { width: adjustedTableWidth }]}> 
             <View style={styles.tableHeader}>
-              {columnHeaders.map(col => (
+              {adjustedHeaders.map(col => (
                 <View key={col.key} style={[styles.headerCell, { width: col.width }]}>
                   <Text style={styles.headerText}>{col.label}</Text>
                 </View>
@@ -101,7 +115,20 @@ export default function BakingControlSheetPresentational({ payload }) {
             </View>
             {formData.map(renderRow)}
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView horizontal contentContainerStyle={{ minWidth: tableWidth }}>
+            <View style={[styles.tableWrap, { width: tableWidth }]}> 
+              <View style={styles.tableHeader}>
+                {columnHeaders.map(col => (
+                  <View key={col.key} style={[styles.headerCell, { width: col.width }]}>
+                    <Text style={styles.headerText}>{col.label}</Text>
+                  </View>
+                ))}
+              </View>
+              {formData.map(renderRow)}
+            </View>
+          </ScrollView>
+        )}
       </ScrollView>
     </View>
   );

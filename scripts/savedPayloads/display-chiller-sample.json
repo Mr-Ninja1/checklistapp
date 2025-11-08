@@ -1,0 +1,16 @@
+{
+  "formType": "DisplayChillerShelfLifeInspection",
+  "templateVersion": "v1.0",
+  "title": "DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST",
+  "date": "11/07/2025",
+  "verifiedBy": "John Doe",
+  "verifiedBySign": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+  "baristaSign": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=",
+  "formData": [
+    { "id": "1", "item": "ENGLISH MUFFIN", "dateIn": "11/07/2025", "timeIn": "08:15", "usedBy": "Use within 3 days", "staffName": "Alice", "quantity": "10", "sign": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQ" },
+    { "id": "2", "item": "REUBEN TOASTIE", "dateIn": "", "timeIn": "", "usedBy": "", "staffName": "", "quantity": "", "sign": "" }
+  ],
+  "layoutHints": { "itemCol": 420, "dateCol": 100, "timeCol": 100, "usedByCol": 120, "staffCol": 220, "qtyCol": 80, "signCol": 180 },
+  "_tableWidth": 1200,
+  "savedAt": 1700
+}

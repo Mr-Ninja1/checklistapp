@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function CookingTemperaturePresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function CookingTemperaturePresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const p = payload.payload || payload;
   const { metadata = {}, formData = [], layoutHints = {}, _tableWidth } = p;
@@ -44,10 +45,26 @@ export default function CookingTemperaturePresentational({ payload }) {
     SIGN: 100,
     STAFF_NAME: 160,
   };
+  const tableWidth = (_tableWidth && Number(_tableWidth)) || 900;
+  let scale = 1;
+  let adjustedTableWidth = tableWidth;
+  if (exportingWide && tableWidth > A4_WIDTH) {
+    scale = A4_WIDTH / tableWidth;
+    adjustedTableWidth = A4_WIDTH;
+  }
+  const adjustedWidths = exportingWide ? {
+    INDEX: Math.round(WIDTHS.INDEX * scale),
+    FOOD_ITEM: Math.round(WIDTHS.FOOD_ITEM * scale),
+    TIME: Math.round(WIDTHS.TIME * scale),
+    TEMP: Math.round(WIDTHS.TEMP * scale),
+    SIGN: Math.round(WIDTHS.SIGN * scale),
+    STAFF_NAME: Math.round(WIDTHS.STAFF_NAME * scale),
+  } : WIDTHS;
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
+    <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.container}>
+      <View style={[styles.card, exportA4Style]}>
 
         {/* Top row: logo left, title center, issue date right */}
         <View style={styles.topRow}>
@@ -74,77 +91,144 @@ export default function CookingTemperaturePresentational({ payload }) {
           <Text style={styles.probeDateSmall}>DATE: {metadata.date || ''}</Text>
         </View>
 
-        {/* Table (horizontally scrollable) */}
-        <ScrollView horizontal contentContainerStyle={{}} showsHorizontalScrollIndicator={true}>
-          <View style={[styles.table, { minWidth: _tableWidth || 900 }]}> 
-            {/* Title */}
+        {/* Table: shrink to A4 width and disable horizontal scroll during export */}
+        {exportingWide ? (
+          <View style={[styles.table, exportA4Style]}> 
             <Text style={styles.tableTitle}>COOKING TEMPERATURE LOG</Text>
 
-          {/* Header group row */}
-          <View style={[styles.tableGroupHeader]}>
-            <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
-            <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
-            <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
-            <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
-            <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
-            <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
-          </View>
-
-          {/* Subheader row */}
-          <View style={[styles.tableHeaderRow, styles.detailHeader]}>
-            <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]} />
-            <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]} />
-            {[...Array(3)].map((_, i) => (
-              <React.Fragment key={i}>
-                <View style={[styles.hCellFixed, { width: WIDTHS.TIME }]}><Text style={styles.hText}>TIME</Text></View>
-                <View style={[styles.hCellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
-                <View style={[styles.hCellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
-              </React.Fragment>
-            ))}
-            <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]} />
-          </View>
-
-          {/* Rows */}
-          {rowsToRender.map((r, ri) => (
-            <View key={ri} style={styles.row}>
-              <View style={[styles.cellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.FOOD_ITEM }]}>
-                <Text style={styles.cellText}>{r.foodItem || ''}</Text>
-              </View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
-                {(() => {
-                  const u = resolveSignatureUri(r.sign1);
-                  return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign1 || ''}</Text>;
-                })()}
-              </View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
-                {(() => {
-                  const u = resolveSignatureUri(r.sign2);
-                  return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign2 || ''}</Text>;
-                })()}
-              </View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
-                {(() => {
-                  const u = resolveSignatureUri(r.sign3);
-                  return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign3 || ''}</Text>;
-                })()}
-              </View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+            <View style={[styles.tableGroupHeader]}>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.INDEX }]}><Text style={styles.hText}>#</Text></View>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
+              <View style={[styles.hGroupCell, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
             </View>
-          ))}
+
+            <View style={[styles.tableHeaderRow, styles.detailHeader]}>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.INDEX }]} />
+              <View style={[styles.hCellFixed, { width: adjustedWidths.FOOD_ITEM }]} />
+              {[...Array(3)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <View style={[styles.hCellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.hText}>TIME</Text></View>
+                  <View style={[styles.hCellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
+                  <View style={[styles.hCellFixed, { width: adjustedWidths.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
+                </React.Fragment>
+              ))}
+              <View style={[styles.hCellFixed, { width: adjustedWidths.STAFF_NAME }]} />
+            </View>
+
+            {rowsToRender.map((r, ri) => (
+              <View key={ri} style={styles.row}>
+                <View style={[styles.cellFixed, { width: adjustedWidths.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.FOOD_ITEM }]}>
+                  <Text style={styles.cellText}>{r.foodItem || ''}</Text>
+                </View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.SIGN }]}>
+                  {(() => {
+                    const u = resolveSignatureUri(r.sign1);
+                    return u ? <SignatureThumb uri={u} width={adjustedWidths.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign1 || ''}</Text>;
+                  })()}
+                </View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.SIGN }]}>
+                  {(() => {
+                    const u = resolveSignatureUri(r.sign2);
+                    return u ? <SignatureThumb uri={u} width={adjustedWidths.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign2 || ''}</Text>;
+                  })()}
+                </View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.SIGN }]}>
+                  {(() => {
+                    const u = resolveSignatureUri(r.sign3);
+                    return u ? <SignatureThumb uri={u} width={adjustedWidths.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign3 || ''}</Text>;
+                  })()}
+                </View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+              </View>
+            ))}
 
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView horizontal contentContainerStyle={{}} showsHorizontalScrollIndicator={true}>
+            <View style={[styles.table, { minWidth: _tableWidth || 900 }]}> 
+              {/* Title */}
+              <Text style={styles.tableTitle}>COOKING TEMPERATURE LOG</Text>
+
+            {/* Header group row */}
+            <View style={[styles.tableGroupHeader]}>
+              <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
+              <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
+              <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
+              <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
+            </View>
+
+            {/* Subheader row */}
+            <View style={[styles.tableHeaderRow, styles.detailHeader]}>
+              <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]} />
+              <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]} />
+              {[...Array(3)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <View style={[styles.hCellFixed, { width: WIDTHS.TIME }]}><Text style={styles.hText}>TIME</Text></View>
+                  <View style={[styles.hCellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
+                  <View style={[styles.hCellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
+                </React.Fragment>
+              ))}
+              <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]} />
+            </View>
+
+            {/* Rows */}
+            {rowsToRender.map((r, ri) => (
+              <View key={ri} style={styles.row}>
+                <View style={[styles.cellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.FOOD_ITEM }]}>
+                  <Text style={styles.cellText}>{r.foodItem || ''}</Text>
+                </View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
+                  {(() => {
+                    const u = resolveSignatureUri(r.sign1);
+                    return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign1 || ''}</Text>;
+                  })()}
+                </View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
+                  {(() => {
+                    const u = resolveSignatureUri(r.sign2);
+                    return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign2 || ''}</Text>;
+                  })()}
+                </View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>
+                  {(() => {
+                    const u = resolveSignatureUri(r.sign3);
+                    return u ? <SignatureThumb uri={u} width={WIDTHS.SIGN - 8} height={48} layers={8} spread={1.0} /> : <Text style={styles.cellText}>{r.sign3 || ''}</Text>;
+                  })()}
+                </View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+              </View>
+            ))}
+
+            </View>
+          </ScrollView>
+        )}
 
         {/* --- Footer Section: Chef / Corrective Action / Verified By (HSEQ & Complex Manager) --- */}
         <View style={styles.footerSection}>

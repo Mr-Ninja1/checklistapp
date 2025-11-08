@@ -31,7 +31,7 @@ const renderMaybeSignature = (val, props = {}) => {
   return <Text>{val || ''}</Text>;
 };
 
-export default function WelfareFacilitiesPresentational({ payload }) {
+export default function WelfareFacilitiesPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const meta = payload.metadata || {};
   const items = Array.isArray(payload.formData) ? payload.formData : (payload.formData?.items || []);
@@ -43,6 +43,15 @@ export default function WelfareFacilitiesPresentational({ payload }) {
     acc[area].push(it);
     return acc;
   }, {});
+
+  // Calculate table width
+  const baseTableWidth = 260 + 150 + WEEK_DAYS.length * (48 + 110);
+  const A4_WIDTH = 794; // px for A4 at 96dpi
+  const tableWidth = exportingWide ? A4_WIDTH : baseTableWidth;
+  const areaColW = exportingWide ? Math.round(260 * (A4_WIDTH / baseTableWidth)) : 260;
+  const freqColW = exportingWide ? Math.round(150 * (A4_WIDTH / baseTableWidth)) : 150;
+  const checkColW = exportingWide ? Math.round(48 * (A4_WIDTH / baseTableWidth)) : 48;
+  const cleanedByColW = exportingWide ? Math.round(110 * (A4_WIDTH / baseTableWidth)) : 110;
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
@@ -90,31 +99,30 @@ export default function WelfareFacilitiesPresentational({ payload }) {
 
         </View>
 
-        <ScrollView horizontal style={styles.tableScroll}>
-          <View>
-            <View style={styles.tableHeader}>
-              <View style={[styles.cell, styles.areaCol]}><Text style={styles.headerText}>Area to be cleaned</Text></View>
-              <View style={[styles.cell, styles.freqCol]}><Text style={styles.headerText}>Frequency (Per Week)</Text></View>
+        {exportingWide ? (
+          <View style={[styles.tableScroll, { width: tableWidth, maxWidth: tableWidth, alignSelf: 'center' }]}> 
+            <View style={[styles.tableHeader, { width: tableWidth }]}> 
+              <View style={[styles.cell, { width: areaColW }]}><Text style={styles.headerText}>Area to be cleaned</Text></View>
+              <View style={[styles.cell, { width: freqColW }]}><Text style={styles.headerText}>Frequency (Per Week)</Text></View>
               {WEEK_DAYS.map(d => (
                 <View key={d} style={[styles.dayGroup]}>
-                  <View style={[styles.cell, styles.checkCol]}><Text style={styles.headerText}>{d}</Text></View>
-                  <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.headerText}>Cleaned BY</Text></View>
+                  <View style={[styles.cell, { width: checkColW }]}><Text style={styles.headerText}>{d}</Text></View>
+                  <View style={[styles.cell, { width: cleanedByColW }]}><Text style={styles.headerText}>Cleaned BY</Text></View>
                 </View>
               ))}
             </View>
-
             {/* render grouped areas */}
             {Object.keys(grouped).map(area => (
               <View key={`area-${area}`}>
                 <View style={styles.sectionHeader}><Text style={styles.sectionHeaderText}>{area}</Text></View>
                 {grouped[area].map(item => (
-                  <View key={item.id || item.name} style={styles.row}>
-                    <View style={[styles.cell, styles.areaCol]}><Text style={styles.cellText}>{item.name}</Text></View>
-                    <View style={[styles.cell, styles.freqCol]}><Text style={styles.cellText}>{item.frequency || ''}</Text></View>
+                  <View key={item.id || item.name} style={[styles.row, { width: tableWidth }]}> 
+                    <View style={[styles.cell, { width: areaColW }]}><Text style={styles.cellText}>{item.name}</Text></View>
+                    <View style={[styles.cell, { width: freqColW }]}><Text style={styles.cellText}>{item.frequency || ''}</Text></View>
                     {WEEK_DAYS.map(day => (
                       <View key={`${item.id || item.name}-${day}`} style={styles.dayGroup}>
-                        <View style={[styles.cell, styles.checkCol]}><Text style={styles.cellText}>{item.checks?.[day]?.checked ? '✓' : ''}</Text></View>
-                        <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.cellText}>{item.checks?.[day]?.cleanedBy || ''}</Text></View>
+                        <View style={[styles.cell, { width: checkColW }]}><Text style={styles.cellText}>{item.checks?.[day]?.checked ? '✓' : ''}</Text></View>
+                        <View style={[styles.cell, { width: cleanedByColW }]}><Text style={styles.cellText}>{item.checks?.[day]?.cleanedBy || ''}</Text></View>
                       </View>
                     ))}
                   </View>
@@ -122,7 +130,40 @@ export default function WelfareFacilitiesPresentational({ payload }) {
               </View>
             ))}
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView horizontal style={styles.tableScroll}>
+            <View>
+              <View style={styles.tableHeader}>
+                <View style={[styles.cell, styles.areaCol]}><Text style={styles.headerText}>Area to be cleaned</Text></View>
+                <View style={[styles.cell, styles.freqCol]}><Text style={styles.headerText}>Frequency (Per Week)</Text></View>
+                {WEEK_DAYS.map(d => (
+                  <View key={d} style={[styles.dayGroup]}>
+                    <View style={[styles.cell, styles.checkCol]}><Text style={styles.headerText}>{d}</Text></View>
+                    <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.headerText}>Cleaned BY</Text></View>
+                  </View>
+                ))}
+              </View>
+              {/* render grouped areas */}
+              {Object.keys(grouped).map(area => (
+                <View key={`area-${area}`}>
+                  <View style={styles.sectionHeader}><Text style={styles.sectionHeaderText}>{area}</Text></View>
+                  {grouped[area].map(item => (
+                    <View key={item.id || item.name} style={styles.row}>
+                      <View style={[styles.cell, styles.areaCol]}><Text style={styles.cellText}>{item.name}</Text></View>
+                      <View style={[styles.cell, styles.freqCol]}><Text style={styles.cellText}>{item.frequency || ''}</Text></View>
+                      {WEEK_DAYS.map(day => (
+                        <View key={`${item.id || item.name}-${day}`} style={styles.dayGroup}>
+                          <View style={[styles.cell, styles.checkCol]}><Text style={styles.cellText}>{item.checks?.[day]?.checked ? '✓' : ''}</Text></View>
+                          <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.cellText}>{item.checks?.[day]?.cleanedBy || ''}</Text></View>
+                        </View>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </ScrollView>
   );

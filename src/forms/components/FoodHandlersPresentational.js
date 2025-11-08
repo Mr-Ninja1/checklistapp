@@ -18,7 +18,8 @@ const normalizeSignature = (v) => {
 
 // Presentational (read-only) renderer for Food Handlers Daily Handwashing form
 // Accepts a `payload` prop that matches the shape produced by the editable form
-export default function FoodHandlersPresentational({ payload }) {
+// No export width constraint
+export default function FoodHandlersPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
 
   const {
@@ -63,9 +64,23 @@ export default function FoodHandlersPresentational({ payload }) {
   };
 
   // Use layoutHints when provided to better match saved proportions
-  const nameW = layoutHints.nameW || 140;
-  const jobW = layoutHints.jobW || 100;
-  const signW = layoutHints.signW || 80;
+  let nameW = layoutHints.nameW || 140;
+  let jobW = layoutHints.jobW || 100;
+  let signW = layoutHints.signW || 80;
+  let timeW = 48;
+  let tableW = 40 + nameW + jobW + (timeSlots.length * timeW) + signW * 3;
+
+  // Proportional shrink for export
+  const TARGET_EXPORT_WIDTH = 700;
+  let scale = 1;
+  if (exportingWide && tableW > TARGET_EXPORT_WIDTH) {
+    scale = TARGET_EXPORT_WIDTH / tableW;
+    nameW = Math.round(nameW * scale);
+    jobW = Math.round(jobW * scale);
+    signW = Math.round(signW * scale);
+    timeW = Math.round(timeW * scale);
+    tableW = TARGET_EXPORT_WIDTH;
+  }
 
   const renderSignatureCell = (val, w = signW, h = 60) => {
     const uri = normalizeSignature(val);
@@ -73,9 +88,14 @@ export default function FoodHandlersPresentational({ payload }) {
     return <Text style={styles.dataCell}>{''}</Text>;
   };
 
+  // For export, allow horizontal scroll and do not shrink width
+  const exportContainerStyle = exportingWide
+    ? { padding: 12, backgroundColor: '#fff', width: '100%', alignSelf: 'stretch', alignItems: 'center' }
+    : { padding: 12, backgroundColor: '#fff' };
   return (
-    <ScrollView style={styles.container} horizontal={false} contentContainerStyle={{ padding: 12 }}>
-      <View style={styles.logoRow}>
+    <ScrollView style={styles.container} horizontal={exportingWide} contentContainerStyle={exportContainerStyle}>
+      <View>
+        <View style={styles.logoRow}>
         {/* If an embedded logo exists, use it; otherwise fallback to local asset */}
         {assets && assets.logoDataUri ? (
           <Image source={{ uri: assets.logoDataUri }} style={styles.logo} resizeMode="contain" />
@@ -119,13 +139,13 @@ export default function FoodHandlersPresentational({ payload }) {
         </View>
       </View>
 
-      <View style={styles.tableScroll}>
-        <View style={styles.tableHeaderRow}>
+      <View style={exportingWide ? [styles.tableScroll, { width: tableW, maxWidth: tableW, alignSelf: 'center' }] : styles.tableScroll}>
+        <View style={exportingWide ? [styles.tableHeaderRow, { width: tableW, maxWidth: tableW }] : styles.tableHeaderRow}>
           <Text style={[styles.headerCell, styles.snCell]}>S/N</Text>
           <Text style={[styles.headerCell, { minWidth: nameW, width: nameW }]}>Full Name</Text>
           <Text style={[styles.headerCell, { minWidth: jobW, width: jobW }]}>Job Title</Text>
           {timeSlots.map((t) => (
-            <Text key={t} style={[styles.headerCell, styles.timeCell]}>{t}</Text>
+            <Text key={t} style={[styles.headerCell, { minWidth: timeW, width: timeW }]}>{t}</Text>
           ))}
           <Text style={[styles.headerCell, { minWidth: signW, width: signW }]}>Staff Sign</Text>
           <Text style={[styles.headerCell, { minWidth: signW, width: signW }]}>Sup Name</Text>
@@ -133,21 +153,22 @@ export default function FoodHandlersPresentational({ payload }) {
         </View>
 
         {handlers.map((row, idx) => (
-          <View key={idx} style={styles.tableRow}>
-            <Text style={[styles.dataCell, styles.snCell]}>{row.id || idx + 1}</Text>
-            <Text style={[styles.dataCell, { minWidth: nameW, width: nameW }]}>{row.fullName}</Text>
-            <Text style={[styles.dataCell, { minWidth: jobW, width: jobW }]}>{row.jobTitle}</Text>
+          <View key={idx} style={exportingWide ? [styles.tableRow, { width: tableW, maxWidth: tableW }] : styles.tableRow}>
+            <Text style={[styles.dataCell, styles.snCell, exportingWide ? { width: Math.round(40 * scale), minWidth: Math.round(40 * scale) } : {}]}>{row.id || idx + 1}</Text>
+            <Text style={[styles.dataCell, exportingWide ? { width: nameW, minWidth: nameW } : { minWidth: nameW, width: nameW }]}>{row.fullName}</Text>
+            <Text style={[styles.dataCell, exportingWide ? { width: jobW, minWidth: jobW } : { minWidth: jobW, width: jobW }]}>{row.jobTitle}</Text>
             {timeSlots.map((time) => (
-              <Text key={time} style={[styles.dataCell, styles.timeCell]}>{row.checks && row.checks[time] ? '\u2611' : '\u2610'}</Text>
+              <Text key={time} style={[styles.dataCell, exportingWide ? { width: timeW, minWidth: timeW } : { minWidth: timeW, width: timeW }]}>{row.checks && row.checks[time] ? '\u2611' : '\u2610'}</Text>
             ))}
-            <View style={[{ minWidth: signW, width: signW, alignItems: 'center' }]}>{row.staffSign ? renderSignatureCell(row.staffSign, signW - 8, 44) : <Text style={styles.dataCell}>{''}</Text>}</View>
-            <Text style={[styles.dataCell, { minWidth: signW, width: signW }]}>{row.supName}</Text>
-            <View style={[{ minWidth: signW, width: signW, alignItems: 'center' }]}>{row.supSign ? renderSignatureCell(row.supSign, signW - 8, 44) : <Text style={styles.dataCell}>{''}</Text>}</View>
+            <View style={[exportingWide ? { width: signW, minWidth: signW, alignItems: 'center' } : { minWidth: signW, width: signW, alignItems: 'center' }]}>{row.staffSign ? renderSignatureCell(row.staffSign, signW - 8, 44) : <Text style={styles.dataCell}>{''}</Text>}</View>
+            <Text style={[styles.dataCell, exportingWide ? { width: signW, minWidth: signW } : { minWidth: signW, width: signW }]}>{row.supName}</Text>
+            <View style={[exportingWide ? { width: signW, minWidth: signW, alignItems: 'center' } : { minWidth: signW, width: signW, alignItems: 'center' }]}>{row.supSign ? renderSignatureCell(row.supSign, signW - 8, 44) : <Text style={styles.dataCell}>{''}</Text>}</View>
           </View>
         ))}
       </View>
 
-      <View style={styles.footerRow}>
+  <View style={styles.footerRow}>
+  </View>
         <Text style={styles.footerLabel}>Complex Manager:</Text>
         {(() => {
           const cm = findSignature('complexManager') || findSignature('complexManagerSign') || get('complexManagerSign') || complexManagerSign;

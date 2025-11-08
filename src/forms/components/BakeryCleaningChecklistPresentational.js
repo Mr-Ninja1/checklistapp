@@ -4,7 +4,8 @@ import SignatureThumb from '../../components/SignatureThumb';
 
 const DAYS_OF_WEEK = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-export default function BakeryCleaningChecklistPresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function BakeryCleaningChecklistPresentational({ payload, exportingWide = false }) {
   const p = payload || {};
   const payloadCore = p.payload || p;
   const { metadata = {}, formData = [], verification = {}, layoutHints = {}, _tableWidth } = payloadCore;
@@ -18,6 +19,16 @@ export default function BakeryCleaningChecklistPresentational({ payload }) {
   };
 
   const TABLE_WIDTH = _tableWidth || (COL.AREA + COL.FREQ + (DAYS_OF_WEEK.length * COL.DAY));
+
+  // Calculate scale and adjusted column widths for export
+  let scale = 1;
+  if (exportingWide && TABLE_WIDTH > A4_WIDTH) {
+    scale = A4_WIDTH / TABLE_WIDTH;
+  }
+  const adjustedArea = Math.round(COL.AREA * scale);
+  const adjustedFreq = Math.round(COL.FREQ * scale);
+  const adjustedDay = Math.round(COL.DAY * scale);
+  const adjustedTableWidth = exportingWide ? Math.round(TABLE_WIDTH * scale) : TABLE_WIDTH;
 
   const normalizeSignature = (v) => {
     if (!v) return null;
@@ -46,10 +57,10 @@ export default function BakeryCleaningChecklistPresentational({ payload }) {
     return <Text style={textStyle}>{val || ''}</Text>;
   };
 
-  const renderDayCell = (item, day) => {
+  const renderDayCell = (item, day, dayWidth) => {
     const dayObj = item.days && item.days[day] ? item.days[day] : { checked: false, cleanedBy: '' };
     return (
-      <View key={day} style={[styles.dayCol, { width: COL.DAY }] }>
+      <View key={day} style={[styles.dayCol, { width: dayWidth }] }>
         <View style={styles.checkBoxWrap}>
           {dayObj.checked ? <Text style={styles.checkMark}>✓</Text> : <View style={styles.emptyBox} />}
         </View>
@@ -58,9 +69,11 @@ export default function BakeryCleaningChecklistPresentational({ payload }) {
     );
   };
 
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerTop}>
+    <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.container}>
+      <View style={[styles.headerTop, exportA4Style]}>
         <Image source={logo} style={styles.logo} resizeMode="contain" />
         <View style={{ flex: 1, paddingLeft: 12 }}>
           <Text style={styles.companyName}>Bravo</Text>
@@ -77,32 +90,61 @@ export default function BakeryCleaningChecklistPresentational({ payload }) {
         <View style={styles.metaCol}><Text style={styles.metaLabel}>Week:</Text><Text style={styles.metaVal}>{metadata.week}</Text></View>
       </View>
 
-      <ScrollView horizontal contentContainerStyle={{ width: TABLE_WIDTH }} style={styles.tableScroll}>
-        <View style={{ width: TABLE_WIDTH }}>
-          <View style={[styles.headerRow, { width: TABLE_WIDTH }]}>
-            <View style={[styles.headerCell, { width: COL.AREA }]}>
-              <Text style={styles.headerText}>Area to be cleaned</Text>
+      {exportingWide ? (
+        <View style={[styles.tableScroll, exportA4Style]}>
+          <View style={{ width: adjustedTableWidth }}>
+            <View style={[styles.headerRow, { width: adjustedTableWidth }]}> 
+              <View style={[styles.headerCell, { width: adjustedArea }]}>
+                <Text style={styles.headerText}>Area to be cleaned</Text>
+              </View>
+              <View style={[styles.headerCell, { width: adjustedFreq }]}>
+                <Text style={styles.headerText}>Frequency</Text>
+              </View>
+              {DAYS_OF_WEEK.map((day) => (
+                <View key={day} style={[styles.dayHeaderContainer, { width: adjustedDay }]}> 
+                  <View style={styles.dayHeaderMain}><Text style={styles.dayHeaderText}>{day.toUpperCase()}</Text></View>
+                  <View style={styles.dayHeaderSub}><Text style={styles.dayHeaderSubText}>CHECK</Text><Text style={styles.dayHeaderSubText}>CLEANED BY</Text></View>
+                </View>
+              ))}
             </View>
-            <View style={[styles.headerCell, { width: COL.FREQ }]}>
-              <Text style={styles.headerText}>Frequency</Text>
-            </View>
-            {DAYS_OF_WEEK.map((day) => (
-              <View key={day} style={[styles.dayHeaderContainer, { width: COL.DAY }]}>
-                <View style={styles.dayHeaderMain}><Text style={styles.dayHeaderText}>{day.toUpperCase()}</Text></View>
-                <View style={styles.dayHeaderSub}><Text style={styles.dayHeaderSubText}>CHECK</Text><Text style={styles.dayHeaderSubText}>CLEANED BY</Text></View>
+
+            {formData.map(item => (
+              <View key={item.id} style={[styles.row, { width: adjustedTableWidth }]}> 
+                <View style={[styles.cell, { width: adjustedArea }]}><Text style={styles.areaText}>{item.name}</Text></View>
+                <View style={[styles.cell, { width: adjustedFreq }]}><Text style={styles.freqText}>{item.frequency}</Text></View>
+                {DAYS_OF_WEEK.map(d => renderDayCell(item, d, adjustedDay))}
               </View>
             ))}
           </View>
-
-          {formData.map(item => (
-            <View key={item.id} style={[styles.row, { width: TABLE_WIDTH }]}>
-              <View style={[styles.cell, { width: COL.AREA }]}><Text style={styles.areaText}>{item.name}</Text></View>
-              <View style={[styles.cell, { width: COL.FREQ }]}><Text style={styles.freqText}>{item.frequency}</Text></View>
-              {DAYS_OF_WEEK.map(d => renderDayCell(item, d))}
-            </View>
-          ))}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView horizontal contentContainerStyle={{ width: TABLE_WIDTH }} style={styles.tableScroll}>
+          <View style={{ width: TABLE_WIDTH }}>
+            <View style={[styles.headerRow, { width: TABLE_WIDTH }]}> 
+              <View style={[styles.headerCell, { width: COL.AREA }]}>
+                <Text style={styles.headerText}>Area to be cleaned</Text>
+              </View>
+              <View style={[styles.headerCell, { width: COL.FREQ }]}>
+                <Text style={styles.headerText}>Frequency</Text>
+              </View>
+              {DAYS_OF_WEEK.map((day) => (
+                <View key={day} style={[styles.dayHeaderContainer, { width: COL.DAY }]}> 
+                  <View style={styles.dayHeaderMain}><Text style={styles.dayHeaderText}>{day.toUpperCase()}</Text></View>
+                  <View style={styles.dayHeaderSub}><Text style={styles.dayHeaderSubText}>CHECK</Text><Text style={styles.dayHeaderSubText}>CLEANED BY</Text></View>
+                </View>
+              ))}
+            </View>
+
+            {formData.map(item => (
+              <View key={item.id} style={[styles.row, { width: TABLE_WIDTH }]}> 
+                <View style={[styles.cell, { width: COL.AREA }]}><Text style={styles.areaText}>{item.name}</Text></View>
+                <View style={[styles.cell, { width: COL.FREQ }]}><Text style={styles.freqText}>{item.frequency}</Text></View>
+                {DAYS_OF_WEEK.map(d => renderDayCell(item, d, COL.DAY))}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
       <View style={styles.verificationContainer}>
         <View style={styles.verificationRow}>

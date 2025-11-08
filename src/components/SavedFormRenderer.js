@@ -15,6 +15,9 @@ import PastInspectionFormPresentational from '../forms/components/PastInspection
 import EggsReceivingPresentational from '../forms/components/EggsReceivingPresentational';
 import CertificateOfAnalysisPresentational from '../forms/components/CertificateOfAnalysisPresentational';
 import React from 'react';
+
+// A4 width in pixels at 96dpi: ~794
+const A4_WIDTH = 794;
 import FoodHandlersPresentational from '../forms/components/FoodHandlersPresentational';
 import ThawingTemperaturePresentational from '../forms/components/ThawingTemperaturePresentational';
 import FOH_DailyCleaningPresentational from '../forms/components/FOH_DailyCleaningPresentational';
@@ -53,7 +56,7 @@ import BravoHealthStatusCheckPresentational from '../forms/components/BravoHealt
 // Add other form imports as needed
 
 // SavedFormRenderer renders a saved payload using the same form component (read-only)
-export default function SavedFormRenderer({ savedPayload, embedded = false }) {
+export default function SavedFormRenderer({ savedPayload, embedded = false, exportingWide = false }) {
   if (!savedPayload) return null;
 
   // The Saved Forms history entries sometimes wrap the payload in different shapes
@@ -83,27 +86,30 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // include history entry top-level title as a fallback when payload lacks title
   const type = (payload?.formType || payload?.formTypeName || payload?.title || savedPayload?.title || '').toString();
 
+  // Helper for export-wide style
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
+
   // Chilled & Frozen Receiving
   if (/ChilledFrozenReceivingForm|Chilled & Frozen Receiving|ChilledFrozenReceiving/i.test(type)) {
-    return <ChilledFrozenReceivingPresentational payload={payload} />;
+    return <View style={exportA4Style}><ChilledFrozenReceivingPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
 
   // Dry Goods Receiving
   if (/DryGoodsReceivingForm|Dry Goods Receiving|DryGoodsReceiving/i.test(type)) {
-    return <DryGoodsReceivingPresentational payload={payload} />;
+    return <View style={exportA4Style}><DryGoodsReceivingPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
 
   // Chemicals Receiving
   if (/ChemicalsReceivingForm|Chemicals Receiving|ChemicalsReceiving/i.test(type)) {
-    return <ChemicalsReceivingPresentational payload={payload} />;
+    return <View style={exportA4Style}><ChemicalsReceivingPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
 
   // Food Handlers
   const looksLikeFoodHandlers = Array.isArray(payload?.handlers) && Array.isArray(payload?.timeSlots);
   if (looksLikeFoodHandlers || /handwash/i.test(type)) {
     return (
-      <View>
-        <FoodHandlersPresentational payload={payload} />
+      <View style={exportA4Style}>
+        <FoodHandlersPresentational payload={payload} exportingWide={exportingWide} />
       </View>
     );
   }
@@ -111,12 +117,12 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH
   if (/FOH_DailyCleaning|FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH|FOH_FrontOfHouseCleaning|FRONT OF HOUSE|FOH/i.test(type)) {
     return (
-      <View>
+      <View style={exportA4Style}>
         {/* Prefer the specific front-of-house renderer when type matches */}
         { /FOH_FrontOfHouseCleaning|FRONT OF HOUSE/i.test(type) ? (
-          <FOH_FrontOfHouseCleaningPresentational payload={payload} />
+          <FOH_FrontOfHouseCleaningPresentational payload={payload} exportingWide={exportingWide} />
         ) : (
-          <FOH_DailyCleaningPresentational payload={payload} />
+          <FOH_DailyCleaningPresentational payload={payload} exportingWide={exportingWide} />
         )}
       </View>
     );
@@ -125,71 +131,71 @@ export default function SavedFormRenderer({ savedPayload, embedded = false }) {
   // Display Chiller Shelf-Life
   if (/DisplayChillerShelfLifeInspection|DISPLAY CHILLER|Display Chiller/i.test(type)) {
     return (
-      <View>
-        <DisplayChillerShelfLifeInspectionPresentational payload={payload} />
+      <View style={exportA4Style}>
+        <DisplayChillerShelfLifeInspectionPresentational payload={payload} exportingWide={exportingWide} />
       </View>
     );
   }
   // BOH Products Shelf-Life
   if (/BOH_ShelfLifeInspectionChecklist|BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST|BOH Products Shelf-Life/i.test(type)) {
     return (
-      <View>
-        <BOH_ShelfLifeInspectionPresentational payload={payload} />
+      <View style={exportA4Style}>
+        <BOH_ShelfLifeInspectionPresentational payload={payload} exportingWide={exportingWide} />
       </View>
     );
   }
   // Bin Liners Changing Log
   if (/BinLinersChangingLog|Bin Liners Changing Log/i.test(type)) {
-    return <BinLinersChangingLogPresentational payload={payload} />;
+    return <View style={exportA4Style}><BinLinersChangingLogPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Beverage & Water Receiving
   if (/BeverageReceivingForm|Beverage & Water Receiving|Beverage and Water Receiving/i.test(type)) {
-    return <BeverageReceivingPresentational payload={payload} />;
+    return <View style={exportA4Style}><BeverageReceivingPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Product Rejection Form
   if (/ProductRejectionForm/i.test(type)) {
-    return <ProductRejectionPresentational payload={payload} />;
+    return <View style={exportA4Style}><ProductRejectionPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Packaging Materials Receiving
   if (/PackagingMaterialsReceivingForm|Packaging Materials Receiving|PackagingMaterialsReceiving/i.test(type)) {
-    return <PackagingMaterialsReceivingPresentational payload={payload} />;
+    return <View style={exportA4Style}><PackagingMaterialsReceivingPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Process & Quality Out of Control Report
   if (/ProcessQualityOutOfControlReport|Process & Quality Out of Control|Out of Control/i.test(type)) {
-    return <ProcessQualityOutOfControlPresentational payload={payload} />;
+    return <View style={exportA4Style}><ProcessQualityOutOfControlPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Product Release Form
   if (/ProductReleaseForm|Product Release/i.test(type)) {
-    return <ProductReleasePresentational payload={payload} />;
+    return <View style={exportA4Style}><ProductReleasePresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Customer Satisfaction Questionnaire
   if (/CustomerSatisfactionQuestionnaire|Customer Satisfaction|CustomerSatisfaction/i.test(type)) {
-    return <CustomerSatisfactionQuestionnairePresentational payload={payload} />;
+    return <View style={exportA4Style}><CustomerSatisfactionQuestionnairePresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Vegetables & Fruits Receiving
   if (/VegetablesFruitsReceiving|Vegetables and Fruits Receiving|VegetablesFruitsReceivingForm/i.test(type)) {
-    return <VegetablesFruitsReceivingPresentational payload={payload} />;
+    return <View style={exportA4Style}><VegetablesFruitsReceivingPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Eggs Receiving
   if (/EggsReceiving|Eggs Receiving|EggsReceivingForm/i.test(type)) {
-    return <EggsReceivingPresentational payload={payload} />;
+    return <View style={exportA4Style}><EggsReceivingPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Certificate of Analysis
   if (/CertificateOfAnalysis|Certificate of Analysis|CertificateOfAnalysisForm/i.test(type)) {
-    return <CertificateOfAnalysisPresentational payload={payload} />;
+    return <View style={exportA4Style}><CertificateOfAnalysisPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Toolbox Talk Register
   if (/ToolboxTalkRegister|Tool Box Talk Register|TBT Register/i.test(type)) {
-    return <ToolboxTalkRegisterPresentational payload={payload} />;
+    return <View style={exportA4Style}><ToolboxTalkRegisterPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Welfare Facilities Cleaning Checklist
   if (/WelfareFacilities_CleaningChecklist|Welfare Facilities Cleaning Checklist|Welfare Facilities/i.test(type)) {
-    return <WelfareFacilitiesPresentational payload={payload} />;
+    return <View style={exportA4Style}><WelfareFacilitiesPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
 
   // Cleaning Equipment Checklist
   if (/CleaningEquipment_CleaningChecklist|Cleaning Equipment Checklist|CLEANING EQUIPMENT CHECKLIST/i.test(type)) {
-    return <CleaningEquipment_CleaningChecklistPresentational payload={payload} />;
+    return <View style={exportA4Style}><CleaningEquipment_CleaningChecklistPresentational payload={payload} exportingWide={exportingWide} /></View>;
   }
   // Food Handlers Daily Showering Log (reuse if type matches)
   if (/FoodHandlersDailyShowering|Daily Showering|FOOD HANDLERS DAILY SHOWERING/i.test(type)) {

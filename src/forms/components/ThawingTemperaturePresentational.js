@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function ThawingTemperaturePresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function ThawingTemperaturePresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const p = payload.payload || payload;
   const { metadata = {}, formData = [], layoutHints = {}, _tableWidth } = p;
@@ -11,7 +12,6 @@ export default function ThawingTemperaturePresentational({ payload }) {
 
   // Accept either the explicit TIME/TEMP/SIGN widths, or a legacy TIME_TEMP_SIGN value
   const rawWidths = (layoutHints && layoutHints.WIDTHS) || {};
-  // Fallback widths tuned for A4 landscape printing: narrower index & food item
   let WIDTHS = {
     INDEX: rawWidths.INDEX || 36,
     FOOD_ITEM: rawWidths.FOOD_ITEM || 220,
@@ -20,111 +20,22 @@ export default function ThawingTemperaturePresentational({ payload }) {
     SIGN: rawWidths.SIGN || rawWidths.TIME_TEMP_SIGN || 90,
     STAFF_NAME: rawWidths.STAFF_NAME || 140,
   };
-
-  // Scale widths proportionally to target table width to ensure saved payloads fit the printable area.
-  const targetTableWidth = Number(_tableWidth) || 900;
-  // sum: INDEX + FOOD_ITEM + 3*(TIME+TEMP+SIGN) + STAFF_NAME
-  const sumWidths = WIDTHS.INDEX + WIDTHS.FOOD_ITEM + 3 * (WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN) + WIDTHS.STAFF_NAME;
-  if (sumWidths > 0 && sumWidths !== targetTableWidth) {
-    const scale = targetTableWidth / sumWidths;
-    let scaled = Object.fromEntries(Object.entries(WIDTHS).map(([k, v]) => [k, Math.max(1, Math.round(v * scale))]));
-    // Fix rounding delta: ensure sum(scaled) equals targetTableWidth by adding leftover to STAFF_NAME
-    const scaledSum = Object.values(scaled).reduce((s, v) => s + v, 0);
-    const delta = targetTableWidth - scaledSum;
-    if (delta !== 0) {
-      scaled.STAFF_NAME = Math.max(1, (scaled.STAFF_NAME || 1) + delta);
-    }
-    WIDTHS = scaled;
+  const tableWidth = Number(_tableWidth) || 1000;
+  let scale = 1;
+  let adjustedTableWidth = tableWidth;
+  if (exportingWide && tableWidth > A4_WIDTH) {
+    scale = A4_WIDTH / tableWidth;
+    adjustedTableWidth = A4_WIDTH;
   }
-
-  // Enforce a minimum width for STAFF_NAME so full names fit and re-balance widths.
-  const MIN_STAFF_WIDTH = 180; // px target to fit long names like "wwewwewewewwrwew"
-  if (WIDTHS.STAFF_NAME < MIN_STAFF_WIDTH) {
-    const shortage = MIN_STAFF_WIDTH - WIDTHS.STAFF_NAME;
-    // Try to take from FOOD_ITEM first
-    const takeFromFood = Math.min(shortage, Math.max(40, WIDTHS.FOOD_ITEM - 40));
-    WIDTHS.FOOD_ITEM = Math.max(40, WIDTHS.FOOD_ITEM - takeFromFood);
-    WIDTHS.STAFF_NAME = WIDTHS.STAFF_NAME + takeFromFood;
-    const remainingShortage = MIN_STAFF_WIDTH - WIDTHS.STAFF_NAME;
-    if (remainingShortage > 0) {
-      // If still short, take evenly from TIME/TEMP/SIGN groups
-      const perCol = Math.ceil(remainingShortage / 3);
-      WIDTHS.TIME = Math.max(40, WIDTHS.TIME - perCol);
-      WIDTHS.TEMP = Math.max(40, WIDTHS.TEMP - perCol);
-      WIDTHS.SIGN = Math.max(40, WIDTHS.SIGN - perCol);
-      WIDTHS.STAFF_NAME = Math.min(MIN_STAFF_WIDTH, WIDTHS.STAFF_NAME + perCol * 3);
-    }
-  }
-
-  // User requested: make STAFF_NAME column same width as FOOD_ITEM.
-  // We'll set STAFF_NAME = FOOD_ITEM and then remove the difference from TIME/TEMP/SIGN (evenly)
-  // to keep total width equal to targetTableWidth.
-  const oldStaff = WIDTHS.STAFF_NAME;
-  const targetStaff = WIDTHS.FOOD_ITEM || oldStaff;
-  if (targetStaff !== oldStaff) {
-    const diff = targetStaff - oldStaff; // positive => need to reduce others
-    WIDTHS.STAFF_NAME = targetStaff;
-    if (diff > 0) {
-      // Remove diff from TIME/TEMP/SIGN evenly, respecting minimums
-      let remaining = diff;
-      const mins = { TIME: 40, TEMP: 40, SIGN: 40 };
-      const cols = ['TIME', 'TEMP', 'SIGN'];
-      // attempt even removal in rounds
-      for (let pass = 0; pass < 3 && remaining > 0; pass++) {
-        const per = Math.ceil(remaining / (3 - pass));
-        for (const c of cols) {
-          const take = Math.min(per, Math.max(0, WIDTHS[c] - mins[c]));
-          WIDTHS[c] = WIDTHS[c] - take;
-          remaining -= take;
-          if (remaining <= 0) break;
-        }
-      }
-      // If still remaining (very unlikely), shave off from FOOD_ITEM too (but keep it >=40)
-      if (remaining > 0) {
-        const takeFood = Math.min(remaining, Math.max(0, WIDTHS.FOOD_ITEM - 40));
-        WIDTHS.FOOD_ITEM -= takeFood;
-        remaining -= takeFood;
-      }
-      // If still remaining after all attempts, accept that sum may be slightly > target; rounding handled earlier
-    }
-    // If diff < 0 (old staff bigger), then we have extra space; give it to FOOD_ITEM
-    if (diff < 0) {
-      WIDTHS.FOOD_ITEM += Math.abs(diff);
-    }
-  }
-
-  // Reduce FOOD_ITEM a bit (user requested) while keeping STAFF_NAME unchanged.
-  // We'll reduce FOOD_ITEM by up to 30px (but not below 40px) and add that amount evenly to TIME/TEMP/SIGN.
-  const desiredFoodReduction = 30;
-  const actualReduction = Math.min(desiredFoodReduction, Math.max(0, WIDTHS.FOOD_ITEM - 40));
-  if (actualReduction > 0) {
-    WIDTHS.FOOD_ITEM = WIDTHS.FOOD_ITEM - actualReduction;
-    const per = Math.floor(actualReduction / 3);
-    WIDTHS.TIME = (WIDTHS.TIME || 40) + per;
-    WIDTHS.TEMP = (WIDTHS.TEMP || 40) + per;
-    WIDTHS.SIGN = (WIDTHS.SIGN || 40) + (actualReduction - per * 2);
-  }
-
-  // User requested a further reduction: apply one more reduction up to 30px
-  const furtherReduction = Math.min(30, Math.max(0, WIDTHS.FOOD_ITEM - 40));
-  if (furtherReduction > 0) {
-    WIDTHS.FOOD_ITEM = WIDTHS.FOOD_ITEM - furtherReduction;
-    const per2 = Math.floor(furtherReduction / 3);
-    WIDTHS.TIME = (WIDTHS.TIME || 40) + per2;
-    WIDTHS.TEMP = (WIDTHS.TEMP || 40) + per2;
-    WIDTHS.SIGN = (WIDTHS.SIGN || 40) + (furtherReduction - per2 * 2);
-  }
-
-  // Now: reduce FOOD_ITEM by the current TIME column width (transfer that width to TIME/TEMP/SIGN).
-  // Clamp so FOOD_ITEM >= 40.
-  const transfer = Math.min(WIDTHS.TIME || 0, Math.max(0, WIDTHS.FOOD_ITEM - 40));
-  if (transfer > 0) {
-    WIDTHS.FOOD_ITEM = WIDTHS.FOOD_ITEM - transfer;
-    const perT = Math.floor(transfer / 3);
-    WIDTHS.TIME = (WIDTHS.TIME || 40) + perT;
-    WIDTHS.TEMP = (WIDTHS.TEMP || 40) + perT;
-    WIDTHS.SIGN = (WIDTHS.SIGN || 40) + (transfer - perT * 2);
-  }
+  const adjustedWidths = exportingWide ? {
+    INDEX: Math.round(WIDTHS.INDEX * scale),
+    FOOD_ITEM: Math.round(WIDTHS.FOOD_ITEM * scale),
+    TIME: Math.round(WIDTHS.TIME * scale),
+    TEMP: Math.round(WIDTHS.TEMP * scale),
+    SIGN: Math.round(WIDTHS.SIGN * scale),
+    STAFF_NAME: Math.round(WIDTHS.STAFF_NAME * scale),
+  } : WIDTHS;
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
 
   // helper: resolve legacy base64 or data: URIs and render helper
   const resolveSignatureUri = (val) => {
@@ -154,8 +65,8 @@ export default function ThawingTemperaturePresentational({ payload }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
+    <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.container}>
+      <View style={[styles.card, exportA4Style]}>
         <View style={styles.topRow}>
           <View style={styles.logoArea}>
               <Image source={p.assets?.logoDataUri ? { uri: p.assets.logoDataUri } : require('../../assets/logo.jpeg')} style={styles.logo} />
@@ -178,57 +89,110 @@ export default function ThawingTemperaturePresentational({ payload }) {
           {/* Date removed: issue date already displayed in the header block */}
         </View>
 
-        <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: _tableWidth || 1000 }}>
-          <View style={[styles.table, { minWidth: _tableWidth || 1000 }]}> 
+        {/* Table: shrink to A4 width and disable horizontal scroll during export */}
+        {exportingWide ? (
+          <View style={[styles.table, exportA4Style]}> 
             <Text style={styles.tableTitle}>THAWING TEMPERATURE LOG</Text>
 
-          <View style={[styles.tableGroupHeader]}>
-            <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
-            <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
-            <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
-            <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
-            <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
-            <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
-          </View>
-
-          <View style={[styles.tableHeaderRow, styles.detailHeader]}>
-            <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]} />
-            <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]} />
-            {[...Array(3)].map((_, i) => (
-              <React.Fragment key={i}>
-                <View style={[styles.hCellFixed, { width: WIDTHS.TIME }]}><Text style={styles.hText}>TIME</Text></View>
-                <View style={[styles.hCellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
-                <View style={[styles.hCellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
-              </React.Fragment>
-            ))}
-            <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]} />
-          </View>
-
-          {rowsToRender.map((r, ri) => (
-            <View key={ri} style={styles.row}>
-              <View style={[styles.cellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.FOOD_ITEM }]}>
-                <Text style={styles.cellText}>{r.foodItem || ''}</Text>
-              </View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign1, WIDTHS.SIGN)}</View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign2, WIDTHS.SIGN)}</View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
-              <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign3, WIDTHS.SIGN)}</View>
-
-              <View style={[styles.cellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+            <View style={[styles.tableGroupHeader]}>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.INDEX }]}><Text style={styles.hText}>#</Text></View>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
+              <View style={[styles.hGroupCell, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
             </View>
-          ))}
+
+            <View style={[styles.tableHeaderRow, styles.detailHeader]}>
+              <View style={[styles.hCellFixed, { width: adjustedWidths.INDEX }]} />
+              <View style={[styles.hCellFixed, { width: adjustedWidths.FOOD_ITEM }]} />
+              {[...Array(3)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <View style={[styles.hCellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.hText}>TIME</Text></View>
+                  <View style={[styles.hCellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
+                  <View style={[styles.hCellFixed, { width: adjustedWidths.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
+                </React.Fragment>
+              ))}
+              <View style={[styles.hCellFixed, { width: adjustedWidths.STAFF_NAME }]} />
+            </View>
+
+            {rowsToRender.map((r, ri) => (
+              <View key={ri} style={styles.row}>
+                <View style={[styles.cellFixed, { width: adjustedWidths.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.FOOD_ITEM }]}>
+                  <Text style={styles.cellText}>{r.foodItem || ''}</Text>
+                </View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.SIGN }]}>{renderSignatureCell(r.sign1, adjustedWidths.SIGN)}</View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.SIGN }]}>{renderSignatureCell(r.sign2, adjustedWidths.SIGN)}</View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: adjustedWidths.SIGN }]}>{renderSignatureCell(r.sign3, adjustedWidths.SIGN)}</View>
+
+                <View style={[styles.cellFixed, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+              </View>
+            ))}
 
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: _tableWidth || 1000 }}>
+            <View style={[styles.table, { minWidth: _tableWidth || 1000 }]}> 
+              <Text style={styles.tableTitle}>THAWING TEMPERATURE LOG</Text>
+
+            <View style={[styles.tableGroupHeader]}>
+              <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
+              <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
+              <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
+              <View style={[styles.hGroupCell, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
+              <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
+            </View>
+
+            <View style={[styles.tableHeaderRow, styles.detailHeader]}>
+              <View style={[styles.hCellFixed, { width: WIDTHS.INDEX }]} />
+              <View style={[styles.hCellFixed, { width: WIDTHS.FOOD_ITEM }]} />
+              {[...Array(3)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <View style={[styles.hCellFixed, { width: WIDTHS.TIME }]}><Text style={styles.hText}>TIME</Text></View>
+                  <View style={[styles.hCellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
+                  <View style={[styles.hCellFixed, { width: WIDTHS.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
+                </React.Fragment>
+              ))}
+              <View style={[styles.hCellFixed, { width: WIDTHS.STAFF_NAME }]} />
+            </View>
+
+            {rowsToRender.map((r, ri) => (
+              <View key={ri} style={styles.row}>
+                <View style={[styles.cellFixed, { width: WIDTHS.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.FOOD_ITEM }]}>
+                  <Text style={styles.cellText}>{r.foodItem || ''}</Text>
+                </View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign1, WIDTHS.SIGN)}</View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign2, WIDTHS.SIGN)}</View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
+                <View style={[styles.cellFixed, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign3, WIDTHS.SIGN)}</View>
+
+                <View style={[styles.cellFixed, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+              </View>
+            ))}
+
+            </View>
+          </ScrollView>
+        )}
 
         {/* Footer: Chef signature, corrective action and verified-by lines */}
         <View style={styles.footerSection}>

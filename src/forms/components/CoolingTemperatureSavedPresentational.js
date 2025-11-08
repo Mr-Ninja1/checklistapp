@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function CoolingTemperatureSavedPresentational({ payload }) {
+const A4_WIDTH = 794;
+export default function CoolingTemperatureSavedPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const p = payload.payload || payload;
   const { metadata = {}, formData = [], layoutHints = {}, _tableWidth } = p;
@@ -22,6 +23,22 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
   };
 
   const tableWidth = Number(_tableWidth) || 1000;
+  let scale = 1;
+  let adjustedTableWidth = tableWidth;
+  if (exportingWide && tableWidth > A4_WIDTH) {
+    scale = A4_WIDTH / tableWidth;
+    adjustedTableWidth = A4_WIDTH;
+  }
+  const adjustedWidths = exportingWide ? {
+    INDEX: Math.round(WIDTHS.INDEX * scale),
+    FOOD_ITEM: Math.round(WIDTHS.FOOD_ITEM * scale),
+    TIME_INTO_UNIT: Math.round(WIDTHS.TIME_INTO_UNIT * scale),
+    TIME: Math.round(WIDTHS.TIME * scale),
+    TEMP: Math.round(WIDTHS.TEMP * scale),
+    SIGN: Math.round(WIDTHS.SIGN * scale),
+    STAFF_NAME: Math.round(WIDTHS.STAFF_NAME * scale),
+  } : WIDTHS;
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
 
   const resolveSignatureUri = (val) => {
     if (!val) return null;
@@ -67,8 +84,8 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.card}>
+    <ScrollView contentContainerStyle={exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.container}>
+      <View style={[styles.card, exportA4Style]}>
         <View style={styles.topRow}>
           <View style={styles.logoArea}>
             <Image source={p.assets?.logoDataUri ? { uri: p.assets.logoDataUri } : require('../../assets/logo.jpeg')} style={styles.logo} />
@@ -86,69 +103,133 @@ export default function CoolingTemperatureSavedPresentational({ payload }) {
           <View style={styles.compiledBoxThin}><Text style={styles.compiledLabelSmall}>APPROVED BY: {metadata.approvedBy || ''}</Text></View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-          <View style={[styles.table, { minWidth: tableWidth }]}> 
+        {exportingWide ? (
+          <View style={[styles.table, exportA4Style]}> 
             <Text style={styles.tableTitle}>COOLING TEMPERATURE LOG</Text>
 
-          <View style={[styles.tableHeaderRow, styles.groupHeader]}>
-            <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
+            <View style={[styles.tableHeaderRow, styles.groupHeader]}>
+              <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.INDEX }]}><Text style={styles.hText}>#</Text></View>
 
-            <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.FOOD_ITEM + WIDTHS.TIME_INTO_UNIT }]}>
-              <View>
-                <Text style={[styles.hText, styles.instructionText]}>COOLING (10 °C within 2hours)</Text>
-              </View>
-              <View style={{ flexDirection: 'row', borderTopWidth: 1, borderColor: '#333' }}>
-                <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
-                <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME_INTO_UNIT }]}>
-                  <Text style={[styles.hText, { fontSize: 8 }]}>Time into{"\n"}Fridge/Display{"\n"}Chiller/Deep{"\n"}Freezer/Chiller{"\n"}Room/Freezer Room</Text>
+              <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.FOOD_ITEM + adjustedWidths.TIME_INTO_UNIT }]}>
+                <View>
+                  <Text style={[styles.hText, styles.instructionText]}>COOLING (10 °C within 2hours)</Text>
+                </View>
+                <View style={{ flexDirection: 'row', borderTopWidth: 1, borderColor: '#333' }}>
+                  <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
+                  <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.TIME_INTO_UNIT }]}>
+                    <Text style={[styles.hText, { fontSize: 8 }]}>Time into{"\n"}Fridge/Display{"\n"}Chiller/Deep{"\n"}Freezer/Chiller{"\n"}Room/Freezer Room</Text>
+                  </View>
                 </View>
               </View>
+
+              <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
+              <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
+              <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.TIME + adjustedWidths.TEMP + adjustedWidths.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
+
+              <View style={[styles.hCell, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
             </View>
 
-            <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
-            <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
-            <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
+            <View style={[styles.tableHeaderRow, styles.detailHeader]}>
+              <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.INDEX }]} /><View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.FOOD_ITEM + adjustedWidths.TIME_INTO_UNIT }]} />
+              {[...Array(3)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.TIME }]}><Text style={styles.hText}>TIME</Text></View>
+                  <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
+                  <View style={[styles.hCell, styles.borderRight, { width: adjustedWidths.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
+                </React.Fragment>
+              ))}
+              <View style={[styles.hCell, { width: adjustedWidths.STAFF_NAME }]} />
+            </View>
 
-            <View style={[styles.hCell, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
-          </View>
+            {rows.map((r, ri) => (
+              <View key={ri} style={styles.row}>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
 
-          <View style={[styles.tableHeaderRow, styles.detailHeader]}>
-            <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.INDEX }]} /><View style={[styles.hCell, styles.borderRight, { width: WIDTHS.FOOD_ITEM + WIDTHS.TIME_INTO_UNIT }]} />
-            {[...Array(3)].map((_, i) => (
-              <React.Fragment key={i}>
-                <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.hText}>TIME</Text></View>
-                <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
-                <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
-              </React.Fragment>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.FOOD_ITEM }]}><Text style={styles.cellText}>{r.foodItem || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.TIME_INTO_UNIT }]}><Text style={styles.cellText}>{r.timeIntoUnit || r.timeIntoUnit || ''}</Text></View>
+
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.SIGN }]}>{renderSignatureCell(r.sign1, adjustedWidths.SIGN)}</View>
+
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.SIGN }]}>{renderSignatureCell(r.sign2, adjustedWidths.SIGN)}</View>
+
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: adjustedWidths.SIGN }]}>{renderSignatureCell(r.sign3, adjustedWidths.SIGN)}</View>
+
+                <View style={[styles.cell, { width: adjustedWidths.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+              </View>
             ))}
-            <View style={[styles.hCell, { width: WIDTHS.STAFF_NAME }]} />
+
           </View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+            <View style={[styles.table, { minWidth: tableWidth }]}> 
+              <Text style={styles.tableTitle}>COOLING TEMPERATURE LOG</Text>
 
-          {rows.map((r, ri) => (
-            <View key={ri} style={styles.row}>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
+            <View style={[styles.tableHeaderRow, styles.groupHeader]}>
+              <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.INDEX }]}><Text style={styles.hText}>#</Text></View>
 
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.cellText}>{r.foodItem || ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME_INTO_UNIT }]}><Text style={styles.cellText}>{r.timeIntoUnit || r.timeIntoUnit || ''}</Text></View>
+              <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.FOOD_ITEM + WIDTHS.TIME_INTO_UNIT }]}>
+                <View>
+                  <Text style={[styles.hText, styles.instructionText]}>COOLING (10 °C within 2hours)</Text>
+                </View>
+                <View style={{ flexDirection: 'row', borderTopWidth: 1, borderColor: '#333' }}>
+                  <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.hText}>FOOD ITEM</Text></View>
+                  <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME_INTO_UNIT }]}>
+                    <Text style={[styles.hText, { fontSize: 8 }]}>Time into{"\n"}Fridge/Display{"\n"}Chiller/Deep{"\n"}Freezer/Chiller{"\n"}Room/Freezer Room</Text>
+                  </View>
+                </View>
+              </View>
 
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign1, WIDTHS.SIGN)}</View>
+              <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>1ST RECORD</Text></View>
+              <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>2ND RECORD</Text></View>
+              <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME + WIDTHS.TEMP + WIDTHS.SIGN }]}><Text style={styles.hText}>3RD RECORD</Text></View>
 
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign2, WIDTHS.SIGN)}</View>
-
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
-              <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign3, WIDTHS.SIGN)}</View>
-
-              <View style={[styles.cell, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+              <View style={[styles.hCell, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.hText}>STAFF'S NAME</Text></View>
             </View>
-          ))}
 
-          </View>
-        </ScrollView>
+            <View style={[styles.tableHeaderRow, styles.detailHeader]}>
+              <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.INDEX }]} /><View style={[styles.hCell, styles.borderRight, { width: WIDTHS.FOOD_ITEM + WIDTHS.TIME_INTO_UNIT }]} />
+              {[...Array(3)].map((_, i) => (
+                <React.Fragment key={i}>
+                  <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.hText}>TIME</Text></View>
+                  <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.hText}>TEMP</Text></View>
+                  <View style={[styles.hCell, styles.borderRight, { width: WIDTHS.SIGN }]}><Text style={styles.hText}>SIGN</Text></View>
+                </React.Fragment>
+              ))}
+              <View style={[styles.hCell, { width: WIDTHS.STAFF_NAME }]} />
+            </View>
+
+            {rows.map((r, ri) => (
+              <View key={ri} style={styles.row}>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.INDEX }]}><Text style={styles.cellText}>{r.index || ri + 1}</Text></View>
+
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.FOOD_ITEM }]}><Text style={styles.cellText}>{r.foodItem || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME_INTO_UNIT }]}><Text style={styles.cellText}>{r.timeIntoUnit || r.timeIntoUnit || ''}</Text></View>
+
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time1 || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp1 ? `${r.temp1} °C` : ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign1, WIDTHS.SIGN)}</View>
+
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time2 || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp2 ? `${r.temp2} °C` : ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign2, WIDTHS.SIGN)}</View>
+
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TIME }]}><Text style={styles.cellText}>{r.time3 || ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.TEMP }]}><Text style={styles.cellText}>{r.temp3 ? `${r.temp3} °C` : ''}</Text></View>
+                <View style={[styles.cell, styles.borderRight, { width: WIDTHS.SIGN }]}>{renderSignatureCell(r.sign3, WIDTHS.SIGN)}</View>
+
+                <View style={[styles.cell, { width: WIDTHS.STAFF_NAME }]}><Text style={styles.cellText}>{r.staffName || ''}</Text></View>
+              </View>
+            ))}
+
+            </View>
+          </ScrollView>
+        )}
 
         {/* Footer */}
         <View style={styles.footerSection}>

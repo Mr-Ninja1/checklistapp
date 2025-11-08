@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bakery_CleaningChecklist - export skeleton</title>
+<style>
+  table, tbody, tr { page-break-inside: avoid !important; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; padding: 16px; }
+  .form-title { text-align: center; font-size: 18px; font-weight: 700; margin-bottom: 12px }
+  .header-block { border: 1px solid #ccc; padding: 8px; margin-bottom: 12px; }
+  .hdr-row { margin: 4px 0 }
+  .field-row { margin: 6px 0 }
+  .label { font-weight: 600 }
+  .sign-box { width: 220px; height: 80px; border: 1px dashed #888; }
+  table.data { width: 100%; border-collapse: collapse; margin-top: 12px }
+  table.data th, table.data td { border: 1px solid #ccc; padding: 6px; font-size: 12px }
+  </style>
+</head>
+<body>
+<div class="form-title">Bakery Area Cleaning Checklist</div>
+<div class="header-block" style="display:flex;align-items:center;">
+  <img src="{{logoDataUri}}" style="height:48px;margin-right:12px;object-fit:contain;" alt="logo"/>
+  <div style="flex:1;padding-left:12px;">
+    <span class="label" style="font-size:22px;color:#185a9d;font-weight:800;">Bravo</span><br>
+    <span style="font-size:12px;font-weight:bold;color:#374151;">BAKERY &amp; CONFECTIONARY AREA</span>
+  </div>
+  <div style="flex:2;text-align:center;">
+    <span style="font-size:20px;font-weight:800;color:#1F2937;">BAKERY AREA CLEANING CHECKLIST</span><br>
+    <span style="font-size:10px;color:#6B7280;">Doc No: BBN-SHEQ-P-16-R-11h | Issue Date: {{issueDate}} | Revision Date: N/A</span><br>
+    <span style="font-size:10px;color:#6B7280;">Issued: {{month}} {{year}}</span>
+  </div>
+</div>
+<div class="body-block">
+  <div style="margin-bottom:12px;background:#EFF6FF;padding:12px;border-radius:8px;display:flex;flex-wrap:wrap;">
+    <div style="width:24%;min-width:150px;margin-bottom:8px;"><span class="label">LOCATION:</span> {{location}}</div>
+    <div style="width:24%;min-width:150px;margin-bottom:8px;"><span class="label">WEEK:</span> {{week}}</div>
+    <div style="width:24%;min-width:150px;margin-bottom:8px;"><span class="label">ISSUE MONTH:</span> {{month}}</div>
+    <div style="width:24%;min-width:150px;margin-bottom:8px;"><span class="label">ISSUE YEAR:</span> {{year}}</div>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="data" style="width:1500px;">
+      <thead>
+        <tr>
+          <th>Area to be cleaned</th>
+          <th>Frequency (Per Week)</th>
+          <!-- {{daysHeaders}} -->
+        </tr>
+        <tr>
+          <th></th>
+          <th></th>
+          <!-- {{daysSubHeaders}} -->
+        </tr>
+      </thead>
+      <tbody>
+        <!-- {{cleaningRows}} -->
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:32px;padding:16px;border:1px solid #D1D5DB;border-radius:8px;background:#F9FAFB;">
+    <div style="font-size:16px;font-weight:bold;color:#1F2937;border-bottom:1px solid #E5E7EB;padding-bottom:8px;margin-bottom:12px;">Verification</div>
+    <div style="margin-bottom:8px;">
+      <span class="label">Verified by: HSEQ Manager:</span>
+      <span><!-- {{hseqManagerSign}} --></span>
+    </div>
+    <div style="margin-bottom:8px;">
+      <span class="label">Complex Manager Sign:</span>
+      <span><!-- {{complexManagerSign}} --></span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

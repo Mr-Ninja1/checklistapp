@@ -23,11 +23,25 @@ const renderMaybeSignature = (val) => {
   return <Text>{val || ''}</Text>;
 };
 
-export default function BOH_ShelfLifeInspectionPresentational({ payload }) {
+export default function BOH_ShelfLifeInspectionPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const { title = 'BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST', frequency = payload?.metadata?.frequency || 'DAILY', formData = [], verification = {}, layoutHints = {}, assets = {} } = payload;
 
-  const tableW = payload._tableWidth || 1000;
+  // Table column widths
+  const baseWidths = {
+    name: 420,
+    dateIn: 100,
+    timeIn: 100,
+    usedBy: 120,
+    bakerChefName: 220,
+    quantity: 80,
+    sign: 80,
+  };
+  const baseTableW = Object.values(baseWidths).reduce((a, b) => a + b, 0);
+  const A4_WIDTH = 794; // px for A4 at 96dpi
+  const tableW = exportingWide ? A4_WIDTH : (payload._tableWidth || baseTableW);
+  const scale = exportingWide ? (A4_WIDTH / baseTableW) : 1;
+  const colWidths = Object.fromEntries(Object.entries(baseWidths).map(([k, v]) => [k, Math.round(v * scale)]));
 
   return (
     <ScrollView style={styles.container} horizontal={false} contentContainerStyle={{ padding: 12 }}>
@@ -44,33 +58,61 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload }) {
       </View>
       <View style={styles.titleRow}><Text style={styles.title}>{title}</Text><Text style={styles.frequency}>FREQUENCY: {frequency}</Text></View>
 
-      <ScrollView horizontal contentContainerStyle={{ minWidth: tableW }}>
-        <View style={[styles.tableContainer, { minWidth: tableW }]}>
-          <View style={styles.thead}>
-            <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
-            <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
-            <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
-            <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
-            <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS NAME</Text>
-            <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
-            <Text style={[styles.th, { width: 80 }]}>SIGN</Text>
+      {exportingWide ? (
+        <View style={[styles.tableContainer, { width: tableW, maxWidth: tableW, alignSelf: 'center' }]}> 
+          <View style={[styles.thead, { width: tableW }]}> 
+            <Text style={[styles.th, { width: colWidths.name }]}>ITEMS</Text>
+            <Text style={[styles.th, { width: colWidths.dateIn }]}>DATE IN</Text>
+            <Text style={[styles.th, { width: colWidths.timeIn }]}>TIME IN</Text>
+            <Text style={[styles.th, { width: colWidths.usedBy }]}>USED BY</Text>
+            <Text style={[styles.th, { width: colWidths.bakerChefName }]}>BAKER/CHEFS NAME</Text>
+            <Text style={[styles.th, { width: colWidths.quantity }]}>QUANTITY</Text>
+            <Text style={[styles.th, { width: colWidths.sign }]}>SIGN</Text>
           </View>
 
           {formData.map((r, idx) => (
-            <View key={r.name || idx} style={styles.trow}>
-              <Text style={[styles.td, { width: 420 }]}>{r.name}</Text>
-              <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
-              <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
-              <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
-              <Text style={[styles.td, { width: 220 }]}>{r.bakerChefName}</Text>
-              <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
-              <View style={[styles.td, { width: 80, justifyContent: 'center', alignItems: 'center' }]}>
+            <View key={r.name || idx} style={[styles.trow, { width: tableW }]}> 
+              <Text style={[styles.td, { width: colWidths.name }]}>{r.name}</Text>
+              <Text style={[styles.td, { width: colWidths.dateIn }]}>{r.dateIn}</Text>
+              <Text style={[styles.td, { width: colWidths.timeIn }]}>{r.timeIn}</Text>
+              <Text style={[styles.td, { width: colWidths.usedBy }]}>{r.usedBy}</Text>
+              <Text style={[styles.td, { width: colWidths.bakerChefName }]}>{r.bakerChefName}</Text>
+              <Text style={[styles.td, { width: colWidths.quantity }]}>{r.quantity}</Text>
+              <View style={[styles.td, { width: colWidths.sign, justifyContent: 'center', alignItems: 'center' }]}>
                 {renderMaybeSignature(r.sign)}
               </View>
             </View>
           ))}
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView horizontal contentContainerStyle={{ minWidth: tableW }}>
+          <View style={[styles.tableContainer, { minWidth: tableW }]}> 
+            <View style={styles.thead}>
+              <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
+              <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
+              <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
+              <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
+              <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS NAME</Text>
+              <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
+              <Text style={[styles.th, { width: 80 }]}>SIGN</Text>
+            </View>
+
+            {formData.map((r, idx) => (
+              <View key={r.name || idx} style={styles.trow}>
+                <Text style={[styles.td, { width: 420 }]}>{r.name}</Text>
+                <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
+                <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
+                <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
+                <Text style={[styles.td, { width: 220 }]}>{r.bakerChefName}</Text>
+                <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
+                <View style={[styles.td, { width: 80, justifyContent: 'center', alignItems: 'center' }]}>
+                  {renderMaybeSignature(r.sign)}
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
       <View style={{ height: 12 }} />
       <View style={styles.footerRowMultiple}>

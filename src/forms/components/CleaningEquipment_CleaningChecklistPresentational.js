@@ -39,16 +39,44 @@ function renderSignatureOnly(v, style = {}) {
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
-export default function CleaningEquipment_CleaningChecklistPresentational({ payload }) {
+// A4 width in pixels at 96dpi: ~794
+const A4_WIDTH = 794;
+
+export default function CleaningEquipment_CleaningChecklistPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
   const meta = payload.metadata || {};
   const items = Array.isArray(payload.formData) ? payload.formData : (payload.formData?.items || []);
 
+  // Original column widths
+  const areaColWidth = 260;
+  const freqColWidth = 150;
+  const checkColWidth = 40;
+  const cleanedByColWidth = 100;
+  // Total table width
+  const tableWidth = areaColWidth + freqColWidth + WEEK_DAYS.length * (checkColWidth + cleanedByColWidth);
+
+  // If exportingWide, shrink columns proportionally to fit A4
+  let scale = 1;
+  if (exportingWide && tableWidth > A4_WIDTH) {
+    scale = A4_WIDTH / tableWidth;
+  }
+  const adjustedAreaCol = Math.round(areaColWidth * scale);
+  const adjustedFreqCol = Math.round(freqColWidth * scale);
+  const adjustedCheckCol = Math.round(checkColWidth * scale);
+  const adjustedCleanedByCol = Math.round(cleanedByColWidth * scale);
+  const adjustedTableWidth = exportingWide ? Math.round(tableWidth * scale) : tableWidth;
+
+
+  // Helper style for export mode
+  const exportA4Style = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center' } : {};
+  const scrollStyle = exportingWide ? { padding: 0, margin: 0, backgroundColor: '#fff' } : styles.scroll;
+  const cardStyle = exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH, alignSelf: 'center', padding: 0, borderRadius: 0, borderWidth: 0, margin: 0, backgroundColor: '#fff' } : styles.card;
+
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
-      <View style={styles.card}>
-        <View style={styles.headerTop}>
-          <View style={styles.brandRow}>
+    <ScrollView contentContainerStyle={scrollStyle}>
+      <View style={cardStyle}>
+        <View style={[styles.headerTop, exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH } : {}]}>
+          <View style={[styles.brandRow, exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH } : {}]}>
             <Image source={require('../../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
             <View style={{ flex: 1 }}>
               <Text style={styles.brandName}>Bravo! Food Safety Inspections</Text>
@@ -56,14 +84,14 @@ export default function CleaningEquipment_CleaningChecklistPresentational({ payl
             </View>
           </View>
 
-          <View style={styles.headerMeta}>
+          <View style={[styles.headerMeta, exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH } : {}]}>
             <Text style={styles.docText}>Issue Date: {meta.issueDate || ''}</Text>
             <Text style={styles.docText}>Page 1 of 1</Text>
           </View>
 
           <Text style={styles.mainTitle}>CLEANING EQUIPMENT CHECKLIST</Text>
 
-          <View style={styles.areaMetaRow}>
+          <View style={[styles.areaMetaRow, exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH } : {}]}>
             <View style={[styles.metaField, { flex: 2 }]}>
               <Text style={styles.metaLabel}>LOCATION:</Text>
               <Text style={styles.metaValue}>{meta.location || ''}</Text>
@@ -84,7 +112,7 @@ export default function CleaningEquipment_CleaningChecklistPresentational({ payl
 
           <Text style={styles.areaTitle}>CLEANING EQUIPMENT</Text>
 
-          <View style={styles.verificationRow}>
+          <View style={[styles.verificationRow, exportingWide ? { width: A4_WIDTH, maxWidth: A4_WIDTH } : {}]}>
             <View style={styles.verificationCell}>
               <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
               {renderSignatureOnly(meta.hseqSign || meta.hseqManager || '', { width: 240, height: 60 })}
@@ -96,33 +124,62 @@ export default function CleaningEquipment_CleaningChecklistPresentational({ payl
           </View>
         </View>
 
-        <ScrollView horizontal style={styles.tableScroll}>
-          <View>
+        {/* If exportingWide, disable horizontal scroll and shrink table to A4 width */}
+        {exportingWide ? (
+          <View style={[styles.tableScroll, { width: adjustedTableWidth }]}> 
             <View style={styles.tableHeader}>
-              <View style={[styles.cell, styles.areaCol]}><Text style={styles.headerText}>Equipment</Text></View>
-              <View style={[styles.cell, styles.freqCol]}><Text style={styles.headerText}>Frequency</Text></View>
+              <View style={[styles.cell, { width: adjustedAreaCol }]}><Text style={styles.headerText}>Equipment</Text></View>
+              <View style={[styles.cell, { width: adjustedFreqCol }]}><Text style={styles.headerText}>Frequency</Text></View>
               {WEEK_DAYS.map(d => (
                 <View key={d} style={styles.dayGroup}>
-                  <View style={[styles.cell, styles.checkCol]}><Text style={styles.headerText}>{d}</Text></View>
-                  <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.headerText}>Cleaned BY</Text></View>
+                  <View style={[styles.cell, { width: adjustedCheckCol }]}><Text style={styles.headerText}>{d}</Text></View>
+                  <View style={[styles.cell, { width: adjustedCleanedByCol }]}><Text style={styles.headerText}>Cleaned BY</Text></View>
                 </View>
               ))}
             </View>
 
             {items.map(item => (
               <View key={item.id || item.name} style={styles.row}>
-                <View style={[styles.cell, styles.areaCol]}><Text style={styles.cellText}>{item.name}</Text></View>
-                <View style={[styles.cell, styles.freqCol]}><Text style={styles.cellText}>{item.frequency || ''}</Text></View>
+                <View style={[styles.cell, { width: adjustedAreaCol }]}><Text style={styles.cellText}>{item.name}</Text></View>
+                <View style={[styles.cell, { width: adjustedFreqCol }]}><Text style={styles.cellText}>{item.frequency || ''}</Text></View>
                 {WEEK_DAYS.map(day => (
                   <View key={`${item.id || item.name}-${day}`} style={styles.dayGroup}>
-                    <View style={[styles.cell, styles.checkCol]}><Text style={styles.cellText}>{item.checks?.[day]?.checked ? '✓' : ''}</Text></View>
-                    <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.cellText}>{item.checks?.[day]?.cleanedBy || ''}</Text></View>
+                    <View style={[styles.cell, { width: adjustedCheckCol }]}><Text style={styles.cellText}>{item.checks?.[day]?.checked ? '✓' : ''}</Text></View>
+                    <View style={[styles.cell, { width: adjustedCleanedByCol }]}><Text style={styles.cellText}>{item.checks?.[day]?.cleanedBy || ''}</Text></View>
                   </View>
                 ))}
               </View>
             ))}
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView horizontal style={styles.tableScroll}>
+            <View>
+              <View style={styles.tableHeader}>
+                <View style={[styles.cell, styles.areaCol]}><Text style={styles.headerText}>Equipment</Text></View>
+                <View style={[styles.cell, styles.freqCol]}><Text style={styles.headerText}>Frequency</Text></View>
+                {WEEK_DAYS.map(d => (
+                  <View key={d} style={styles.dayGroup}>
+                    <View style={[styles.cell, styles.checkCol]}><Text style={styles.headerText}>{d}</Text></View>
+                    <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.headerText}>Cleaned BY</Text></View>
+                  </View>
+                ))}
+              </View>
+
+              {items.map(item => (
+                <View key={item.id || item.name} style={styles.row}>
+                  <View style={[styles.cell, styles.areaCol]}><Text style={styles.cellText}>{item.name}</Text></View>
+                  <View style={[styles.cell, styles.freqCol]}><Text style={styles.cellText}>{item.frequency || ''}</Text></View>
+                  {WEEK_DAYS.map(day => (
+                    <View key={`${item.id || item.name}-${day}`} style={styles.dayGroup}>
+                      <View style={[styles.cell, styles.checkCol]}><Text style={styles.cellText}>{item.checks?.[day]?.checked ? '✓' : ''}</Text></View>
+                      <View style={[styles.cell, styles.cleanedByCol]}><Text style={styles.cellText}>{item.checks?.[day]?.cleanedBy || ''}</Text></View>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </ScrollView>
   );
