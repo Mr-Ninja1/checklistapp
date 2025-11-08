@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal, ActivityIndicator } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import ViewDocumentModal from '../components/ViewDocumentModal';
@@ -17,6 +17,7 @@ export default function FormSavesScreen() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
+  const [opening, setOpening] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('date');
   const [activeMonth, setActiveMonth] = useState('all');
@@ -557,6 +558,8 @@ export default function FormSavesScreen() {
                       style={styles.card}
                       activeOpacity={0.8}
                       onPress={async () => {
+                          if (opening) return; // prevent double-tap
+                          setOpening(true);
                           try {
                             // Attempt multiple strategies to obtain the canonical saved payload
                             let payload = null;
@@ -599,9 +602,11 @@ export default function FormSavesScreen() {
 
                             setSelectedForm(payload);
                             setModalVisible(true);
+                            setOpening(false);
                           } catch (e) {
                             console.warn('failed loading saved payload', e);
                             Alert.alert('Open failed', 'Unable to load saved form payload.');
+                            setOpening(false);
                           }
                         }}
                     >
@@ -627,6 +632,8 @@ export default function FormSavesScreen() {
                       style={styles.card}
                       activeOpacity={0.8}
                       onPress={async () => {
+                        if (opening) return; // prevent double-tap
+                        setOpening(true);
                         try {
                           let payload = null;
                           const meta = form.meta || {};
@@ -657,9 +664,11 @@ export default function FormSavesScreen() {
 
                           setSelectedForm(payload);
                           setModalVisible(true);
+                          setOpening(false);
                         } catch (e) {
                           console.warn('failed loading saved payload', e);
                           Alert.alert('Open failed', 'Unable to load saved form payload.');
+                          setOpening(false);
                         }
                       }}
                     >
@@ -682,6 +691,15 @@ export default function FormSavesScreen() {
         onClose={() => setModalVisible(false)}
         onDownload={handleDownload}
       />
+      {/* Overlay shown while a saved form payload is being loaded */}
+      <Modal visible={opening} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', padding: 18, borderRadius: 12, alignItems: 'center', minWidth: 180 }}>
+            <ActivityIndicator size="large" color="#185a9d" />
+            <Text style={{ marginTop: 12, fontWeight: '700', color: '#111' }}>Loading form...</Text>
+          </View>
+        </View>
+      </Modal>
       {/* Google Drive button is shown inline in the filter row now */}
     </View>
   );
