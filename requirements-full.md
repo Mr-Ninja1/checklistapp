@@ -318,3 +318,10 @@ and they are a lot of unused form cards on the home screen these card are not li
 ,read food handlers Daily showering LOG- check how its making the edit and read only , so that the form can be scrollable, and how its implementing the keybord avoiding so that when the keyboard appears it doesnt hide the input fields
 ,Read food handlers Daily showering LOG- check how its making the edit and read only , so that the form can be scrollable, and how its implementing the keybord avoiding so that when the keyboard appears it doesnt hide the input fields,
 so i noticed two things about this app when run on touch screen you cnat really scroll the form to the bottom while touching the input fiels part since the form is made up of input fields ,unless when you touch a part thats readonly then you can scroll , thats why i implemented a read only and edit toogle, and also i noticed the keyboard was covering the typing area when typing so i made a solution too, so i want you to check and undersatnd that logic so that we can apply it to other forms too
+
+
+
+
+
+
+C:\Users\AHMAD\app\src\android\app\build\outputs\apk\release\app-release.apk

@@ -43,6 +43,7 @@ import HotHoldingTemperaturePresentational from '../forms/components/HotHoldingT
 import CookingTemperaturePresentational from '../forms/components/CookingTemperaturePresentational';
 import CoolingTemperaturePresentational from '../forms/components/CoolingTemperaturePresentational';
 import CoolingTemperatureSavedPresentational from '../forms/components/CoolingTemperatureSavedPresentational';
+import DeepFreezerTemperaturePresentational from '../forms/components/DeepFreezerTemperaturePresentational';
 import DryStorageArea_CleaningChecklistPresentational from '../forms/components/DryStorageArea_CleaningChecklistPresentational';
 import SculleryArea_CleaningChecklistPresentational from '../forms/components/SculleryArea_CleaningChecklistPresentational';
 import ColdRoom_FreezerRoomCleaningChecklistPresentational from '../forms/components/ColdRoom_FreezerRoomCleaningChecklistPresentational';
@@ -326,6 +327,10 @@ export default function SavedFormRenderer({ savedPayload, embedded = false, expo
   // Underbar chiller
   if (/Underbar Chiller Temperature Log|UnderbarChillerTemperatureLog/i.test(type)) {
     return <UnderbarChillerTemperaturePresentational payload={payload} />;
+  }
+  // Deep Freezer Temp Log
+  if (/Deep Freezer Temperature Log|DeepFreezerTemperatureLog|Deep Freezer/i.test(type)) {
+    return <DeepFreezerTemperaturePresentational payload={payload} />;
   }
   // Cooking Temp
   if (/Cooking Temperature Log|CookingTemperatureLog|COOKING TEMPERATURE LOG/i.test(type)) {

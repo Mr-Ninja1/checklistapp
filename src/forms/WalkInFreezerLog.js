@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
 import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
@@ -43,10 +43,13 @@ const useFormState = (initialState, initialMeta) => {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
-        if (d && mounted) {
-          if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
+        const d = await formStorage.loadForm(DRAFT_KEY);
+        // formStorage.loadForm returns the wrapped object { payload, savedAt }
+        const wrapped = d && d.payload ? d : null;
+        if (wrapped && mounted) {
+          const pd = wrapped.payload || {};
+          if (pd.formData) setFormData(pd.formData);
+          if (pd.metadata) setMetadata(pd.metadata);
         } else if (mounted) {
           const today = new Date();
           const month = today.toLocaleString('default', { month: 'long' });
@@ -146,9 +149,9 @@ export default function WalkInFreezerLog() {
 
   const handleSubmit = async () => {
     setBusy(true);
-    try {
+      try {
       await hookSubmit();
-      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      try { await formStorage.deleteForm(DRAFT_KEY); } catch (e) {}
       // success handled by NotificationModal from the hook
     } catch (e) { Alert.alert('Error', 'Submission failed'); }
     finally { setBusy(false); }

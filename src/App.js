@@ -19,6 +19,7 @@ import CookingTemperatureLog from './forms/CookingTemperatureLog';
 import ThawingTemperatureLog from './forms/ThawingTemperatureLog';
 import HotHoldingTemperatureLog from './forms/HotHoldingTemperatureLog';
 import UnderbarChillerTemperatureLog from './forms/UnderbarChillerTemperatureLog';
+import DeepFreezerTemperatureLog from './forms/DeepFreezerTemperatureLog';
 import CustomerSatisfactionQuestionnaire from './forms/CustomerSatisfactionQuestionnaire';
 import PPEIssuanceForm from './forms/PPEIssuanceForm';
 import PersonalHygieneChecklist from './forms/PersonalHygieneChecklist';
@@ -67,13 +68,17 @@ const linking = {
   CookingTemperatureLog: 'cooking-temperature-log',
   ThawingTemperatureLog: 'thawing-temperature-log',
   HotHoldingTemperatureLog: 'hot-holding-temperature-log',
-  UnderbarChillerTemperatureLog: 'underbar-chiller-temperature-log',
-      Splash: 'Splash',
-      KitchenCategory: 'KitchenCategory',
+  UnderbarChillerTemperatureLog1: 'underbar-chiller-temperature-log-1',
+  UnderbarChillerTemperatureLog2: 'underbar-chiller-temperature-log-2',
+  DeepFreezerTemperatureLog: 'deep-freezer-temperature-log',
+        FoodHandlersHandwashingForm_AM: 'FoodHandlersHandwashingForm_AM',
+        FoodHandlersHandwashingForm_PM: 'FoodHandlersHandwashingForm_PM',
       FOHCategory: 'FOHCategory',
-        FoodHandlersHandwashingForm: 'FoodHandlersHandwashingForm',
-        FOH_DailyCleaningForm: 'FOH_DailyCleaningForm',
+        FOH_DailyCleaningForm_AM: 'FOH_DailyCleaningForm_AM',
+  FOH_DailyCleaningForm_PM: 'FOH_DailyCleaningForm_PM',
+        FOH_DailyCleaningForm_AM: 'FOH_DailyCleaningForm_AM',
         Kitchen_DailyCleaningForm: 'Kitchen_DailyCleaningForm',
+        Kitchen_DailyCleaningForm_PM: 'Kitchen_DailyCleaningForm_PM',
     },
   },
 };
@@ -132,9 +137,13 @@ export default function App() {
   <Stack.Screen name="FOH_FrontOfHouseCleaningChecklist" component={FOH_FrontOfHouseCleaningChecklist} />
   <Stack.Screen name="ColdRoom_FreezerRoomCleaningChecklist" component={require('./forms/ColdRoom_FreezerRoomCleaningChecklist').default} />
   <Stack.Screen name="FoodHandlersHandwashingForm" component={require('./forms/FoodHandlersHandwashingForm').default} />
-    <Stack.Screen name="FOH_DailyCleaningForm" component={require('./forms/FOH_DailyCleaningForm').default} />
-    <Stack.Screen name="Kitchen_DailyCleaningForm" component={require('./forms/Kitchen_DailyCleaningForm').default} />
-    <Stack.Screen name="Kitchen_WeeklyCleaningChecklist" component={require('./forms/Kitchen_WeeklyCleaningChecklist').default} />
+    <Stack.Screen name="FoodHandlersHandwashingForm_AM" component={require('./forms/FoodHandlersHandwashingForm_AM').default} />
+    <Stack.Screen name="FoodHandlersHandwashingForm_PM" component={require('./forms/FoodHandlersHandwashingForm_PM').default} />
+    <Stack.Screen name="FOH_DailyCleaningForm_PM" component={require('./forms/FOH_DailyCleaningForm').default} />
+    <Stack.Screen name="FOH_DailyCleaningForm_AM" component={require('./forms/FOH_DailyCleaningForm_AM').default} />
+  <Stack.Screen name="Kitchen_DailyCleaningForm" component={require('./forms/Kitchen_DailyCleaningForm').default} />
+  <Stack.Screen name="Kitchen_DailyCleaningForm_PM" component={require('./forms/Kitchen_DailyCleaningForm_PM').default} />
+  <Stack.Screen name="Kitchen_WeeklyCleaningChecklist" component={require('./forms/Kitchen_WeeklyCleaningChecklist').default} />
       <Stack.Screen name="CoolingTemperatureLog" component={require('./forms/CoolingTemperatureLog').default} />
   <Stack.Screen name="Bakery_SanitizingLog" component={require('./forms/Bakery_SanitizingLog').default} />
   <Stack.Screen name="Bakery_CleaningChecklist" component={require('./forms/Bakery_CleaningChecklist').default} />
@@ -153,7 +162,9 @@ export default function App() {
   <Stack.Screen name="CookingTemperatureLog" component={CookingTemperatureLog} />
   <Stack.Screen name="ThawingTemperatureLog" component={ThawingTemperatureLog} />
   <Stack.Screen name="HotHoldingTemperatureLog" component={HotHoldingTemperatureLog} />
-  <Stack.Screen name="UnderbarChillerTemperatureLog" component={UnderbarChillerTemperatureLog} />
+  <Stack.Screen name="UnderbarChillerTemperatureLog1" component={UnderbarChillerTemperatureLog} />
+  <Stack.Screen name="UnderbarChillerTemperatureLog2" component={require('./forms/UnderbarChillerTemperatureLog_2').default} />
+  <Stack.Screen name="DeepFreezerTemperatureLog" component={DeepFreezerTemperatureLog} />
   <Stack.Screen name="CustomerSatisfactionQuestionnaire" component={CustomerSatisfactionQuestionnaire} />
   <Stack.Screen name="PPEIssuanceForm" component={PPEIssuanceForm} />
   <Stack.Screen name="PersonalHygieneChecklist" component={PersonalHygieneChecklist} />

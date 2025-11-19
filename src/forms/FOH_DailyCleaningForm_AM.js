@@ -7,7 +7,6 @@ import formStorage from '../utils/formStorage';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
-// ...existing code... (react hooks consolidated above)
 import { useNavigation } from '@react-navigation/native';
 import LoadingOverlay from '../components/LoadingOverlay';
 import FormActionBar from '../components/FormActionBar';
@@ -15,7 +14,8 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 
 // --- DATA STRUCTURE ---
-const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
+// AM shift time slots: 06:00 - 14:00 inclusive
+const TIME_SLOTS = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00'];
 const EQUIPMENT_LIST = [
   'TABLES',
   'CHAIRS',
@@ -29,11 +29,7 @@ const EQUIPMENT_LIST = [
 ];
 
 const initialEquipmentState = EQUIPMENT_LIST.map((name, index) => {
-  const times = TIME_SLOTS.reduce((acc, time) => {
-    acc[time] = false;
-    return acc;
-  }, {});
-
+  const times = TIME_SLOTS.reduce((acc, time) => { acc[time] = false; return acc; }, {});
   return {
     id: index,
     name,
@@ -65,17 +61,16 @@ const DataCell = ({ children, width, flex = 0, style = {} }) => (
   </View>
 );
 
-export default function FOH_DailyCleaningForm() {
+export default function FOH_DailyCleaningForm_AM() {
   const resp = useResponsive();
   const [formData, setFormData] = useState(initialEquipmentState);
   const [loadingDraft, setLoadingDraft] = React.useState(true);
-  const draftKey = 'foh_daily_cleaning_pm';
+  const draftKey = 'foh_daily_cleaning_am';
   const saveTimer = useRef(null);
   const navigation = useNavigation();
   const now = new Date();
   const sysDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  // Use a manual constant for PM form shift rather than auto-detecting from system time
-  const sysShift = 'PM';
+  const sysShift = 'AM';
   const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedBy: '', verifiedBySign: '' });
   const [editMode, setEditMode] = useState(false);
 
@@ -111,17 +106,16 @@ export default function FOH_DailyCleaningForm() {
   // Compute column widths dynamically to fit the available viewport (A4-friendly)
   const { width: vw, height: vh, s, ms } = resp;
   const containerPadding = s(12);
-  const availableWidth = Math.max(360, vw - containerPadding * 2); // minimum fallback
+  const availableWidth = Math.max(360, vw - containerPadding * 2);
 
-  const targetTableWidth = Math.round(availableWidth * 0.98); // aim to fill 98% of available width
+  const targetTableWidth = Math.round(availableWidth * 0.98);
 
-  // Proportions for columns (sum ~= 1)
   const PROPORTIONS = useMemo(() => ({
     EQUIPMENT: 0.20,
     PPM: 0.07,
     TIME_SLOTS: 0.36,
-    STAFF_NAME: 0.11, // widened
-    SIGNATURE: 0.11, // widened
+    STAFF_NAME: 0.11,
+    SIGNATURE: 0.11,
     SUP_NAME: 0.095,
     SUP_SIGN: 0.095,
   }), []);
@@ -151,7 +145,7 @@ export default function FOH_DailyCleaningForm() {
   const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIPMENT + COL_WIDTHS.PPM + TIME_SLOTS_WIDTH + COL_WIDTHS.STAFF_NAME + COL_WIDTHS.SIGNATURE + COL_WIDTHS.SUP_NAME + COL_WIDTHS.SUP_SIGN;
 
   const renderLogRow = (item) => (
-    <View key={item.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(44) }]}> 
+    <View key={item.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(44) }]}>
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.dataText, { fontSize: ms(12) }]}>{item.name}</Text></DataCell>
       <DataCell width={COL_WIDTHS.PPM}>
         <TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'ppm', text)} value={item.ppm} keyboardType="numeric" placeholder="0" editable={editMode} />
@@ -163,10 +157,10 @@ export default function FOH_DailyCleaningForm() {
           </DataCell>
         ))}
       </View>
-  <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffName', text)} value={item.staffName} editable={editMode} /></DataCell>
-  <DataCell width={COL_WIDTHS.SIGNATURE} style={{ alignItems: 'center', justifyContent: 'center' }}>
-    <SignatureField value={item.staffSign} onChange={(v) => handleInputChange(item.id, 'staffSign', v)} editable={editMode} width={Math.max(80, COL_WIDTHS.SIGNATURE - 8)} height={56} />
-  </DataCell>
+      <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'staffName', text)} value={item.staffName} editable={editMode} /></DataCell>
+      <DataCell width={COL_WIDTHS.SIGNATURE} style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <SignatureField value={item.staffSign} onChange={(v) => handleInputChange(item.id, 'staffSign', v)} editable={editMode} width={Math.max(80, COL_WIDTHS.SIGNATURE - 8)} height={56} />
+      </DataCell>
       <DataCell width={COL_WIDTHS.SUP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'SUPName', text)} value={item.SUPName} /></DataCell>
       <DataCell width={COL_WIDTHS.SUP_SIGN} style={{ alignItems: 'center', justifyContent: 'center' }}>
         <SignatureField value={item.supSign} onChange={(v) => handleInputChange(item.id, 'supSign', v)} editable={editMode} width={Math.max(80, COL_WIDTHS.SUP_SIGN - 8)} height={56} />
@@ -177,8 +171,6 @@ export default function FOH_DailyCleaningForm() {
   const handleSave = async () => {
     setBusy(true);
     try {
-      // Build canonical payload
-      // try to embed logo as base64 for perfect saved rendering (best-effort)
       let logoDataUri = null;
       try {
         const asset = Asset.fromModule(require('../assets/logo.jpeg'));
@@ -192,9 +184,9 @@ export default function FOH_DailyCleaningForm() {
       } catch (e) { /* ignore */ }
 
       const payload = {
-        formType: 'FOH_DailyCleaning_PM',
+        formType: 'FOH_DailyCleaning_AM',
         templateVersion: 'v1.0',
-        title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — PM',
+        title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM',
         date: metadata.date,
         metadata,
         timeSlots: TIME_SLOTS,
@@ -205,19 +197,17 @@ export default function FOH_DailyCleaningForm() {
         savedAt: Date.now(),
       };
 
-      const formId = `FOH_DailyCleaning_PM_${Date.now()}`;
+      const formId = `FOH_DailyCleaning_AM_${Date.now()}`;
       try {
         await formStorage.saveForm(formId, payload);
       } catch (e) {
-        // fallback to older history if storage fails
-        try { await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
+        try { await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
       }
 
       try { await removeDraft(draftKey); } catch (e) {}
 
-      // reset form to empty/default state
       setFormData(initialEquipmentState.map(i => ({ ...i, times: Object.keys(i.times).reduce((acc,k)=>({ ...acc, [k]: false }), {}) })));
-        setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '', verifiedBySign: '' });
+      setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '', verifiedBySign: '' });
 
       alert('Submitted and saved to history');
       navigation.navigate('Home');
@@ -245,86 +235,79 @@ export default function FOH_DailyCleaningForm() {
 
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
-    <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 140 }}>
-      <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
-      {/* Header: logo + company name at top-left, title centered below */}
-      <View style={styles.headerTop}>
-        <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.companyName}>Bravo</Text>
-      </View>
-      <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text></View>
-
-       {/* Duplicate FormActionBar removed */}
-
-      <View style={styles.metadataContainer}>
-        {/* First row: Date | Location | Shift */}
-        <View style={styles.metaRowInline}>
-          <View style={styles.metaColDate}>
-            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Date:</Text>
-            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.date} onChangeText={(t) => handleMetadataChange('date', t)} />
-          </View>
-          <View style={styles.metaColLocation}>
-            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Location:</Text>
-            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.location} onChangeText={(t) => handleMetadataChange('location', t)} />
-          </View>
-          <View style={styles.metaColShift}>
-            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Shift:</Text>
-            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11), textAlign: 'center' }]} value={metadata.shift} onChangeText={(t) => handleMetadataChange('shift', t)} />
-          </View>
+      <ScrollView style={[styles.container, { padding: containerPadding }]} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 140 }}>
+        <LoadingOverlay visible={busy} message={busy ? 'Working...' : ''} />
+        <View style={styles.headerTop}>
+          <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.companyName}>Bravo</Text>
         </View>
+        <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM</Text></View>
 
-        {/* Second row: Verified By (with signature below) and complex manager sign */}
-        <View style={styles.metaRowInlineSecond}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Verified By:</Text>
-            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.verifiedBy} onChangeText={(t) => handleMetadataChange('verifiedBy', t)} />
+        <View style={styles.metadataContainer}>
+          <View style={styles.metaRowInline}>
+            <View style={styles.metaColDate}>
+              <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Date:</Text>
+              <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.date} onChangeText={(t) => handleMetadataChange('date', t)} />
+            </View>
+            <View style={styles.metaColLocation}>
+              <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Location:</Text>
+              <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.location} onChangeText={(t) => handleMetadataChange('location', t)} />
+            </View>
+            <View style={styles.metaColShift}>
+              <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Shift:</Text>
+              <TextInput style={[styles.metadataInputInline, { fontSize: ms(11), textAlign: 'center' }]} value={metadata.shift} onChangeText={(t) => handleMetadataChange('shift', t)} />
+            </View>
+          </View>
+
+          <View style={styles.metaRowInlineSecond}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Verified By:</Text>
+              <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.verifiedBy} onChangeText={(t) => handleMetadataChange('verifiedBy', t)} />
+              <View style={{ marginTop: 6 }}>
+                <SignatureField value={metadata.verifiedBySign} onChange={(v) => handleMetadataChange('verifiedBySign', v)} editable={editMode} width={240} height={80} />
+              </View>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 8 }}>
+            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>COMPLEX MANAGER SIGN:</Text>
             <View style={{ marginTop: 6 }}>
-              <SignatureField value={metadata.verifiedBySign} onChange={(v) => handleMetadataChange('verifiedBySign', v)} editable={editMode} width={240} height={80} />
+              <SignatureField value={metadata.managerSign} onChange={(v) => handleMetadataChange('managerSign', v)} editable={editMode} width={260} height={100} />
             </View>
           </View>
+
+          <View style={styles.tickBadge}><Text style={{ color: '#085f1a', fontWeight: '700' }}>✓ TICK AFTER CLEANING</Text></View>
         </View>
 
-        <View style={{ marginTop: 8 }}>
-          <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>COMPLEX MANAGER SIGN:</Text>
-          <View style={{ marginTop: 6 }}>
-            <SignatureField value={metadata.managerSign} onChange={(v) => handleMetadataChange('managerSign', v)} editable={editMode} width={260} height={100} />
-          </View>
-        </View>
-
-        <View style={styles.tickBadge}><Text style={{ color: '#085f1a', fontWeight: '700' }}>✓ TICK AFTER CLEANING</Text></View>
-      </View>
-
-      {/* Table area: allow horizontal scroll when needed */}
-      <ScrollView
-        horizontal={true}
-        nestedScrollEnabled={true}
-        showsHorizontalScrollIndicator={true}
-        directionalLockEnabled={true}
-        contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
-          <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
-            <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
-            <HeaderCell width={COL_WIDTHS.PPM}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SANITIZER-VEG WASH (PPM?)</Text></HeaderCell>
-            <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
-              <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}><Text style={[styles.headerText, { fontSize: ms(10) }]}>TIME INTERVAL</Text></HeaderCell>
-              <View style={{ flexDirection: 'row' }}>{TIME_SLOTS.map((time, index) => (<HeaderCell key={index} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}><Text style={{ fontSize: ms(9) }}>{time}</Text></HeaderCell>))}</View>
+        <ScrollView
+          horizontal={true}
+          nestedScrollEnabled={true}
+          showsHorizontalScrollIndicator={true}
+          directionalLockEnabled={true}
+          contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
+            <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
+              <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
+              <HeaderCell width={COL_WIDTHS.PPM}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SANITIZER-VEG WASH (PPM?)</Text></HeaderCell>
+              <View style={{ width: TIME_SLOTS_WIDTH, borderLeftWidth: 1, borderColor: '#333' }}>
+                <HeaderCell style={{ borderBottomWidth: 1, width: '100%' }}><Text style={[styles.headerText, { fontSize: ms(10) }]}>TIME INTERVAL</Text></HeaderCell>
+                <View style={{ flexDirection: 'row' }}>{TIME_SLOTS.map((time, index) => (<HeaderCell key={index} width={COL_WIDTHS.TIME_SLOT} style={styles.timeHeader}><Text style={{ fontSize: ms(9) }}>{time}</Text></HeaderCell>))}</View>
+              </View>
+              <HeaderCell width={COL_WIDTHS.STAFF_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF NAME</Text></HeaderCell>
+              <HeaderCell width={COL_WIDTHS.SIGNATURE}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF SIGN</Text></HeaderCell>
+              <HeaderCell width={COL_WIDTHS.SUP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP NAME</Text></HeaderCell>
+              <HeaderCell width={COL_WIDTHS.SUP_SIGN}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP SIGN</Text></HeaderCell>
             </View>
-            <HeaderCell width={COL_WIDTHS.STAFF_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF NAME</Text></HeaderCell>
-            <HeaderCell width={COL_WIDTHS.SIGNATURE}><Text style={[styles.headerText, { fontSize: ms(10) }]}>STAFF SIGN</Text></HeaderCell>
-            <HeaderCell width={COL_WIDTHS.SUP_NAME}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP NAME</Text></HeaderCell>
-            <HeaderCell width={COL_WIDTHS.SUP_SIGN}><Text style={[styles.headerText, { fontSize: ms(10) }]}>SUP SIGN</Text></HeaderCell>
-          </View>
 
-          {formData.map(renderLogRow)}
-        </View>
+            {formData.map(renderLogRow)}
+          </View>
+        </ScrollView>
+
+        <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All food handlers are required to clean and sanitize the equipment used every after use.</Text>
+
       </ScrollView>
-
-      <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All food handlers are required to clean and sanitize the equipment used every after use.</Text>
-
-  {/* action buttons moved into EditableFormContainer.actionButtons */}
-    </ScrollView>
     </EditableFormContainer>
   );
 }
@@ -362,17 +345,4 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   logo: { width: 64, height: 48, marginRight: 8 },
   companyName: { fontSize: 16, fontWeight: '800', color: '#185a9d', marginRight: 12 },
-});
-
-// add simple button styles used in new UI
-const extraButtonStyles = StyleSheet.create({
-  auxButton: { backgroundColor: '#777', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
-  auxButtonSaveDraft: { backgroundColor: '#f0ad4e', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
-  auxButtonText: { color: '#fff', fontWeight: '700' },
-});
-
-// inject top button styles into main styles for consistency
-Object.assign(styles, {
-  topButtonRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 12 },
-  submitButton: { backgroundColor: '#185a9d', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
 });

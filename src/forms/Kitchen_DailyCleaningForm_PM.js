@@ -10,8 +10,8 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 
-// TIME SLOTS and equipment list: match the scanned kitchen form (AM shift)
-const TIME_SLOTS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00'];
+// TIME SLOTS and equipment list: copy from AM variant; adjust if needed for PM
+const TIME_SLOTS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
 const EQUIPMENT_LIST = [
   'HOT PASS',
   'MAKELINE TABLE',
@@ -19,7 +19,6 @@ const EQUIPMENT_LIST = [
   'MEAT & PASTRY FREEZER',
   'GAS GRILL',
   'VEG SINK',
-  // FLAT TOP and FISH AND MEAT SINK are separate rows
   'FLAT TOP',
   'FISH AND MEAT SINK',
   'PRECOOKED FOOD UNDERBAR-CHILLERS',
@@ -48,32 +47,27 @@ const DataCell = ({ children, width, style = {} }) => (
   </View>
 );
 
-export default function Kitchen_DailyCleaningForm() {
+export default function Kitchen_DailyCleaningForm_PM() {
   const resp = useResponsive();
   const [formData, setFormData] = useState(initialEquipmentState);
   const [busy, setBusy] = useState(false);
   const [loadingDraft, setLoadingDraft] = React.useState(true);
-  // treat this file as the AM variant to avoid draft collisions with the PM copy
-  const draftKey = 'kitchen_daily_cleaning_am';
+  const draftKey = 'kitchen_daily_cleaning_pm';
   const saveTimer = useRef(null);
   const scrollRef = useRef(null);
   const scrollXRef = useRef(0);
   const panStartScroll = useRef(0);
 
-  // PanResponder to allow horizontal dragging from anywhere over the table area.
   const panResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => false,
     onMoveShouldSetPanResponder: (_, gestureState) => {
-      // claim responder when horizontal movement is dominant
       return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 4;
     },
-    onPanResponderGrant: () => {
-      panStartScroll.current = scrollXRef.current || 0;
-    },
+    onPanResponderGrant: () => { panStartScroll.current = scrollXRef.current || 0; },
     onPanResponderMove: (_, gestureState) => {
       const desired = Math.max(0, panStartScroll.current - gestureState.dx);
       if (scrollRef.current && typeof scrollRef.current.scrollTo === 'function') {
-        try { scrollRef.current.scrollTo({ x: desired, animated: false }); } catch (e) { /* ignore */ }
+        try { scrollRef.current.scrollTo({ x: desired, animated: false }); } catch (e) { }
       }
     },
     onPanResponderRelease: () => {},
@@ -83,9 +77,8 @@ export default function Kitchen_DailyCleaningForm() {
 
   const now = new Date();
   const sysDate = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
-  // For the AM variant we set the default shift explicitly rather than auto-detecting
-  const sysShift = 'AM';
-  // prefer a signature field for verification; keep older text key as fallback
+  // PM variant: set shift explicitly
+  const sysShift = 'PM';
   const [metadata, setMetadata] = useState({ date: sysDate, location: '', shift: sysShift, verifiedSign: '', verifiedBy: '' });
   const [logoDataUri, setLogoDataUri] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -95,7 +88,6 @@ export default function Kitchen_DailyCleaningForm() {
   const handleTimeToggle = (id, time) => setFormData(prev => prev.map(r => r.id === id ? { ...r, times: { ...r.times, [time]: !r.times[time] } } : r));
   const handleInput = (id, field, value) => setFormData(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
 
-  // load draft on mount
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -105,21 +97,15 @@ export default function Kitchen_DailyCleaningForm() {
           if (draft.formData) setFormData(draft.formData);
           if (draft.metadata) setMetadata(draft.metadata);
         }
-      } catch (e) {
-        // ignore
-      } finally {
-        if (mounted) setLoadingDraft(false);
-      }
+      } catch (e) {}
+      finally { if (mounted) setLoadingDraft(false); }
     })();
     return () => { mounted = false; };
   }, []);
 
-  // auto-save draft (debounced)
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      setDraft(draftKey, { formData, metadata });
-    }, 700);
+    saveTimer.current = setTimeout(() => { setDraft(draftKey, { formData, metadata }); }, 700);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [formData, metadata]);
 
@@ -128,11 +114,9 @@ export default function Kitchen_DailyCleaningForm() {
   const availableWidth = Math.max(360, vw - containerPadding * 2);
   const targetTableWidth = Math.round(availableWidth * 0.98);
 
-  // Update proportions to match Promptdoc: include PPM and several signature columns
   const PROPORTIONS = useMemo(() => ({
     EQUIPMENT: 0.20,
     PPM: 0.10,
-    // Reduce time-slot share slightly to give more room to supervisor fields for printing
     TIME_SLOTS: 0.30,
     STAFF_NAME: 0.10,
     SIGNATURE: 0.10,
@@ -143,12 +127,12 @@ export default function Kitchen_DailyCleaningForm() {
   const COL_WIDTHS = useMemo(() => {
     const equipment = Math.max(100, Math.round(targetTableWidth * PROPORTIONS.EQUIPMENT));
     const ppm = Math.max(40, Math.round(targetTableWidth * PROPORTIONS.PPM));
-  const timeSlotsTotal = Math.max(220, Math.round(targetTableWidth * PROPORTIONS.TIME_SLOTS));
-  const perTime = Math.max(56, Math.floor(timeSlotsTotal / TIME_SLOTS.length));
-  const staff = Math.max(80, Math.round(targetTableWidth * PROPORTIONS.STAFF_NAME));
-  const sign = Math.max(80, Math.round(targetTableWidth * PROPORTIONS.SIGNATURE));
-  const slip = Math.max(140, Math.round(targetTableWidth * PROPORTIONS.SLIP_NAME));
-  const sup = Math.max(140, Math.round(targetTableWidth * PROPORTIONS.SUP_SIGN));
+    const timeSlotsTotal = Math.max(220, Math.round(targetTableWidth * PROPORTIONS.TIME_SLOTS));
+    const perTime = Math.max(56, Math.floor(timeSlotsTotal / TIME_SLOTS.length));
+    const staff = Math.max(80, Math.round(targetTableWidth * PROPORTIONS.STAFF_NAME));
+    const sign = Math.max(80, Math.round(targetTableWidth * PROPORTIONS.SIGNATURE));
+    const slip = Math.max(140, Math.round(targetTableWidth * PROPORTIONS.SLIP_NAME));
+    const sup = Math.max(140, Math.round(targetTableWidth * PROPORTIONS.SUP_SIGN));
 
     return {
       EQUIPMENT: equipment,
@@ -164,7 +148,6 @@ export default function Kitchen_DailyCleaningForm() {
   const TIME_SLOTS_WIDTH = COL_WIDTHS.TIME_SLOT * TIME_SLOTS.length;
   const TOTAL_TABLE_WIDTH = COL_WIDTHS.EQUIPMENT + COL_WIDTHS.PPM + TIME_SLOTS_WIDTH + COL_WIDTHS.STAFF_NAME + COL_WIDTHS.SIGNATURE + COL_WIDTHS.SLIP_NAME + COL_WIDTHS.SUP_SIGN;
 
-  // embed logo as base64 for deterministic saved payload rendering
   React.useEffect(() => {
     let mounted = true;
     (async () => {
@@ -174,7 +157,7 @@ export default function Kitchen_DailyCleaningForm() {
         const uri = asset.localUri || asset.uri;
         const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
         if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
-      } catch (e) { /* ignore */ }
+      } catch (e) {}
     })();
     return () => { mounted = false; };
   }, []);
@@ -184,7 +167,6 @@ export default function Kitchen_DailyCleaningForm() {
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
         <Text numberOfLines={2} style={[styles.dataText, { fontSize: ms(12), flexWrap: 'wrap' }]}>{row.name}</Text>
       </DataCell>
-      {/* PPM input column */}
       <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="numeric" placeholder="0" /></DataCell>
       <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>{TIME_SLOTS.map(t => (<DataCell key={t} width={COL_WIDTHS.TIME_SLOT}><Checkbox checked={row.times[t]} onPress={()=>handleTimeToggle(row.id,t)} /></DataCell>))}</View>
       <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} /></DataCell>
@@ -213,13 +195,10 @@ export default function Kitchen_DailyCleaningForm() {
   const handleSave = async () => {
     setBusy(true);
     try {
-      // build canonical payload
       const payload = {
-        // use a human-friendly formType that matches SavedFormRenderer's detection
-        formType: 'Kitchen Daily Cleaning — AM',
+        formType: 'Kitchen Daily Cleaning — PM',
         templateVersion: 'v1.0',
-        // card title exactly as printed on the card
-        title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — AM',
+        title: 'Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — PM',
         date: metadata.date,
         metadata,
         formData,
@@ -234,27 +213,14 @@ export default function Kitchen_DailyCleaningForm() {
       await removeDraft(draftKey);
       alert('Submitted and saved to history');
       if (navigation && navigation.navigate) navigation.navigate('Home');
-    } catch (e) {
-      alert('Failed to submit');
-    } finally {
-      setBusy(false);
-    }
+    } catch (e) { alert('Failed to submit'); } finally { setBusy(false); }
   };
 
   const handleSaveDraft = async () => {
     setBusy(true);
-    try {
-      await setDraft(draftKey, { formData, metadata });
-      alert('Draft saved');
-    } catch (e) {
-      alert('Failed to save draft');
-    } finally {
-      setBusy(false);
-    }
+    try { await setDraft(draftKey, { formData, metadata }); alert('Draft saved'); } catch (e) { alert('Failed to save draft'); } finally { setBusy(false); }
   };
 
-  // Render action buttons outside pointer-events-blocking children so they're
-  // tappable while viewing (editMode may be false). Keep handlers unchanged.
   const actionButtons = (
     <View style={{ paddingVertical: s(8) }}>
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -268,13 +234,7 @@ export default function Kitchen_DailyCleaningForm() {
     </View>
   );
 
-  const handleBack = () => {
-    setBusy(true);
-    setTimeout(() => {
-      if (navigation && navigation.navigate) navigation.navigate('Home');
-      setBusy(false);
-    }, 180);
-  };
+  const handleBack = () => { setBusy(true); setTimeout(() => { if (navigation && navigation.navigate) navigation.navigate('Home'); setBusy(false); }, 180); };
 
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
@@ -284,12 +244,10 @@ export default function Kitchen_DailyCleaningForm() {
           <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
           <Text style={styles.companyName}>Bravo</Text>
           <Text style={[styles.title, { fontSize: ms(14), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET (KITCHEN)</Text>
-          {/* top action buttons removed to avoid duplication; bottom action bar remains */}
         </View>
 
         <View style={styles.metadataContainer}>
           <View style={styles.metadataRow}>
-            {/* Render generic metadata keys except verified (we render verified separately) */}
             {Object.keys(metadata).filter(k => !/^verified/i.test(k)).map(key => (
               <View key={key} style={styles.metadataItem}>
                 <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>{key.charAt(0).toUpperCase()+key.slice(1)}:</Text>
@@ -297,7 +255,6 @@ export default function Kitchen_DailyCleaningForm() {
               </View>
             ))}
 
-            {/* Verified By: prefer a signature. In edit mode the user can tap to sign; when viewing we show the saved signature or fallback to text. */}
             <View key="verified" style={styles.metadataItem}>
               <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>Verified By:</Text>
               {editMode ? (
@@ -321,24 +278,8 @@ export default function Kitchen_DailyCleaningForm() {
           <Text style={[styles.tickInstruction, { fontSize: ms(11) }]}>✓ TICK AFTER CLEANING</Text>
         </View>
 
-        {/* Always enable pointer events for the table area to allow drag-to-scroll in read-only mode */}
-        <View
-          pointerEvents="box-none"
-          style={{ flex: 1 }}
-          {...panResponder.panHandlers}
-        >
-          <ScrollView
-            horizontal
-            nestedScrollEnabled={true}
-            showsHorizontalScrollIndicator={true}
-            directionalLockEnabled={false}
-            contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }}
-            keyboardShouldPersistTaps="handled"
-            alwaysBounceHorizontal
-            ref={scrollRef}
-            onScroll={(e) => { scrollXRef.current = e.nativeEvent.contentOffset.x || 0; }}
-            scrollEventThrottle={16}
-          >
+        <View pointerEvents="box-none" style={{ flex: 1 }} {...panResponder.panHandlers}>
+          <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} directionalLockEnabled={false} contentContainerStyle={{ flexDirection: 'column', minWidth: TOTAL_TABLE_WIDTH }} keyboardShouldPersistTaps="handled" alwaysBounceHorizontal ref={scrollRef} onScroll={(e) => { scrollXRef.current = e.nativeEvent.contentOffset.x || 0; }} scrollEventThrottle={16}>
             <View style={{ width: TOTAL_TABLE_WIDTH, minWidth: TOTAL_TABLE_WIDTH }}>
               <View style={[styles.headerRow, { width: TOTAL_TABLE_WIDTH }]}>
                 <HeaderCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.headerText, { fontSize: ms(10) }]}>EQUIPMENT</Text></HeaderCell>
@@ -360,7 +301,6 @@ export default function Kitchen_DailyCleaningForm() {
 
         <Text style={[styles.instruction, { fontSize: ms(10) }]}>Instruction: All kitchen staff must clean and sanitize the listed areas after use.</Text>
 
-        {/* buttons moved into EditableFormContainer via actionButtons prop */}
       </ScrollView>
     </EditableFormContainer>
   );

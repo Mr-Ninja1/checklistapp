@@ -17,6 +17,9 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
     SIGN: 120,
     CORRECTIVE_ACTION: 300,
     SUP_NAME_SIGN: 180,
+    COMPLEX_SIGN: 160,
+    FSC_SIGN: 140,
+    HSEQ_SIGN: 160,
   };
 
   const COL = WIDTHS;
@@ -37,7 +40,7 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
   };
 
   // Compute total table width for presentational rendering (sum of column widths)
-  const TABLE_WIDTH = COL.DATE + (COL.TEMP + COL.SIGN) * 3 + COL.CORRECTIVE_ACTION + COL.SUP_NAME_SIGN;
+  const TABLE_WIDTH = COL.DATE + (COL.TEMP + COL.SIGN) * 3 + COL.CORRECTIVE_ACTION + COL.SUP_NAME_SIGN + COL.COMPLEX_SIGN + COL.FSC_SIGN + COL.HSEQ_SIGN;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -101,7 +104,10 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
             <View style={[styles.hGroupCell, { width: COL.TEMP + COL.SIGN }]}><Text style={styles.hText}>AFTERNOON</Text></View>
             <View style={[styles.hGroupCell, { width: COL.TEMP + COL.SIGN }]}><Text style={styles.hText}>EVENING</Text></View>
             <View style={[styles.hCellFixed, { width: COL.CORRECTIVE_ACTION }]}><Text style={styles.hText}>IF TEMPERATURE IS OUT OF SPECIFICATION, WHAT WAS DONE ABOUT IT?</Text></View>
-            <View style={[styles.hCellFixed, { width: COL.SUP_NAME_SIGN }]}><Text style={styles.hText}>SUP NAME AND SIGNATURE</Text></View>
+            <View style={[styles.hCellFixed, { width: COL.SUP_NAME_SIGN }]}><Text style={styles.hText}>SUP SIGN</Text></View>
+            <View style={[styles.hCellFixed, { width: COL.COMPLEX_SIGN }]}><Text style={styles.hText}>COMPLEX MANAGER SIGN</Text></View>
+            <View style={[styles.hCellFixed, { width: COL.FSC_SIGN }]}><Text style={styles.hText}>FSC SIGN</Text></View>
+            <View style={[styles.hCellFixed, { width: COL.HSEQ_SIGN }]}><Text style={styles.hText}>HSEQ MANAGER SIGN</Text></View>
           </View>
 
           {/* Sub-header row: Temp / Staff Sign repeated */}
@@ -115,6 +121,9 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
             <View style={[styles.hCellFixed, { width: COL.SIGN }]}><Text style={styles.hText}>STAFF SIGN</Text></View>
             <View style={[styles.hCellFixed, { width: COL.CORRECTIVE_ACTION }]} />
             <View style={[styles.hCellFixed, { width: COL.SUP_NAME_SIGN }]} />
+            <View style={[styles.hCellFixed, { width: COL.COMPLEX_SIGN }]} />
+            <View style={[styles.hCellFixed, { width: COL.FSC_SIGN }]} />
+            <View style={[styles.hCellFixed, { width: COL.HSEQ_SIGN }]} />
           </View>
 
           {/* Header row 2: details */}
@@ -152,42 +161,28 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
                 const uri = normalizeSignature(v);
                 return uri ? <SignatureThumb uri={uri} width={Math.max(120, COL.SUP_NAME_SIGN - 20)} height={44} layers={6} spread={0.9} /> : <Text style={styles.cellText}>{v || ''}</Text>;
               })()}</View>
+              <View style={[styles.cellFixed, { width: COL.COMPLEX_SIGN }]}>{(() => {
+                const v = r.complexManagerSign;
+                const uri = normalizeSignature(v);
+                return uri ? <SignatureThumb uri={uri} width={Math.max(120, COL.COMPLEX_SIGN - 20)} height={44} layers={6} spread={0.9} /> : <Text style={styles.cellText}>{v || ''}</Text>;
+              })()}</View>
+
+              <View style={[styles.cellFixed, { width: COL.FSC_SIGN }]}>{(() => {
+                const v = r.fscSign;
+                const uri = normalizeSignature(v);
+                return uri ? <SignatureThumb uri={uri} width={Math.max(100, COL.FSC_SIGN - 20)} height={44} layers={6} spread={0.9} /> : <Text style={styles.cellText}>{v || ''}</Text>;
+              })()}</View>
+
+              <View style={[styles.cellFixed, { width: COL.HSEQ_SIGN }]}>{(() => {
+                const v = r.hseqManagerSign;
+                const uri = normalizeSignature(v);
+                return uri ? <SignatureThumb uri={uri} width={Math.max(120, COL.HSEQ_SIGN - 20)} height={44} layers={6} spread={0.9} /> : <Text style={styles.cellText}>{v || ''}</Text>;
+              })()}</View>
             </View>
           ))}
           </View>
         </ScrollView>
-        {/* Footer: render verification / manager signatures (support multiple metadata keys for backwards compatibility) */}
-        <View style={styles.footerRow}>
-          <View style={styles.footerItem}>
-            {(() => {
-              const v = metadata.verifiedBySign || metadata.verifiedBySignature || metadata.verifiedBy || (metadata.verification && metadata.verification.verifiedBySign);
-              const name = metadata.verifiedBy || (metadata.verification && metadata.verification.verifiedBy) || '';
-              const uri = normalizeSignature(v);
-              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={0.9} /> : <Text style={styles.footerText}>{name || ''}</Text>;
-            })()}
-            <Text style={styles.footerLabel}>Verified By</Text>
-          </View>
-
-          <View style={styles.footerItem}>
-            {(() => {
-              const v = metadata.hseqManagerSign || metadata.hseqSign || metadata.hseqManager || (metadata.verification && metadata.verification.hseqManagerSign);
-              const name = metadata.hseqManager || (metadata.verification && metadata.verification.hseqManager) || '';
-              const uri = normalizeSignature(v);
-              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={0.9} /> : <Text style={styles.footerText}>{name || ''}</Text>;
-            })()}
-            <Text style={styles.footerLabel}>HSEQ Manager</Text>
-          </View>
-
-          <View style={styles.footerItem}>
-            {(() => {
-              const v = metadata.complexManagerSign || metadata.complexManager || (metadata.verification && metadata.verification.complexManagerSign);
-              const name = metadata.complexManager || (metadata.verification && metadata.verification.complexManager) || '';
-              const uri = normalizeSignature(v);
-              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={0.9} /> : <Text style={styles.footerText}>{name || ''}</Text>;
-            })()}
-            <Text style={styles.footerLabel}>Complex Manager</Text>
-          </View>
-        </View>
+        {/* Footer signatures removed for Underbar Chiller presentational */}
       </View>
     </ScrollView>
   );

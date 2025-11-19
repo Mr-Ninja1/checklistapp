@@ -8,7 +8,7 @@ import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
 
-const DRAFT_KEY = 'underbar_chiller_temperature_log_draft_1';
+const DRAFT_KEY = 'underbar_chiller_temperature_log_draft_2';
 const MAX_DAYS = 31;
 
 const emptyDayRow = {
@@ -28,7 +28,7 @@ const emptyDayRow = {
 const initialRows = Array.from({ length: MAX_DAYS }, () => ({ ...emptyDayRow }));
 
 const initialMeta = {
-  subject: 'UNDERBAR CHILLER TEMPERATURE LOG SHEET 1',
+  subject: 'UNDERBAR CHILLER TEMPERATURE LOG SHEET 2',
   // issueDate will be set to system date when no draft exists
   issueDate: '',
   // Branding
@@ -45,7 +45,7 @@ const initialMeta = {
   fscSign: '',
 };
 
-export default function UnderbarChillerTemperatureLog() {
+export default function UnderbarChillerTemperatureLog2() {
   const [rows, setRows] = useState(initialRows);
   const [meta, setMeta] = useState(initialMeta);
   const [busy, setBusy] = useState(false);
@@ -115,7 +115,7 @@ export default function UnderbarChillerTemperatureLog() {
       const payload = {
         formType: 'UnderbarChillerTemperatureLog',
         templateVersion: 'v1.0',
-        title: 'Underbar Chiller Temperature Log 1',
+        title: 'Underbar Chiller Temperature Log 2',
         date: meta.issueDate || new Date().toLocaleDateString(),
         metadata: meta,
         formData: logData,
@@ -229,7 +229,7 @@ export default function UnderbarChillerTemperatureLog() {
           </View>
 
           <View style={styles.metaBottomRow}>
-            <View style={[styles.metaBottomItem, { flex: 3 }]}>
+            <View style={[styles.metaBottomItem, { flex: 3 }]}> 
               <Text style={styles.metaBold}>Subject:</Text>
               {editMode ? <TextInput style={styles.monthlyInput} value={meta.subject} onChangeText={v => setMetaField('subject', v)} editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.subject}</Text>}
             </View>
@@ -284,15 +284,15 @@ export default function UnderbarChillerTemperatureLog() {
             <View style={[styles.hCell, { flex: COL_FLEX.SUP_NAME_SIGN }]}>
               <Text style={styles.hText}>SUP SIGN</Text>
             </View>
-            <View style={[styles.hCell, { flex: COL_FLEX.COMPLEX_SIGN }]}>
-              <Text style={styles.hText}>Complex Manager Sign</Text>
-            </View>
-            <View style={[styles.hCell, { flex: COL_FLEX.FSC_SIGN }]}>
-              <Text style={styles.hText}>FSC Sign</Text>
-            </View>
-            <View style={[styles.hCell, { flex: COL_FLEX.HSEQ_SIGN }]}>
-              <Text style={styles.hText}>HSEQ Manager Sign</Text>
-            </View>
+              <View style={[styles.hCell, { flex: COL_FLEX.COMPLEX_SIGN }]}>
+                <Text style={styles.hText}>Complex Manager Sign</Text>
+              </View>
+              <View style={[styles.hCell, { flex: COL_FLEX.FSC_SIGN }]}>
+                <Text style={styles.hText}>FSC Sign</Text>
+              </View>
+              <View style={[styles.hCell, { flex: COL_FLEX.HSEQ_SIGN }]}>
+                <Text style={styles.hText}>HSEQ Manager Sign</Text>
+              </View>
           </View>
           {/* Header Row 2: Detail Labels (Temp, Staff Sign) */}
           <View style={[styles.tableHeaderRow, styles.detailHeader]}>

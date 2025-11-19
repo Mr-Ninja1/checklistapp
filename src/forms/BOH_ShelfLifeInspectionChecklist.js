@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
-import { getDraft, removeDraft } from '../utils/formDrafts';
+import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
@@ -12,25 +12,34 @@ import SignatureThumb from '../components/SignatureThumb';
 const DRAFT_KEY = 'boh_shelf_life_inspection_draft';
 
 const initialProducts = [
-  { name: 'Bread Loaf' },
-  { name: 'Buns' },
-  { name: 'Rolls' },
-  { name: 'Pastries' },
-  { name: 'Cakes' },
-  { name: 'Cookies' },
-  { name: 'Other' },
+  { name: 'BURGER ROLLS' },
+  { name: 'BAGELS' },
+  { name: 'MALVA PUDDING' },
+  { name: 'PORTUGUESE ROLLS' },
+  { name: 'BAGUETTE' },
+  { name: 'ALMOND BROWNIES' },
+  { name: 'CHEESE CAKE' },
+  { name: 'PIZZA DOUGH' },
+  { name: 'WHITE BREAD' },
+  { name: 'CROISSANTS' },
+  { name: 'BROWN BREAD' },
+  { name: 'DATE CAKE' },
+  { name: 'CARROT CAKE' },
+  { name: 'ALMOND CHOCOLATE CAKE' },
 ];
 
 const initialEntry = {
   dateIn: '',
   timeIn: '',
+  timeOut: '',
   usedBy: '',
   bakerChefName: '',
   quantity: '',
   sign: '',
 };
 
-const initialLogState = initialProducts.map(p => ({ ...p, ...initialEntry }));
+// Add five blank rows at the end for extra entries
+const initialLogState = initialProducts.concat(Array.from({ length: 5 }, () => ({ name: '' }))).map(p => ({ ...p, ...initialEntry }));
 
 const initialMetadata = {
   docNo: 'BBN-SHEQ-BOH-F-02-01c',
@@ -43,6 +52,8 @@ const initialMetadata = {
 const initialVerification = {
   hseqManagerSign: '',
   complexManagerSign: '',
+  bakerSign: '',
+  verifiedBySign: '',
 };
 
 export default function BOH_ShelfLifeInspectionChecklist() {
@@ -57,11 +68,12 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
-        if (d && mounted) {
-          if (d.formData) setFormData(d.formData);
-          if (d.metadata) setMetadata(d.metadata);
-          if (d.verification) setVerification(d.verification);
+        const d = await formStorage.loadForm(DRAFT_KEY).catch(() => null);
+        const payload = d?.payload || null;
+        if (payload && mounted) {
+          if (payload.formData) setFormData(payload.formData);
+          if (payload.metadata) setMetadata(payload.metadata);
+          if (payload.verification) setVerification(payload.verification);
         } else if (mounted) {
           // auto-populate date fields
           const today = new Date();
@@ -122,7 +134,7 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     setBusy(true);
     try {
       await hookSubmit();
-      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      // stable draft removal handled inside useFormSave.handleSubmit
       // clearing of state handled by clearOnSubmit passed to the hook
     } catch (e) { console.warn('submit failed', e); }
     setBusy(false);
@@ -139,14 +151,16 @@ export default function BOH_ShelfLifeInspectionChecklist() {
 
   // use flex weights so columns scale and can expand for A4-like width
   const columnHeaders = useMemo(() => [
-    { key: 'name', label: 'ITEMS', flex: 3, isStatic: true },
+    { key: 'name', label: 'ITEMS', flex: 3, isStatic: false },
     { key: 'dateIn', label: 'DATE IN', flex: 1 },
     { key: 'timeIn', label: 'TIME IN', flex: 1 },
+    { key: 'timeOut', label: 'TIME OUT', flex: 1 },
     { key: 'usedBy', label: 'USED BY', flex: 2 },
     { key: 'bakerChefName', label: "BAKER/CHEF'S NAME", flex: 3 },
     { key: 'quantity', label: 'QUANTITY', flex: 1 },
     { key: 'sign', label: 'SIGN', flex: 1 },
   ], []);
+
 
   // compute widths so columns fill the available view width
   const totalFlex = columnHeaders.reduce((s, c) => s + (c.flex || 1), 0);
@@ -281,6 +295,32 @@ export default function BOH_ShelfLifeInspectionChecklist() {
               <SignatureField value={verification.complexManagerSign} onChange={v => handleVerificationChange('complexManagerSign', v)} editable={editMode} width={240} height={80} />
             ) : (() => {
               const v = verification.complexManagerSign || verification.complexManager || verification.complexManagerSignature || '';
+              const asString = v ? String(v) : '';
+              const uri = asString.startsWith('data:') ? asString : (asString.replace(/\s+/g, '') && /^[A-Za-z0-9+/=]+$/.test(asString.replace(/\s+/g, '')) && asString.replace(/\s+/g, '').length > 100 ? `data:image/png;base64,${asString.replace(/\s+/g, '')}` : null);
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={8} spread={1.2} /> : <Text style={styles.metaText}>{v || ''}</Text>;
+            })()}
+          </View>
+
+          {/* Baker / Chef Signature */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={styles.verLabel}>Baker / Chef Signature</Text>
+            {editMode ? (
+              <SignatureField value={verification.bakerSign} onChange={v => handleVerificationChange('bakerSign', v)} editable={editMode} width={240} height={80} />
+            ) : (() => {
+              const v = verification.bakerSign || verification.baker || verification.bakerSignature || '';
+              const asString = v ? String(v) : '';
+              const uri = asString.startsWith('data:') ? asString : (asString.replace(/\s+/g, '') && /^[A-Za-z0-9+/=]+$/.test(asString.replace(/\s+/g, '')) && asString.replace(/\s+/g, '').length > 100 ? `data:image/png;base64,${asString.replace(/\s+/g, '')}` : null);
+              return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={8} spread={1.2} /> : <Text style={styles.metaText}>{v || ''}</Text>;
+            })()}
+          </View>
+
+          {/* Verified By (other verification) */}
+          <View style={{ marginBottom: 12 }}>
+            <Text style={styles.verLabel}>Verified By</Text>
+            {editMode ? (
+              <SignatureField value={verification.verifiedBySign} onChange={v => handleVerificationChange('verifiedBySign', v)} editable={editMode} width={240} height={80} />
+            ) : (() => {
+              const v = verification.verifiedBySign || verification.verifiedBy || verification.verifiedBySignature || '';
               const asString = v ? String(v) : '';
               const uri = asString.startsWith('data:') ? asString : (asString.replace(/\s+/g, '') && /^[A-Za-z0-9+/=]+$/.test(asString.replace(/\s+/g, '')) && asString.replace(/\s+/g, '').length > 100 ? `data:image/png;base64,${asString.replace(/\s+/g, '')}` : null);
               return uri ? <SignatureThumb uri={uri} width={240} height={80} layers={8} spread={1.2} /> : <Text style={styles.metaText}>{v || ''}</Text>;

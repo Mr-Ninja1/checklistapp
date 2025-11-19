@@ -10,15 +10,22 @@ export default function KitchenDailyCleaningPresentational({ payload }) {
 
   // Determine time slots list from payload (preserve original order), fallback to default 11 slots
   const DEFAULT_SLOTS = ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00'];
+  // Prefer an explicit `timeSlots` array saved in the payload. If absent,
+  // fall back to inspecting the first row's `times` keys (preserve order).
+  // Only use the DEFAULT_SLOTS as a last resort.
   let timesList = DEFAULT_SLOTS;
-  for (let i = 0; i < formData.length; i++) {
-    const row = formData[i];
-    if (row && row.times && typeof row.times === 'object') {
-      const keys = Object.keys(row.times);
-      if (keys.length > 0) {
-        // preserve the keys order as-is; if they look like times, use them
-        timesList = keys;
-        break;
+  if (Array.isArray(p.timeSlots) && p.timeSlots.length) {
+    timesList = p.timeSlots;
+  } else {
+    for (let i = 0; i < formData.length; i++) {
+      const row = formData[i];
+      if (row && row.times && typeof row.times === 'object') {
+        const keys = Object.keys(row.times);
+        if (keys.length > 0) {
+          // preserve the keys order as-is; if they look like times, use them
+          timesList = keys;
+          break;
+        }
       }
     }
   }

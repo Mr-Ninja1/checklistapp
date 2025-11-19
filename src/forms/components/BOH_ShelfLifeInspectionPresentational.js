@@ -17,10 +17,14 @@ const normalizeSignature = (v) => {
   return null;
 };
 
-const renderMaybeSignature = (val) => {
+const renderMaybeSignature = (val, width = 240, height = 80) => {
   const uri = normalizeSignature(val);
-  if (uri) return <SignatureThumb uri={uri} width={240} height={80} layers={8} spread={1.2} />;
-  return <Text>{val || ''}</Text>;
+  if (uri) {
+    // keep layers reasonable relative to width
+    const layers = Math.max(4, Math.round(width / 40));
+    return <SignatureThumb uri={uri} width={width} height={height} layers={layers} spread={1.0} />;
+  }
+  return <Text style={{ width, textAlign: 'center' }}>{val || ''}</Text>;
 };
 
 export default function BOH_ShelfLifeInspectionPresentational({ payload, exportingWide = false }) {
@@ -32,6 +36,7 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload, exporti
     name: 420,
     dateIn: 100,
     timeIn: 100,
+    timeOut: 100,
     usedBy: 120,
     bakerChefName: 220,
     quantity: 80,
@@ -64,6 +69,7 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload, exporti
             <Text style={[styles.th, { width: colWidths.name }]}>ITEMS</Text>
             <Text style={[styles.th, { width: colWidths.dateIn }]}>DATE IN</Text>
             <Text style={[styles.th, { width: colWidths.timeIn }]}>TIME IN</Text>
+            <Text style={[styles.th, { width: colWidths.timeOut }]}>TIME OUT</Text>
             <Text style={[styles.th, { width: colWidths.usedBy }]}>USED BY</Text>
             <Text style={[styles.th, { width: colWidths.bakerChefName }]}>BAKER/CHEFS NAME</Text>
             <Text style={[styles.th, { width: colWidths.quantity }]}>QUANTITY</Text>
@@ -75,11 +81,12 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload, exporti
               <Text style={[styles.td, { width: colWidths.name }]}>{r.name}</Text>
               <Text style={[styles.td, { width: colWidths.dateIn }]}>{r.dateIn}</Text>
               <Text style={[styles.td, { width: colWidths.timeIn }]}>{r.timeIn}</Text>
+              <Text style={[styles.td, { width: colWidths.timeOut }]}>{r.timeOut}</Text>
               <Text style={[styles.td, { width: colWidths.usedBy }]}>{r.usedBy}</Text>
               <Text style={[styles.td, { width: colWidths.bakerChefName }]}>{r.bakerChefName}</Text>
               <Text style={[styles.td, { width: colWidths.quantity }]}>{r.quantity}</Text>
-              <View style={[styles.td, { width: colWidths.sign, justifyContent: 'center', alignItems: 'center' }]}>
-                {renderMaybeSignature(r.sign)}
+              <View style={[styles.td, { width: colWidths.sign, justifyContent: 'center', alignItems: 'center' }]}> 
+                {renderMaybeSignature(r.sign, Math.max(40, colWidths.sign - 8), Math.max(32, Math.round((colWidths.sign - 8) * 0.6)))}
               </View>
             </View>
           ))}
@@ -91,6 +98,7 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload, exporti
               <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
               <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
               <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
+              <Text style={[styles.th, { width: 100 }]}>TIME OUT</Text>
               <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
               <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS NAME</Text>
               <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
@@ -99,15 +107,16 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload, exporti
 
             {formData.map((r, idx) => (
               <View key={r.name || idx} style={styles.trow}>
-                <Text style={[styles.td, { width: 420 }]}>{r.name}</Text>
-                <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
-                <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
-                <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
-                <Text style={[styles.td, { width: 220 }]}>{r.bakerChefName}</Text>
-                <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
-                <View style={[styles.td, { width: 80, justifyContent: 'center', alignItems: 'center' }]}>
-                  {renderMaybeSignature(r.sign)}
-                </View>
+                  <Text style={[styles.td, { width: 420 }]}>{r.name}</Text>
+                  <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
+                  <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
+                  <Text style={[styles.td, { width: 100 }]}>{r.timeOut}</Text>
+                  <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
+                  <Text style={[styles.td, { width: 220 }]}>{r.bakerChefName}</Text>
+                  <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
+                  <View style={[styles.td, { width: 80, justifyContent: 'center', alignItems: 'center' }]}>
+                    {renderMaybeSignature(r.sign, Math.max(40, 80 - 8), Math.max(32, Math.round((80 - 8) * 0.6)))}
+                  </View>
               </View>
             ))}
           </View>
@@ -117,13 +126,25 @@ export default function BOH_ShelfLifeInspectionPresentational({ payload, exporti
       <View style={{ height: 12 }} />
       <View style={styles.footerRowMultiple}>
         <View style={styles.footerCol}><Text style={styles.footerLabel}>DATE: {payload?.metadata?.date || ''}</Text></View>
+
         <View style={styles.footerCol}>
-          <Text style={styles.footerLabel}>VERIFIED BY:</Text>
+          <Text style={styles.footerLabel}>HSEQ MANAGER:</Text>
           {renderMaybeSignature(verification?.hseqManagerSign || verification?.hseqManager || verification?.hseqManagerSignature)}
         </View>
+
         <View style={styles.footerCol}>
           <Text style={styles.footerLabel}>COMPLEX MANAGER:</Text>
           {renderMaybeSignature(verification?.complexManagerSign || verification?.complexManager || verification?.complexManagerSignature)}
+        </View>
+
+        <View style={styles.footerCol}>
+          <Text style={styles.footerLabel}>BAKER / CHEF SIGN:</Text>
+          {renderMaybeSignature(verification?.bakerSign || verification?.baker || verification?.bakerSignature)}
+        </View>
+
+        <View style={styles.footerCol}>
+          <Text style={styles.footerLabel}>VERIFIED BY:</Text>
+          {renderMaybeSignature(verification?.verifiedBySign || verification?.verifiedBy || verification?.verifiedBySignature)}
         </View>
       </View>
     </ScrollView>

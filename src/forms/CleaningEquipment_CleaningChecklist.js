@@ -9,7 +9,7 @@ import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
-import { getDraft, removeDraft } from '../utils/formDrafts';
+import formStorage from '../utils/formStorage';
 
 const DRAFT_KEY = 'cleaning_equipment_checklist_draft';
 
@@ -66,7 +66,9 @@ export default function CleaningEquipmentChecklist() {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
+        // load the stable draft saved by useFormSave/formStorage.saveDraft
+        const wrapped = await formStorage.loadForm(DRAFT_KEY).catch(() => null);
+        const d = wrapped && wrapped.payload ? wrapped.payload : null;
         if (d && mounted) {
           if (d.formData) setFormData(d.formData);
           if (d.metadata) {
@@ -153,7 +155,7 @@ export default function CleaningEquipmentChecklist() {
     setBusy(true);
     try {
       await hookSubmit();
-      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      try { await formStorage.deleteForm(DRAFT_KEY); } catch (e) {}
     } catch (e) {
       Alert.alert('Error', 'Submission failed');
     } finally { setBusy(false); }
