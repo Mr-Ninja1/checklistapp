@@ -24,6 +24,7 @@ import FOH_DailyCleaningPresentational from '../forms/components/FOH_DailyCleani
 import FOH_FrontOfHouseCleaningPresentational from '../forms/components/FOH_FrontOfHouseCleaningPresentational';
 import DisplayChillerShelfLifeInspectionPresentational from '../forms/components/DisplayChillerShelfLifeInspectionPresentational';
 import BOH_ShelfLifeInspectionPresentational from '../forms/components/BOH_ShelfLifeInspectionPresentational';
+import Bakery_UnderbarShelfLifeInspectionPresentational from '../forms/components/Bakery_UnderbarShelfLifeInspectionPresentational';
 import PreShiftMeetingAttendancePresentational from '../forms/components/PreShiftMeetingAttendancePresentational';
 import TrainingAttendanceRegisterPresentational from '../forms/components/TrainingAttendanceRegisterPresentational';
 import ProcessQualityOutOfControlPresentational from '../forms/components/ProcessQualityOutOfControlPresentational';
@@ -44,6 +45,7 @@ import CookingTemperaturePresentational from '../forms/components/CookingTempera
 import CoolingTemperaturePresentational from '../forms/components/CoolingTemperaturePresentational';
 import CoolingTemperatureSavedPresentational from '../forms/components/CoolingTemperatureSavedPresentational';
 import DeepFreezerTemperaturePresentational from '../forms/components/DeepFreezerTemperaturePresentational';
+import DisplayChillerTemperaturePresentational from '../forms/components/DisplayChillerTemperaturePresentational';
 import DryStorageArea_CleaningChecklistPresentational from '../forms/components/DryStorageArea_CleaningChecklistPresentational';
 import SculleryArea_CleaningChecklistPresentational from '../forms/components/SculleryArea_CleaningChecklistPresentational';
 import ColdRoom_FreezerRoomCleaningChecklistPresentational from '../forms/components/ColdRoom_FreezerRoomCleaningChecklistPresentational';
@@ -142,6 +144,14 @@ export default function SavedFormRenderer({ savedPayload, embedded = false, expo
     return (
       <View style={exportA4Style}>
         <BOH_ShelfLifeInspectionPresentational payload={payload} exportingWide={exportingWide} />
+      </View>
+    );
+  }
+  // Bakery Underbar Shelf-Life
+  if (/Bakery_UnderbarShelfLifeInspectionChecklist|UNDERBAR CHILLER SHELF-LIFE INSPECTION CHECKLIST|Underbar Chiller Shelf-Life/i.test(type)) {
+    return (
+      <View style={exportA4Style}>
+        <Bakery_UnderbarShelfLifeInspectionPresentational payload={payload} exportingWide={exportingWide} />
       </View>
     );
   }
@@ -327,6 +337,10 @@ export default function SavedFormRenderer({ savedPayload, embedded = false, expo
   // Underbar chiller
   if (/Underbar Chiller Temperature Log|UnderbarChillerTemperatureLog/i.test(type)) {
     return <UnderbarChillerTemperaturePresentational payload={payload} />;
+  }
+  // Display Chiller Temperature Log (any of the three variants)
+  if (/DisplayChillerTemperatureLog|DISPLAY CHILLER TEMPERATURE LOG SHEET|Display Chiller Temperature Log/i.test(type)) {
+    return <DisplayChillerTemperaturePresentational payload={payload} />;
   }
   // Deep Freezer Temp Log
   if (/Deep Freezer Temperature Log|DeepFreezerTemperatureLog|Deep Freezer/i.test(type)) {

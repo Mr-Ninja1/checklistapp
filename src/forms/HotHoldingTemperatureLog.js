@@ -4,6 +4,7 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
+import formatTemp from '../utils/formatTemp';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 
@@ -114,6 +115,14 @@ export default function HotHoldingTemperatureLog() {
                 logoDataUri = `data:image/jpeg;base64,${b64}`;
             } catch (e) { console.warn('logo embed failed', e); }
 
+            // Normalize temperatures to include °C when missing
+            const normalizedRows = rows.map(r => ({
+                ...r,
+                temp1: formatTemp(r.temp1),
+                temp2: formatTemp(r.temp2),
+                temp3: formatTemp(r.temp3),
+            }));
+
             const payload = {
                 formType: 'HotHoldingTemperatureLog',
                 templateVersion: '1.0',
@@ -131,7 +140,7 @@ export default function HotHoldingTemperatureLog() {
                     hseqManagerSignature: meta.hseqManagerSignature || meta.hseqManagerSign || '',
                 },
                 // Save all rows (including empty ones) so presentational rendering matches the editor
-                formData: rows,
+                formData: normalizedRows,
                 layoutHints: { COL_FLEX, WIDTHS: widths },
                 _tableWidth: TABLE_WIDTH,
                 assets: { logoDataUri },

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
-export default function DeepFreezerTemperaturePresentational({ payload }) {
+export default function DisplayChillerTemperaturePresentational({ payload }) {
   if (!payload) return null;
   const p = payload.payload || payload;
   const { metadata = {}, formData = [], layoutHints = {}, _tableWidth } = p;
@@ -47,31 +47,30 @@ export default function DeepFreezerTemperaturePresentational({ payload }) {
 
   const TABLE_WIDTH = COL.DATE + (COL.TEMP + COL.SIGN) * 3 + COL.CORRECTIVE_ACTION + COL.SUP_NAME_SIGN + COL.COMPLEX_SIGN + COL.FSC_SIGN + COL.HSEQ_SIGN;
 
-  // Use freezerName from metadata only (no fallback to subject)
-  const freezerName = metadata.freezerName || '';
+  const chillerName = metadata.displayChillerName || '';
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
-        {/* Branding row: logo + company name on top-left above all content */}
-        <View style={styles.brandingRowTop}>
-          <View style={styles.logoAreaTop}>
+        <View style={styles.topBranding}>
+          <View style={styles.logoArea}>
             <View style={styles.logoWrap}>
               {p.assets?.logoDataUri ? <Image source={{ uri: p.assets.logoDataUri }} style={styles.logo} /> : <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />}
             </View>
-            <View style={styles.companyAreaTop}>
+            <View style={styles.companyArea}>
               <Text style={styles.companyText}>{metadata.companyName || 'Bravo'}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.titleRow}>
-          <Text style={styles.titleText}>DEEP FREEZER TEMPERATURE LOG SHEET</Text>
+          <Text style={styles.titleText}>DISPLAY CHILLER TEMPERATURE LOG SHEET</Text>
         </View>
+
         <View style={styles.subjectBand}>
           <View style={styles.subjectLeft}>
-            <Text style={styles.subjectLabel}>Name of freezer:</Text>
-            <Text style={styles.subjectContent}>{freezerName}</Text>
+            <Text style={styles.subjectLabel}>Name of display chiller:</Text>
+            <Text style={styles.subjectContent}>{chillerName}</Text>
           </View>
           <View style={styles.compiledBox}>
             <View style={styles.compiledRow}>
@@ -84,14 +83,16 @@ export default function DeepFreezerTemperaturePresentational({ payload }) {
             </View>
           </View>
         </View>
-        <View style={styles.metaInfoRow}>
-            <View style={styles.metaInfoField}><Text style={styles.metaInfoLabel}>Month:</Text><Text style={styles.metaInfoValue}>{metadata.month || ''}</Text></View>
-            <View style={styles.metaInfoField}><Text style={styles.metaInfoLabel}>Year:</Text><Text style={styles.metaInfoValue}>{metadata.year || ''}</Text></View>
-            <View style={[styles.metaInfoField, { flex: 1 }]}><Text style={styles.metaInfoLabel}>Location:</Text><Text style={styles.metaInfoValue}>{metadata.location || ''}</Text></View>
+
+        <View style={styles.metaInfoRow}
+             accessible={false}>
+          <View style={styles.metaInfoField}><Text style={styles.metaInfoLabel}>Month:</Text><Text style={styles.metaInfoValue}>{metadata.month || ''}</Text></View>
+          <View style={styles.metaInfoField}><Text style={styles.metaInfoLabel}>Year:</Text><Text style={styles.metaInfoValue}>{metadata.year || ''}</Text></View>
+          <View style={[styles.metaInfoField, { flex: 1 }]}><Text style={styles.metaInfoLabel}>Location:</Text><Text style={styles.metaInfoValue}>{metadata.location || ''}</Text></View>
         </View>
 
         <View style={styles.instructionBox}>
-          <Text style={styles.instructionText}><Text style={{ fontWeight: '800' }}>Instruction:</Text> {metadata.instruction || 'The temperature of the Deep Freezer should be less than -18°C and not fall below -12°C.'}</Text>
+          <Text style={styles.instructionText}><Text style={{ fontWeight: '800' }}>Instruction:</Text> {metadata.instruction || 'The temperature of the chiller should be between 0°C and 4°C.'}</Text>
         </View>
 
         <ScrollView horizontal={true} nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: TABLE_WIDTH }}>
@@ -176,12 +177,7 @@ export default function DeepFreezerTemperaturePresentational({ payload }) {
           </View>
         </ScrollView>
 
-        <View style={styles.footerRow}>
-          
-         
-
-         
-        </View>
+        <View style={styles.footerRow} />
       </View>
     </ScrollView>
   );
@@ -211,9 +207,6 @@ const styles = StyleSheet.create({
   compiledRow: { flexDirection: 'row', justifyContent: 'space-between' },
   compiledLabel: { fontWeight: '700', fontSize: 10 },
   compiledValue: { fontSize: 10 },
-  brandingRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  logoAreaTop: { flexDirection: 'row', alignItems: 'center' },
-  companyAreaTop: { marginLeft: 8 },
   brandingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   metaInfoRow: { flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
   metaInfoField: { marginRight: 16 },
@@ -226,7 +219,4 @@ const styles = StyleSheet.create({
   cellFixed: { padding: 6, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#cbd5e1' },
   cellText: { fontSize: 12, color: '#111827' },
   footerRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#e6e6e6' },
-  footerItem: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
-  footerLabel: { marginTop: 6, fontSize: 12, fontWeight: '700', color: '#374151' },
-  footerText: { fontSize: 12, color: '#111827' },
 });

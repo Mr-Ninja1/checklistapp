@@ -7,6 +7,7 @@ import * as FileSystem from 'expo-file-system';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
+import formatTemp from '../utils/formatTemp';
 
 const DRAFT_KEY = 'underbar_chiller_temperature_log_draft_1';
 const MAX_DAYS = 31;
@@ -106,7 +107,13 @@ export default function UnderbarChillerTemperatureLog() {
 
   const handleSubmit = async () => {
     // Always save all rows (including empty) so presentational render matches the exact form
-    const logData = rows.map((r, i) => ({ day: i + 1, ...r }));
+    const logData = rows.map((r, i) => ({
+      day: i + 1,
+      ...r,
+      tempMorning: formatTemp(r.tempMorning),
+      tempAfternoon: formatTemp(r.tempAfternoon),
+      tempEvening: formatTemp(r.tempEvening),
+    }));
 
     // Allow submitting even when metadata or log rows are empty (testing mode)
 

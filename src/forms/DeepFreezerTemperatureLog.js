@@ -9,7 +9,7 @@ import { addFormHistory } from '../utils/formHistory';
 import formStorage from '../utils/formStorage';
 import EditableFormContainer from '../components/EditableFormContainer';
 
-const DRAFT_KEY = 'deep_freezer_temperature_log_draft';
+const BASE_DRAFT_KEY = 'deep_freezer_temperature_log';
 const MAX_DAYS = 31;
 
 const emptyDayRow = {
@@ -38,12 +38,10 @@ const initialMeta = {
   year: new Date().getFullYear().toString(),
   location: '',
   freezerName: '',
-  hseqManagerSign: '',
-  complexManagerSign: '',
-   fscSign: '',
+  fscSign: '',
 };
 
-export default function DeepFreezerTemperatureLog() {
+export default function DeepFreezerTemperatureLog(props = {}) {
   const [rows, setRows] = useState(initialRows);
   const [meta, setMeta] = useState(initialMeta);
   const [busy, setBusy] = useState(false);
@@ -63,13 +61,21 @@ export default function DeepFreezerTemperatureLog() {
     let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(DRAFT_KEY);
+        const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_default_draft`;
+        const d = await getDraft(draftKey);
         if (d && mounted) {
           if (d.rows) setRows(d.rows);
           if (d.meta) setMeta(d.meta);
         }
+        // ensure issue date is set when missing
         if (mounted && (!d || !d.meta || !d.meta.issueDate)) {
           setMeta(prev => ({ ...prev, issueDate: getTodayDate() }));
+        }
+        // Apply wrapper default only when the wrapper supplied a draftKey and
+        // there is no existing draft stored specifically for that key.
+        // This avoids accidentally picking up another variant's draft.
+        if (mounted && props.defaultFreezerName && props.draftKey && !d) {
+          setMeta(prev => ({ ...prev, freezerName: props.defaultFreezerName }));
         }
         if (mounted) {
           const now = new Date();
@@ -91,23 +97,52 @@ export default function DeepFreezerTemperatureLog() {
 
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { rows, meta }), 700);
+    const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_default_draft`;
+    saveTimer.current = setTimeout(() => setDraft(draftKey, { rows, meta }), 700);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [rows, meta]);
+  }, [rows, meta, props.draftKey]);
 
   const setCell = useCallback((r, k, v) => setRows(prev => prev.map((row, i) => i === r ? { ...row, [k]: v } : row)), []);
   const setMetaField = (k, v) => setMeta(prev => ({ ...prev, [k]: v }));
 
   const handleSubmit = async () => {
-    const logData = rows.map((r, i) => ({ day: i + 1, ...r }));
+    // Normalize temperature fields so saved payload shows degrees by default
+    const formatTemp = (v) => {
+      if (v === null || v === undefined) return '';
+      const s = String(v).trim();
+      if (s === '') return '';
+      // If already contains a degree symbol or a trailing 'C'/'c', assume it's fine
+      if (s.includes('°') || /[cC]$/.test(s)) return s;
+      // If purely numeric, append °C
+      if (/^-?\d+(?:\.\d+)?$/.test(s)) return `${s}°C`;
+      // Otherwise append °C to be helpful
+      return `${s}°C`;
+    };
+
+    const logData = rows.map((r, i) => ({
+      day: i + 1,
+      tempMorning: formatTemp(r.tempMorning),
+      staffSignMorning: r.staffSignMorning,
+      tempAfternoon: formatTemp(r.tempAfternoon),
+      staffSignAfternoon: r.staffSignAfternoon,
+      tempEvening: formatTemp(r.tempEvening),
+      staffSignEvening: r.staffSignEvening,
+      outOfSpecAction: r.outOfSpecAction,
+      supNameSign: r.supNameSign,
+      complexManagerSign: r.complexManagerSign,
+      hseqManagerSign: r.hseqManagerSign,
+      fscSign: r.fscSign,
+    }));
     setBusy(true);
     try {
       // Ensure freezerName is populated from subject (editor uses subject as freezer name)
       const metadataForPayload = { ...meta, freezerName: meta.freezerName || meta.subject };
+      const formType = props.formType || 'DeepFreezerTemperatureLog';
+      const title = props.title || 'DEEP FREEZER TEMPERATURE LOG SHEET';
       const payload = {
-        formType: 'DeepFreezerTemperatureLog',
+        formType,
         templateVersion: 'v1.0',
-        title: 'DEEP FREEZER TEMPERATURE LOG SHEET',
+        title,
         date: meta.issueDate || new Date().toLocaleDateString(),
         metadata: metadataForPayload,
         formData: logData,
@@ -125,14 +160,15 @@ export default function DeepFreezerTemperatureLog() {
         try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload }); } catch (err) { /* ignore */ }
       }
       try { Alert.alert('Saved', 'Form saved'); } catch (e) { /* ignore */ }
-      await removeDraft(DRAFT_KEY);
+      const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_default_draft`;
+      await removeDraft(draftKey);
       setRows(initialRows);
       setMeta(prev => ({
         ...initialMeta,
         year: new Date().getFullYear().toString(),
         month: '',
         location: '',
-        freezerName: '',
+        freezerName: props.defaultFreezerName || '',
         hseqManagerSign: '',
         complexManagerSign: ''
       }));
@@ -145,7 +181,10 @@ export default function DeepFreezerTemperatureLog() {
 
   const handleSaveDraft = async () => {
     setBusy(true);
-    try { await setDraft(DRAFT_KEY, { rows, meta }); } catch (e) { console.warn('save draft error', e); }
+    try {
+      const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_default_draft`;
+      await setDraft(draftKey, { rows, meta });
+    } catch (e) { console.warn('save draft error', e); }
     setBusy(false);
   };
 
@@ -385,34 +424,7 @@ export default function DeepFreezerTemperatureLog() {
 
         </View>
 
-        <View style={styles.footerSection}>
-          <Text style={{ fontWeight: '700', marginBottom: 10, fontSize: 12 }}>Verified by:</Text>
-
-          <View style={styles.verificationRow}>
-            <View style={{ flex: 1, marginRight: 16 }}>
-              <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>HSEQ Manager:</Text>
-              {editMode ? (
-                <SignatureField value={meta.hseqManagerSign} onChange={v => setMetaField('hseqManagerSign', v)} editable={editMode} width={220} height={60} />
-              ) : (() => {
-                const v = meta.hseqManagerSign;
-                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyCell}>{meta.hseqManager || ''}</Text>;
-              })()}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '700', marginBottom: 6, fontSize: 12 }}>COMPLEX Manager:</Text>
-              {editMode ? (
-                <SignatureField value={meta.complexManagerSign} onChange={v => setMetaField('complexManagerSign', v)} editable={editMode} width={220} height={60} />
-              ) : (() => {
-                const v = meta.complexManagerSign;
-                const uri = v ? (String(v).startsWith('data:') ? v : `data:image/png;base64,${v}`) : null;
-                return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={1.0} /> : <Text style={styles.readOnlyCell}>{meta.complexManager || ''}</Text>;
-              })()}
-            </View>
-          </View>
-        </View>
-
-        <View style={{ height: 110 }} />
+        <View style={{ height: 20 }} />
         </ScrollView>
       </EditableFormContainer>
 

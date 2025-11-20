@@ -45,6 +45,18 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
+        {/* Branding row: logo + company name on top-left above all content */}
+        <View style={styles.brandingRowTop}> 
+          <View style={styles.logoAreaTop}>
+            <View style={styles.logoWrap}>
+              {p.assets?.logoDataUri ? <Image source={{ uri: p.assets.logoDataUri }} style={styles.logo} /> : <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />}
+            </View>
+            <View style={styles.companyAreaTop}>
+              <Text style={styles.companyText}>{metadata.companyName || 'Bravo'}</Text>
+            </View>
+          </View>
+        </View>
+
         {/* Top subject band with compiled/approved box on right */}
         <View style={styles.subjectBand}>
           <View style={styles.subjectLeft}>
@@ -70,23 +82,6 @@ export default function UnderbarChillerTemperaturePresentational({ payload }) {
                 return uri ? <SignatureThumb uri={uri} width={160} height={50} layers={6} spread={0.9} /> : <Text style={styles.compiledValue}>{name}</Text>;
               })()}
             </View>
-          </View>
-        </View>
-
-        {/* Branding row: logo + company name to the left, metadata fields across */}
-        <View style={styles.brandingRow}>
-          <View style={styles.logoArea}>
-            <View style={styles.logoWrap}>
-              {p.assets?.logoDataUri ? <Image source={{ uri: p.assets.logoDataUri }} style={styles.logo} /> : <Image source={require('../../assets/logo.jpeg')} style={styles.logo} />}
-            </View>
-            <View style={styles.companyArea}>
-              <Text style={styles.companyText}>{metadata.companyName || 'Bravo'}</Text>
-            </View>
-          </View>
-          <View style={styles.metaInfoRow}>
-            <View style={styles.metaInfoField}><Text style={styles.metaInfoLabel}>Month:</Text><Text style={styles.metaInfoValue}>{metadata.month || ''}</Text></View>
-            <View style={styles.metaInfoField}><Text style={styles.metaInfoLabel}>Year:</Text><Text style={styles.metaInfoValue}>{metadata.year || ''}</Text></View>
-            <View style={[styles.metaInfoField, { flex: 1 }]}><Text style={styles.metaInfoLabel}>Location:</Text><Text style={styles.metaInfoValue}>{metadata.location || ''}</Text></View>
           </View>
         </View>
 
@@ -213,6 +208,9 @@ const styles = StyleSheet.create({
   compiledRow: { flexDirection: 'row', justifyContent: 'space-between' },
   compiledLabel: { fontWeight: '700', fontSize: 10 },
   compiledValue: { fontSize: 10 },
+  brandingRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  logoAreaTop: { flexDirection: 'row', alignItems: 'center' },
+  companyAreaTop: { marginLeft: 8 },
   brandingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   companyArea: { marginLeft: 8 },
   metaInfoRow: { flexDirection: 'row', alignItems: 'center', marginLeft: 12 },

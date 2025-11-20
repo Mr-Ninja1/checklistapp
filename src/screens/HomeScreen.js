@@ -14,6 +14,9 @@ const formCategories = {
     color: ["#43cea2", "#185a9d"],
     forms: [
       { id: 117, title: "Display Chiller Shelf-Life Inspection", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller", route: 'DisplayChillerShelfLifeInspectionChecklist' },
+      { id: 120, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Upright", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Upright", route: 'DisplayChillerTemperatureLog_Upright' },
+      { id: 121, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Grab and Go", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Grab and Go", route: 'DisplayChillerTemperatureLog_GrabAndGo' },
+      { id: 122, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Gelato", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Gelato", route: 'DisplayChillerTemperatureLog_Gelato' },
   { id: 41, title: "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH -PM", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm_PM' },
       { id: 142, title: "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm_AM' },
       { id: 43, title: "Front of House Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Front of House", route: 'FOH_FrontOfHouseCleaningChecklist' }
@@ -65,7 +68,10 @@ const formCategories = {
     name: "Bakery Records",
     color: ["#fa709a", "#fee140"],
     forms: [
-      { id: 74, title: "DEEP FREEZER TEMPERATURE LOG SHEET", status: "pending", priority: "high", dueTime: "Monthly", location: "Deep Freezer", route: 'DeepFreezerTemperatureLog' },
+      { id: 74, title: "DEEP FREEZER TEMPERATURE LOG SHEET - Storage", status: "pending", priority: "high", dueTime: "Monthly", location: "Deep Freezer - Storage", route: 'DeepFreezerTemperatureLog_Storage' },
+      { id: 76, title: "DEEP FREEZER TEMPERATURE LOG SHEET - Blast", status: "pending", priority: "high", dueTime: "Monthly", location: "Deep Freezer - Blast", route: 'DeepFreezerTemperatureLog_Blast' },
+      { id: 77, title: "DEEP FREEZER TEMPERATURE LOG SHEET - Production", status: "pending", priority: "high", dueTime: "Monthly", location: "Deep Freezer - Production", route: 'DeepFreezerTemperatureLog_Production' },
+          { id: 75, title: "Underbar Chiller Shelf-Life Inspection Checklist", status: "pending", priority: "medium", dueTime: "Daily", location: "Underbar Chiller", route: 'Bakery_UnderbarShelfLifeInspectionChecklist' },
       { id: 19, title: "Cooling Temp Log", status: "overdue", priority: "critical", dueTime: "30 min ago", location: "Cooling Area", route: 'CoolingTemperatureLog' },
       { id: 24, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery", status: "pending", priority: "high", dueTime: "Each shift", location: "Bakery Floor", route: 'Bakery_SanitizingLog' },
       { id: 31, title: "Bakery Area Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Bakery Floor", route: 'Bakery_CleaningChecklist' },

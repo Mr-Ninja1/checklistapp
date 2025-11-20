@@ -20,6 +20,12 @@ import ThawingTemperatureLog from './forms/ThawingTemperatureLog';
 import HotHoldingTemperatureLog from './forms/HotHoldingTemperatureLog';
 import UnderbarChillerTemperatureLog from './forms/UnderbarChillerTemperatureLog';
 import DeepFreezerTemperatureLog from './forms/DeepFreezerTemperatureLog';
+import DeepFreezerTemperatureLog_Storage from './forms/DeepFreezerTemperatureLog_Storage';
+import DeepFreezerTemperatureLog_Blast from './forms/DeepFreezerTemperatureLog_Blast';
+import DeepFreezerTemperatureLog_Production from './forms/DeepFreezerTemperatureLog_Production';
+import DisplayChillerTemperatureLog_Upright from './forms/DisplayChillerTemperatureLog_Upright';
+import DisplayChillerTemperatureLog_GrabAndGo from './forms/DisplayChillerTemperatureLog_GrabAndGo';
+import DisplayChillerTemperatureLog_Gelato from './forms/DisplayChillerTemperatureLog_Gelato';
 import CustomerSatisfactionQuestionnaire from './forms/CustomerSatisfactionQuestionnaire';
 import PPEIssuanceForm from './forms/PPEIssuanceForm';
 import PersonalHygieneChecklist from './forms/PersonalHygieneChecklist';
@@ -41,6 +47,7 @@ import VisitorsLogBook from './forms/VisitorsLogBook';
 import ProductRejectionForm from './forms/ProductRejectionForm';
 import FoodSamplesCollectionLog from './forms/FoodSamplesCollectionLog';
 import FoodHandlersDailyShoweringForm from './forms/FoodHandlersDailyShoweringForm';
+import Bakery_UnderbarShelfLifeInspectionChecklist from './forms/Bakery_UnderbarShelfLifeInspectionChecklist';
 
 const Stack = createStackNavigator();
 
@@ -147,6 +154,7 @@ export default function App() {
       <Stack.Screen name="CoolingTemperatureLog" component={require('./forms/CoolingTemperatureLog').default} />
   <Stack.Screen name="Bakery_SanitizingLog" component={require('./forms/Bakery_SanitizingLog').default} />
   <Stack.Screen name="Bakery_CleaningChecklist" component={require('./forms/Bakery_CleaningChecklist').default} />
+  <Stack.Screen name="Bakery_UnderbarShelfLifeInspectionChecklist" component={Bakery_UnderbarShelfLifeInspectionChecklist} />
   <Stack.Screen name="WelfareFacilities_CleaningChecklist" component={require('./forms/WelfareFacilities_CleaningChecklist').default} />
   <Stack.Screen name="SculleryArea_CleaningChecklist" component={require('./forms/SculleryArea_CleaningChecklist').default} />
   <Stack.Screen name="CleaningEquipment_CleaningChecklist" component={require('./forms/CleaningEquipment_CleaningChecklist').default} />
@@ -165,6 +173,12 @@ export default function App() {
   <Stack.Screen name="UnderbarChillerTemperatureLog1" component={UnderbarChillerTemperatureLog} />
   <Stack.Screen name="UnderbarChillerTemperatureLog2" component={require('./forms/UnderbarChillerTemperatureLog_2').default} />
   <Stack.Screen name="DeepFreezerTemperatureLog" component={DeepFreezerTemperatureLog} />
+  <Stack.Screen name="DeepFreezerTemperatureLog_Storage" component={DeepFreezerTemperatureLog_Storage} />
+  <Stack.Screen name="DeepFreezerTemperatureLog_Blast" component={DeepFreezerTemperatureLog_Blast} />
+  <Stack.Screen name="DeepFreezerTemperatureLog_Production" component={DeepFreezerTemperatureLog_Production} />
+  <Stack.Screen name="DisplayChillerTemperatureLog_Upright" component={DisplayChillerTemperatureLog_Upright} />
+  <Stack.Screen name="DisplayChillerTemperatureLog_GrabAndGo" component={DisplayChillerTemperatureLog_GrabAndGo} />
+  <Stack.Screen name="DisplayChillerTemperatureLog_Gelato" component={DisplayChillerTemperatureLog_Gelato} />
   <Stack.Screen name="CustomerSatisfactionQuestionnaire" component={CustomerSatisfactionQuestionnaire} />
   <Stack.Screen name="PPEIssuanceForm" component={PPEIssuanceForm} />
   <Stack.Screen name="PersonalHygieneChecklist" component={PersonalHygieneChecklist} />
