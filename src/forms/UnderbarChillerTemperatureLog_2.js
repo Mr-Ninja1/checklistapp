@@ -9,7 +9,7 @@ import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
 import formatTemp from '../utils/formatTemp';
 
-const DRAFT_KEY = 'underbar_chiller_temperature_log_draft_2';
+const DRAFT_KEY = 'kitchen_underbar_chiller_temperature_log_draft_2';
 const MAX_DAYS = 31;
 
 const emptyDayRow = {
@@ -45,6 +45,9 @@ const initialMeta = {
   complexManagerSign: '',
   fscSign: '',
 };
+
+initialMeta.category = 'Kitchen';
+initialMeta.location = initialMeta.location || '';
 
 export default function UnderbarChillerTemperatureLog2() {
   const [rows, setRows] = useState(initialRows);
@@ -122,9 +125,9 @@ export default function UnderbarChillerTemperatureLog2() {
       const payload = {
         formType: 'UnderbarChillerTemperatureLog',
         templateVersion: 'v1.0',
-        title: 'Underbar Chiller Temperature Log 2',
+        title: 'Kitchen - Underbar Chiller Temperature Log 2',
         date: meta.issueDate || new Date().toLocaleDateString(),
-        metadata: meta,
+        metadata: { ...meta, category: 'Kitchen' },
         formData: logData,
         layoutHints: { COL_FLEX, GROUP_FLEX },
         _tableWidth: 800,

@@ -26,6 +26,7 @@ import DeepFreezerTemperatureLog_Production from './forms/DeepFreezerTemperature
 import DisplayChillerTemperatureLog_Upright from './forms/DisplayChillerTemperatureLog_Upright';
 import DisplayChillerTemperatureLog_GrabAndGo from './forms/DisplayChillerTemperatureLog_GrabAndGo';
 import DisplayChillerTemperatureLog_Gelato from './forms/DisplayChillerTemperatureLog_Gelato';
+import DisplayChillerTemperatureLog_Underbar from './forms/DisplayChillerTemperatureLog_Underbar';
 import CustomerSatisfactionQuestionnaire from './forms/CustomerSatisfactionQuestionnaire';
 import PPEIssuanceForm from './forms/PPEIssuanceForm';
 import PersonalHygieneChecklist from './forms/PersonalHygieneChecklist';
@@ -48,6 +49,8 @@ import ProductRejectionForm from './forms/ProductRejectionForm';
 import FoodSamplesCollectionLog from './forms/FoodSamplesCollectionLog';
 import FoodHandlersDailyShoweringForm from './forms/FoodHandlersDailyShoweringForm';
 import Bakery_UnderbarShelfLifeInspectionChecklist from './forms/Bakery_UnderbarShelfLifeInspectionChecklist';
+import Bakery_UnderbarChillerTemperatureLog1 from './forms/Bakery_UnderbarChillerTemperatureLog1';
+import Bakery_UnderbarChillerTemperatureLog2 from './forms/Bakery_UnderbarChillerTemperatureLog2';
 
 const Stack = createStackNavigator();
 
@@ -172,6 +175,8 @@ export default function App() {
   <Stack.Screen name="HotHoldingTemperatureLog" component={HotHoldingTemperatureLog} />
   <Stack.Screen name="UnderbarChillerTemperatureLog1" component={UnderbarChillerTemperatureLog} />
   <Stack.Screen name="UnderbarChillerTemperatureLog2" component={require('./forms/UnderbarChillerTemperatureLog_2').default} />
+  <Stack.Screen name="Bakery_UnderbarChillerTemperatureLog1" component={Bakery_UnderbarChillerTemperatureLog1} />
+  <Stack.Screen name="Bakery_UnderbarChillerTemperatureLog2" component={Bakery_UnderbarChillerTemperatureLog2} />
   <Stack.Screen name="DeepFreezerTemperatureLog" component={DeepFreezerTemperatureLog} />
   <Stack.Screen name="DeepFreezerTemperatureLog_Storage" component={DeepFreezerTemperatureLog_Storage} />
   <Stack.Screen name="DeepFreezerTemperatureLog_Blast" component={DeepFreezerTemperatureLog_Blast} />
@@ -179,6 +184,7 @@ export default function App() {
   <Stack.Screen name="DisplayChillerTemperatureLog_Upright" component={DisplayChillerTemperatureLog_Upright} />
   <Stack.Screen name="DisplayChillerTemperatureLog_GrabAndGo" component={DisplayChillerTemperatureLog_GrabAndGo} />
   <Stack.Screen name="DisplayChillerTemperatureLog_Gelato" component={DisplayChillerTemperatureLog_Gelato} />
+  <Stack.Screen name="DisplayChillerTemperatureLog_Underbar" component={DisplayChillerTemperatureLog_Underbar} />
   <Stack.Screen name="CustomerSatisfactionQuestionnaire" component={CustomerSatisfactionQuestionnaire} />
   <Stack.Screen name="PPEIssuanceForm" component={PPEIssuanceForm} />
   <Stack.Screen name="PersonalHygieneChecklist" component={PersonalHygieneChecklist} />

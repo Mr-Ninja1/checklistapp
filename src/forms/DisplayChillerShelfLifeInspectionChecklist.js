@@ -32,6 +32,17 @@ const createRowsFromItems = (items) => items.map((it, i) => ({
   sign: '',
 }));
 
+const createBlankRow = (idx) => ({
+  id: `new_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+  item: '',
+  dateIn: '',
+  timeIn: '',
+  usedBy: '',
+  staffName: '',
+  quantity: '',
+  sign: '',
+});
+
 export default function DisplayChillerShelfLifeInspectionChecklist() {
   const draftKey = 'display_chiller_shelf_life';
   const [rows, setRows] = useState(() => createRowsFromItems(checklistItems));
@@ -68,6 +79,19 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
 
   const updateField = (id, field, value) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const addRow = () => {
+    // limit new rows to max 5 for demo
+    const newRowCount = rows.filter(r => String(r.id).startsWith('new_')).length;
+    if (newRowCount >= 5) {
+      Alert.alert('Limit reached', 'You cannot add more than 5 new rows — the form has become too long.');
+      return;
+    }
+    setRows(prev => {
+      const next = [...prev, createBlankRow(prev.length + 1)];
+      return next;
+    });
   };
 
   const handleSubmit = async () => {
@@ -153,9 +177,22 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
   );
 
   const saveDraftLocal = async () => { await setDraft(draftKey, { rows, issueDate }); alert('Draft saved'); };
+  const actionButtons = (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
+      <TouchableOpacity onPress={() => { if (!editMode || busy) return; addRow(); }} style={{ backgroundColor: '#2e7d32', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Please wait' : 'Add Row'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => { if (!editMode || busy) return; saveDraftLocal(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Saving...' : (!editMode ? 'Edit to Save' : 'Save Draft')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSubmit(); }} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Submitting...' : (!editMode ? 'Edit to Submit' : 'Submit Checklist')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={saveDraftLocal}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={saveDraftLocal} actionButtons={actionButtons}>
       <ScrollView contentContainerStyle={{ padding: 10, paddingBottom: 160, paddingRight: 110 }} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Image source={require('../assets/logo.jpeg')} style={styles.logo} />
@@ -223,16 +260,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
           </View>
         )}
 
-        {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={() => { if (!editMode || busy) return; saveDraftLocal(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Saving...' : (!editMode ? 'Edit to Save' : 'Save Draft')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => { if (!editMode || busy) return; handleSubmit(); }} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>{busy ? 'Submitting...' : (!editMode ? 'Edit to Submit' : 'Submit Checklist')}</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </EditableFormContainer>
   );

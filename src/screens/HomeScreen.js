@@ -17,6 +17,7 @@ const formCategories = {
       { id: 120, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Upright", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Upright", route: 'DisplayChillerTemperatureLog_Upright' },
       { id: 121, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Grab and Go", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Grab and Go", route: 'DisplayChillerTemperatureLog_GrabAndGo' },
       { id: 122, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Gelato", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Gelato", route: 'DisplayChillerTemperatureLog_Gelato' },
+      { id: 123, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Underbar", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Underbar", route: 'DisplayChillerTemperatureLog_Underbar' },
   { id: 41, title: "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH -PM", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm_PM' },
       { id: 142, title: "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM", status: "pending", priority: "high", dueTime: "Each shift", location: "Front Counter", route: 'FOH_DailyCleaningForm_AM' },
       { id: 43, title: "Front of House Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Front of House", route: 'FOH_FrontOfHouseCleaningChecklist' }
@@ -54,6 +55,8 @@ const formCategories = {
     name: "Kitchen Records",
     color: ["#56ccf2", "#2f80ed"],
     forms: [
+        { id: 75, title: "Underbar Chiller Shelf-Life Inspection Checklist", status: "pending", priority: "medium", dueTime: "Daily", location: "Underbar Chiller", route: 'Bakery_UnderbarShelfLifeInspectionChecklist' },
+      { id: 19, title: "Cooling Temp Log", status: "overdue", priority: "critical", dueTime: "30 min ago", location: "Cooling Area", route: 'CoolingTemperatureLog' },
       { id: 43, title: "Kitchen Weekly Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Kitchen Area", route: 'Kitchen_WeeklyCleaningChecklist' },
   { id: 42, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — AM", status: "pending", priority: "high", dueTime: "Each shift", location: "Main Kitchen", route: 'Kitchen_DailyCleaningForm' },
   { id: 71, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — PM", status: "pending", priority: "high", dueTime: "Each shift", location: "Main Kitchen", route: 'Kitchen_DailyCleaningForm_PM' },
@@ -71,8 +74,8 @@ const formCategories = {
       { id: 74, title: "DEEP FREEZER TEMPERATURE LOG SHEET - Storage", status: "pending", priority: "high", dueTime: "Monthly", location: "Deep Freezer - Storage", route: 'DeepFreezerTemperatureLog_Storage' },
       { id: 76, title: "DEEP FREEZER TEMPERATURE LOG SHEET - Blast", status: "pending", priority: "high", dueTime: "Monthly", location: "Deep Freezer - Blast", route: 'DeepFreezerTemperatureLog_Blast' },
       { id: 77, title: "DEEP FREEZER TEMPERATURE LOG SHEET - Production", status: "pending", priority: "high", dueTime: "Monthly", location: "Deep Freezer - Production", route: 'DeepFreezerTemperatureLog_Production' },
-          { id: 75, title: "Underbar Chiller Shelf-Life Inspection Checklist", status: "pending", priority: "medium", dueTime: "Daily", location: "Underbar Chiller", route: 'Bakery_UnderbarShelfLifeInspectionChecklist' },
-      { id: 19, title: "Cooling Temp Log", status: "overdue", priority: "critical", dueTime: "30 min ago", location: "Cooling Area", route: 'CoolingTemperatureLog' },
+      { id: 170, title: "Underbar Chiller Temperature Log — 1", status: "pending", priority: "high", dueTime: "Monthly", location: "Underbar Chiller 1", route: 'Bakery_UnderbarChillerTemperatureLog1' },
+      { id: 172, title: "Underbar Chiller Temperature Log — 2", status: "pending", priority: "high", dueTime: "Monthly", location: "Underbar Chiller 2", route: 'Bakery_UnderbarChillerTemperatureLog2' },
       { id: 24, title: "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery", status: "pending", priority: "high", dueTime: "Each shift", location: "Bakery Floor", route: 'Bakery_SanitizingLog' },
       { id: 31, title: "Bakery Area Cleaning Checklist", status: "pending", priority: "high", dueTime: "Weekly", location: "Bakery Floor", route: 'Bakery_CleaningChecklist' },
       { id: 27, title: "Baking Control Sheet", status: "overdue", priority: "critical", dueTime: "45 min ago", location: "Oven Station", route: 'BakingControlSheet' },
@@ -495,7 +498,7 @@ export default function HomeScreen() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Bravo @ {new Date().getFullYear()}</Text>
+        <Text style={styles.footerText}>Built by RAJAB CULTURE  & STEPHANIE DIGITAL SOLUTIONS ZAMBIA  Bravo brands@ {new Date().getFullYear()}</Text>
       </View>
 
       {/* Dropbox disconnected sticky banner (bottom-center).
