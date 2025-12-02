@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
+import { getDraft } from '../utils/formDrafts';
 import FormActionBar from '../components/FormActionBar';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
@@ -97,6 +98,26 @@ const EggsReceivingForm = () => {
     const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave: _scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload: getPayload, draftId: 'EggsReceiving_draft', clearOnSubmit: () => clearForm() });
     // attach scheduleAutoSave to local name used above
     scheduleAutoSave = _scheduleAutoSave;
+
+    // hydrate draft on mount
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getDraft('EggsReceiving_draft');
+                if (d && mounted) {
+                    if (d.formData) setReceivingData(d.formData);
+                    if (d.metadata) {
+                        if (d.metadata.issueDate) setIssueDate(d.metadata.issueDate);
+                        setDeliveryDetails(prev => ({ ...prev, ...d.metadata }));
+                        if (d.metadata.verifiedBySign) setVerifiedBySign(d.metadata.verifiedBySign);
+                        if (d.metadata.hseqManagerSign) setHseqManagerSign(d.metadata.hseqManagerSign);
+                    }
+                }
+            } catch (e) { console.warn('load draft failed', e); }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     useEffect(() => { if (showNotification) { Alert.alert(notificationMessage || 'Saved'); setShowNotification(false); } }, [showNotification]);
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { getDraft, removeDraft } from '../utils/formDrafts';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -61,6 +61,10 @@ export default function FruitWashingLog() {
         if (d && mounted) {
           if (d.formData) setFormData(d.formData);
           if (d.metadata) setMetadata(d.metadata);
+        }
+        // If no draft exists, ensure the entry rows are empty (no prefilled dates)
+        if (mounted && !d) {
+          setFormData(initialLogState);
         }
         // set issue date to today if not set
         const today = new Date();
@@ -144,7 +148,24 @@ export default function FruitWashingLog() {
   };
 
   // UI: render buttons and overlays
-  const saveDraftLocal = async () => { await handleSaveDraft(); };
+  const saveDraftLocal = async () => {
+    try {
+      const res = await handleSaveDraft();
+      try { console.info('FruitWashingLog: handleSaveDraft result', res); } catch (e) {}
+      // Also mirror the payload to the legacy/native draft location to maximize
+      // discoverability for getDraft (helps when storage fallbacks differ).
+      try {
+        const payload = buildPayload();
+        await setDraft(DRAFT_KEY, payload);
+        try { console.info('FruitWashingLog: setDraft wrote legacy/native draft'); } catch (e) {}
+      } catch (e) {
+        console.warn('FruitWashingLog: setDraft failed', e);
+      }
+      return res;
+    } catch (e) {
+      console.warn('FruitWashingLog: saveDraftLocal failed', e);
+    }
+  };
 
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={saveDraftLocal}>
@@ -165,7 +186,7 @@ export default function FruitWashingLog() {
         <View style={styles.siteRow}>
           <Text style={styles.siteLabel}>SITE:</Text>
           {editMode ? (
-            <TextInput style={styles.siteInput} value={metadata.site} onChangeText={v => handleMetaChange('site', v)} placeholder="Site name" editable={true} />
+            <TextInput style={styles.siteInput} value={metadata.site} onChangeText={v => handleMetaChange('site', v)} editable={true} />
           ) : (
             <Text style={styles.readOnlyCell}>{metadata.site}</Text>
           )}
@@ -186,14 +207,14 @@ export default function FruitWashingLog() {
 
           {formData.map((item, idx) => (
             <View key={idx} style={styles.row}>
-              <View style={[styles.cell, { flex: 1.5 }]}>{editMode ? <TextInput style={styles.input} value={item.date} onChangeText={v => handleEntryChange(idx, 'date', v)} placeholder="YYYY-MM-DD" editable={true} /> : <Text style={styles.readOnlyCell}>{item.date}</Text>}</View>
-              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.productWashed} onChangeText={v => handleEntryChange(idx, 'productWashed', v)} placeholder="Product" editable={true} /> : <Text style={styles.readOnlyCell}>{item.productWashed}</Text>}</View>
-              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.sanitizerName} onChangeText={v => handleEntryChange(idx, 'sanitizerName', v)} placeholder="Sanitizer" editable={true} /> : <Text style={styles.readOnlyCell}>{item.sanitizerName}</Text>}</View>
-              <View style={[styles.cell, { flex: 2.5 }]}>{editMode ? <TextInput style={styles.input} value={item.sanitizerConcentration} onChangeText={v => handleEntryChange(idx, 'sanitizerConcentration', v)} placeholder="Conc." editable={true} /> : <Text style={styles.readOnlyCell}>{item.sanitizerConcentration}</Text>}</View>
-              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.disinfectionStartTime} onChangeText={v => handleEntryChange(idx, 'disinfectionStartTime', v)} placeholder="HH:MM" editable={true} /> : <Text style={styles.readOnlyCell}>{item.disinfectionStartTime}</Text>}</View>
-              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.disinfectionEndTime} onChangeText={v => handleEntryChange(idx, 'disinfectionEndTime', v)} placeholder="HH:MM" editable={true} /> : <Text style={styles.readOnlyCell}>{item.disinfectionEndTime}</Text>}</View>
-              <View style={[styles.cell, { flex: 1.5 }]}>{editMode ? <TextInput style={styles.input} value={item.rinsingDone} onChangeText={v => handleEntryChange(idx, 'rinsingDone', v)} placeholder="Y/N" editable={true} /> : <Text style={styles.readOnlyCell}>{item.rinsingDone}</Text>}</View>
-              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.personWashing} onChangeText={v => handleEntryChange(idx, 'personWashing', v)} placeholder="Name" editable={true} /> : <Text style={styles.readOnlyCell}>{item.personWashing}</Text>}</View>
+              <View style={[styles.cell, { flex: 1.5 }]}>{editMode ? <TextInput style={styles.input} value={item.date} onChangeText={v => handleEntryChange(idx, 'date', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.date}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.productWashed} onChangeText={v => handleEntryChange(idx, 'productWashed', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.productWashed}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.sanitizerName} onChangeText={v => handleEntryChange(idx, 'sanitizerName', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.sanitizerName}</Text>}</View>
+              <View style={[styles.cell, { flex: 2.5 }]}>{editMode ? <TextInput style={styles.input} value={item.sanitizerConcentration} onChangeText={v => handleEntryChange(idx, 'sanitizerConcentration', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.sanitizerConcentration}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.disinfectionStartTime} onChangeText={v => handleEntryChange(idx, 'disinfectionStartTime', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.disinfectionStartTime}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.disinfectionEndTime} onChangeText={v => handleEntryChange(idx, 'disinfectionEndTime', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.disinfectionEndTime}</Text>}</View>
+              <View style={[styles.cell, { flex: 1.5 }]}>{editMode ? <TextInput style={styles.input} value={item.rinsingDone} onChangeText={v => handleEntryChange(idx, 'rinsingDone', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.rinsingDone}</Text>}</View>
+              <View style={[styles.cell, { flex: 2 }]}>{editMode ? <TextInput style={styles.input} value={item.personWashing} onChangeText={v => handleEntryChange(idx, 'personWashing', v)} editable={true} /> : <Text style={styles.readOnlyCell}>{item.personWashing}</Text>}</View>
               <View style={[styles.cell, { flex: 1.5, borderRightWidth: 0 }]}> 
                 {editMode ? (
                   <SignatureField
@@ -273,7 +294,7 @@ export default function FruitWashingLog() {
         </View>
 
   <View style={styles.buttonRow}>
-   <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+  <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={saveDraftLocal} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={submitAndRecord} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
   </View>
         <LoadingOverlay visible={isSaving} />

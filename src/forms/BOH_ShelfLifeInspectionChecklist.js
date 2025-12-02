@@ -38,8 +38,10 @@ const initialEntry = {
   sign: '',
 };
 
-// Add five blank rows at the end for extra entries
-const initialLogState = initialProducts.concat(Array.from({ length: 5 }, () => ({ name: '' }))).map(p => ({ ...p, ...initialEntry }));
+// Base table rows (only the predefined product rows). New rows are added
+// by user via the `Add Row` control (limit 5 extra rows).
+const initialLogState = initialProducts.map(p => ({ ...p, ...initialEntry }));
+const MAX_EXTRA_ROWS = 5;
 
 const initialMetadata = {
   docNo: 'BBN-SHEQ-BOH-F-02-01c',
@@ -68,13 +70,28 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     let mounted = true;
     (async () => {
       try {
-        const d = await formStorage.loadForm(DRAFT_KEY).catch(() => null);
-        const payload = d?.payload || null;
-        if (payload && mounted) {
-          if (payload.formData) setFormData(payload.formData);
-          if (payload.metadata) setMetadata(payload.metadata);
-          if (payload.verification) setVerification(payload.verification);
-        } else if (mounted) {
+          const d = await formStorage.loadForm(DRAFT_KEY).catch(() => null);
+          const payload = d?.payload || null;
+          if (payload && mounted) {
+            if (payload.formData) {
+              // Restore what was saved but filter out legacy implicit blank rows.
+              // Preserve user-added rows (they are marked with __userAdded).
+              const loaded = Array.isArray(payload.formData) ? payload.formData.slice() : [];
+              const cleaned = loaded.filter(r => {
+                if (!r) return false;
+                if (r.__userAdded) return true;
+                if (r.name && String(r.name).trim()) return true;
+                const keys = Object.keys(initialEntry);
+                for (let k of keys) {
+                  if (r[k] && String(r[k]).trim()) return true;
+                }
+                return false;
+              });
+              setFormData(cleaned.length ? cleaned : initialLogState);
+            }
+            if (payload.metadata) setMetadata(payload.metadata);
+            if (payload.verification) setVerification(payload.verification);
+          } else if (mounted) {
           // auto-populate date fields
           const today = new Date();
           const dd = String(today.getDate()).padStart(2, '0');
@@ -88,22 +105,6 @@ export default function BOH_ShelfLifeInspectionChecklist() {
   }, []);
 
   // autosave is scheduled via the save hook when fields change
-
-  const handleEntryChange = useCallback((index, field, value) => {
-    setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
-    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
-  }, []);
-
-  const handleVerificationChange = (key, value) => {
-    setVerification(prev => ({ ...prev, [key]: value }));
-    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
-  };
-
-  const handleMetadataChange = (key, value) => {
-    setMetadata(prev => ({ ...prev, [key]: value }));
-    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
-  };
-
   // build canonical payload for storage
   const buildPayload = (status = 'draft') => ({
     formType: 'BOH_ShelfLifeInspectionChecklist',
@@ -111,7 +112,19 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     title: 'BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST',
     date: new Date().toLocaleDateString(),
     metadata,
-    formData,
+    // Persist the current table rows but filter out legacy implicit blank rows.
+    // Preserve rows that were explicitly added by the user (marked with __userAdded).
+    formData: (Array.isArray(formData) ? formData.slice() : []).filter(r => {
+      if (!r) return false;
+      if (r.__userAdded) return true; // keep user-added rows even if empty
+      // keep rows that have a name or any non-empty field
+      if (r.name && String(r.name).trim()) return true;
+      const keys = Object.keys(initialEntry);
+      for (let k of keys) {
+        if (r[k] && String(r[k]).trim()) return true;
+      }
+      return false;
+    }),
     verification,
     layoutHints: {},
     savedAt: Date.now(),
@@ -124,11 +137,55 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     setMetadata(initialMetadata);
   }, waitForSave: true });
 
+  const handleEntryChange = useCallback((index, field, value) => {
+    setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+    try { if (typeof scheduleAutoSave === 'function') scheduleAutoSave(); } catch (e) { /* ignore */ }
+  }, [scheduleAutoSave]);
+
+  const handleVerificationChange = (key, value) => {
+    setVerification(prev => ({ ...prev, [key]: value }));
+    try { if (typeof scheduleAutoSave === 'function') scheduleAutoSave(); } catch (e) { /* ignore */ }
+  };
+
+  const handleMetadataChange = (key, value) => {
+    setMetadata(prev => ({ ...prev, [key]: value }));
+    try { if (typeof scheduleAutoSave === 'function') scheduleAutoSave(); } catch (e) { /* ignore */ }
+  };
+
+
   const handleSaveDraft = async () => {
     setBusy(true);
     try { await hookSaveDraft(); } catch (e) { console.warn('save draft failed', e); }
     setBusy(false);
   };
+
+  // Expose the draft-save result to callers for easier debugging/testing
+  const handleSaveDraftAndReturn = async () => {
+    setBusy(true);
+    try {
+      const res = await hookSaveDraft();
+      return res;
+    } catch (e) {
+      console.warn('save draft failed', e);
+      throw e;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Add a new blank row after the predefined items (limit MAX_EXTRA_ROWS)
+  const addRow = useCallback(() => {
+    const baseCount = initialLogState.length;
+    const extraCount = Math.max(0, (Array.isArray(formData) ? formData.length : 0) - baseCount);
+    if (extraCount >= MAX_EXTRA_ROWS) return false;
+    setFormData(prev => {
+      const next = Array.isArray(prev) ? prev.slice() : [];
+      next.push({ name: '', ...initialEntry, __userAdded: true });
+      return next;
+    });
+    try { if (typeof scheduleAutoSave === 'function') scheduleAutoSave(); } catch (e) { /* ignore */ }
+    return true;
+  }, [formData, scheduleAutoSave]);
 
   const handleSubmit = async () => {
     setBusy(true);
@@ -144,7 +201,10 @@ export default function BOH_ShelfLifeInspectionChecklist() {
   // remain tappable when editMode is false.
   const actionButtons = (
     <View style={styles.buttonRow}>
-      <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#10b981' }]} onPress={() => addRow()} disabled={(formData.length - initialLogState.length) >= MAX_EXTRA_ROWS}>
+        <Text style={styles.btnText}>{((formData.length - initialLogState.length) >= MAX_EXTRA_ROWS) ? 'Max rows' : 'Add Row'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraftAndReturn} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
     </View>
   );
@@ -238,6 +298,7 @@ export default function BOH_ShelfLifeInspectionChecklist() {
               multiline={true}
               numberOfLines={2}
               textAlignVertical="top"
+              editable={editMode}
             />
           </View>
         );
@@ -333,11 +394,9 @@ export default function BOH_ShelfLifeInspectionChecklist() {
             duplicate buttons to avoid duplicate controls. */}
         <LoadingOverlay visible={isSaving || busy} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => {
+          // Only dismiss the notification. Do NOT clear the form here —
+          // clearing is handled by the save/submit flow (clearOnSubmit) when appropriate.
           setShowNotification(false);
-          // on OK we also clear inputs (useful when trying the Welfare form later)
-          setFormData(initialLogState);
-          setVerification(initialVerification);
-          setMetadata(initialMetadata);
         }} />
         </ScrollView>
       </View>

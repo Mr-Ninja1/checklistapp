@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getDraft } from '../utils/formDrafts';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
@@ -85,6 +86,24 @@ const PersonalHygieneChecklist = () => {
     });
 
     const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PersonalHygieneChecklist_draft', clearOnSubmit: () => { setData(initialHygieneData); setHseqSign(null); setSupervisorSign(null); } });
+
+    // hydrate draft on mount
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getDraft('PersonalHygieneChecklist_draft');
+                if (d && mounted) {
+                    if (d.formData) setData(d.formData);
+                    if (d.metadata) {
+                        if (d.metadata.hseqSign) setHseqSign(d.metadata.hseqSign);
+                        if (d.metadata.supervisorSign) setSupervisorSign(d.metadata.supervisorSign);
+                    }
+                }
+            } catch (e) { console.warn('load draft failed', e); }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     // --- Table Row Renderer for FlatList ---
     const renderItem = ({ item }) => (

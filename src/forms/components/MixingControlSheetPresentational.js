@@ -8,6 +8,19 @@ const A4_WIDTH = 794;
 
 export default function MixingControlSheetPresentational({ payload, exportingWide = false }) {
   const rows = Array.isArray(payload?.formData) ? payload.formData : [];
+  const formatTemp = (v) => {
+    if (v === null || typeof v === 'undefined') return '';
+    const s = String(v).trim();
+    if (s === '') return '';
+    // remove any degree symbols or stray C letters, then extract numeric value if present
+    const stripped = s.replace(/[°℃]/g, '').trim();
+    // try to find a numeric token
+    const m = stripped.match(/[+-]?\d+(?:\.\d+)?/);
+    if (m) return `${m[0]}°C`;
+    // fallback: if string already had a trailing C-like marker, return original
+    if (/°|℃|\bC$/i.test(s)) return s;
+    return `${stripped}°C`;
+  };
   // Calculate table width from column widths
   const columnWidths = [120, 180, 100, 220, 160, 120, 120, 160, 120, 140, 140];
   const tableWidth = columnWidths.reduce((a, b) => a + b, 0);
@@ -70,7 +83,7 @@ export default function MixingControlSheetPresentational({ payload, exportingWid
                 <View style={[styles.cell, { width: adjustedWidths[3] }]}><Text style={styles.cellText}>{String(row?.ingredients ?? '')}</Text></View>
                 <View style={[styles.cell, { width: adjustedWidths[4] }]}><Text style={styles.cellText}>{String(row?.ingredientsWeight ?? '')}</Text></View>
                 <View style={[styles.cell, { width: adjustedWidths[5] }]}><Text style={styles.cellText}>{String(row?.mixingTime ?? '')}</Text></View>
-                <View style={[styles.cell, { width: adjustedWidths[6] }]}><Text style={styles.cellText}>{String(row?.mixingTemp ?? '')}</Text></View>
+                <View style={[styles.cell, { width: adjustedWidths[6] }]}><Text style={styles.cellText}>{formatTemp(row?.mixingTemp ?? '')}</Text></View>
                 <View style={[styles.cell, { width: adjustedWidths[7] }]}><Text style={styles.cellText}>{String(row?.doughDividingScaling ?? '')}</Text></View>
                 <View style={[styles.cell, { width: adjustedWidths[8] }]}><Text style={styles.cellText}>{String(row?.productQuantity ?? '')}</Text></View>
                 <View style={[styles.cell, { width: adjustedWidths[9] }]}>
@@ -111,7 +124,7 @@ export default function MixingControlSheetPresentational({ payload, exportingWid
                   <View style={[styles.cell, { width: 220 }]}><Text style={styles.cellText}>{String(row?.ingredients ?? '')}</Text></View>
                   <View style={[styles.cell, { width: 160 }]}><Text style={styles.cellText}>{String(row?.ingredientsWeight ?? '')}</Text></View>
                   <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.mixingTime ?? '')}</Text></View>
-                  <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.mixingTemp ?? '')}</Text></View>
+                  <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{formatTemp(row?.mixingTemp ?? '')}</Text></View>
                   <View style={[styles.cell, { width: 160 }]}><Text style={styles.cellText}>{String(row?.doughDividingScaling ?? '')}</Text></View>
                   <View style={[styles.cell, { width: 120 }]}><Text style={styles.cellText}>{String(row?.productQuantity ?? '')}</Text></View>
                   <View style={[styles.cell, { width: 140 }]}>

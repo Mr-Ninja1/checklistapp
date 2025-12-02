@@ -70,7 +70,7 @@ export default function BakerySanitizingPresentational({ payload = {}, embedded 
         <View style={styles.metaRowTopSecond}>
           <View style={{ flex: 1 }}>
             <Text style={styles.metaLabel}>Verified By:</Text>
-            {renderUnderline(metadata.verifiedBy)}
+            {/* Only signature is supported for Verified By; no free-text name */}
           </View>
           <View style={{ width: 260, alignItems: 'center', marginLeft: 12 }}>
             {/* render signature image if present */}

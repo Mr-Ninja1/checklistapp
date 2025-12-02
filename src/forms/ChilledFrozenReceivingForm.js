@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import useFormSave from '../hooks/useFormSave';
 import { addFormHistory, removeFormHistory } from '../utils/formHistory';
+import { getDraft } from '../utils/formDrafts';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FormActionBar from '../components/FormActionBar';
@@ -76,6 +77,25 @@ const ChilledFrozenReceivingForm = () => {
 
     // integrate useFormSave hook (buildCanonicalPayload already defined above)
     const DRAFT_ID = 'ChilledFrozenReceiving_draft';
+    // hydrate draft on mount
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getDraft(DRAFT_ID);
+                if (d && mounted) {
+                    if (d.formData) setReceivingData(d.formData);
+                    if (d.metadata) {
+                        if (d.metadata.issueDate) setIssueDate(d.metadata.issueDate);
+                        setDeliveryDetails(prev => ({ ...prev, ...d.metadata }));
+                        if (d.metadata.verifiedBySign) setVerifiedBySign(d.metadata.verifiedBySign);
+                        if (d.metadata.hseqManagerSign) setHseqManagerSign(d.metadata.hseqManagerSign);
+                    }
+                }
+            } catch (e) { console.warn('load draft failed', e); }
+        })();
+        return () => { mounted = false; };
+    }, []);
     const { isSaving: saving, showNotification: hookShowNotification, notificationMessage: hookNotificationMessage, setShowNotification: setHookShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave(buildCanonicalPayload, { formType: 'ChilledFrozenReceiving', draftId: DRAFT_ID, clearOnSubmit: () => {
         // reset local form state on submit
         setReceivingData(createInitialProductData(10));

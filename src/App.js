@@ -166,6 +166,8 @@ export default function App() {
   <Stack.Screen name="Kitchen_WeeklyCleaningChecklist" component={require('./forms/Kitchen_WeeklyCleaningChecklist').default} />
       <Stack.Screen name="CoolingTemperatureLog" component={require('./forms/CoolingTemperatureLog').default} />
   <Stack.Screen name="Bakery_SanitizingLog" component={require('./forms/Bakery_SanitizingLog').default} />
+  <Stack.Screen name="Bakery_SanitizingLog_AM" component={require('./forms/Bakery_SanitizingLog_AM').default} />
+  <Stack.Screen name="Bakery_SanitizingLog_PM" component={require('./forms/Bakery_SanitizingLog_PM').default} />
   <Stack.Screen name="Bakery_CleaningChecklist" component={require('./forms/Bakery_CleaningChecklist').default} />
   <Stack.Screen name="Bakery_UnderbarShelfLifeInspectionChecklist" component={Bakery_UnderbarShelfLifeInspectionChecklist} />
   <Stack.Screen name="WelfareFacilities_CleaningChecklist" component={require('./forms/WelfareFacilities_CleaningChecklist').default} />

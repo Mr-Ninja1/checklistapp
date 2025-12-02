@@ -22,6 +22,25 @@ export default function PreShiftMeetingRegister() {
   // 20 total rows: 10 left, 10 right
   const rows = Array.from({ length: 20 }, (_, i) => i + 1);
 
+  // State (declare before effects that reference them)
+  const [agenda, setAgenda] = useState(''); // Updated from Subject
+  const [presenter, setPresenter] = useState('');
+  const [dateVal, setDateVal] = useState(() => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+    const year = today.getFullYear();
+    return `${day}/${month}/${year}`;
+  });
+  const [issues, setIssues] = useState(['', '', '', '']); // Updated from Topics
+  // Initialize state for 20 rows, using only 4 fields (NRC removed)
+  const [cells, setCells] = useState(() => {
+    const state = { left: {}, right: {} };
+    for (let i = 1; i <= 10; i++) state.left[i] = { name: '', job: '', sign: '' };
+    for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' };
+    return state;
+  });
+
   // Load draft on mount
   React.useEffect(() => {
     let mounted = true;
@@ -103,27 +122,8 @@ export default function PreShiftMeetingRegister() {
       await setDraft(draftKey, { agenda, presenter, dateVal, issues, cells });
       Alert.alert('Draft saved');
     } catch (e) { Alert.alert('Error', 'Failed to save draft'); }
+
   };
-  const [agenda, setAgenda] = useState(''); // Updated from Subject
-  const [presenter, setPresenter] = useState('');
-  const [dateVal, setDateVal] = useState(() => {
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
-    const year = today.getFullYear();
-    return `${day}/${month}/${year}`;
-  });
-  const [issues, setIssues] = useState(['', '', '', '']); // Updated from Topics
-  
-  // Initialize state for 20 rows, using only 4 fields (NRC removed)
-  const [cells, setCells] = useState(() => {
-    const state = { left: {}, right: {} };
-    // Initialize 10 rows for the left table
-  for (let i = 1; i <= 10; i++) state.left[i] = { name: '', job: '', sign: '' }; 
-    // Initialize 10 rows for the right table (indices 11 to 20)
-  for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' }; 
-    return state;
-  });
 
   const updateCell = (side, idx, field, value) => {
     setCells(prev => ({
@@ -304,10 +304,10 @@ export default function PreShiftMeetingRegister() {
         {/* Action buttons - placed inside ScrollView so they can be scrolled into view */}
         <View style={{ height: 18 }} />
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-          <TouchableOpacity onPress={editMode ? handleSaveDraft : undefined} style={{ backgroundColor: '#f0ad4e', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, opacity: editMode ? 1 : 0.6 }} disabled={!editMode}>
+          <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#F59E0B', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={editMode ? handleSubmit : undefined} style={{ backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8, opacity: editMode ? 1 : 0.6 }} disabled={!editMode}>
+          <TouchableOpacity onPress={handleSubmit} style={{ backgroundColor: '#4F46E5', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }}>
             <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
           </TouchableOpacity>
         </View>

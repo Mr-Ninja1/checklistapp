@@ -86,9 +86,20 @@ export default function useFormSave(a, b = {}) {
       const payload = safeGetPayload('draft');
       // Save drafts to the stable draft location so they don't add history entries
       const stableId = stableDraftId || `${formType}_draft`;
-      if (formStorage.saveDraft) await formStorage.saveDraft(stableId, payload);
-      else await formStorage.saveForm(stableId, payload);
-      // Intentionally silent for drafts/autosave: do not set isSaving or showNotification.
+      let res = null;
+      if (formStorage.saveDraft) res = await formStorage.saveDraft(stableId, payload);
+      else res = await formStorage.saveForm(stableId, payload);
+      // Log the saved draft location for easier debugging during development
+      try { console.info('useFormSave: draft saved', { stableId, filePath: res && res.filePath }); } catch (e) {}
+      // Inform the user that a draft was saved when invoked explicitly
+      try {
+        if (mounted.current) {
+          setNotificationMessage('Draft saved');
+          setShowNotification(true);
+        }
+      } catch (e) {}
+      // Return the storage result for callers that want to inspect filePath
+      return res;
     } catch (e) {
       console.error('useFormSave handleSaveDraft failed', e);
     } finally {

@@ -17,7 +17,7 @@ const SafeText = ({ value, style, ...rest }) => {
 
 
 const DRAFT_KEY = 'cooking_temperature_log_draft';
-const MAX_ROWS = 15;
+const MAX_ROWS = 20;
 
 const emptyRow = {
     foodItem: '',

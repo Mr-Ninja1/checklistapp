@@ -138,15 +138,26 @@ export default function BakingControlSheet({ navigation }) {
               })()
             )
           ) : (
-            <TextInput
-              value={item[col.key]}
-              onChangeText={v => handleEntryChange(index, col.key, v)}
-              style={styles.input}
-              multiline={true}
-              numberOfLines={2}
-              textAlignVertical="top"
-              editable={editMode}
-            />
+              (() => {
+                // For temperature columns, show °C suffix in read-only mode
+                if ((col.key === 'proofingTemp' || col.key === 'ovenTemp') && !editMode) {
+                  const raw = item[col.key] || '';
+                  const s = String(raw).trim();
+                  const display = s ? (s.includes('°') ? s : `${s} °C`) : '';
+                  return <Text style={styles.readOnlyCell}>{display}</Text>;
+                }
+                return (
+                  <TextInput
+                    value={item[col.key]}
+                    onChangeText={v => handleEntryChange(index, col.key, v)}
+                    style={styles.input}
+                    multiline={true}
+                    numberOfLines={2}
+                    textAlignVertical="top"
+                    editable={editMode}
+                  />
+                );
+              })()
           )}
         </View>
       ))}
@@ -261,6 +272,7 @@ const styles = StyleSheet.create({
   cell: { padding: 6, borderRightWidth: 1.2, borderRightColor: '#333' },
   // make inputs taller for multi-line content
   input: { padding: 8, fontSize: 12, textAlign: 'left', minHeight: 48, lineHeight: 18 },
+  readOnlyCell: { paddingVertical: 6, paddingHorizontal: 4, textAlign: 'left', fontSize: 12, color: '#333' },
   buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingVertical: 12, gap: 8 },
   btn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, marginLeft: 8 },
   btnText: { color: '#fff', fontWeight: '700' },

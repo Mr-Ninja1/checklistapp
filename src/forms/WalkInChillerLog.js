@@ -84,17 +84,39 @@ function normalizeSignatureToDataUri(v) {
   return null;
 }
 
-const Slot = React.memo(({ value, onChange, editable, signatureWidth = 140, signatureHeight = 44 }) => (
+function normalizeTempInput(t) {
+  if (t === null || typeof t === 'undefined') return '';
+  const s = String(t).trim();
+  if (s === '') return '';
+  // strip any degree symbols and try to extract numeric value
+  const stripped = s.replace(/[°℃]/g, '').trim();
+  const m = stripped.match(/[+-]?\d+(?:\.\d+)?/);
+  if (m) return `${m[0]}°C`;
+  // fallback: return stripped with °C appended
+  return `${stripped}°C`;
+}
+
+function formatTempDisplay(v) {
+  if (v === null || typeof v === 'undefined') return '';
+  const s = String(v).trim();
+  if (s === '') return '';
+  const stripped = s.replace(/[°℃]/g, '').trim();
+  const m = stripped.match(/[+-]?\d+(?:\.\d+)?/);
+  if (m) return `${m[0]}°C`;
+  return `${stripped}°C`;
+}
+
+  const Slot = React.memo(({ value, onChange, editable, signatureWidth = 140, signatureHeight = 44 }) => (
   <View style={styles.slotRow}>
     {editable ? (
       <>
-        <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
+        <TextInput value={value.temp} onChangeText={t => onChange('temp', normalizeTempInput(t))} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
         <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
         <SignatureField value={value.sign} onChange={(v) => onChange('sign', v)} editable={editable} width={signatureWidth} height={signatureHeight} placeholder="Sign" />
       </>
     ) : (
       <>
-        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.temp}</Text>
+        <Text style={[styles.slotReadText, { flex: 1 }]}>{formatTempDisplay(value.temp)}</Text>
         <Text style={[styles.slotReadText, { flex: 1 }]}>{value.time}</Text>
         {(() => {
           const uri = normalizeSignatureToDataUri(value.sign);

@@ -50,14 +50,17 @@ export default function SignatureField({ value, onChange, editable = true, heigh
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <TouchableOpacity onPress={() => setVisible(true)} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8} accessible={true} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <TouchableOpacity onPress={() => {
+          if (debugMode) console.debug('SignatureField: preview pressed, opening modal');
+          setVisible(true);
+        }} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8} accessible={true} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         {previewUri ? (
           <Image source={{ uri: previewUri }} style={{ width: width, height: height, resizeMode: 'contain' }} />
         ) : (
           <Text style={styles.placeholder}>Tap to sign</Text>
         )}
       </TouchableOpacity>
-      <Modal visible={visible} transparent={!debugMode} animationType="fade" onRequestClose={() => setVisible(false)} onDismiss={() => setVisible(false)}>
+      <Modal visible={visible} transparent={!debugMode} animationType="fade" onRequestClose={() => setVisible(false)} onDismiss={() => setVisible(false)} onShow={() => { if (debugMode) console.debug('SignatureField: modal shown'); }}>
         <View style={[styles.overlay, debugMode ? styles.overlayDebug : null]}>
             <View style={[styles.modalBox, { width: modalWidth, maxHeight: modalHeight }] }>
               {/* Wrap signature pad in a ScrollView so on very small devices the content can scroll

@@ -10,7 +10,7 @@ import SignatureThumb from '../../components/SignatureThumb';
 
 
 const DRAFT_KEY = 'cooling_temperature_log_draft';
-const MAX_ROWS = 12; // Matching the visible rows in the image
+const MAX_ROWS = 20; // Set to 20 rows per request
 
 const emptyRow = {
     foodItem: '',

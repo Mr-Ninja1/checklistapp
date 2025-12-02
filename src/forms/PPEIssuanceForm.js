@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { getDraft } from '../utils/formDrafts';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -166,6 +167,20 @@ const PPEIssuanceForm = () => {
 
     // wire save hook
     const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PPEIssuance_draft', clearOnSubmit: () => { setData(initialPPEData); } });
+
+    // hydrate draft on mount
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getDraft('PPEIssuance_draft');
+                if (d && mounted) {
+                    if (d.formData) setData(d.formData);
+                }
+            } catch (e) { console.warn('load draft failed', e); }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     return (
         <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={() => handleSaveDraft()}>

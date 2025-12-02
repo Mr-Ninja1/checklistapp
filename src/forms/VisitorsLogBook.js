@@ -1,7 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
+import { getDraft } from '../utils/formDrafts';
 import EditableFormContainer from '../components/EditableFormContainer';
 import NotificationModal from '../components/NotificationModal';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -327,6 +328,30 @@ export default function VisitorsLogBook() {
     setAuthorizedBySign(null);
     setHealthAnswers(initialHealthAnswers);
   } });
+
+  // hydrate draft on mount
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const d = await getDraft('VisitorsLogBook_draft');
+        if (d && mounted) {
+          if (d.formData) setVisitorEntries(d.formData || initialVisitorLog);
+          if (d.metadata) {
+            if (d.metadata.site) setSite(d.metadata.site);
+            if (d.metadata.section) setSection(d.metadata.section);
+            if (d.metadata.month) setMonth(d.metadata.month);
+            if (d.metadata.year) setYear(d.metadata.year);
+            if (d.metadata.siteManager) setSiteManager(d.metadata.siteManager);
+            if (d.metadata.verifiedManager) setVerifiedManager(d.metadata.verifiedManager);
+            if (d.metadata.authorizedBySign) setAuthorizedBySign(d.metadata.authorizedBySign);
+          }
+          if (d.healthAnswers) setHealthAnswers(prev => ({ ...prev, ...d.healthAnswers }));
+        }
+      } catch (e) { console.warn('load draft failed', e); }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Compute a local issueDate for display (canonical issueDate will be set at save time)
   const issueDate = useMemo(() => formatIssueDate(), []);

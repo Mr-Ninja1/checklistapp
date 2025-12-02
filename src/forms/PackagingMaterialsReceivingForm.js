@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getDraft } from '../utils/formDrafts';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 import SignatureField from '../components/SignatureField';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -68,6 +69,26 @@ const PackagingMaterialsReceivingForm = () => {
     });
 
     const { autoSaveDraft, handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave(buildCanonicalPayload, { formType: 'PackagingMaterialsReceivingForm', draftId: 'PackagingMaterialsReceivingForm_draft', clearOnSubmit: () => setReceivingData(createInitialProductData(10)) });
+
+    // hydrate draft on mount
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getDraft('PackagingMaterialsReceivingForm_draft');
+                if (d && mounted) {
+                    if (d.formData) setReceivingData(d.formData);
+                    if (d.metadata) {
+                        if (d.metadata.issueDate) setIssueDate(d.metadata.issueDate);
+                        setDeliveryDetails(prev => ({ ...prev, ...d.metadata }));
+                        if (d.metadata.verifiedBySign) setVerifiedBySign(d.metadata.verifiedBySign);
+                        if (d.metadata.hseqManagerSign) setHseqManagerSign(d.metadata.hseqManagerSign);
+                    }
+                }
+            } catch (e) { console.warn('load draft failed', e); }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     const renderReceivingLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>

@@ -17,7 +17,29 @@ async function saveForm(formId, payload) {
       }
     } catch (e) { /* ignore */ }
     const wrapped = { payload, savedAt: Date.now() };
-    await FileSystem.writeAsStringAsync(filePath, JSON.stringify(wrapped));
+    // storedFilePath will hold the actual storage path (fs path or localStorage key)
+    let storedFilePath = filePath;
+    try {
+      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(wrapped));
+    } catch (e) {
+      // expo-file-system may be unavailable on web builds (UnavailabilityError).
+      // Fall back to localStorage when running in a web environment so saves
+      // still work during web testing/dev. Use a predictable key so loadForm
+      // can read the same value. Do NOT return early here — we still need to
+      // register a history entry below.
+      try {
+        if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+          const key = `forms:${formId}`;
+          globalThis.localStorage.setItem(key, JSON.stringify(wrapped));
+          storedFilePath = `localStorage:${key}`;
+        } else {
+          // if localStorage also unavailable, rethrow original error
+          throw e;
+        }
+      } catch (err) {
+        throw e;
+      }
+    }
 
     // Register a lightweight history entry so the saved form appears in the saved list
     // Register a lightweight history entry so the saved form appears in the saved list.
@@ -28,7 +50,7 @@ async function saveForm(formId, payload) {
     // block which caused a ReferenceError when referenced below.
     let historyEntry = null;
     try {
-  historyEntry = { title: payload.title || payload.formType || 'Saved Form', date: payload.date || null, shift: payload.shift || null, savedAt: Date.now(), meta: { formId, filePath, payload } };
+  historyEntry = { title: payload.title || payload.formType || 'Saved Form', date: payload.date || null, shift: payload.shift || null, savedAt: Date.now(), meta: { formId, filePath: storedFilePath, payload } };
       // Await history registration so callers that wait for the save will see the
       // new entry present in the history index immediately. Failures are logged
       // but won't prevent the save from returning.
@@ -79,7 +101,20 @@ async function saveDraft(formId, payload) {
       }
     } catch (e) { /* ignore */ }
     const wrapped = { payload, savedAt: Date.now() };
-    await FileSystem.writeAsStringAsync(filePath, JSON.stringify(wrapped));
+    try {
+      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(wrapped));
+    } catch (e) {
+      // Fallback to localStorage on web
+      try {
+        if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+          const key = `forms:${formId}`;
+          globalThis.localStorage.setItem(key, JSON.stringify(wrapped));
+          return { filePath: `localStorage:${key}` };
+        }
+      } catch (err) {
+        throw e;
+      }
+    }
     // NOTE: Drafts are intentionally saved locally only. We don't auto-upload
     // or enqueue drafts to avoid accidental duplicate uploads and to respect
     // the user's expectation that drafts remain local until explicitly saved
@@ -95,10 +130,24 @@ async function saveDraft(formId, payload) {
 async function loadForm(formId) {
   const filePath = BASE_DIR + `${formId}/payload.json`;
   try {
-    const info = await FileSystem.getInfoAsync(filePath);
-    if (!info.exists) return null;
-    const raw = await FileSystem.readAsStringAsync(filePath);
-    return JSON.parse(raw);
+    try {
+      const info = await FileSystem.getInfoAsync(filePath);
+      if (!info.exists) return null;
+      const raw = await FileSystem.readAsStringAsync(filePath);
+      return JSON.parse(raw);
+    } catch (e) {
+      // If file system is unavailable (e.g., web), try reading from localStorage
+      try {
+        if (typeof globalThis !== 'undefined' && globalThis.localStorage) {
+          const key = `forms:${formId}`;
+          const raw = globalThis.localStorage.getItem(key);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        }
+      } catch (err) {
+        throw e;
+      }
+    }
   } catch (err) {
     console.error('formStorage.loadForm error', err);
     throw err;

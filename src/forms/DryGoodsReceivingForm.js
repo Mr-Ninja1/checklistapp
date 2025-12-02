@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
@@ -149,6 +150,26 @@ const DryGoodsReceivingForm = () => {
 
     const getPayload = (status) => buildCanonicalPayload(status);
     const { isSaving: saving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, autoSaveDraft, handleSaveDraft, handleSubmit } = useFormSave(getPayload, { formType: 'DryGoodsReceivingForm', draftId: 'DryGoodsReceivingForm_draft', clearOnSubmit: () => clearForm(), waitForSave: false });
+
+    // hydrate draft on mount (if present)
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const d = await getDraft('DryGoodsReceivingForm_draft');
+                if (d && mounted) {
+                    if (d.formData) setReceivingData(d.formData);
+                    if (d.metadata) {
+                        if (d.metadata.issueDate) setIssueDate(d.metadata.issueDate);
+                        setDeliveryDetails(prev => ({ ...prev, ...d.metadata }));
+                        if (d.metadata.verifiedBySign) setVerifiedBySign(d.metadata.verifiedBySign);
+                        if (d.metadata.hseqManagerSign) setHseqManagerSign(d.metadata.hseqManagerSign);
+                    }
+                }
+            } catch (e) { console.warn('load draft failed', e); }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     // clear form wrapper used on submit
     const onClear = () => clearForm();

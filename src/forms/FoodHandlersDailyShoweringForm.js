@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
+import { getDraft } from '../utils/formDrafts';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { Asset } from 'expo-asset';
@@ -144,6 +145,27 @@ export default function FoodHandlersDailyShoweringForm() {
   // Edit mode toggles whether inputs are editable. Default: read-only so scrolling works everywhere.
   const [editMode, setEditMode] = useState(false);
 
+  // Load draft on mount so previously saved drafts are restored
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const d = await getDraft(draftId).catch(() => null);
+        if (!d || !mounted) return;
+        // getDraft returns the saved payload (we wrote payload via useFormSave)
+        if (d.logEntries) setLogEntries(d.logEntries);
+        if (d.week) setWeek(d.week);
+        if (d.month) setMonth(d.month);
+        if (d.year) setYear(String(d.year));
+        if (d.compiledBy) setCompiledBy(d.compiledBy);
+        if (d.approvedBy) setApprovedBy(d.approvedBy);
+        if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
+        if (d.assets && d.assets.logoDataUri) setLogoDataUri(d.assets.logoDataUri);
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   // embed logo as base64 for deterministic presentational rendering
   React.useEffect(() => {
     let mounted = true;
@@ -245,7 +267,7 @@ export default function FoodHandlersDailyShoweringForm() {
               )}
               <Text style={styles.labelText}>Verified By:</Text>
               {editMode ? (
-                <SignatureField value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={220} height={60} placeholder="Tap to sign - Verified By" />
+                <SignatureField debugMode={true} value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={220} height={60} placeholder="Tap to sign - Verified By" />
               ) : (
                 verifiedBy ? (
                   <Image source={{ uri: String(verifiedBy).startsWith('data:') ? verifiedBy : `data:image/png;base64,${verifiedBy}` }} style={{ width: 220, height: 60, resizeMode: 'contain' }} />
@@ -391,6 +413,7 @@ export default function FoodHandlersDailyShoweringForm() {
                                             scheduleAutoSave();
                                           }}
                                           editable={true}
+                                          debugMode={true}
                                           width={Math.max(48, w - 8)}
                                           height={Math.max(40, W_FIXED.rowHeight)}
                                           placeholder="Tap to sign"
@@ -448,14 +471,14 @@ export default function FoodHandlersDailyShoweringForm() {
         accessibilityLabel={editMode ? 'Finish editing form' : 'Edit form'}
         accessibilityRole="button"
         style={[styles.fabLarge, editMode ? styles.fabActiveLarge : null]}
-        onPress={() => {
-          if (editMode) {
-            // Leaving edit mode: blur keyboard and save draft
-            Keyboard.dismiss();
-            handleSaveDraft();
-          }
-          setEditMode(!editMode);
-        }}
+        onPress={async () => {
+            if (editMode) {
+              // Leaving edit mode: blur keyboard and save draft
+              Keyboard.dismiss();
+              try { await handleSaveDraft(); } catch (e) { /* ignore */ }
+            }
+            setEditMode(!editMode);
+          }}
       >
         <Text style={styles.fabTextLarge}>{editMode ? 'Done' : 'Edit'}</Text>
       </TouchableOpacity>

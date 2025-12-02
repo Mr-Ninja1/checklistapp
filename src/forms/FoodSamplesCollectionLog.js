@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
+import { getDraft } from '../utils/formDrafts';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import FormActionBar from '../components/FormActionBar';
@@ -81,6 +82,24 @@ export default function FoodSamplesCollectionLog() {
     setLogEntries(initialLog);
     setSite(''); setLocation(''); setSupervisorName(''); setSupervisorSign('');
   } });
+
+  // hydrate draft on mount
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const d = await getDraft(draftId);
+        if (d && mounted) {
+          if (d.formData && d.formData.logEntries) setLogEntries(d.formData.logEntries);
+          if (d.site) setSite(d.site);
+          if (d.location) setLocation(d.location);
+          if (d.supervisorName) setSupervisorName(d.supervisorName);
+          if (d.supervisorSign) setSupervisorSign(d.supervisorSign);
+        }
+      } catch (e) { console.warn('load draft failed', e); }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const updateLogEntry = (index, field, value) => {
     setLogEntries(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
