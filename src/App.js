@@ -1,6 +1,6 @@
 // No changes needed; the file is already valid JavaScript.
 import React, { useEffect } from 'react';
-import { LogBox, Alert } from 'react-native';
+import { LogBox, Alert, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from './screens/SplashScreen';
@@ -24,9 +24,10 @@ import DeepFreezerTemperatureLog_Storage from './forms/DeepFreezerTemperatureLog
 import DeepFreezerTemperatureLog_Blast from './forms/DeepFreezerTemperatureLog_Blast';
 import DeepFreezerTemperatureLog_Production from './forms/DeepFreezerTemperatureLog_Production';
 import DisplayChillerTemperatureLog_Upright from './forms/DisplayChillerTemperatureLog_Upright';
+import DisplayChillerTemperatureLog_Underbar from './forms/DisplayChillerTemperatureLog_Underbar';
+import MouldingProofingBakingLog from './forms/MouldingProofingBakingLog';
 import DisplayChillerTemperatureLog_GrabAndGo from './forms/DisplayChillerTemperatureLog_GrabAndGo';
 import DisplayChillerTemperatureLog_Gelato from './forms/DisplayChillerTemperatureLog_Gelato';
-import DisplayChillerTemperatureLog_Underbar from './forms/DisplayChillerTemperatureLog_Underbar';
 import CustomerSatisfactionQuestionnaire from './forms/CustomerSatisfactionQuestionnaire';
 import PPEIssuanceForm from './forms/PPEIssuanceForm';
 import PersonalHygieneChecklist from './forms/PersonalHygieneChecklist';
@@ -95,6 +96,15 @@ const linking = {
 
 export default function App() {
   useEffect(() => {
+    // Ensure the browser document allows scrolling on web builds.
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      try {
+        document.documentElement.style.height = '100%';
+        document.body.style.height = '100%';
+        document.documentElement.style.overflowY = 'auto';
+        document.body.style.overflowY = 'auto';
+      } catch (e) { /* ignore web styling errors */ }
+    }
     // Suppress noisy deprecation warnings coming from third-party libs
     // that still access removed React Native exports. These should be
     // resolved by upgrading those dependencies; this is a temporary
@@ -182,9 +192,11 @@ export default function App() {
   <Stack.Screen name="DeepFreezerTemperatureLog_Blast" component={DeepFreezerTemperatureLog_Blast} />
   <Stack.Screen name="DeepFreezerTemperatureLog_Production" component={DeepFreezerTemperatureLog_Production} />
   <Stack.Screen name="DisplayChillerTemperatureLog_Upright" component={DisplayChillerTemperatureLog_Upright} />
+  <Stack.Screen name="DisplayChillerTemperatureLog_Underbar" component={DisplayChillerTemperatureLog_Underbar} />
+  <Stack.Screen name="MouldingProofingBakingLog" component={MouldingProofingBakingLog} />
   <Stack.Screen name="DisplayChillerTemperatureLog_GrabAndGo" component={DisplayChillerTemperatureLog_GrabAndGo} />
   <Stack.Screen name="DisplayChillerTemperatureLog_Gelato" component={DisplayChillerTemperatureLog_Gelato} />
-  <Stack.Screen name="DisplayChillerTemperatureLog_Underbar" component={DisplayChillerTemperatureLog_Underbar} />
+  
   <Stack.Screen name="CustomerSatisfactionQuestionnaire" component={CustomerSatisfactionQuestionnaire} />
   <Stack.Screen name="PPEIssuanceForm" component={PPEIssuanceForm} />
   <Stack.Screen name="PersonalHygieneChecklist" component={PersonalHygieneChecklist} />

@@ -89,7 +89,6 @@ export async function httpProbe(timeoutMs = PROBE_TIMEOUT_MS, url = PROBE_URL) {
     clearTimeout(id);
     // The generate_204 endpoint returns 204 on success. Treat 2xx as success.
     const ok = !!(resp && (resp.status === 204 || (resp.status >= 200 && resp.status < 300)));
-    try { if (ok) console.log('uploadQueue.httpProbe -> internet reachable'); } catch (e) {}
     return ok;
   } catch (e) {
     return false;

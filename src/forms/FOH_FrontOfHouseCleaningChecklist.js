@@ -209,7 +209,7 @@ export default function FrontOfHouseChecklist() {
             {editMode ? (
               <TextInput
                 style={styles.cellInput}
-                maxLength={5}
+                maxLength={30}
                 value={item.checks[day].cleanedBy}
                 onChangeText={(text) => handleCellChange(item.id, day, 'cleanedBy', text)}
                 placeholder="Name"

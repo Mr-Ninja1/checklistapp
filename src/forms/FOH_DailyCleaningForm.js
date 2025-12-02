@@ -17,8 +17,6 @@ import SignatureField from '../components/SignatureField';
 // --- DATA STRUCTURE ---
 const TIME_SLOTS = ['15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00'];
 const EQUIPMENT_LIST = [
-  'TABLES',
-  'CHAIRS',
   'GRAB AND GO CHILLER',
   'GELATO CHILLER',
   'COFFEE MACHINE',
@@ -210,7 +208,7 @@ export default function FOH_DailyCleaningForm() {
         await formStorage.saveForm(formId, payload);
       } catch (e) {
         // fallback to older history if storage fails
-        try { await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
+        try { await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH- PM', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
       }
 
       try { await removeDraft(draftKey); } catch (e) {}
@@ -252,7 +250,7 @@ export default function FOH_DailyCleaningForm() {
         <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.companyName}>Bravo</Text>
       </View>
-      <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH</Text></View>
+      <View style={styles.titleRow}><Text style={[styles.title, { fontSize: ms(14) }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH - PM</Text></View>
 
        {/* Duplicate FormActionBar removed */}
 

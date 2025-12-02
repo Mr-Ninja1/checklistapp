@@ -32,6 +32,7 @@ import ProductReleasePresentational from '../forms/components/ProductReleasePres
 import CustomerSatisfactionPresentational from '../forms/components/CustomerSatisfactionPresentational';
 import CustomerSatisfactionQuestionnairePresentational from '../forms/components/CustomerSatisfactionQuestionnairePresentational';
 import BakerySanitizingPresentational from '../forms/components/BakerySanitizingPresentational';
+import MouldingProofingBakingLogPresentational from '../forms/components/MouldingProofingBakingLogPresentational';
 import BakeryCleaningChecklistPresentational from '../forms/components/BakeryCleaningChecklistPresentational';
 import BakingControlSheetPresentational from '../forms/components/BakingControlSheetPresentational';
 import MixingControlSheetPresentational from '../forms/components/MixingControlSheetPresentational';
@@ -224,6 +225,9 @@ export default function SavedFormRenderer({ savedPayload, embedded = false, expo
   // Bakery forms
   if (/Bakery_SanitizingLog|Sanitizing Log|Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery/i.test(type)) {
     return <BakerySanitizingPresentational payload={payload} embedded={embedded} />;
+  }
+  if (/MouldingProofingBakingLog|MOULDING PROOFING AND BAKING LOG SHEET/i.test(type)) {
+    return <MouldingProofingBakingLogPresentational payload={payload} />;
   }
   if (/Bakery_CleaningChecklist|Bakery Area Cleaning Checklist|BAKERY AREA CLEANING CHECKLIST|BakeryCleaningChecklist/i.test(type)) {
     return <BakeryCleaningChecklistPresentational payload={payload} />;
