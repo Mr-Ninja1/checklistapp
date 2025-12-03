@@ -3,6 +3,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal, ActivityIndicator } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as Updates from 'expo-updates';
 import ViewDocumentModal from '../components/ViewDocumentModal';
 import DriveFloatingButton from '../components/DriveFloatingButton';
 import formStorage from '../utils/formStorage';
@@ -74,6 +75,34 @@ export default function FormSavesScreen() {
     } catch (e) {
       setLoadingHistory(false);
       setSavedForms([]);
+    }
+  };
+
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+
+  const manualCheckForUpdate = async () => {
+    try {
+      setCheckingUpdate(true);
+      const start = Date.now();
+      const { isAvailable } = await Updates.checkForUpdateAsync();
+      const checkTime = Math.round((Date.now() - start) / 1000);
+      if (!isAvailable) {
+        Alert.alert('Update check', `No update available (checked in ${checkTime}s).\nruntimeVersion: ${Updates.runtimeVersion || 'unknown'}`);
+        setCheckingUpdate(false);
+        return;
+      }
+      const fetchStart = Date.now();
+      await Updates.fetchUpdateAsync();
+      const fetchTime = Math.round((Date.now() - fetchStart) / 1000);
+      Alert.alert('Update downloaded', `Update fetched in ${fetchTime}s.\nruntimeVersion: ${Updates.runtimeVersion || 'unknown'}. Restart now to apply.`, [
+        { text: 'Restart now', onPress: async () => { try { await Updates.reloadAsync(); } catch (e) { console.warn('reload failed', e); } } },
+        { text: 'Later', style: 'cancel' }
+      ], { cancelable: false });
+    } catch (e) {
+      console.warn('manual update check failed', e);
+      Alert.alert('Update error', String(e));
+    } finally {
+      setCheckingUpdate(false);
     }
   };
 
@@ -254,10 +283,13 @@ export default function FormSavesScreen() {
             style={styles.searchInput}
             placeholderTextColor="#6b7280"
           />
-          {/* Manual refresh placed below the search input for immediate visibility after restores */}
-          <View style={{ marginTop: 8, marginBottom: 8, alignItems: 'flex-end' }}>
+          {/* Manual refresh and manual update check placed below the search input for immediate visibility */}
+          <View style={{ marginTop: 8, marginBottom: 8, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
             <TouchableOpacity style={styles.smallActionBtnCompact} onPress={() => loadHistory()}>
               <Text style={styles.smallActionBtnText}>{loadingHistory ? 'Refreshing...' : 'Refresh'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.smallActionBtnCompact, { marginLeft: 8 }]} onPress={() => manualCheckForUpdate()}>
+              <Text style={styles.smallActionBtnText}>{checkingUpdate ? 'Checking...' : 'Check for update'}</Text>
             </TouchableOpacity>
           </View>
           {/* Year -> Months modal: shows months available for the selected year */}

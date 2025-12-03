@@ -33,7 +33,16 @@ const ProductReleaseForm = () => {
     const today = new Date();
     const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
     const defaultIssueDate = `${pad(today.getDate())}/${pad(today.getMonth() + 1)}/${today.getFullYear()}`;
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const defaultMonthValue = monthNames[today.getMonth()];
+    const defaultYearValue = `${today.getFullYear()}`;
     const [issueDate, setIssueDate] = useState(defaultIssueDate);
+    const [compiledBy, setCompiledBy] = useState('Michael C. Zulu');
+    const [approvedBy, setApprovedBy] = useState('Hassani Ali');
+    const [siteName, setSiteName] = useState('');
+    const [weekStarting, setWeekStarting] = useState('');
+    const [monthValue, setMonthValue] = useState(defaultMonthValue);
+    const [yearValue, setYearValue] = useState(defaultYearValue);
     const [editMode, setEditMode] = useState(false);
     const docRef = useMemo(() => 'BBN-SHEQ-P-F-8.9', []);
 
@@ -110,7 +119,7 @@ const ProductReleaseForm = () => {
         formType: 'ProductReleaseForm',
         templateVersion: '01',
         title: 'Product Release Form',
-        metadata: { issueDate },
+        metadata: { issueDate, compiledBy, approvedBy, site: siteName, weekStarting, month: monthValue, year: yearValue },
         formData: productData,
         layoutHints: {},
         assets: {},
@@ -119,18 +128,39 @@ const ProductReleaseForm = () => {
     });
 
     const draftId = 'ProductReleaseForm_draft';
-    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); } });
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); setCompiledBy('Michael C. Zulu'); setApprovedBy('Hassani Ali'); setSiteName(''); setWeekStarting(''); setMonthValue(''); setYearValue(''); } });
 
     // preload draft if present
     useEffect(() => {
         let mounted = true;
-        (async () => {
+                (async () => {
             try {
                 const wrapped = await formStorage.loadForm(draftId);
                 const payload = wrapped?.payload || null;
                 if (payload && mounted) {
                     if (payload.formData) setProductData(payload.formData);
-                    if (payload.metadata) setIssueDate(payload.metadata.issueDate || defaultIssueDate);
+                    if (payload.metadata) {
+                        setIssueDate(payload.metadata.issueDate || defaultIssueDate);
+                        setCompiledBy(payload.metadata.compiledBy || 'Michael C. Zulu');
+                        setApprovedBy(payload.metadata.approvedBy || 'Hassani Ali');
+                        setSiteName(payload.metadata.site || '');
+                        setWeekStarting(payload.metadata.weekStarting || '');
+                        // Accept either numeric month (1-12) or month name; fall back to default month name
+                        const loadedMonth = payload.metadata.month;
+                        if (loadedMonth) {
+                            const maybe = String(loadedMonth).trim();
+                            if (/^\d+$/.test(maybe)) {
+                                const idx = parseInt(maybe, 10) - 1;
+                                if (idx >= 0 && idx < 12) setMonthValue(monthNames[idx]);
+                                else setMonthValue(defaultMonthValue);
+                            } else {
+                                setMonthValue(maybe);
+                            }
+                        } else {
+                            setMonthValue(defaultMonthValue);
+                        }
+                        setYearValue(payload.metadata.year || defaultYearValue);
+                    }
                 }
             } catch (e) { /* ignore */ }
         })();
@@ -176,26 +206,26 @@ const ProductReleaseForm = () => {
                     <View style={styles.subDetailRow}>
                         <View style={styles.subDetailItem}>
                             <Text style={styles.subDetailLabel}>Compiled By:</Text>
-                            <Text style={styles.subDetailValue}>Michael C. Zulu</Text>
+                            <TextInput style={styles.subDetailValueInput} value={compiledBy} onChangeText={setCompiledBy} />
                         </View>
                         <View style={styles.subDetailItem}>
                             <Text style={styles.subDetailLabel}>Approved By:</Text>
-                            <Text style={styles.subDetailValue}>Hassani Ali</Text>
+                            <TextInput style={styles.subDetailValueInput} value={approvedBy} onChangeText={setApprovedBy} />
                         </View>
                     </View>
 
                     <View style={styles.siteDetailsSection}>
                         <View style={styles.siteDetailLine}>
                             <Text style={styles.siteLabel}>SITE NAME:</Text>
-                            <TextInput style={styles.siteInput} />
+                            <TextInput style={styles.siteInput} value={siteName} onChangeText={setSiteName} />
                         </View>
                         <View style={styles.dateDetailRow}>
                             <Text style={styles.dateLabel}>WEEK STARTING:</Text>
-                            <TextInput style={[styles.dateInput, { flex: 1.5 }]} />
+                            <TextInput style={[styles.dateInput, { flex: 1.5 }]} value={weekStarting} onChangeText={setWeekStarting} />
                             <Text style={styles.dateLabel}>MONTH:</Text>
-                            <TextInput style={[styles.dateInput, { flex: 1 }]} />
+                            <TextInput style={[styles.dateInput, { flex: 1 }]} value={monthValue} onChangeText={setMonthValue} />
                             <Text style={styles.dateLabel}>YEAR:</Text>
-                            <TextInput style={[styles.dateInput, { flex: 1 }]} />
+                            <TextInput style={[styles.dateInput, { flex: 1 }]} value={yearValue} onChangeText={setYearValue} />
                         </View>
                     </View>
 
@@ -221,7 +251,7 @@ const ProductReleaseForm = () => {
                         </View>
                         <View style={{ height: 18 }} />
                                         <View style={{ marginTop: 12 }}>
-                                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); })} showSavePdf={false} />
+                                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); setCompiledBy('Michael C. Zulu'); setApprovedBy('Hassani Ali'); setSiteName(''); setWeekStarting(''); setMonthValue(''); setYearValue(''); })} showSavePdf={false} />
                                         </View>
                                         <LoadingOverlay visible={isSaving} />
                                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
@@ -247,6 +277,7 @@ const styles = StyleSheet.create({
     detailRowItem: { flexDirection: 'row' },
     detailLabel: { fontWeight: 'bold', marginRight: 6 },
     detailValue: {},
+    detailValueInput: { borderBottomWidth: 1, borderBottomColor: '#000', minWidth: 120, paddingVertical: 2 },
     subjectRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
     subjectItem: { flex: 2 },
     subjectLabel: { fontWeight: 'bold' },
@@ -257,6 +288,7 @@ const styles = StyleSheet.create({
     subDetailItem: { flex: 1 },
     subDetailLabel: { fontWeight: 'bold' },
     subDetailValue: {},
+    subDetailValueInput: { borderBottomWidth: 1, borderBottomColor: '#000', paddingVertical: 2 },
     siteDetailsSection: { marginTop: 8, marginBottom: 8 },
     siteDetailLine: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
     siteLabel: { fontWeight: 'bold', marginRight: 6 },
@@ -280,7 +312,7 @@ const dailyStyles = StyleSheet.create({
     productionDateCol: { width: 100 },
     expiryDateCol: { width: 100 },
     signatureCol: { width: 160 },
-    approvedCol: { width: 160, borderRightWidth: 0 },
+    approvedCol: { flex: 1, minWidth: 160, borderRightWidth: 0 },
 });
 
 export default ProductReleaseForm;

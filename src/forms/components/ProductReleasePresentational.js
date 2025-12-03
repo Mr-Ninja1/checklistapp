@@ -48,7 +48,18 @@ export default function ProductReleasePresentational({ payload }) {
       </View>
 
       <View style={styles.siteDetailsSection}>
-        <Text style={styles.siteLabel}>SITE NAME: {meta.site || ''}</Text>
+        <View style={styles.siteDetailLine}>
+          <Text style={styles.siteLabel}>SITE NAME:</Text>
+          <Text style={styles.siteValue}>{meta.site || ''}</Text>
+        </View>
+        <View style={styles.dateDetailRow}>
+          <Text style={styles.dateLabel}>WEEK STARTING:</Text>
+          <Text style={[styles.dateValue, { marginRight: 12 }]}>{meta.weekStarting || ''}</Text>
+          <Text style={styles.dateLabel}>MONTH:</Text>
+          <Text style={[styles.dateValue, { marginRight: 12 }]}>{meta.month || ''}</Text>
+          <Text style={styles.dateLabel}>YEAR:</Text>
+          <Text style={styles.dateValue}>{meta.year || ''}</Text>
+        </View>
       </View>
 
       <View style={styles.tableContainer}>
@@ -96,6 +107,11 @@ const styles = StyleSheet.create({
   subDetailValue: {},
   siteDetailsSection: { marginBottom: 8 },
   siteLabel: { fontWeight: 'bold' },
+  siteDetailLine: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  siteValue: { marginLeft: 6 },
+  dateDetailRow: { flexDirection: 'row', alignItems: 'center' },
+  dateLabel: { fontWeight: 'bold', marginRight: 6 },
+  dateValue: {},
   tableContainer: { borderWidth: 1, borderColor: '#000' },
   tableHeader: { flexDirection: 'row', backgroundColor: '#eee' },
   headerCell: { fontWeight: 'bold', fontSize: 10, padding: 6, textAlign: 'center', borderRightWidth: 1, borderRightColor: '#000' },
@@ -107,5 +123,5 @@ const styles = StyleSheet.create({
   productionDateCol: { width: 100 },
   expiryDateCol: { width: 100 },
   signatureCol: { width: 160 },
-  approvedCol: { width: 160, borderRightWidth: 0 },
+  approvedCol: { flex: 1, minWidth: 160, borderRightWidth: 0 },
 });
