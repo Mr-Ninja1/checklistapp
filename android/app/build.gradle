@@ -90,7 +90,10 @@ android {
     namespace 'com.mrninja1.bravomanager'
     defaultConfig {
         applicationId 'com.mrninja1.bravomanager'
-        minSdkVersion rootProject.ext.minSdkVersion
+        // Force a minimum SDK level. Set to API 24 because some libraries
+        // (Hermes/tooling) require minSdkVersion 24 or higher for certain ABIs.
+        // (Previously read from rootProject.ext; override here for compatibility)
+        minSdkVersion 24
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"

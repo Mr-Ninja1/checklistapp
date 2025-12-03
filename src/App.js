@@ -1,6 +1,7 @@
 // No changes needed; the file is already valid JavaScript.
 import React, { useEffect } from 'react';
 import { LogBox, Alert, Platform } from 'react-native';
+import * as Updates from 'expo-updates';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from './screens/SplashScreen';
@@ -139,6 +140,24 @@ export default function App() {
             });
           }
         } catch (e) { /* ignore listener registration errors */ }
+        // Check for OTA updates (expo-updates)
+        try {
+          if (Updates && Updates.checkForUpdateAsync) {
+            const { isAvailable } = await Updates.checkForUpdateAsync();
+            if (isAvailable) {
+              await Updates.fetchUpdateAsync();
+              Alert.alert(
+                'Update available',
+                'A new update was downloaded. Restart now to apply the update.',
+                [
+                  { text: 'Restart now', onPress: async () => { try { await Updates.reloadAsync(); } catch (e) { console.log('reload failed', e); } } },
+                  { text: 'Later', style: 'cancel' }
+                ],
+                { cancelable: false }
+              );
+            }
+          }
+        } catch (e) { console.log('update check failed', e); }
       } catch (e) { /* ignore */ }
     })();
   }, []);
@@ -200,6 +219,7 @@ export default function App() {
   <Stack.Screen name="DisplayChillerTemperatureLog_Gelato" component={DisplayChillerTemperatureLog_Gelato} />
   
   <Stack.Screen name="CustomerSatisfactionQuestionnaire" component={CustomerSatisfactionQuestionnaire} />
+        
   <Stack.Screen name="PPEIssuanceForm" component={PPEIssuanceForm} />
   <Stack.Screen name="PersonalHygieneChecklist" component={PersonalHygieneChecklist} />
   <Stack.Screen name="BravoHealthStatusCheck" component={BravoHealthStatusCheck} />

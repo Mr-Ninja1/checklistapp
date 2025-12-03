@@ -267,7 +267,7 @@ export default function FoodHandlersDailyShoweringForm() {
               )}
               <Text style={styles.labelText}>Verified By:</Text>
               {editMode ? (
-                <SignatureField debugMode={true} value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={220} height={60} placeholder="Tap to sign - Verified By" />
+                <SignatureField value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={220} height={60} placeholder="Tap to sign - Verified By" />
               ) : (
                 verifiedBy ? (
                   <Image source={{ uri: String(verifiedBy).startsWith('data:') ? verifiedBy : `data:image/png;base64,${verifiedBy}` }} style={{ width: 220, height: 60, resizeMode: 'contain' }} />
@@ -412,8 +412,7 @@ export default function FoodHandlersDailyShoweringForm() {
                                             });
                                             scheduleAutoSave();
                                           }}
-                                          editable={true}
-                                          debugMode={true}
+                                          editable={editMode}
                                           width={Math.max(48, w - 8)}
                                           height={Math.max(40, W_FIXED.rowHeight)}
                                           placeholder="Tap to sign"

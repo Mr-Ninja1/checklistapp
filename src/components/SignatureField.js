@@ -50,10 +50,10 @@ export default function SignatureField({ value, onChange, editable = true, heigh
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <TouchableOpacity onPress={() => {
-          if (debugMode) console.debug('SignatureField: preview pressed, opening modal');
+      <TouchableOpacity onPressIn={() => {
+          if (debugMode) console.debug('SignatureField: preview pressed, opening modal (onPressIn)');
           setVisible(true);
-        }} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8} accessible={true} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        }} delayPressIn={0} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8} accessible={true} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         {previewUri ? (
           <Image source={{ uri: previewUri }} style={{ width: width, height: height, resizeMode: 'contain' }} />
         ) : (

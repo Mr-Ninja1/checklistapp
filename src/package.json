@@ -7,7 +7,12 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "start:devclient": "npx expo start --dev-client",
+    "build:dev:android": "npx eas build --profile development --platform android",
+    "build:prod:android": "npx eas build --profile production --platform android",
+    "update:staging": "npx eas update --branch staging --platform android --message \"$(git rev-parse --short HEAD)\"",
+    "update:prod": "npx eas update --branch production --platform android --message \"$(git rev-parse --short HEAD)\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -26,6 +31,7 @@
     "expo-secure-store": "~15.0.7",
     "expo-sharing": "^14.0.7",
     "expo-status-bar": "~3.0.8",
+    "expo-updates": "~29.0.13",
     "expo-web-browser": "~15.0.8",
     "jpegjs": "npm:jpeg-js@^0.4.4",
     "prop-types": "^15.8.1",
