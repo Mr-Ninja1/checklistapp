@@ -1,7 +1,7 @@
 import warnOnce from '../utils/warnOnce';
 import React, { useState, useEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder } from 'react-native';
 import { httpProbe, processQueue } from '../utils/uploadQueue';
 import * as drive from '../utils/drive';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -180,6 +180,67 @@ export default function HomeScreen() {
   const isWide = width > 700;
   const isMobile = width < 700;
 
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Flatten all forms for quick search
+  const allForms = Object.keys(formCategories).reduce((acc, key) => {
+    const cat = formCategories[key];
+    if (cat && Array.isArray(cat.forms)) {
+      cat.forms.forEach(f => {
+        if (f && (f.route || f.isHandwashingLog)) acc.push({ ...f, category: cat.name });
+      });
+    }
+    return acc;
+  }, []);
+
+  // Draggable floating buttons: compute initial positions (use left/top for Animated layout)
+  const searchSize = isMobile ? 56 : 68;
+  const historySize = isMobile ? 64 : 80;
+  const searchRight = isMobile ? 18 : 32;
+  const historyRight = isMobile ? 18 : 32;
+  const initialSearchLeft = Math.max(12, width - searchRight - searchSize);
+  const initialHistoryLeft = Math.max(12, width - historyRight - historySize);
+  const initialSearchTop = isMobile ? 380 : 480; // moved further up so they don't touch
+  const initialHistoryTop = isMobile ? 520 : 620;
+
+  const searchPos = React.useRef(new Animated.ValueXY({ x: initialSearchLeft, y: initialSearchTop })).current;
+  const historyPos = React.useRef(new Animated.ValueXY({ x: initialHistoryLeft, y: initialHistoryTop })).current;
+
+  const searchPan = React.useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => { searchPos.setOffset({ x: searchPos.x._value || 0, y: searchPos.y._value || 0 }); searchPos.setValue({ x: 0, y: 0 }); },
+    onPanResponderMove: Animated.event([null, { dx: searchPos.x, dy: searchPos.y }], { useNativeDriver: false }),
+    onPanResponderRelease: (_, gesture) => {
+      searchPos.flattenOffset();
+      // if this was a tap (no meaningful move) treat as press
+      if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
+        setSearchModalVisible(true);
+        setSearchQuery('');
+        return;
+      }
+      // snap inside bounds
+      const nx = Math.max(8, Math.min(searchPos.x._value, width - searchSize - 8));
+      const ny = Math.max(8, Math.min(searchPos.y._value, Math.max(8, (height || 800) - searchSize - 8)));
+      Animated.spring(searchPos, { toValue: { x: nx, y: ny }, useNativeDriver: false }).start();
+    }
+  })).current;
+
+  const historyPan = React.useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => { historyPos.setOffset({ x: historyPos.x._value || 0, y: historyPos.y._value || 0 }); historyPos.setValue({ x: 0, y: 0 }); },
+    onPanResponderMove: Animated.event([null, { dx: historyPos.x, dy: historyPos.y }], { useNativeDriver: false }),
+    onPanResponderRelease: (_, gesture) => { historyPos.flattenOffset();
+      if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
+        try { navigation.navigate('FormSaves'); } catch (e) { console.warn('navigate failed', e); }
+        return;
+      }
+      const nx = Math.max(8, Math.min(historyPos.x._value, width - historySize - 8));
+      const ny = Math.max(8, Math.min(historyPos.y._value, Math.max(8, (height || 800) - historySize - 8)));
+      Animated.spring(historyPos, { toValue: { x: nx, y: ny }, useNativeDriver: false }).start();
+    }
+  })).current;
+
   // Internet reachability status for header icon (default to false so the
   // icon is visible immediately while the first probe runs).
   const [hasInternet, setHasInternet] = useState(false);
@@ -225,25 +286,64 @@ export default function HomeScreen() {
     // ensure the root fills the viewport on web by setting a minHeight based on window height
     <View style={{ flex: 1, backgroundColor: '#f6fdff', width: '100%', minHeight: height }}>
       <LoadingOverlay visible={loadingCard} message={loadingMsg} />
-      {/* Floating History Button - always visible, top right */}
-      <TouchableOpacity
-        style={[
-          styles.historyBtn,
-          {
-            // To move the button lower, increase the 'top' value. To move it up, decrease it.
-            // Example: top: isMobile ? 500 : 600, // moves it near the bottom for most screens
-            top: isMobile ? 500 : 600,
-            right: isMobile ? 18 : 32,
-            width: isMobile ? 64 : 80,
-            height: isMobile ? 64 : 80,
-            borderRadius: isMobile ? 32 : 40,
-          },
-        ]}
-        onPress={() => navigation.navigate('FormSaves')}
-        activeOpacity={0.85}
+      {/* Floating Search Button - draggable */}
+      <Animated.View
+        {...searchPan.panHandlers}
+        style={[styles.searchBtn, searchPos.getLayout(), { width: searchSize, height: searchSize, borderRadius: searchSize / 2 }]}
       >
-        <Text style={[styles.historyBtnText, { fontSize: isMobile ? 36 : 44 }]}>📂</Text>
-      </TouchableOpacity>
+        <TouchableOpacity onPress={() => { setSearchModalVisible(true); setSearchQuery(''); }} activeOpacity={0.9}>
+          <Text style={[styles.searchBtnText, { fontSize: isMobile ? 24 : 30 }]}>🔍</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Floating History Button - draggable */}
+      <Animated.View
+        {...historyPan.panHandlers}
+        style={[styles.historyBtn, historyPos.getLayout(), { width: historySize, height: historySize, borderRadius: historySize / 2 }]}
+      >
+        <TouchableOpacity onPress={() => navigation.navigate('FormSaves')} activeOpacity={0.85}>
+          <Text style={[styles.historyBtnText, { fontSize: isMobile ? 36 : 44 }]}>📂</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Search modal */}
+      <Modal visible={searchModalVisible} animationType="fade" transparent onRequestClose={() => setSearchModalVisible(false)}>
+        <View style={styles.searchModalOverlay}>
+          <View style={[styles.searchModal, { width: isMobile ? '92%' : 640 }]}>
+            <TextInput
+              placeholder="Search forms by name or location"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={styles.searchInput}
+              autoFocus
+            />
+            <FlatList
+              data={allForms.filter(f => {
+                if (!searchQuery) return true;
+                const q = searchQuery.toLowerCase();
+                return (f.title && f.title.toLowerCase().includes(q)) || (f.location && f.location.toLowerCase().includes(q)) || (f.category && f.category.toLowerCase().includes(q));
+              })}
+              keyExtractor={(item) => String(item.id) + '_' + (item.route || '')}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.suggestionItem} onPress={() => {
+                  setSearchModalVisible(false);
+                  setTimeout(() => {
+                    try { if (item.route) navigation.navigate(item.route); } catch (e) { console.warn('navigate failed', e); }
+                  }, 150);
+                }}>
+                  <Text style={styles.suggestionTitle}>{item.title}</Text>
+                  <Text style={styles.suggestionMeta}>{item.category} • {item.location || ''}</Text>
+                </TouchableOpacity>
+              )}
+              ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: '#eee' }} />}
+              style={{ maxHeight: 420 }}
+            />
+            <TouchableOpacity style={styles.closeSearchBtn} onPress={() => setSearchModalVisible(false)}>
+              <Text style={{ color: '#fff' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <LinearGradient
         colors={["#22c1c3", "#43cea2", "#185a9d"]}
         style={{
@@ -596,6 +696,54 @@ const styles = StyleSheet.create({
     color: '#185a9d',
     fontWeight: 'bold',
   },
+  searchBtn: {
+    position: 'absolute',
+    zIndex: 101,
+    backgroundColor: '#fff',
+    borderRadius: 34,
+    borderWidth: 3,
+    borderColor: '#43cea2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#43cea2',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  searchBtnText: {
+    color: '#185a9d',
+    fontWeight: '700',
+  },
+  searchModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  searchModal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    maxHeight: '90%',
+    alignItems: 'stretch',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#e6eef2',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  suggestionTitle: { fontWeight: '700', fontSize: 16 },
+  suggestionMeta: { color: '#666', fontSize: 12, marginTop: 4 },
+  closeSearchBtn: { marginTop: 8, alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#185a9d', borderRadius: 8 },
   footer: {
     alignItems: 'center',
     padding: 12,
