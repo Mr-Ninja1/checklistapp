@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Updates from 'expo-updates';
@@ -10,10 +10,13 @@ import formStorage from '../utils/formStorage';
 import { getFormHistory, removeFormHistory } from '../utils/formHistory';
 import { normalizeSavedAtUsingFiles } from '../utils/formHistory';
 import { useIsFocused } from '@react-navigation/native';
+import { useTheme } from '../utils/ThemeContext';
 
 export default function FormSavesScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { width, height } = useWindowDimensions();
+  const watermarkSize = Math.round(Math.min(640, Math.max(200, width * 0.55)));
   const [savedForms, setSavedForms] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -65,6 +68,7 @@ export default function FormSavesScreen() {
   const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
   const firstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
   const isFocused = useIsFocused();
+  const { theme } = useTheme();
   // Extracted loader so we can call it manually (Refresh button) and from useEffect
   const loadHistory = async () => {
     try {
@@ -271,8 +275,9 @@ export default function FormSavesScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Saved Forms (History)</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }] }>
+      <Image source={require('../assets/logo.jpeg')} pointerEvents="none" style={{ position: 'absolute', alignSelf: 'center', top: 24, width: watermarkSize, height: watermarkSize, opacity: 0.18, resizeMode: 'contain', zIndex: 0 }} />
+      <Text style={[styles.title, { color: theme.primary }]}>Saved Forms (History)</Text>
       <View style={{ width: '100%', paddingHorizontal: 24 }}>
         {/* Search and grouping controls */}
         <View style={styles.controlsWrap}>

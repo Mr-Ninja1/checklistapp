@@ -5,6 +5,7 @@ import * as Updates from 'expo-updates';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import SplashScreen from './screens/SplashScreen';
+import { ThemeProvider } from './utils/ThemeContext';
 import ResponsiveView from './components/ResponsiveView';
 import HomeScreen from './screens/HomeScreen';
 import KitchenCategory from './screens/KitchenCategory';
@@ -161,8 +162,9 @@ export default function App() {
       } catch (e) { /* ignore */ }
     })();
   }, []);
-  return (
-  <ResponsiveView lockLandscape={false}>
+    return (
+    <ThemeProvider>
+    <ResponsiveView lockLandscape={false}>
       <NavigationContainer linking={linking}>
         <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
         {/* note: individual screens can accept a `responsive` prop injected by ResponsiveView when needed */}
@@ -245,6 +247,7 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </ResponsiveView>
+    </ThemeProvider>
   );
 }
 

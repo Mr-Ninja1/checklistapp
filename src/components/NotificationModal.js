@@ -12,11 +12,11 @@ export default function NotificationModal({ visible, message, onClose }) {
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={false}
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.45)' }]}>
         <View style={styles.modal}>
           <Text style={styles.text}>{message}</Text>
           <TouchableOpacity style={styles.button} onPress={onClose}>

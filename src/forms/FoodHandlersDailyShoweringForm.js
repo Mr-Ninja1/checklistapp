@@ -9,6 +9,8 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import FormActionBar from '../components/FormActionBar';
 import SignatureField from '../components/SignatureField';
+import Signature from 'react-native-signature-canvas';
+import { Modal } from 'react-native';
 // Note: Delayed focus wrapper removed — using native TextInput for editability
 
 // --- Configuration Constants ---
@@ -113,6 +115,11 @@ export default function FoodHandlersDailyShoweringForm() {
   const initialLog = Array.from({ length: DATA_ROWS }, () => Array(finalWidths.length).fill(''));
   const [logEntries, setLogEntries] = useState(initialLog);
   const [logoDataUri, setLogoDataUri] = useState(null);
+  // Centralized signature modal state to avoid multiple WebViews and modal conflicts on large devices
+  const [sigModalVisible, setSigModalVisible] = useState(false);
+  const [sigModalValue, setSigModalValue] = useState('');
+  const [sigModalTarget, setSigModalTarget] = useState(null); // { rIdx, cIdx }
+  const sigRef = React.useRef(null);
 
   // useFormSave integration
   const draftId = 'FoodHandlersDailyShowering_draft';
@@ -279,10 +286,7 @@ export default function FoodHandlersDailyShoweringForm() {
           </View>
           {/* Table Container - Allows horizontal scrolling, now fills screen width */}
 
-          {/* Action buttons (moved to top center) */}
-          <View style={styles.actionBarTop}>
-            <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
-          </View>
+          {/* Action buttons: moved outside scrolling content to avoid touch interception */}
 
           {/* Table Container - Allows horizontal scrolling, now fills screen width */}
           <ScrollView
@@ -402,21 +406,21 @@ export default function FoodHandlersDailyShoweringForm() {
                                   >
                                     {isDailySign || isSupSign ? (
                                       editMode ? (
-                                        <SignatureField
-                                          value={cellValue}
-                                          onChange={(v) => {
-                                            setLogEntries(prev => {
-                                              const next = prev.map(row => row.slice());
-                                              next[rIdx][cIdx] = v;
-                                              return next;
-                                            });
-                                            scheduleAutoSave();
+                                        // Render a simple touchable preview that opens a centralized signature modal
+                                        <TouchableOpacity
+                                          style={{ width: Math.max(48, w - 8), height: Math.max(40, W_FIXED.rowHeight), alignItems: 'center', justifyContent: 'center' }}
+                                          onPress={() => {
+                                            setSigModalTarget({ rIdx, cIdx });
+                                            setSigModalValue(cellValue || '');
+                                            setSigModalVisible(true);
                                           }}
-                                          editable={editMode}
-                                          width={Math.max(48, w - 8)}
-                                          height={Math.max(40, W_FIXED.rowHeight)}
-                                          placeholder="Tap to sign"
-                                        />
+                                        >
+                                          {cellValue ? (
+                                            <Image source={{ uri: String(cellValue).startsWith('data:') ? cellValue : `data:image/png;base64,${cellValue}` }} style={{ width: Math.max(48, w - 8), height: Math.max(40, W_FIXED.rowHeight), resizeMode: 'contain' }} />
+                                          ) : (
+                                            <Text style={[styles.placeholder, { color: '#9ca3af' }]}>Tap to sign</Text>
+                                          )}
+                                        </TouchableOpacity>
                                       ) : (
                                         cellValue ? (
                                           <Image source={{ uri: String(cellValue).startsWith('data:') ? cellValue : `data:image/png;base64,${cellValue}` }} style={{ width: Math.max(48, w - 8), height: Math.max(40, W_FIXED.rowHeight), resizeMode: 'contain' }} />
@@ -464,6 +468,54 @@ export default function FoodHandlersDailyShoweringForm() {
         </View>
         </ScrollView>
       </KeyboardAvoidingView>
+              {/* Fixed action bar so buttons are always reachable and not inside scrollable content */}
+              <View style={styles.actionBarFixed} pointerEvents="box-none">
+                <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
+              </View>
+              {/* Centralized signature modal to edit cell signatures */}
+              <Modal visible={sigModalVisible} transparent animationType="fade" onRequestClose={() => setSigModalVisible(false)}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: Math.max(320, Math.min(820, Dimensions.get('window').width - 40)), backgroundColor: '#fff', borderRadius: 10, padding: 8 }}>
+                    <View style={{ height: Math.max(220, Math.min(600, Math.round(Dimensions.get('window').height * 0.6))) }}>
+                      <Signature
+                        ref={sigRef}
+                        onOK={(data) => {
+                          // save directly
+                          const dataUri = data && data.startsWith('data:') ? data : `data:image/png;base64,${data}`;
+                          if (sigModalTarget) {
+                            const { rIdx, cIdx } = sigModalTarget;
+                            setLogEntries(prev => {
+                              const next = prev.map(row => row.slice());
+                              next[rIdx][cIdx] = dataUri;
+                              return next;
+                            });
+                            scheduleAutoSave();
+                          }
+                          setSigModalVisible(false);
+                        }}
+                        onEmpty={() => { /* no-op */ }}
+                        descriptionText="Sign above"
+                        clearText="Clear"
+                        confirmText="Save"
+                        webStyle={`.m-signature-pad { box-shadow: none; border: none; } html, body { height: 100%; margin: 0; padding: 0; } .m-signature-pad--body { height: 100%; } .m-signature-pad--body canvas { width: 100% !important; height: 100% !important; touch-action: none; } .m-signature-pad--footer { display: none; }`}
+                        autoClear={false}
+                        penColor="#000000"
+                        backgroundColor="rgba(255,255,255,1)"
+                        minWidth={4}
+                        maxWidth={10}
+                        dotSize={2}
+                        velocityFilterWeight={0.7}
+                        height={Math.max(200, Math.min(600, Math.round(Dimensions.get('window').height * 0.5)))}
+                      />
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 8 }}>
+                      <TouchableOpacity onPress={() => { sigRef.current && sigRef.current.clearSignature && sigRef.current.clearSignature(); }} style={[styles.signBtn, { marginHorizontal: 8 }]}><Text style={styles.btnText}>Clear</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => { sigRef.current && sigRef.current.readSignature && sigRef.current.readSignature(); }} style={[styles.signBtn, { marginHorizontal: 8 }]}><Text style={styles.btnText}>Save</Text></TouchableOpacity>
+                      <TouchableOpacity onPress={() => setSigModalVisible(false)} style={[styles.signBtn, { marginHorizontal: 8, backgroundColor: '#6b7280' }]}><Text style={styles.btnText}>Cancel</Text></TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
       {/* Floating Edit toggle button */}
       <TouchableOpacity
         accessible={true}
@@ -472,11 +524,10 @@ export default function FoodHandlersDailyShoweringForm() {
         style={[styles.fabLarge, editMode ? styles.fabActiveLarge : null]}
         onPress={async () => {
             if (editMode) {
-              // Leaving edit mode: blur keyboard and save draft
+              // Leaving edit mode: blur keyboard but do NOT auto-save. User should use Save Draft explicitly.
               Keyboard.dismiss();
-              try { await handleSaveDraft(); } catch (e) { /* ignore */ }
             }
-            setEditMode(!editMode);
+            setEditMode(prev => !prev);
           }}
       >
         <Text style={styles.fabTextLarge}>{editMode ? 'Done' : 'Edit'}</Text>
@@ -611,8 +662,22 @@ const styles = StyleSheet.create({
   fabActiveLarge: {
     backgroundColor: '#34C759'
   },
+  actionBarFixed: {
+    position: 'absolute',
+    top: 8,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 250,
+    elevation: 250,
+    paddingHorizontal: 12,
+    pointerEvents: 'box-none'
+  },
   fabTextLarge: { color: '#fff', fontWeight: '900', fontSize: 16 },
   readOnlyInput: { backgroundColor: 'transparent' },
   readOnlyCell: { backgroundColor: 'transparent' },
   readOnlyText: { color: '#000', paddingVertical: 2, textAlign: 'center' },
+  placeholder: { color: '#9ca3af' },
+  signBtn: { backgroundColor: '#185a9d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, minWidth: 84, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: '700' },
 });

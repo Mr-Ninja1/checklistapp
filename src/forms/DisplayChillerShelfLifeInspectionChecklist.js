@@ -26,6 +26,7 @@ const createRowsFromItems = (items) => items.map((it, i) => ({
   item: it,
   dateIn: '',
   timeIn: '',
+  timeOut: '',
   usedBy: '',
   staffName: '',
   quantity: '',
@@ -37,6 +38,7 @@ const createBlankRow = (idx) => ({
   item: '',
   dateIn: '',
   timeIn: '',
+  timeOut: '',
   usedBy: '',
   staffName: '',
   quantity: '',
@@ -103,13 +105,13 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         templateVersion: 'v1.0',
         title: 'DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST',
         frequency: 'DAILY',
-  date: issueDate,
-  verifiedBy,
-  verifiedBySign,
-  baristaSign,
-        formData: rowsWithId,
-  layoutHints: { itemCol: 420, dateCol: 100, timeCol: 100, usedByCol: 120, staffCol: 220, qtyCol: 80, signCol: 180 },
-  _tableWidth: 420 + 100 + 100 + 120 + 220 + 80 + 180,
+    date: issueDate,
+    verifiedBy,
+    verifiedBySign,
+    baristaSign,
+      formData: rowsWithId,
+    layoutHints: { itemCol: 420, dateCol: 100, timeCol: 100, timeOutCol: 100, usedByCol: 120, staffCol: 220, qtyCol: 80, signCol: 180 },
+    _tableWidth: 420 + 100 + 100 + 100 + 120 + 220 + 80 + 180,
         savedAt: Date.now(),
       };
 
@@ -144,6 +146,11 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         <TextInput style={[styles.cell, styles.timeCol]} value={item.timeIn} onChangeText={(t) => updateField(item.id, 'timeIn', t)} editable />
       ) : (
         <Text style={[styles.cell, styles.timeCol]}>{item.timeIn}</Text>
+      )}
+      {editMode ? (
+        <TextInput style={[styles.cell, styles.timeCol]} value={item.timeOut} onChangeText={(t) => updateField(item.id, 'timeOut', t)} editable />
+      ) : (
+        <Text style={[styles.cell, styles.timeCol]}>{item.timeOut}</Text>
       )}
       {editMode ? (
         <TextInput style={[styles.cell, styles.usedByCol]} value={item.usedBy} onChangeText={(t) => updateField(item.id, 'usedBy', t)} editable />
@@ -212,6 +219,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
             <Text style={[styles.headerCell, styles.itemCol]}>ITEMS</Text>
             <Text style={[styles.headerCell, styles.dateCol]}>DATE IN</Text>
             <Text style={[styles.headerCell, styles.timeCol]}>TIME IN</Text>
+            <Text style={[styles.headerCell, styles.timeCol]}>TIME OUT</Text>
             <Text style={[styles.headerCell, styles.usedByCol]}>USED BY</Text>
             <Text style={[styles.headerCell, styles.staffCol]}>BAKER/CHEFS /BARISTAS NAME</Text>
             <Text style={[styles.headerCell, styles.qtyCol]}>QUANTITY</Text>
@@ -219,7 +227,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
           </View>
 
           <ScrollView horizontal nestedScrollEnabled={true} directionalLockEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ flexGrow: 1, paddingRight: 100 }}>
-            <View style={{ width: 420 + 100 + 100 + 120 + 220 + 80 + 80 }}>
+                <View style={{ width: 420 + 100 + 100 + 100 + 120 + 220 + 80 + 180 }}>
               <FlatList data={rows} renderItem={renderRow} keyExtractor={r => r.id} scrollEnabled={false} />
             </View>
           </ScrollView>

@@ -1,7 +1,9 @@
 import warnOnce from '../utils/warnOnce';
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '../utils/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder, KeyboardAvoidingView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { httpProbe, processQueue } from '../utils/uploadQueue';
 import * as drive from '../utils/drive';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -136,6 +138,7 @@ const getPriorityColor = (priority) => {
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const { theme, setThemeMode } = useTheme();
   const [activeCategory, setActiveCategory] = useState('foh');
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingCard, setLoadingCard] = useState(false);
@@ -179,6 +182,7 @@ export default function HomeScreen() {
   const { width, height } = useWindowDimensions();
   const isWide = width > 700;
   const isMobile = width < 700;
+  const watermarkSize = Math.round(Math.min(640, Math.max(200, width * 0.55)));
 
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -206,40 +210,198 @@ export default function HomeScreen() {
 
   const searchPos = React.useRef(new Animated.ValueXY({ x: initialSearchLeft, y: initialSearchTop })).current;
   const historyPos = React.useRef(new Animated.ValueXY({ x: initialHistoryLeft, y: initialHistoryTop })).current;
+  const searchDragEnabled = React.useRef(false);
+  const historyDragEnabled = React.useRef(false);
+  const searchDragTimer = React.useRef(null);
+  const historyDragTimer = React.useRef(null);
+  const searchLastSave = React.useRef(0);
+  const historyLastSave = React.useRef(0);
+
+  // keep previous dimensions so we can map positions on orientation change
+  const prevWindow = React.useRef({ width, height });
 
   const searchPan = React.useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => { searchPos.setOffset({ x: searchPos.x._value || 0, y: searchPos.y._value || 0 }); searchPos.setValue({ x: 0, y: 0 }); },
-    onPanResponderMove: Animated.event([null, { dx: searchPos.x, dy: searchPos.y }], { useNativeDriver: false }),
+    onPanResponderGrant: () => {
+      // prepare offset for dragging, start a short timer to require long-press to enable movement
+      try {
+        const curX = (typeof searchPos.x._value === 'number') ? searchPos.x._value : (searchPos.x.__getValue ? searchPos.x.__getValue() : 0);
+        const curY = (typeof searchPos.y._value === 'number') ? searchPos.y._value : (searchPos.y.__getValue ? searchPos.y.__getValue() : 0);
+        searchPos.setOffset({ x: curX, y: curY });
+        searchPos.setValue({ x: 0, y: 0 });
+      } catch (e) {}
+      searchDragEnabled.current = false;
+      if (searchDragTimer.current) clearTimeout(searchDragTimer.current);
+      searchDragTimer.current = setTimeout(() => { searchDragEnabled.current = true; }, 220);
+    },
+    onPanResponderMove: (_, gesture) => {
+      // only move when long-press timer has fired
+      if (searchDragEnabled.current) {
+        try {
+          searchPos.setValue({ x: gesture.dx, y: gesture.dy });
+        } catch (e) {}
+        // throttle save during drag
+        try {
+          const now = Date.now();
+          if (now - searchLastSave.current > 500) {
+            searchLastSave.current = now;
+            // compute current absolute coords
+            const curX = (typeof searchPos.x._value === 'number') ? searchPos.x._value : (searchPos.x.__getValue ? searchPos.x.__getValue() : 0);
+            const curY = (typeof searchPos.y._value === 'number') ? searchPos.y._value : (searchPos.y.__getValue ? searchPos.y.__getValue() : 0);
+            const xp = Math.max(0, Math.min(1, (curX - 8) / Math.max(1, width - searchSize - 16)));
+            const yp = Math.max(0, Math.min(1, (curY - 8) / Math.max(1, height - searchSize - 16)));
+            AsyncStorage.setItem('@floating_search_pos', JSON.stringify({ x: curX, y: curY, xp, yp })).catch(() => {});
+          }
+        } catch (e) {}
+      }
+    },
     onPanResponderRelease: (_, gesture) => {
-      searchPos.flattenOffset();
-      // if this was a tap (no meaningful move) treat as press
-      if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
+      if (searchDragTimer.current) { clearTimeout(searchDragTimer.current); searchDragTimer.current = null; }
+      // if long-press not reached treat as tap
+      if (!searchDragEnabled.current && Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
+        // reset any offset
+        try { searchPos.flattenOffset(); } catch (e) {}
         setSearchModalVisible(true);
         setSearchQuery('');
         return;
       }
-      // snap inside bounds
-      const nx = Math.max(8, Math.min(searchPos.x._value, width - searchSize - 8));
-      const ny = Math.max(8, Math.min(searchPos.y._value, Math.max(8, (height || 800) - searchSize - 8)));
-      Animated.spring(searchPos, { toValue: { x: nx, y: ny }, useNativeDriver: false }).start();
+      // finalize drag
+      try { searchPos.flattenOffset(); } catch (e) {}
+      const curX = (typeof searchPos.x._value === 'number') ? searchPos.x._value : (searchPos.x.__getValue ? searchPos.x.__getValue() : 0);
+      const curY = (typeof searchPos.y._value === 'number') ? searchPos.y._value : (searchPos.y.__getValue ? searchPos.y.__getValue() : 0);
+      const nx = Math.max(8, Math.min(curX, width - searchSize - 8));
+      const ny = Math.max(8, Math.min(curY, Math.max(8, (height || 800) - searchSize - 8)));
+      Animated.spring(searchPos, { toValue: { x: nx, y: ny }, useNativeDriver: false }).start(async () => {
+        try { await AsyncStorage.setItem('@floating_search_pos', JSON.stringify({ x: nx, y: ny })); } catch (e) {}
+      });
+      searchDragEnabled.current = false;
     }
   })).current;
 
   const historyPan = React.useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => { historyPos.setOffset({ x: historyPos.x._value || 0, y: historyPos.y._value || 0 }); historyPos.setValue({ x: 0, y: 0 }); },
-    onPanResponderMove: Animated.event([null, { dx: historyPos.x, dy: historyPos.y }], { useNativeDriver: false }),
-    onPanResponderRelease: (_, gesture) => { historyPos.flattenOffset();
-      if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
+    onPanResponderGrant: () => {
+      try {
+        const curX = (typeof historyPos.x._value === 'number') ? historyPos.x._value : (historyPos.x.__getValue ? historyPos.x.__getValue() : 0);
+        const curY = (typeof historyPos.y._value === 'number') ? historyPos.y._value : (historyPos.y.__getValue ? historyPos.y.__getValue() : 0);
+        historyPos.setOffset({ x: curX, y: curY });
+        historyPos.setValue({ x: 0, y: 0 });
+      } catch (e) {}
+      historyDragEnabled.current = false;
+      if (historyDragTimer.current) clearTimeout(historyDragTimer.current);
+      historyDragTimer.current = setTimeout(() => { historyDragEnabled.current = true; }, 220);
+    },
+    onPanResponderMove: (_, gesture) => {
+      if (historyDragEnabled.current) {
+        try { historyPos.setValue({ x: gesture.dx, y: gesture.dy }); } catch (e) {}
+        try {
+          const now = Date.now();
+          if (now - historyLastSave.current > 500) {
+            historyLastSave.current = now;
+            const curX = (typeof historyPos.x._value === 'number') ? historyPos.x._value : (historyPos.x.__getValue ? historyPos.x.__getValue() : 0);
+            const curY = (typeof historyPos.y._value === 'number') ? historyPos.y._value : (historyPos.y.__getValue ? historyPos.y.__getValue() : 0);
+            const xp = Math.max(0, Math.min(1, (curX - 8) / Math.max(1, width - historySize - 16)));
+            const yp = Math.max(0, Math.min(1, (curY - 8) / Math.max(1, height - historySize - 16)));
+            AsyncStorage.setItem('@floating_history_pos', JSON.stringify({ x: curX, y: curY, xp, yp })).catch(() => {});
+          }
+        } catch (e) {}
+      }
+    },
+    onPanResponderRelease: (_, gesture) => { 
+      if (historyDragTimer.current) { clearTimeout(historyDragTimer.current); historyDragTimer.current = null; }
+      if (!historyDragEnabled.current && Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
         try { navigation.navigate('FormSaves'); } catch (e) { console.warn('navigate failed', e); }
+        try { historyPos.flattenOffset(); } catch (e) {}
         return;
       }
-      const nx = Math.max(8, Math.min(historyPos.x._value, width - historySize - 8));
-      const ny = Math.max(8, Math.min(historyPos.y._value, Math.max(8, (height || 800) - historySize - 8)));
-      Animated.spring(historyPos, { toValue: { x: nx, y: ny }, useNativeDriver: false }).start();
+      try { historyPos.flattenOffset(); } catch (e) {}
+      const curX = (typeof historyPos.x._value === 'number') ? historyPos.x._value : (historyPos.x.__getValue ? historyPos.x.__getValue() : 0);
+      const curY = (typeof historyPos.y._value === 'number') ? historyPos.y._value : (historyPos.y.__getValue ? historyPos.y.__getValue() : 0);
+      const nx = Math.max(8, Math.min(curX, width - historySize - 8));
+      const ny = Math.max(8, Math.min(curY, Math.max(8, (height || 800) - historySize - 8)));
+      Animated.spring(historyPos, { toValue: { x: nx, y: ny }, useNativeDriver: false }).start(async () => {
+        try { await AsyncStorage.setItem('@floating_history_pos', JSON.stringify({ x: nx, y: ny })); } catch (e) {}
+      });
+      historyDragEnabled.current = false;
     }
   })).current;
+
+  // When dimensions change (orientation/resize), reposition floating buttons
+  React.useEffect(() => {
+    const prev = prevWindow.current || { width, height };
+    // Only run if size actually changed
+    if (prev.width === width && prev.height === height) return;
+
+    const animateToWithinBounds = (posRef, size) => {
+      try {
+        const curX = posRef.x && (typeof posRef.x._value === 'number' ? posRef.x._value : posRef.x.__getValue && posRef.x.__getValue());
+        const curY = posRef.y && (typeof posRef.y._value === 'number' ? posRef.y._value : posRef.y.__getValue && posRef.y.__getValue());
+        if (typeof curX !== 'number' || typeof curY !== 'number') return;
+
+        // percentage-based mapping: compute percentage in previous viewport and map to new
+        const prevAvailW = Math.max(1, prev.width - size - 16); // minus padding margins used (8+8)
+        const prevAvailH = Math.max(1, prev.height - size - 16);
+        const pctX = Math.max(0, Math.min(1, (curX - 8) / prevAvailW));
+        const pctY = Math.max(0, Math.min(1, (curY - 8) / prevAvailH));
+
+        const newAvailW = Math.max(0, width - size - 16);
+        const newAvailH = Math.max(0, height - size - 16);
+        const nextX = Math.round(8 + pctX * newAvailW);
+        const nextY = Math.round(8 + pctY * newAvailH);
+
+        Animated.spring(posRef, { toValue: { x: nextX, y: nextY }, useNativeDriver: false }).start();
+      } catch (e) { /* ignore */ }
+    };
+
+    animateToWithinBounds(searchPos, searchSize);
+    animateToWithinBounds(historyPos, historySize);
+
+    prevWindow.current = { width, height };
+  }, [width, height, searchPos, historyPos, searchSize, historySize]);
+
+  // Load persisted positions on mount
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const s = await AsyncStorage.getItem('@floating_search_pos');
+        const h = await AsyncStorage.getItem('@floating_history_pos');
+        if (!mounted) return;
+        if (s) {
+          const p = JSON.parse(s);
+          if (p) {
+            // if percentage stored, use that to map to current size; otherwise use raw pixels
+            if (typeof p.xp === 'number' && typeof p.yp === 'number') {
+              const availW = Math.max(0, width - searchSize - 16);
+              const availH = Math.max(0, height - searchSize - 16);
+              const x = Math.round(8 + (p.xp * availW));
+              const y = Math.round(8 + (p.yp * availH));
+              searchPos.setValue({ x, y });
+            } else if (typeof p.x === 'number' && typeof p.y === 'number') {
+              searchPos.setValue({ x: p.x, y: p.y });
+            }
+          }
+        }
+        if (h) {
+          const p = JSON.parse(h);
+          if (p) {
+            if (typeof p.xp === 'number' && typeof p.yp === 'number') {
+              const availW = Math.max(0, width - historySize - 16);
+              const availH = Math.max(0, height - historySize - 16);
+              const x = Math.round(8 + (p.xp * availW));
+              const y = Math.round(8 + (p.yp * availH));
+              historyPos.setValue({ x, y });
+            } else if (typeof p.x === 'number' && typeof p.y === 'number') {
+              historyPos.setValue({ x: p.x, y: p.y });
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; if (searchDragTimer.current) { clearTimeout(searchDragTimer.current); searchDragTimer.current = null; } if (historyDragTimer.current) { clearTimeout(historyDragTimer.current); historyDragTimer.current = null; } };
+  }, [searchPos, historyPos]);
 
   // Internet reachability status for header icon (default to false so the
   // icon is visible immediately while the first probe runs).
@@ -284,14 +446,14 @@ export default function HomeScreen() {
   // Main UI
   return (
     // ensure the root fills the viewport on web by setting a minHeight based on window height
-    <View style={{ flex: 1, backgroundColor: '#f6fdff', width: '100%', minHeight: height }}>
+    <View style={{ flex: 1, backgroundColor: theme.background, width: '100%', minHeight: height }}>
       <LoadingOverlay visible={loadingCard} message={loadingMsg} />
       {/* Floating Search Button - draggable */}
       <Animated.View
         {...searchPan.panHandlers}
         style={[styles.searchBtn, searchPos.getLayout(), { width: searchSize, height: searchSize, borderRadius: searchSize / 2 }]}
       >
-        <TouchableOpacity onPress={() => { setSearchModalVisible(true); setSearchQuery(''); }} activeOpacity={0.9}>
+        <TouchableOpacity onPress={() => { setSearchModalVisible(true); setSearchQuery(''); }} activeOpacity={0.9} hitSlop={{ top: 18, left: 18, right: 18, bottom: 18 }} delayLongPress={220}>
           <Text style={[styles.searchBtnText, { fontSize: isMobile ? 24 : 30 }]}>🔍</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -301,7 +463,7 @@ export default function HomeScreen() {
         {...historyPan.panHandlers}
         style={[styles.historyBtn, historyPos.getLayout(), { width: historySize, height: historySize, borderRadius: historySize / 2 }]}
       >
-        <TouchableOpacity onPress={() => navigation.navigate('FormSaves')} activeOpacity={0.85}>
+        <TouchableOpacity onPress={() => navigation.navigate('FormSaves')} activeOpacity={0.85} hitSlop={{ top: 18, left: 18, right: 18, bottom: 18 }} delayLongPress={220}>
           <Text style={[styles.historyBtnText, { fontSize: isMobile ? 36 : 44 }]}>📂</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -309,7 +471,11 @@ export default function HomeScreen() {
       {/* Search modal */}
       <Modal visible={searchModalVisible} animationType="fade" transparent onRequestClose={() => setSearchModalVisible(false)}>
         <View style={styles.searchModalOverlay}>
-          <View style={[styles.searchModal, { width: isMobile ? '92%' : 640 }]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 70}
+            style={[styles.searchModal, { width: isMobile ? '92%' : 640 }]}
+          >
             <TextInput
               placeholder="Search forms by name or location"
               value={searchQuery}
@@ -341,11 +507,11 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.closeSearchBtn} onPress={() => setSearchModalVisible(false)}>
               <Text style={{ color: '#fff' }}>Close</Text>
             </TouchableOpacity>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
       <LinearGradient
-        colors={["#22c1c3", "#43cea2", "#185a9d"]}
+        colors={[theme.accent, theme.accent, theme.primary]}
         style={{
           width: '100%',
           paddingBottom: isMobile ? 0 : 24,
@@ -386,8 +552,8 @@ export default function HomeScreen() {
                 />
                 {/* reachability icon removed from here — now shown on the right side of the time/date row */}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 22, fontWeight: '700', color: '#185a9d', letterSpacing: 1, textAlign: 'left', marginBottom: 2 }}>Bravo!</Text>
-                  <Text style={{ fontSize: 15, color: '#43cea2', opacity: 0.95, textAlign: 'left', marginBottom: 0, fontWeight: '500' }}>Food Safety Inspections</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '700', color: theme.primary, letterSpacing: 1, textAlign: 'left', marginBottom: 2 }}>Bravo!</Text>
+                  <Text style={{ fontSize: 15, color: theme.accent, opacity: 0.95, textAlign: 'left', marginBottom: 0, fontWeight: '500' }}>Food Safety Inspections</Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
@@ -512,6 +678,18 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
           </TouchableOpacity>
+          {/* Theme toggle */}
+          <TouchableOpacity
+            onPress={() => {
+              try {
+                setThemeMode(theme.mode === 'dark' ? 'light' : 'dark');
+              } catch (e) { console.warn('toggle theme failed', e); }
+            }}
+            activeOpacity={0.7}
+            style={{ marginRight: isMobile ? 12 : 20 }}
+          >
+            <Text style={{ fontSize: isMobile ? 20 : 22 }}>{theme.mode === 'dark' ? '🌞' : '🌙'}</Text>
+          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -525,7 +703,7 @@ export default function HomeScreen() {
         justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
-        backgroundColor: '#f6fdff',
+        backgroundColor: theme.background,
         borderRadius: 16,
         padding: 4,
         marginBottom: 0, // Remove space below category tab
@@ -549,14 +727,16 @@ export default function HomeScreen() {
       {/* Removed kitchen quick access featured cards per request */}
 
       {/* Form Lists */}
-      <ScrollView
-        style={{ flex: 1, width: '100%' }}
-        // allow content to grow so the ScrollView becomes scrollable on web
-        contentContainerStyle={[styles.formListContent, { paddingBottom: 120, flexGrow: 1 }]}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled={true}
-      >
-        {getFilteredForms(activeCategory).map((form, idx) => (
+      <View style={{ flex: 1, width: '100%', position: 'relative' }}>
+        <Image source={require('../assets/logo.jpeg')} pointerEvents="none" style={{ position: 'absolute', alignSelf: 'center', top: 24, width: watermarkSize, height: watermarkSize, opacity: 0.18, resizeMode: 'contain', zIndex: 0 }} />
+        <ScrollView
+          style={{ flex: 1, width: '100%', backgroundColor: 'transparent' }}
+          // allow content to grow so the ScrollView becomes scrollable on web
+          contentContainerStyle={[styles.formListContent, { paddingBottom: 120, flexGrow: 1, backgroundColor: 'transparent' }]}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled={true}
+        >
+          {getFilteredForms(activeCategory).map((form, idx) => (
           <View key={`form-card-${form.id}-${idx}-${form.title}` }>
               <TouchableOpacity
               key={`form-touchable-${form.id}-${idx}-${form.title}`}
@@ -574,21 +754,30 @@ export default function HomeScreen() {
                 // hide after short delay to let navigation settle
                 setTimeout(() => setLoadingCard(false), 350);
               }}
-              style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: '#fff', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6 }]}
+              style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: 'transparent', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6, zIndex: 3 } ]}
             >
-              <View style={styles.formCardTop}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
-                  <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
+              <LinearGradient
+                colors={['rgba(255,255,255,0.40)', 'rgba(255,255,255,0.995)', 'rgba(255,255,255,0.995)', 'rgba(255,255,255,0.40)']}
+                locations={[0, 0.28, 0.72, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ ...StyleSheet.absoluteFillObject, borderRadius: 12, zIndex: 0 }}
+              />
+              <View style={{ zIndex: 1 }}>
+                <View style={styles.formCardTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.formTitle, { color: '#222' }]}>{form.title}</Text>
+                    <Text style={[styles.formLocation, { color: '#555' }]}>{form.location}</Text>
                   </View>
-                  <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
-                    <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
+                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
+                    </View>
+                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
+                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -596,6 +785,7 @@ export default function HomeScreen() {
           </View>
         ))}
       </ScrollView>
+      </View>
 
       {/* Floating Action Button removed, replaced by top right button */}
 
@@ -654,10 +844,16 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.12)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   formLocation: {
     fontSize: 14,
     color: '#888',
+    textShadowColor: 'rgba(0,0,0,0.08)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   formListContent: {
     padding: 12,

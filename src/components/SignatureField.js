@@ -50,10 +50,10 @@ export default function SignatureField({ value, onChange, editable = true, heigh
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <TouchableOpacity onPressIn={() => {
-          if (debugMode) console.debug('SignatureField: preview pressed, opening modal (onPressIn)');
+      <TouchableOpacity onPress={() => {
+          if (debugMode) console.debug('SignatureField: preview pressed, opening modal (onPress)');
           setVisible(true);
-        }} delayPressIn={0} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8} accessible={true} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        }} style={[styles.previewWrap, { width, height }] } activeOpacity={0.8} accessible={true} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
         {previewUri ? (
           <Image source={{ uri: previewUri }} style={{ width: width, height: height, resizeMode: 'contain' }} />
         ) : (
@@ -95,7 +95,41 @@ export default function SignatureField({ value, onChange, editable = true, heigh
                 {debugMode && (
                   <TouchableOpacity onPress={() => setVisible(false)} style={[styles.signBtn, styles.sideBtn, { backgroundColor: '#ef4444' }]}><Text style={styles.btnText}>Force Close</Text></TouchableOpacity>
                 )}
-                <TouchableOpacity onPress={() => { ref.current && ref.current.readSignature(); }} style={[styles.signBtn, styles.saveBtn]}><Text style={styles.btnText}>Save</Text></TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    // Try the normal ref API first
+                    try {
+                      if (ref.current && typeof ref.current.readSignature === 'function') {
+                        if (debugMode) console.debug('SignatureField: calling readSignature() via ref');
+                        ref.current.readSignature();
+                        return;
+                      }
+
+                      // Fallback: attempt to inject JS into the WebView used by the signature pad
+                      // Many implementations expose an injectJavaScript or postMessage helper on the ref
+                      if (ref.current && typeof ref.current.injectJavaScript === 'function') {
+                        if (debugMode) console.debug('SignatureField: injecting JS fallback to read signature');
+                        const js = "try{(function(){var p=window.signaturePad||window.__signaturePad; if(p&&p.toDataURL){var d=p.toDataURL(); if(window.ReactNativeWebView&&window.ReactNativeWebView.postMessage){window.ReactNativeWebView.postMessage(d);} else if(window.postMessage){window.postMessage(d);}}})();}catch(e){console.error(e);}true;";
+                        ref.current.injectJavaScript(js);
+                        return;
+                      }
+
+                      // Another fallback: some versions expose a .postMessage on the ref
+                      if (ref.current && typeof ref.current.postMessage === 'function') {
+                        if (debugMode) console.debug('SignatureField: calling ref.postMessage fallback');
+                        try { ref.current.postMessage('readSignature'); } catch (e) { /* ignore */ }
+                        return;
+                      }
+                    } catch (e) {
+                      console.warn('SignatureField: Save handler fallback failed', e);
+                    }
+
+                    // If nothing worked, close the modal to avoid trapping the user and log warning
+                    console.warn('SignatureField: signature component not ready for saving');
+                    setVisible(false);
+                  }}
+                  style={[styles.signBtn, styles.saveBtn]}
+                ><Text style={styles.btnText}>Save</Text></TouchableOpacity>
               </View>
             </View>
           </View>

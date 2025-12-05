@@ -30,6 +30,7 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
             <Text style={[styles.th, { width: 320 }]}>ITEMS</Text>
             <Text style={[styles.th, { width: 80 }]}>DATE IN</Text>
             <Text style={[styles.th, { width: 80 }]}>TIME IN</Text>
+            <Text style={[styles.th, { width: 80 }]}>TIME OUT</Text>
             <Text style={[styles.th, { width: 100 }]}>USED BY</Text>
             <Text style={[styles.th, { width: 160 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
             <Text style={[styles.th, { width: 60 }]}>QUANTITY</Text>
@@ -41,6 +42,7 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
               <Text style={[styles.td, { width: 320 }]}>{r.item}</Text>
               <Text style={[styles.td, { width: 80 }]}>{r.dateIn}</Text>
               <Text style={[styles.td, { width: 80 }]}>{r.timeIn}</Text>
+              <Text style={[styles.td, { width: 80 }]}>{r.timeOut}</Text>
               <Text style={[styles.td, { width: 100 }]}>{r.usedBy}</Text>
               <Text style={[styles.td, { width: 160 }]}>{r.staffName}</Text>
               <Text style={[styles.td, { width: 60 }]}>{r.quantity}</Text>
@@ -65,6 +67,7 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
               <Text style={[styles.th, { width: 420 }]}>ITEMS</Text>
               <Text style={[styles.th, { width: 100 }]}>DATE IN</Text>
               <Text style={[styles.th, { width: 100 }]}>TIME IN</Text>
+              <Text style={[styles.th, { width: 100 }]}>TIME OUT</Text>
               <Text style={[styles.th, { width: 120 }]}>USED BY</Text>
               <Text style={[styles.th, { width: 220 }]}>BAKER/CHEFS /BARISTAS NAME</Text>
               <Text style={[styles.th, { width: 80 }]}>QUANTITY</Text>
@@ -76,6 +79,7 @@ export default function DisplayChillerShelfLifeInspectionPresentational({ payloa
                 <Text style={[styles.td, { width: 420 }]}>{r.item}</Text>
                 <Text style={[styles.td, { width: 100 }]}>{r.dateIn}</Text>
                 <Text style={[styles.td, { width: 100 }]}>{r.timeIn}</Text>
+                <Text style={[styles.td, { width: 100 }]}>{r.timeOut}</Text>
                 <Text style={[styles.td, { width: 120 }]}>{r.usedBy}</Text>
                 <Text style={[styles.td, { width: 220 }]}>{r.staffName}</Text>
                 <Text style={[styles.td, { width: 80 }]}>{r.quantity}</Text>
