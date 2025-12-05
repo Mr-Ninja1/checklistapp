@@ -9,6 +9,7 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import ResponsiveTable from '../components/ResponsiveTable';
 import SignatureField from '../components/SignatureField';
 import { addFormHistory } from '../utils/formHistory';
+import formStorage from '../utils/formStorage';
 
 const { width, height: windowHeight } = Dimensions.get('window');
 
@@ -36,8 +37,9 @@ const FitCheckToggle = ({ isChecked, onToggle }) => (
 
 const createInitialWeeklyData = (count) => Array.from({ length: count }, (_, i) => ({
     id: `${i + 1}`,
-    name: `Staff Name ${i + 1}`,
-    position: i % 2 === 0 ? 'Chef' : 'Hygiene Attendant',
+    // start empty so user can enter names/positions (no placeholders)
+    name: '',
+    position: '',
     weeklyChecks: daysOfWeek.reduce((acc, day) => ({
         ...acc,
         [day]: { fit: null, comment: '' }
@@ -135,6 +137,19 @@ const HealthStatusCheck = () => {
         });
     };
 
+    const updatePersonField = (id, field, value) => {
+        setWeeklyData(prevData => {
+            const newData = prevData.map(item => {
+                if (item.id === id) {
+                    return { ...item, [field]: value };
+                }
+                return item;
+            });
+            try { scheduleAutoSave(); } catch (e) {}
+            return newData;
+        });
+    };
+
     const renderDailyCells = (item, day) => (
         <React.Fragment key={day}>
             <View style={{ width: fitWidth }}>
@@ -156,8 +171,30 @@ const HealthStatusCheck = () => {
 
     const renderWeeklyLogItem = ({ item }) => (
         <View style={dailyStyles.tableRow} key={item.id}>
-            <Text style={[dailyStyles.dataCell, dailyStyles.nameCol]}>{item.name}</Text>
-            <Text style={[dailyStyles.dataCell, dailyStyles.positionCol]}>{item.position}</Text>
+            <View style={[dailyStyles.dataCell, dailyStyles.nameCol, { alignItems: 'flex-start', justifyContent: 'center' }]}>
+                {editMode ? (
+                    <TextInput
+                        value={item.name}
+                        onChangeText={(t) => updatePersonField(item.id, 'name', t)}
+                        style={{ fontSize: 10, padding: 4, width: nameColWidth, textAlign: 'left' }}
+                        placeholder=""
+                    />
+                ) : (
+                    <Text style={{ fontSize: 10, textAlign: 'left' }}>{item.name}</Text>
+                )}
+            </View>
+            <View style={[dailyStyles.dataCell, dailyStyles.positionCol, { alignItems: 'center', justifyContent: 'center' }]}>
+                {editMode ? (
+                    <TextInput
+                        value={item.position}
+                        onChangeText={(t) => updatePersonField(item.id, 'position', t)}
+                        style={{ fontSize: 10, padding: 4, width: positionColWidth, textAlign: 'center' }}
+                        placeholder=""
+                    />
+                ) : (
+                    <Text style={{ fontSize: 10 }}>{item.position}</Text>
+                )}
+            </View>
             {daysOfWeek.map(day => renderDailyCells(item, day))}
         </View>
     );
@@ -201,6 +238,33 @@ const HealthStatusCheck = () => {
 
     // wire scheduleAutoSave to local variable used above
     scheduleAutoSave = scheduleAutoSaveFromHook;
+
+    // preload any stable draft saved via formStorage
+    React.useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                const wrapped = await formStorage.loadForm('HealthStatusCheck_draft').catch(() => null);
+                const payload = wrapped?.payload || null;
+                if (payload && mounted) {
+                    // populate weekly data if available
+                    if (Array.isArray(payload.formData) && payload.formData.length) {
+                        setWeeklyData(payload.formData.map(d => ({ ...d })));
+                    }
+                    if (payload.metadata) {
+                        setSite(payload.metadata.site || '');
+                        setWeek(payload.metadata.week || '');
+                        setMonth(payload.metadata.month || '');
+                        setYear(payload.metadata.year || '');
+                    }
+                    if (payload.supervisorSign) setSupervisorSign(payload.supervisorSign);
+                    if (payload.complexManagerSign) setComplexManagerSign(payload.complexManagerSign);
+                    if (payload.hseqManagerSign) setHseqManagerSign(payload.hseqManagerSign);
+                }
+            } catch (e) { /* ignore */ }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     return (
         <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
@@ -326,7 +390,24 @@ const HealthStatusCheck = () => {
 
                     {/* Buttons placed under Complex Manager - stacked full-width bars */}
                     <View style={styles.stackActionsWrap}>
-                        <TouchableOpacity style={[styles.stackBtn, { backgroundColor: '#f6c342' }]} onPress={async () => { try { await handleSaveDraft(); } catch (e) { console.warn('save draft failed', e); } }} disabled={isSaving || localSaving}>
+                        <TouchableOpacity
+                            style={[styles.stackBtn, { backgroundColor: '#f6c342' }]}
+                            onPress={async () => {
+                                try {
+                                    const res = await handleSaveDraft(true);
+                                    try { console.info('SaveDraft result', res); } catch (e) {}
+                                    if (res && res.filePath) {
+                                        Alert.alert('Draft saved', `Saved to: ${res.filePath}`);
+                                    } else {
+                                        Alert.alert('Draft saved', 'Draft saved successfully.');
+                                    }
+                                } catch (e) {
+                                    console.warn('save draft failed', e);
+                                    Alert.alert('Save failed', String(e));
+                                }
+                            }}
+                            disabled={isSaving || localSaving}
+                        >
                             <Text style={styles.stackBtnText}>{'Save Draft'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={[styles.stackBtn, { backgroundColor: '#3b82f6' }]} onPress={async () => {

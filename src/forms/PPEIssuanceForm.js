@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { getDraft } from '../utils/formDrafts';
-import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EditableFormContainer from '../components/EditableFormContainer';
 import useFormSave from '../hooks/useFormSave';
@@ -15,11 +15,27 @@ import SignatureThumb from '../components/SignatureThumb';
 
 const { width } = Dimensions.get('window');
 
-// --- Component for a single checkbox (Switch) ---
-const PPECheckbox = ({ isChecked, onToggle, editable = true }) => (
-    <TouchableOpacity onPress={editable ? onToggle : undefined} style={styles.checkboxContainer}>
-        <View style={[styles.checkboxBox, isChecked && styles.checkboxChecked, !editable && { opacity: 0.6 }]}>
-            {isChecked ? <Text style={styles.checkMark}>✓</Text> : null}
+// --- Component for a single checkbox (chooser) ---
+// Supports three states: null | 'tick' | 'cross'
+const PPECheckbox = ({ value, onChange, editable = true }) => (
+    <TouchableOpacity
+        onPress={editable ? () => {
+            Alert.alert(
+                'Select',
+                'Choose an option',
+                [
+                    { text: '✔️ Tick', onPress: () => onChange && onChange('tick') },
+                    { text: '✖️ Cross', onPress: () => onChange && onChange('cross') },
+                    { text: 'Clear', onPress: () => onChange && onChange(null), style: 'cancel' },
+                ],
+                { cancelable: true }
+            );
+        } : undefined}
+        style={styles.checkboxContainer}
+    >
+        <View style={[styles.checkboxBox, value === 'tick' && styles.checkboxTick, value === 'cross' && styles.checkboxCross, !editable && { opacity: 0.6 }]}>
+            {value === 'tick' ? <Text style={styles.checkMark}>✔️</Text> : null}
+            {value === 'cross' ? <Text style={styles.crossMark}>✖️</Text> : null}
         </View>
     </TouchableOpacity>
 );
@@ -28,8 +44,9 @@ const PPECheckbox = ({ isChecked, onToggle, editable = true }) => (
 const initialPPEData = Array.from({ length: 13 }, (_, i) => ({
     id: `${i + 1}`,
     name: '', jobTitle: '', 
-    apron: false, cap: false, chefHat: false, trousers: false, safetyBoots: false, 
-    shirt: false, golfTShirt: false, workSuit: false, chefCoat: false, 
+    // three-state: null | 'tick' | 'cross'
+    apron: null, cap: null, chefHat: null, trousers: null, safetyBoots: null, 
+    shirt: null, golfTShirt: null, workSuit: null, chefCoat: null, 
     staffNrc: '', staffSign: '', supSign: '' 
 }));
 
@@ -53,11 +70,11 @@ const PPEIssuanceForm = () => {
         setData(prevData => prevData.map(item => item.id === id ? { ...item, [key]: value } : item));
     };
 
-    // Function to update the checked state for a specific person and PPE item
-    const togglePPE = (id, ppeKey) => {
+    // Set explicit value for PPE: 'tick' | 'cross' | null
+    const setPPEValue = (id, ppeKey, value) => {
         setData(prevData =>
             prevData.map(item =>
-                item.id === id ? { ...item, [ppeKey]: !item[ppeKey] } : item
+                item.id === id ? { ...item, [ppeKey]: value } : item
             )
         );
     };
@@ -90,16 +107,16 @@ const PPEIssuanceForm = () => {
                 <Text style={[styles.cell, styles.jobTitleCol]}>{item.jobTitle}</Text>
             )}
             
-            {/* PPE Checkboxes */}
-            <PPECheckbox isChecked={item.apron} onToggle={editMode ? () => togglePPE(item.id, 'apron') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.cap} onToggle={editMode ? () => togglePPE(item.id, 'cap') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.chefHat} onToggle={editMode ? () => togglePPE(item.id, 'chefHat') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.trousers} onToggle={editMode ? () => togglePPE(item.id, 'trousers') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.safetyBoots} onToggle={editMode ? () => togglePPE(item.id, 'safetyBoots') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.shirt} onToggle={editMode ? () => togglePPE(item.id, 'shirt') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.golfTShirt} onToggle={editMode ? () => togglePPE(item.id, 'golfTShirt') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.workSuit} onToggle={editMode ? () => togglePPE(item.id, 'workSuit') : undefined} editable={editMode} />
-            <PPECheckbox isChecked={item.chefCoat} onToggle={editMode ? () => togglePPE(item.id, 'chefCoat') : undefined} editable={editMode} />
+            {/* PPE Checkboxes (tap to choose Tick/Cross/Clear) */}
+            <PPECheckbox value={item.apron} onChange={editMode ? (v) => setPPEValue(item.id, 'apron', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.cap} onChange={editMode ? (v) => setPPEValue(item.id, 'cap', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.chefHat} onChange={editMode ? (v) => setPPEValue(item.id, 'chefHat', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.trousers} onChange={editMode ? (v) => setPPEValue(item.id, 'trousers', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.safetyBoots} onChange={editMode ? (v) => setPPEValue(item.id, 'safetyBoots', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.shirt} onChange={editMode ? (v) => setPPEValue(item.id, 'shirt', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.golfTShirt} onChange={editMode ? (v) => setPPEValue(item.id, 'golfTShirt', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.workSuit} onChange={editMode ? (v) => setPPEValue(item.id, 'workSuit', v) : undefined} editable={editMode} />
+            <PPECheckbox value={item.chefCoat} onChange={editMode ? (v) => setPPEValue(item.id, 'chefCoat', v) : undefined} editable={editMode} />
             
             {/* Signature/ID Columns (editable) */}
             {editMode ? (
@@ -468,15 +485,24 @@ const styles = StyleSheet.create({
         fontSize: 10,
         padding: 4,
         borderRightWidth: 1,
-        borderRightColor: '#000',
-        textAlign: 'center',
-        minHeight: 30,
+    checkboxTick: {
+        backgroundColor: '#4CAF50', // Green checkmark background
+    },
+    checkboxCross: {
+        backgroundColor: '#e74c3c', // Red cross background
+    },
     },
 
     // --- FOOTER STYLES ---
     footerSignatures: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+    crossMark: {
+        color: '#fff',
+        fontSize: 14,
+        lineHeight: 14,
+        fontWeight: 'bold',
+    },
         marginTop: 20,
         paddingHorizontal: 10,
     },

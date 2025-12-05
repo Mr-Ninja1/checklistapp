@@ -82,15 +82,11 @@ const PPEIssuancePresentational = ({ payload }) => {
             <Text style={[styles.cell, styles.noCol]}>{r.id || i+1}</Text>
             <Text style={[styles.cell, styles.nameCol]}>{r.name || ''}</Text>
             <Text style={[styles.cell, styles.jobCol]}>{r.jobTitle || ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.apron ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.cap ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.chefHat ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.trousers ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.safetyBoots ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.shirt ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.golfTShirt ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.workSuit ? '✓' : ''}</Text>
-            <Text style={[styles.cell, styles.ppeCol]}>{r.chefCoat ? '✓' : ''}</Text>
+            {['apron','cap','chefHat','trousers','safetyBoots','shirt','golfTShirt','workSuit','chefCoat'].map((k,i)=>{
+              const v = r[k];
+              const disp = v === 'tick' ? '✔️' : (v === 'cross' ? '✖️' : '');
+              return <Text key={`p-${i}`} style={[styles.cell, styles.ppeCol]}>{disp}</Text>;
+            })}
             <View style={[styles.cell, styles.signCol]}>{renderSignature(r.staffNrc, styles.cellText, { width: columnWidths.sign - 8, height: 32 })}</View>
             <View style={[styles.cell, styles.signCol]}>{renderSignature(r.staffSign, styles.cellText, { width: columnWidths.sign - 8, height: 32 })}</View>
             <View style={[styles.cell, styles.signCol]}>{renderSignature(r.supSign, styles.cellText, { width: columnWidths.sign - 8, height: 32 })}</View>

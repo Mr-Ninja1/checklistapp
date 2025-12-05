@@ -50,11 +50,14 @@
     "react-native-view-shot": "^4.0.3",
     "react-native-web": "^0.21.0",
     "react-native-webview": "^13.16.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "babel-plugin-transform-remove-console": "^6.9.4"
   },
   "private": true,
   "devDependencies": {
     "@react-native-community/cli": "latest",
-    "@react-native/metro-config": "latest"
+    "@react-native/metro-config": "latest",
+    "expo-build-properties": "^1.0.10"
   }
+
 }

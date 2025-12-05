@@ -21,7 +21,7 @@ const createInitialProductData = (count) => Array.from({ length: count }, (_, i)
 }));
 
 const ChemicalsReceivingForm = () => {
-    const [receivingData, setReceivingData] = useState(createInitialProductData(10));
+    const [receivingData, setReceivingData] = useState(createInitialProductData(20));
     const [deliveryDetails, setDeliveryDetails] = useState({
         dateOfDelivery: '',
         receivedBy: '',
@@ -124,7 +124,7 @@ const ChemicalsReceivingForm = () => {
     // use shared hook for autosave/save/submit
     const draftId = 'ChemicalsReceiving_draft';
     const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload: buildCanonicalPayload, draftId, clearOnSubmit: () => {
-        setReceivingData(createInitialProductData(10));
+        setReceivingData(createInitialProductData(20));
         setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
         setVerifiedBySign('');
         setHseqManagerSign('');

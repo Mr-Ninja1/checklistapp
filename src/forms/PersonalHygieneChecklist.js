@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { getDraft } from '../utils/formDrafts';
-import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -13,11 +13,30 @@ import SignatureThumb from '../components/SignatureThumb';
 const { width } = Dimensions.get('window');
 
 // --- Component for a single Checkbox (Custom Touchable) ---
-// This component now toggles between a blank state (false) and a checkmark (true)
-const ChecklistToggle = ({ isChecked, onToggle, editable = true }) => (
-    <TouchableOpacity onPress={editable ? onToggle : undefined} style={styles.checkboxContainer}>
-        <View style={[styles.checkboxBox, isChecked && styles.checkboxChecked]}>
-            {isChecked ? <Text style={styles.checkMark}>✓</Text> : null}
+// This component now allows three states: 'tick' (yes), 'cross' (no) or null (blank).
+const ChecklistToggle = ({ value, onChange, editable = true }) => (
+    <TouchableOpacity
+        onPress={editable ? () => {
+            Alert.alert(
+                'Select',
+                'Choose an option',
+                [
+                    { text: '✔️ Tick', onPress: () => onChange && onChange('tick') },
+                    { text: '✖️ Cross', onPress: () => onChange && onChange('cross') },
+                    { text: 'Clear', onPress: () => onChange && onChange(null), style: 'cancel' },
+                ],
+                { cancelable: true }
+            );
+        } : undefined}
+        style={styles.checkboxContainer}
+    >
+        <View style={[
+            styles.checkboxBox,
+            value === 'tick' && styles.checkboxTick,
+            value === 'cross' && styles.checkboxCross,
+        ]}>
+            {value === 'tick' ? <Text style={styles.checkMark}>✔️</Text> : null}
+            {value === 'cross' ? <Text style={styles.crossMark}>✖️</Text> : null}
         </View>
     </TouchableOpacity>
 );
@@ -28,16 +47,17 @@ const initialHygieneData = Array.from({ length: 13 }, (_, i) => ({
     date: '', 
     name: '', 
     // Hygiene Check Columns (Boolean) - Defaulting ALL to false (blank)
-    hairCover: false, 
-    shortNails: false, 
-    workSuit: false, 
-    jewellery: false, 
-    lipstick: false, 
-    persistentDiarrhoea: false, 
-    persistentCough: false, 
-    runningNose: false, 
-    skinInfection: false, 
-    openWound: false, 
+    // use null | 'tick' | 'cross' so users can explicitly choose tick or cross
+    hairCover: null, 
+    shortNails: null, 
+    workSuit: null, 
+    jewellery: null, 
+    lipstick: null, 
+    persistentDiarrhoea: null, 
+    persistentCough: null, 
+    runningNose: null, 
+    skinInfection: null, 
+    openWound: null, 
     // Signature/Comment Columns (Text Input)
     comment: '', 
     checkedBy: '' 
@@ -65,11 +85,12 @@ const PersonalHygieneChecklist = () => {
         setData(prevData => prevData.map(item => item.id === id ? { ...item, [key]: value } : item));
     };
 
-    // Function to toggle the checked state for a specific person and hygiene item
-    const toggleCheck = (id, checkKey) => {
+    // Function to set the checked state for a specific person and hygiene item
+    // value: 'tick' | 'cross' | null
+    const setCheckValue = (id, checkKey, value) => {
         setData(prevData =>
             prevData.map(item =>
-                item.id === id ? { ...item, [checkKey]: !item[checkKey] } : item
+                item.id === id ? { ...item, [checkKey]: value } : item
             )
         );
     };
@@ -134,17 +155,17 @@ const PersonalHygieneChecklist = () => {
                 <Text style={[styles.cell, styles.nameCol]}>{item.name}</Text>
             )}
             
-            {/* Hygiene Checkboxes (10 columns) */}
-            <ChecklistToggle isChecked={item.hairCover} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'hairCover') : undefined} />
-            <ChecklistToggle isChecked={item.shortNails} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'shortNails') : undefined} />
-            <ChecklistToggle isChecked={item.workSuit} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'workSuit') : undefined} />
-            <ChecklistToggle isChecked={item.jewellery} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'jewellery') : undefined} />
-            <ChecklistToggle isChecked={item.lipstick} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'lipstick') : undefined} />
-            <ChecklistToggle isChecked={item.persistentDiarrhoea} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'persistentDiarrhoea') : undefined} />
-            <ChecklistToggle isChecked={item.persistentCough} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'persistentCough') : undefined} />
-            <ChecklistToggle isChecked={item.runningNose} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'runningNose') : undefined} />
-            <ChecklistToggle isChecked={item.skinInfection} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'skinInfection') : undefined} />
-            <ChecklistToggle isChecked={item.openWound} editable={editMode} onToggle={editMode ? () => toggleCheck(item.id, 'openWound') : undefined} /> 
+            {/* Hygiene Checkboxes (10 columns) - tap to choose Tick / Cross / Clear */}
+            <ChecklistToggle value={item.hairCover} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'hairCover', v) : undefined} />
+            <ChecklistToggle value={item.shortNails} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'shortNails', v) : undefined} />
+            <ChecklistToggle value={item.workSuit} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'workSuit', v) : undefined} />
+            <ChecklistToggle value={item.jewellery} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'jewellery', v) : undefined} />
+            <ChecklistToggle value={item.lipstick} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'lipstick', v) : undefined} />
+            <ChecklistToggle value={item.persistentDiarrhoea} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'persistentDiarrhoea', v) : undefined} />
+            <ChecklistToggle value={item.persistentCough} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'persistentCough', v) : undefined} />
+            <ChecklistToggle value={item.runningNose} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'runningNose', v) : undefined} />
+            <ChecklistToggle value={item.skinInfection} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'skinInfection', v) : undefined} />
+            <ChecklistToggle value={item.openWound} editable={editMode} onChange={editMode ? (v) => setCheckValue(item.id, 'openWound', v) : undefined} /> 
 
             {/* COMMENT (Input) */}
             {editMode ? (
@@ -511,7 +532,19 @@ const styles = StyleSheet.create({
     checkboxChecked: {
         backgroundColor: '#4CAF50', // Green checkmark background
     },
+    checkboxTick: {
+        backgroundColor: '#4CAF50', // Green checkmark background
+    },
+    checkboxCross: {
+        backgroundColor: '#e74c3c', // Red cross background
+    },
     checkMark: {
+        color: '#fff',
+        fontSize: 14,
+        lineHeight: 14,
+        fontWeight: 'bold',
+    },
+    crossMark: {
         color: '#fff',
         fontSize: 14,
         lineHeight: 14,

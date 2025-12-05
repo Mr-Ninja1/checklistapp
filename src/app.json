@@ -34,7 +34,17 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+        "android": {
+            "minSdkVersion": 23,
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
+          }
+        }
+      ]
     ],
     "extra": {
       "googleClientIdAndroid": "815051787209-q2fessai98b08g0ja49f9oiqae431c28.apps.googleusercontent.com",

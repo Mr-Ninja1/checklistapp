@@ -102,7 +102,30 @@ export default function ProductRejectionForm() {
 
   const handleSaveDraft = async () => {
     try {
-      await setDraft(draftKey, { rejectionEntries, storeOfficer, complexManager, financeStockController, rejectedProductCollector });
+      // legacy draft storage (used by getDraft)
+      await setDraft(draftKey, { rejectionEntries, storeOfficer, complexManager, financeStockController, rejectedProductCollector, storeOfficerSign, complexManagerSign, financeStockControllerSign, rejectedProductCollectorSign });
+      // also save to unified form storage draft location so other loaders can find it
+      try {
+        const payload = {
+          formType: 'ProductRejectionForm',
+          templateVersion: 'v1.0',
+          title: 'PRODUCT REJECTION FORM',
+          rejectionEntries,
+          storeOfficer,
+          complexManager,
+          financeStockController,
+          rejectedProductCollector,
+          storeOfficerSign,
+          complexManagerSign,
+          financeStockControllerSign,
+          rejectedProductCollectorSign,
+          savedAt: Date.now(),
+        };
+        if (formStorage && formStorage.saveDraft) {
+          const res = await formStorage.saveDraft(draftKey, payload).catch(() => null);
+          try { console.info('formStorage.saveDraft result', res); } catch (e) {}
+        }
+      } catch (e) { /* ignore secondary save errors */ }
       Alert.alert('Draft saved');
     } catch (e) { Alert.alert('Error', 'Failed to save draft'); }
   };

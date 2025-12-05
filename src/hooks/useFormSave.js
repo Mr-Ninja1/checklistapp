@@ -75,7 +75,7 @@ export default function useFormSave(a, b = {}) {
   // alias for older callers
   const autoSaveDraft = (...args) => scheduleAutoSave(...args);
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = async (persist = false) => {
     // Save draft silently (do not show fullscreen saving overlay). Keep a small
     // notification to confirm the draft save but avoid toggling isSaving so
     // modal backdrops won't appear during typical autosave flows.
@@ -84,11 +84,19 @@ export default function useFormSave(a, b = {}) {
     inFlightSave.current = true;
     try {
       const payload = safeGetPayload('draft');
-      // Save drafts to the stable draft location so they don't add history entries
+      // Save drafts to the stable draft location. By default use saveDraft
+      // so autosave does not create history entries. If `persist` is true
+      // the caller explicitly requested a persistent save that should
+      // appear in Saved Forms (history), so use saveForm instead.
       const stableId = stableDraftId || `${formType}_draft`;
       let res = null;
-      if (formStorage.saveDraft) res = await formStorage.saveDraft(stableId, payload);
-      else res = await formStorage.saveForm(stableId, payload);
+      if (persist) {
+        // explicit persistent draft: register history entry
+        res = await formStorage.saveForm(stableId, payload);
+      } else {
+        if (formStorage.saveDraft) res = await formStorage.saveDraft(stableId, payload);
+        else res = await formStorage.saveForm(stableId, payload);
+      }
       // Log the saved draft location for easier debugging during development
       try { console.info('useFormSave: draft saved', { stableId, filePath: res && res.filePath }); } catch (e) {}
       // Inform the user that a draft was saved when invoked explicitly

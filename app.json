@@ -14,8 +14,19 @@
     },
     "android": {
       "package": "com.mrninja1.bravomanager"
-    }
-    ,
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 23,
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
+          }
+        }
+      ]
+    ],
     "updates": {
       "enabled": true,
       "checkAutomatically": "ON_LOAD",

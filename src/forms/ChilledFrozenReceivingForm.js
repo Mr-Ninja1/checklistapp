@@ -46,6 +46,7 @@ const ChilledFrozenReceivingForm = () => {
     // Update delivery details
     const updateDeliveryDetail = (field, value) => {
         setDeliveryDetails(prev => ({ ...prev, [field]: value }));
+        try { scheduleAutoSave(); } catch (e) { /* ignore if hook not ready */ }
     };
 
     // Canonical payload builder
@@ -216,7 +217,7 @@ const ChilledFrozenReceivingForm = () => {
                         <View style={styles.docDetailsRight}>
                             <View style={styles.detailRowItem}>
                                 <Text style={styles.detailLabel}>Issue Date:</Text>
-                                <TextInput style={styles.detailValueInput} value={issueDate} onChangeText={setIssueDate} />
+                                    <TextInput style={styles.detailValueInput} value={issueDate} onChangeText={(t) => { setIssueDate(t); try { scheduleAutoSave(); } catch (e) {} }} />
                             </View>
                             <View style={styles.detailRowItem}>
                                 <Text style={styles.detailLabel}>Page:</Text>
@@ -255,23 +256,23 @@ const ChilledFrozenReceivingForm = () => {
                     <View style={styles.deliveryDetails}>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Date of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.dateOfDelivery} onChangeText={(t) => updateDeliveryDetail('dateOfDelivery', t)} />
                             <Text style={styles.deliveryLabel}>Received By:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.receivedBy} onChangeText={(t) => updateDeliveryDetail('receivedBy', t)} />
                             <Text style={styles.deliveryLabel}>Complex Manager:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.complexManager} onChangeText={(t) => updateDeliveryDetail('complexManager', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Time of Delivery:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.timeOfDelivery} onChangeText={(t) => updateDeliveryDetail('timeOfDelivery', t)} />
                             <Text style={styles.deliveryLabel}>Invoice No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.invoiceNo} onChangeText={(t) => updateDeliveryDetail('invoiceNo', t)} />
                             <Text style={styles.deliveryLabel}>Drivers Name:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.driversName} onChangeText={(t) => updateDeliveryDetail('driversName', t)} />
                         </View>
                         <View style={styles.deliveryRow}>
                             <Text style={styles.deliveryLabel}>Vehicle Reg No:</Text>
-                            <TextInput style={styles.deliveryInput} />
+                            <TextInput style={styles.deliveryInput} value={deliveryDetails.vehicleRegNo} onChangeText={(t) => updateDeliveryDetail('vehicleRegNo', t)} />
                             <Text style={styles.deliveryLabel}>Signature:</Text>
                             <SignatureField value={deliveryDetails.signature} onChange={(v) => updateDeliveryDetail('signature', v)} editable={editMode} width={240} height={80} placeholder="Tap to sign" />
                         </View>

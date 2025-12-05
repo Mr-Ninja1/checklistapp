@@ -76,9 +76,11 @@ export default function PersonalHygieneChecklistPresentational({ payload, embedd
 						<Text style={[styles.cell, { width: columnWidths.date }]}>{r.date || ''}</Text>
 						<Text style={[styles.cellLeft, { width: columnWidths.name }]}>{r.name || ''}</Text>
 
-						{['hairCover','shortNails','workSuit','jewellery','lipstick','persistentDiarrhoea','persistentCough','runningNose','skinInfection','openWound'].map((k, i) => (
-							<Text key={`c-${i}`} style={[styles.cell, { width: columnWidths.check }]}>{r[k] ? '✓' : ''}</Text>
-						))}
+						{['hairCover','shortNails','workSuit','jewellery','lipstick','persistentDiarrhoea','persistentCough','runningNose','skinInfection','openWound'].map((k, i) => {
+							const v = r[k];
+							const disp = v === 'tick' ? '✔️' : (v === 'cross' ? '✖️' : '');
+							return <Text key={`c-${i}`} style={[styles.cell, { width: columnWidths.check }]}>{disp}</Text>;
+						})}
 
 										<Text style={[styles.cell, { width: columnWidths.comment }]}>{r.comment || ''}</Text>
 										<Text style={[styles.cell, { width: columnWidths.checkedBy }]}>{r.checkedBy || ''}</Text>
