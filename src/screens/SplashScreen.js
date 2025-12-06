@@ -12,7 +12,7 @@ export default function SplashScreen({ navigation }) {
   }, [navigation]);
 
   return (
-    <LinearGradient colors={["#43cea2", "#185a9d"]} style={styles.container}>
+    <LinearGradient colors={["#e9322cff", "#994545ff"]} style={styles.container}>
       <View style={styles.logoContainer}>
         <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
       </View>

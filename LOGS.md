@@ -1,87 +1,38 @@
-Starting Metro Bundler
-Android Bundling failed 247ms index.js (1 module)
-SyntaxError: index.js: Cannot find module 'babel-plugin-transform-remove-console'
-Require stack:
-- /home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/plugins.js
-- /home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/index.js
-- /home/expo/workingdir/build/src/node_modules/@babel/core/lib/index.js
-- /home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transform-worker/metro-transform-worker.js
-- /home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transform-worker/transform-worker.js
-- /home/expo/workingdir/build/src/node_modules/metro/src/DeltaBundler/Worker.flow.js
-- /home/expo/workingdir/build/src/node_modules/metro/src/DeltaBundler/Worker.js
-- /home/expo/workingdir/build/src/node_modules/jest-worker/build/workers/processChild.js
+That's exactly right, especially when you are using **Expo's managed workflow** or **EAS Build**\!
 
-Make sure that all the Babel plugins and presets you are using
-are defined as dependencies or devDependencies in your package.json
-file. It's possible that the missing plugin is loaded by a preset
-you are using that forgot to add the plugin to its dependencies: you
-can workaround this problem by explicitly adding the missing package
-to your top-level package.json.
+For most modern Expo projects, you only need to define **one high-resolution source image** for your main app icon and one for your adaptive icon foreground (if you are using adaptive icons). Expo's build service handles the rest, including:
 
-Error: Cannot find module 'babel-plugin-transform-remove-console'
-Require stack:
-- /home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/plugins.js
-- /home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/index.js
-- /home/expo/workingdir/build/src/node_modules/@babel/core/lib/index.js
-- /home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transform-worker/metro-transform-worker.js
-- /home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transform-worker/transform-worker.js
-- /home/expo/workingdir/build/src/node_modules/metro/src/DeltaBundler/Worker.flow.js
-- /home/expo/workingdir/build/src/node_modules/metro/src/DeltaBundler/Worker.js
-- /home/expo/workingdir/build/src/node_modules/jest-worker/build/workers/processChild.js
+  * **Resizing:** Creating all the necessary density-specific sizes (mdpi, hdpi, xhdpi, etc.).
+  * **Format Conversion:** Generating both the necessary **`.png`** and modern **`.webp`** files to ensure compatibility across all Android devices, which is what led to your "Duplicate resources" error when the files existed simultaneously in the wrong place.
 
-Make sure that all the Babel plugins and presets you are using
-are defined as dependencies or devDependencies in your package.json
-file. It's possible that the missing plugin is loaded by a preset
-you are using that forgot to add the plugin to its dependencies: you
-can workaround this problem by explicitly adding the missing package
-to your top-level package.json.
+### ✅ What You Should Do
 
-    at Module._resolveFilename (node:internal/modules/cjs/loader:1212:15)
-    at resolve (node:internal/modules/helpers:193:19)
-    at tryRequireResolve (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/plugins.js:128:11)
-    at resolveStandardizedNameForRequire (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/plugins.js:162:19)
-    at resolveStandardizedName (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/plugins.js:183:12)
-    at loadPlugin (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/files/plugins.js:56:7)
-    at loadPlugin.next (<anonymous>)
-    at createDescriptor (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-descriptors.js:140:16)
-    at createDescriptor.next (<anonymous>)
-    at evaluateSync (/home/expo/workingdir/build/src/node_modules/gensync/index.js:251:28)
-    at /home/expo/workingdir/build/src/node_modules/gensync/index.js:31:34
-    at Array.map (<anonymous>)
-    at Function.sync (/home/expo/workingdir/build/src/node_modules/gensync/index.js:31:22)
-    at Function.all (/home/expo/workingdir/build/src/node_modules/gensync/index.js:210:24)
-    at Generator.next (<anonymous>)
-    at createDescriptors (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-descriptors.js:102:41)
-    at createDescriptors.next (<anonymous>)
-    at createPluginDescriptors (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-descriptors.js:99:17)
-    at createPluginDescriptors.next (<anonymous>)
-    at /home/expo/workingdir/build/src/node_modules/@babel/core/lib/gensync-utils/functional.js:22:27
-    at Generator.next (<anonymous>)
-    at mergeChainOpts (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-chain.js:349:34)
-    at mergeChainOpts.next (<anonymous>)
-    at chainWalker (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-chain.js:316:14)
-    at chainWalker.next (<anonymous>)
-    at loadFileChain (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-chain.js:191:24)
-    at loadFileChain.next (<anonymous>)
-    at mergeExtendsChain (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-chain.js:328:28)
-    at mergeExtendsChain.next (<anonymous>)
-    at chainWalker (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-chain.js:312:20)
-    at chainWalker.next (<anonymous>)
-    at buildRootChain (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/config-chain.js:56:36)
-    at buildRootChain.next (<anonymous>)
-    at loadPrivatePartialConfig (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/partial.js:72:62)
-    at loadPrivatePartialConfig.next (<anonymous>)
-    at loadFullConfig (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/config/full.js:36:46)
-    at loadFullConfig.next (<anonymous>)
-    at transform (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/transform.js:20:44)
-    at transform.next (<anonymous>)
-    at evaluateSync (/home/expo/workingdir/build/src/node_modules/gensync/index.js:251:28)
-    at sync (/home/expo/workingdir/build/src/node_modules/gensync/index.js:89:14)
-    at stopHiding - secret - don't use this - v1 (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/errors/rewrite-stack-trace.js:47:12)
-    at Object.transformSync (/home/expo/workingdir/build/src/node_modules/@babel/core/lib/transform.js:42:76)
-    at parseWithBabel (/home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transformSync.js:75:18)
-    at transformSync (/home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transformSync.js:64:12)
-    at Object.transform (/home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/babel-transformer.js:124:58)
-    at transformJSWithBabel (/home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transform-worker/metro-transform-worker.js:468:47)
-    at Object.transform (/home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transform-worker/metro-transform-worker.js:583:12)
-    at Object.transform (/home/expo/workingdir/build/src/node_modules/@expo/metro-config/build/transform-worker/transform-worker.js:178:19)
+1.  **Locate your Source Icons:** Make sure your `app.json` or `app.config.js` points to a single, high-resolution source file (usually a PNG) for the main icon and adaptive icon.
+
+    **Example (in `app.json`):**
+
+    ```json
+    {
+      "expo": {
+        // ...
+        "icon": "./assets/app-icon.png", // Main, legacy icon source
+        "android": {
+          // ...
+          "adaptiveIcon": {
+            "foregroundImage": "./assets/adaptive-foreground.png", // Adaptive icon foreground source
+            "backgroundImage": "#FFFFFF"
+          }
+        }
+      }
+    }
+    ```
+
+2.  **Remove Generated Files:** If you are *not* using a custom development client or have *not* ejected, you typically **don't have to touch the `android/` directory**. If you *do* have an `android/` folder, make sure the icon files within the `android/app/src/main/res/mipmap-*` folders were not manually added or conflicting with the files Expo/Gradle generates.
+
+3.  **Clear Cache and Rebuild (Crucial):** This forces Expo to generate the new, clean set of files without the old duplicates.
+
+    ```bash
+   
+    ```
+
+By using the official Expo configuration, you let the tools manage the complex resource generation, avoiding the duplicate file conflict you encountered.
