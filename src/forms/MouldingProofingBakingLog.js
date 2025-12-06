@@ -263,8 +263,22 @@ export default function MouldingProofingBakingLog(props = {}) {
 						</View>
 					</View>
 					<View style={[styles.metaRow, { marginTop: 8 }]}>
-						<View style={styles.metaItem}><Text style={styles.label}>Compiled By:</Text><TextInput style={styles.input} value={meta.compiledBy || 'Michael zulu'} onChangeText={t => setMetaField('compiledBy', t)} /></View>
-						<View style={styles.metaItem}><Text style={styles.label}>Approved By:</Text><TextInput style={styles.input} value={meta.approvedBy || 'Hassani Ali'} onChangeText={t => setMetaField('approvedBy', t)} /></View>
+						<View style={styles.metaItem}>
+							<Text style={styles.label}>Compiled By:</Text>
+							<TextInput style={styles.input} value={meta.compiledBy || 'Michael zulu'} onChangeText={t => setMetaField('compiledBy', t)} />
+						</View>
+						<View style={styles.metaItem}>
+							<Text style={styles.label}>Approved By:</Text>
+							<TextInput style={styles.input} value={meta.approvedBy || 'Hassani Ali'} onChangeText={t => setMetaField('approvedBy', t)} />
+						</View>
+						<View style={[styles.metaItem, { justifyContent: 'center' }]} onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
+							<Text style={styles.label}>Verified By:</Text>
+							<SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={true} width={220} height={56} />
+						</View>
+						<View style={[styles.metaItem, { justifyContent: 'center' }]} onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
+							<Text style={styles.label}>Complex Manager:</Text>
+							<SignatureField value={complexManagerSign} onChange={setComplexManagerSign} editable={true} width={220} height={56} />
+						</View>
 					</View>
 				</View>
 				{/* Table: grouped header + rows — make horizontally scrollable when needed */}
@@ -342,16 +356,7 @@ export default function MouldingProofingBakingLog(props = {}) {
 						<Text style={styles.footerLabel}>Corrective Action:</Text>
 						<TextInput value={meta.correctiveAction} onChangeText={t => setMetaField('correctiveAction', t)} style={styles.correctiveInput} editable={editMode} multiline numberOfLines={3} />
 					</View>
-					<View style={styles.verificationRow}>
-						<View style={[styles.footerField, { flex: 1 }] } onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
-							<Text style={styles.footerLabel}>Verified By:</Text>
-							<SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={true} width={280} height={64} />
-						</View>
-						<View style={[styles.footerField, { flex: 1, alignItems: 'flex-end' }]} onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
-							<Text style={[styles.footerLabel, { textAlign: 'right' }]}>Complex Manager Signature</Text>
-							<SignatureField value={complexManagerSign} onChange={setComplexManagerSign} editable={true} width={260} height={64} />
-						</View>
-					</View>
+					{/* Verified & Complex Manager signatures were moved to the meta header for better tablet tap reliability */}
 				</View>
 
 			</ScrollView>
