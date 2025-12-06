@@ -300,14 +300,22 @@ export default function MouldingProofingBakingLog(props = {}) {
 								</View>
 								<TextInput style={[styles.cell, { width: dynamicWidths.food }]} value={r.product} onChangeText={t => setRowField(r.id, 'product', t)} editable={editMode} />
 								<TextInput style={[styles.cell, { width: dynamicWidths.mouldingTime }]} value={r.mouldingTime} onChangeText={t => setRowField(r.id, 'mouldingTime', t)} editable={editMode} />
-								<View style={[styles.cell, { width: dynamicWidths.mouldingSign, alignItems: 'center' }]}>
-									<SignatureField value={r.mouldingSign} onChange={v => setRowField(r.id, 'mouldingSign', v)} editable={editMode} width={Math.max(40, dynamicWidths.mouldingSign - 12)} height={36} />
-								</View>
+																<View
+																	style={[styles.cell, { width: dynamicWidths.mouldingSign, alignItems: 'center' }]}
+																	onStartShouldSetResponder={() => true}
+																	onResponderTerminationRequest={() => true}
+																>
+																		<SignatureField value={r.mouldingSign} onChange={v => setRowField(r.id, 'mouldingSign', v)} editable={true} width={Math.max(40, dynamicWidths.mouldingSign - 12)} height={36} />
+																</View>
 								<TextInput style={[styles.cell, { width: dynamicWidths.proofTimeIn }]} value={r.proofTimeIn} onChangeText={t => setRowField(r.id, 'proofTimeIn', t)} editable={editMode} />
 								<TextInput style={[styles.cell, { width: dynamicWidths.proofTimeOut }]} value={r.proofTimeOut} onChangeText={t => setRowField(r.id, 'proofTimeOut', t)} editable={editMode} />
-								<View style={[styles.cell, { width: dynamicWidths.proofSign, alignItems: 'center' }]}>
-									<SignatureField value={r.proofSign} onChange={v => setRowField(r.id, 'proofSign', v)} editable={editMode} width={Math.max(40, dynamicWidths.proofSign - 12)} height={36} />
-								</View>
+																<View
+																	style={[styles.cell, { width: dynamicWidths.proofSign, alignItems: 'center' }]}
+																	onStartShouldSetResponder={() => true}
+																	onResponderTerminationRequest={() => true}
+																>
+																		<SignatureField value={r.proofSign} onChange={v => setRowField(r.id, 'proofSign', v)} editable={true} width={Math.max(40, dynamicWidths.proofSign - 12)} height={36} />
+																</View>
 								<TextInput style={[styles.cell, { width: dynamicWidths.bakeTimeIn }]} value={r.bakeTimeIn} onChangeText={t => setRowField(r.id, 'bakeTimeIn', t)} editable={editMode} />
 								<View style={[styles.cell, { width: dynamicWidths.bakeTemp }]}> 
 									<TextInput
@@ -326,9 +334,9 @@ export default function MouldingProofingBakingLog(props = {}) {
 
 				{/* Footer: corrective action and signatures */}
 				<View style={styles.footerContainer}>
-					<View style={styles.footerField}>
+					<View style={styles.footerField} onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
 						<Text style={styles.footerLabel}>Head Chef/Baker Signature:</Text>
-						<SignatureField value={headChefSign} onChange={setHeadChefSign} editable={editMode} width={320} height={64} />
+						<SignatureField value={headChefSign} onChange={setHeadChefSign} editable={true} width={320} height={64} />
 					</View>
 					<View style={styles.footerField}>
 						<Text style={styles.footerLabel}>Corrective Action:</Text>
@@ -336,12 +344,16 @@ export default function MouldingProofingBakingLog(props = {}) {
 					</View>
 					<View style={styles.verificationRow}>
 						<View style={{ flex: 1 }}>
-							<Text style={styles.footerLabel}>Verified By:</Text>
-							<SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={editMode} width={280} height={64} />
+														<Text style={styles.footerLabel}>Verified By:</Text>
+														<View onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
+															<SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={true} width={280} height={64} />
+														</View>
 						</View>
 						<View style={{ flex: 1, alignItems: 'flex-end' }}>
-							<Text style={[styles.footerLabel, { textAlign: 'right' }]}>Complex Manager Signature</Text>
-							<SignatureField value={complexManagerSign} onChange={setComplexManagerSign} editable={editMode} width={260} height={64} />
+														<Text style={[styles.footerLabel, { textAlign: 'right' }]}>Complex Manager Signature</Text>
+														<View onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
+															<SignatureField value={complexManagerSign} onChange={setComplexManagerSign} editable={true} width={260} height={64} />
+														</View>
 						</View>
 					</View>
 				</View>
