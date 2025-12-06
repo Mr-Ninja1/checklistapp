@@ -343,17 +343,13 @@ export default function MouldingProofingBakingLog(props = {}) {
 						<TextInput value={meta.correctiveAction} onChangeText={t => setMetaField('correctiveAction', t)} style={styles.correctiveInput} editable={editMode} multiline numberOfLines={3} />
 					</View>
 					<View style={styles.verificationRow}>
-						<View style={{ flex: 1 }}>
-														<Text style={styles.footerLabel}>Verified By:</Text>
-														<View onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
-															<SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={true} width={280} height={64} />
-														</View>
+						<View style={[styles.footerField, { flex: 1 }] } onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
+							<Text style={styles.footerLabel}>Verified By:</Text>
+							<SignatureField value={verifiedBySign} onChange={setVerifiedBySign} editable={true} width={280} height={64} />
 						</View>
-						<View style={{ flex: 1, alignItems: 'flex-end' }}>
-														<Text style={[styles.footerLabel, { textAlign: 'right' }]}>Complex Manager Signature</Text>
-														<View onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
-															<SignatureField value={complexManagerSign} onChange={setComplexManagerSign} editable={true} width={260} height={64} />
-														</View>
+						<View style={[styles.footerField, { flex: 1, alignItems: 'flex-end' }]} onStartShouldSetResponder={() => true} onResponderTerminationRequest={() => true}>
+							<Text style={[styles.footerLabel, { textAlign: 'right' }]}>Complex Manager Signature</Text>
+							<SignatureField value={complexManagerSign} onChange={setComplexManagerSign} editable={true} width={260} height={64} />
 						</View>
 					</View>
 				</View>
