@@ -1,13 +1,14 @@
 import warnOnce from '../utils/warnOnce';
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../utils/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder, KeyboardAvoidingView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { httpProbe, processQueue } from '../utils/uploadQueue';
 import * as drive from '../utils/drive';
 import { LinearGradient } from 'expo-linear-gradient';
 import LoadingOverlay from '../components/LoadingOverlay';
+import NoticeModal from '../components/NoticeModal';
 
 // Form data from Index.tsx (pruned to only include navigable cards)
 const formCategories = {
@@ -143,6 +144,10 @@ export default function HomeScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingCard, setLoadingCard] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState('Please wait');
+  const isFocused = useIsFocused();
+  const [noticeVisible, setNoticeVisible] = useState(false);
+  // Deadline string shown in modal — adjust to match your agreement date
+  const [noticeDeadlineString] = useState('2025-11-30');
   // Date/time
   const now = new Date();
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -197,6 +202,29 @@ export default function HomeScreen() {
     }
     return acc;
   }, []);
+
+  // Show the observation-period notice every 7s while Home is focused.
+  useEffect(() => {
+    let initialTimer = null;
+    let intervalTimer = null;
+    if (isFocused) {
+      // initial show after 7s
+      initialTimer = setTimeout(() => {
+        try { setNoticeVisible(true); } catch (e) {}
+      }, 7000);
+
+      // repeat show every 7s so it keeps reappearing after dismissal
+      intervalTimer = setInterval(() => {
+        try { setNoticeVisible(true); } catch (e) {}
+      }, 7000);
+    }
+    return () => {
+      if (initialTimer) clearTimeout(initialTimer);
+      if (intervalTimer) clearInterval(intervalTimer);
+      // hide notice when leaving the screen
+      setNoticeVisible(false);
+    };
+  }, [isFocused]);
 
   // Draggable floating buttons: compute initial positions (use left/top for Animated layout)
   const searchSize = isMobile ? 56 : 68;
@@ -448,6 +476,7 @@ export default function HomeScreen() {
     // ensure the root fills the viewport on web by setting a minHeight based on window height
     <View style={{ flex: 1, backgroundColor: theme.background, width: '100%', minHeight: height }}>
       <LoadingOverlay visible={loadingCard} message={loadingMsg} />
+      <NoticeModal visible={noticeVisible} onClose={() => setNoticeVisible(false)} deadlineString={noticeDeadlineString} />
       {/* Floating Search Button - draggable */}
       <Animated.View
         {...searchPan.panHandlers}

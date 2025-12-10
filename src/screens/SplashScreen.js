@@ -1,14 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { ActivityIndicator } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import { LinearGradient } from 'expo-linear-gradient';
+import NoticeModal from '../components/NoticeModal';
 
 export default function SplashScreen({ navigation }) {
+  const [noticeVisible, setNoticeVisible] = useState(true);
+
   useEffect(() => {
-    setTimeout(() => {
-  navigation.replace('Home');
+    // Navigate to Home after a short delay but keep the modal visible on Splash.
+    const t = setTimeout(() => {
+      try { navigation.replace('Home'); } catch (e) {}
     }, 2000);
+    return () => clearTimeout(t);
   }, [navigation]);
 
   return (
@@ -18,6 +23,7 @@ export default function SplashScreen({ navigation }) {
       </View>
       <Text style={styles.bravo}>Bravo!</Text>
       <ActivityIndicator size="large" color="#fff" style={styles.spinner} />
+      <NoticeModal visible={noticeVisible} onClose={() => setNoticeVisible(false)} deadlineString={'2025-11-30'} />
     </LinearGradient>
   );
 }
