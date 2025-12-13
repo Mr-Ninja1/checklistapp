@@ -1,14 +1,39 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, Image, Animated, Easing } from 'react-native';
 import { ActivityIndicator } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SplashScreen({ navigation }) {
+  const [index, setIndex] = useState(0);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const messages = [
+    'Starting app',
+    'Loading forms',
+    'Connecting to the internet',
+    'Starting Dropbox',
+  ];
+
   useEffect(() => {
-    setTimeout(() => {
-  navigation.replace('Home');
-    }, 2000);
+    let mounted = true;
+    const run = () => {
+      opacity.setValue(0);
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.delay(900),
+        Animated.timing(opacity, { toValue: 0, duration: 700, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      ]).start(() => {
+        if (!mounted) return;
+        setIndex(i => (i + 1) % messages.length);
+      });
+    };
+    run();
+    return () => { mounted = false; opacity.stopAnimation(); };
+  }, [index]);
+
+  useEffect(() => {
+    const t = setTimeout(() => navigation.replace('Home'), 2000);
+    return () => clearTimeout(t);
   }, [navigation]);
 
   return (
@@ -18,6 +43,22 @@ export default function SplashScreen({ navigation }) {
       </View>
       <Text style={styles.bravo}>Bravo!</Text>
       <ActivityIndicator size="large" color="#fff" style={styles.spinner} />
+      <Animated.Text
+        style={[
+          styles.loadingText,
+          {
+            opacity: opacity,
+            transform: [
+              {
+                translateY: opacity.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }),
+              },
+            ],
+          },
+        ]}
+        numberOfLines={1}
+      >
+        {messages[index]}
+      </Animated.Text>
     </LinearGradient>
   );
 }
@@ -76,5 +117,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     letterSpacing: 1,
+  },
+  loadingText: {
+    marginTop: 18,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.95)',
+    letterSpacing: 0.6,
+    textAlign: 'center',
+    maxWidth: '80%',
   },
 });
