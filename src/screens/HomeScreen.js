@@ -523,25 +523,7 @@ export default function HomeScreen() {
         {/* Polished mobile app header */}
         {isMobile ? (
           <View style={{ padding: 0, margin: 0 }}>
-            <View
-              style={{
-                backgroundColor: '#fff',
-                borderRadius: 18,
-                marginHorizontal: 14,
-                marginTop: 14,
-                marginBottom: 0,
-                padding: 16,
-                elevation: 5,
-                shadowColor: '#185a9d',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.13,
-                shadowRadius: 12,
-                borderWidth: 1,
-                borderColor: '#eaf7f7',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-              }}
-            >
+            <View style={styles.headerCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Image
                  
@@ -569,14 +551,7 @@ export default function HomeScreen() {
             </View>
           </View>
         ) : (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 24,
-              paddingBottom: 0,
-            }}
-          >
+            <View style={styles.headerRow}>
             <Image
               source={require('../assets/logo.jpeg')}
               style={{ width: 48, height: 48, borderRadius: 12, marginRight: 16, backgroundColor: '#fff' }}
@@ -587,7 +562,7 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 15, color: '#fff', opacity: 0.85 }}>Food Safety Inspections</Text>
             </View>
               {/* reachability icon removed from here — now shown on the right side of the time/date row */}
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 12, minWidth: 220, alignItems: 'flex-start', elevation: 2 }}>
+            <View style={styles.headerCardAlt}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                 <Text style={{ fontSize: 16, color: '#22c1c3', fontWeight: 'bold', marginRight: 6 }}>📍</Text>
                 <Text style={{ fontSize: 15, color: '#22c1c3', fontWeight: 'bold' }}>Ndola, Zambia</Text>
@@ -715,10 +690,10 @@ export default function HomeScreen() {
         {Object.entries(formCategories).map(([key, category], idx) => (
           <TouchableOpacity
             key={key}
-            style={{ flex: 1, alignItems: 'center', paddingVertical: 16, borderRadius: 12, backgroundColor: activeCategory === key ? '#43cea2' : 'transparent' }}
+            style={[styles.categoryTab, activeCategory === key && styles.categoryTabActive]}
             onPress={() => setActiveCategory(key)}
           >
-            <Text style={{ fontSize: 18, color: activeCategory === key ? '#fff' : '#185a9d', fontWeight: 'bold' }}>
+            <Text style={[styles.categoryTabText, activeCategory === key && styles.categoryTabTextActive]}>
               {idx === 0 ? '🍽️' : idx === 1 ? '🏭' : idx === 2 ? '🍳' : idx === 3 ? '🍞' : '🏢'} {category.name.split(' ')[0]}
             </Text>
           </TouchableOpacity>
@@ -757,11 +732,10 @@ export default function HomeScreen() {
               style={[styles.formCard, { borderLeftColor: getStatusColor(form.status).backgroundColor, backgroundColor: 'transparent', opacity: (form.route || form.isHandwashingLog) ? 1 : 0.6, zIndex: 3 } ]}
             >
               <LinearGradient
-                colors={['rgba(255,255,255,0.40)', 'rgba(255,255,255,0.995)', 'rgba(255,255,255,0.995)', 'rgba(255,255,255,0.40)']}
-                locations={[0, 0.28, 0.72, 1]}
+                colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.10)']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={{ ...StyleSheet.absoluteFillObject, borderRadius: 12, zIndex: 0 }}
+                style={{ ...StyleSheet.absoluteFillObject, borderRadius: 14, zIndex: 0 }}
               />
               <View style={{ zIndex: 1 }}>
                 <View style={styles.formCardTop}>
@@ -772,11 +746,11 @@ export default function HomeScreen() {
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginRight: 6, backgroundColor: getStatusColor(form.status).backgroundColor }}>
-                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getStatusColor(form.status).color }}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(form.status).backgroundColor }]}> 
+                      <Text style={[styles.statusBadgeText, { color: getStatusColor(form.status).color }]}>{form.status.charAt(0).toUpperCase() + form.status.slice(1)}</Text>
                     </View>
-                    <View style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: getPriorityColor(form.priority).borderColor, marginRight: 6 }}>
-                      <Text style={{ fontSize: 12, fontWeight: 'bold', color: getPriorityColor(form.priority).color }}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
+                    <View style={[styles.priorityBadge, { borderColor: getPriorityColor(form.priority).borderColor }]}> 
+                      <Text style={[styles.priorityBadgeText, { color: getPriorityColor(form.priority).color }]}>{form.priority.charAt(0).toUpperCase() + form.priority.slice(1)}</Text>
                     </View>
                   </View>
                 </View>
@@ -827,14 +801,18 @@ const styles = StyleSheet.create({
   formCard: {
     marginVertical: 8,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     borderLeftWidth: 6,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    overflow: 'hidden',
+    shadowColor: '#0a3a2f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 8,
+    backdropFilter: 'blur(6px)'
   },
   formCardTop: {
     flexDirection: 'row',
@@ -847,11 +825,12 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.12)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+    color: '#f7fbf8'
   },
   formLocation: {
     fontSize: 14,
-    color: '#888',
-    textShadowColor: 'rgba(0,0,0,0.08)',
+    color: 'rgba(255,255,255,0.85)',
+    textShadowColor: 'rgba(0,0,0,0.06)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1,
   },
@@ -859,32 +838,32 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   quickCard: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.10)',
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e6eef2',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#0a3a2f',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 6,
   },
   historyBtn: {
     position: 'absolute',
     zIndex: 100,
-    backgroundColor: '#fff',
-    borderRadius: 40, // matches the larger size
-    borderWidth: 4,
-    borderColor: '#185a9d', // bold colored border
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: 'rgba(67,206,162,0.9)',
     width: 80,
     height: 80,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#185a9d',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
+    shadowColor: '#0a3a2f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
     elevation: 12,
   },
   historyBtnText: {
@@ -895,15 +874,15 @@ const styles = StyleSheet.create({
   searchBtn: {
     position: 'absolute',
     zIndex: 101,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 34,
-    borderWidth: 3,
-    borderColor: '#43cea2',
+    borderWidth: 2,
+    borderColor: 'rgba(67,206,162,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#43cea2',
+    shadowColor: '#0a3a2f',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.14,
     shadowRadius: 12,
     elevation: 10,
   },
@@ -919,19 +898,25 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   searchModal: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 12,
     padding: 12,
     maxHeight: '90%',
     alignItems: 'stretch',
+    shadowColor: '#0a3a2f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 8,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: '#e6eef2',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: 'rgba(0,0,0,0.06)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.9)'
   },
   suggestionItem: {
     paddingVertical: 10,
@@ -973,4 +958,82 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
   },
+  statusBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 6,
+    minWidth: 72,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  priorityBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 2,
+    marginRight: 6,
+    minWidth: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.02)'
+  },
+  priorityBadgeText: {
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  /* Glassy header and category tab styles */
+  headerCard: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 18,
+    marginHorizontal: 14,
+    marginTop: 14,
+    marginBottom: 0,
+    padding: 16,
+    elevation: 6,
+    shadowColor: '#0a3a2f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)'
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 24,
+    paddingBottom: 0,
+  },
+  headerCardAlt: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 16,
+    padding: 12,
+    minWidth: 220,
+    alignItems: 'flex-start',
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(67,206,162,0.12)'
+  },
+  categoryTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: 'transparent'
+  },
+  categoryTabActive: {
+    backgroundColor: 'rgba(67,206,162,0.95)'
+  },
+  categoryTabText: {
+    fontSize: 18,
+    color: '#185a9d',
+    fontWeight: '700'
+  },
+  categoryTabTextActive: {
+    color: '#ffffff'
+  }
 });

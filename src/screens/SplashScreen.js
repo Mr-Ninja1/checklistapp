@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 export default function SplashScreen({ navigation }) {
   const [index, setIndex] = useState(0);
   const opacity = useRef(new Animated.Value(0)).current;
+  const currentIndexRef = useRef(0);
   const messages = [
     'Starting app',
     'Loading forms',
@@ -24,17 +25,23 @@ export default function SplashScreen({ navigation }) {
         Animated.timing(opacity, { toValue: 0, duration: 700, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
       ]).start(() => {
         if (!mounted) return;
-        setIndex(i => (i + 1) % messages.length);
+        const next = (currentIndexRef.current + 1) % messages.length;
+        currentIndexRef.current = next;
+        setIndex(next);
+        // if we've cycled back to the first message, all messages have been shown once
+        if (next === 0) {
+          navigation.replace('Home');
+        } else {
+          // continue the loop for the next message
+          run();
+        }
       });
     };
     run();
     return () => { mounted = false; opacity.stopAnimation(); };
-  }, [index]);
+  }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => navigation.replace('Home'), 2000);
-    return () => clearTimeout(t);
-  }, [navigation]);
+  // navigation will be triggered after all messages have been displayed once
 
   return (
     <LinearGradient colors={["#22c1c3", "#185a9d"]} style={styles.container}>
