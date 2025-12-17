@@ -1,7 +1,7 @@
 // Central PDF HTML generator.
 // Renders a generic, print-ready HTML for all form payloads (single exporter).
 
-import generateBakeryCleaningChecklistHtml from './htmlGenerators/generateBakeryCleaningChecklistHtml';
+import generateBakeryCleaningChecklistHtml from '../exporters/html/generateBakeryCleaningChecklistHtml';
 import captureAndExport from './captureAndExport';
 
 

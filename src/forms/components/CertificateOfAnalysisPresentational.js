@@ -7,86 +7,101 @@ export default function CertificateOfAnalysisPresentational({ payload }) {
   const p = payload.payload || payload;
   const meta = p.metadata || {};
   const data = p.formData || {};
+  const products = data.products || [];
+
+  // Helper to render signature thumbnails safely
+  const renderSignature = (val, w = 130, h = 40) => {
+    if (!val) return <Text style={styles.emptyValue}>-</Text>;
+    const uri = String(val).startsWith('data:') 
+      ? val 
+      : (String(val).length > 100 ? `data:image/png;base64,${String(val).replace(/\s+/g, '')}` : null);
+    
+    return uri 
+      ? <SignatureThumb uri={uri} width={w} height={h} layers={6} spread={1.0} /> 
+      : <Text style={styles.cellText}>{String(val)}</Text>;
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.card}>
+
+        {/* TOP HEADER: left product label area, right time/date */}
         <View style={styles.headerRowTop}>
           <Image source={require('../../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
           <View style={{ flex: 1 }}>
             <Text style={styles.brandName}>BRAVO BRANDS LIMITED</Text>
             <Text style={styles.title}>CERTIFICATE OF ANALYSIS</Text>
           </View>
-          <View style={styles.metaBox}>
-            <Text style={styles.metaText}>Issue date: {meta.issueDate || data.issueDate || ''}</Text>
+          <View style={styles.metaBoxRight}>
+            <Text style={styles.metaTextSmall}>Issue date: {meta.issueDate || data.issueDate || ''}</Text>
           </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={[styles.inputRow, { width: '48%' }]}>
-            <Text style={styles.inputLabel}>Ingredient / Product:</Text>
-            <Text style={styles.inputValue}>{data.ingredientProduct || ''}</Text>
+        {/* DATA TABLE: horizontal scroll allowed for narrow screens but structured as a table */}
+        <ScrollView horizontal style={styles.tableWrapper}>
+          <View>
+            {/* removed duplicate outside labels: Ingredient / Product and external tests title */}
+
+            {/* Spanning header: reserve space for left columns, then group header above the three test columns */}
+            <View style={styles.spanningHeaderRowExact}>
+              <View style={{ width: 460 }} />
+              <View style={styles.testsHeaderGroupExact}><Text style={styles.testsHeaderText}>Organoleptic & Morphologistic Tests</Text></View>
+              <View style={{ width: 480 }} />
+            </View>
+
+            <View style={styles.tableHeader}>
+              <Text style={[styles.columnHeader, { width: 140 }]}>Product</Text>
+              <Text style={[styles.columnHeader, { width: 120 }]}>Product No</Text>
+              <Text style={[styles.columnHeader, { width: 90 }]}>Time</Text>
+              <Text style={[styles.columnHeader, { width: 110 }]}>Date Rec.</Text>
+              <Text style={[styles.columnHeader, { width: 120 }]}>Appearance</Text>
+              <Text style={[styles.columnHeader, { width: 100 }]}>Weight</Text>
+              <Text style={[styles.columnHeader, { width: 120 }]}>Texture</Text>
+              <Text style={[styles.columnHeader, { width: 140 }]}>Result</Text>
+              <Text style={[styles.columnHeader, { width: 180 }]}>Comment</Text>
+              <Text style={[styles.columnHeader, { width: 160 }]}>Sampled By</Text>
+            </View>
+
+            {products && products.length ? products.map((item, idx) => (
+              <View key={item.id || idx} style={styles.tableRow}>
+                <Text style={[styles.cellText, { width: 140 }]}>{item.product || ''}</Text>
+                <Text style={[styles.cellText, { width: 120 }]}>{item.productNo || ''}</Text>
+                <Text style={[styles.cellText, { width: 90 }]}>{item.time || ''}</Text>
+                <Text style={[styles.cellText, { width: 110 }]}>{item.dateReceived || ''}</Text>
+                <Text style={[styles.cellText, { width: 120 }]}>{item.appearance || ''}</Text>
+                <Text style={[styles.cellText, { width: 100 }]}>{item.weight || ''}</Text>
+                <Text style={[styles.cellText, { width: 120 }]}>{item.texture || ''}</Text>
+                <Text style={[styles.cellText, { width: 140, fontWeight: '700', color: item.result ? '#065f46' : '#111' }]}>{item.result || ''}</Text>
+                <Text style={[styles.cellText, { width: 180 }]}>{item.comment || ''}</Text>
+                <View style={{ width: 160, padding: 4, alignItems: 'center' }}>
+                  {renderSignature(item.sampledBy)}
+                </View>
+              </View>
+            )) : (
+              <View style={styles.tableRow}><Text style={styles.cellText}>No products recorded</Text></View>
+            )}
           </View>
-          <View style={[styles.inputRow, { width: '48%' }]}>
-            <Text style={styles.inputLabel}>TIME:</Text>
-            <Text style={styles.inputValue}>{data.time || ''}</Text>
+        </ScrollView>
+
+        {/* Sampled / Managers row */}
+        <View style={[styles.sampledManagersRow, { justifyContent: 'space-between' }]}>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.smallLabel}>HSEQ Manager:</Text>
+            {renderSignature(data.hseqManager, 160, 50)}
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.smallLabel}>COMPLEX MANAGER:</Text>
+            {renderSignature(data.complexManager, 160, 50)}
           </View>
         </View>
 
-        <View style={styles.metaRow}>
-          <View style={[styles.inputRow, { width: '48%' }]}>
-            <Text style={styles.inputLabel}>NO:</Text>
-            <Text style={styles.inputValue}>{data.no || ''}</Text>
-          </View>
-          <View style={[styles.inputRow, { width: '48%' }]}>
-            <Text style={styles.inputLabel}>DATE RECEIVED:</Text>
-            <Text style={styles.inputValue}>{data.dateReceived || ''}</Text>
-          </View>
-        </View>
+        {/* Results and comments are rendered inside the table rows above; no separate summary here */}
 
-        <View style={styles.testArea}>
-          <Text style={styles.sectionTitle}>Organoleptic & Morphologistic Tests</Text>
-          <View style={styles.inputRow}><Text style={styles.inputLabel}>APPEARANCE:</Text><Text style={styles.inputValue}>{data.appearance || ''}</Text></View>
-          <View style={styles.inputRow}><Text style={styles.inputLabel}>WEIGHT:</Text><Text style={styles.inputValue}>{data.weight || ''}</Text></View>
-          <View style={styles.inputRow}><Text style={styles.inputLabel}>TEXTURE:</Text><Text style={styles.inputValue}>{data.texture || ''}</Text></View>
-          <View style={styles.inputRow}><Text style={styles.inputLabel}>ORGANIC TASTE:</Text><Text style={styles.inputValue}>{data.organicTaste || ''}</Text></View>
-        </View>
-
-        <View style={styles.signatureArea}>
-          <View style={[styles.inputRow, { width: '32%' }]}>
-            <Text style={styles.inputLabel}>SAMPLED BY:</Text>
-            {(() => {
-              const v = data.sampledBySign || data.sampledBy || '';
-              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
-              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={1.0} /> : <Text style={styles.inputValue}>{String(data.sampledBy || '')}</Text>;
-            })()}
+        {data.footerDate ? (
+          <View style={styles.dateBox}>
+             <Text style={styles.inputLabel}>DATE: <Text style={styles.inputValue}>{data.footerDate}</Text></Text>
           </View>
-
-          <View style={[styles.inputRow, { width: '32%' }]}>
-            <Text style={styles.inputLabel}>HSEQ Manager:</Text>
-            {(() => {
-              const v = data.hseqManagerSign || data.hseqManager || '';
-              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
-              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={1.0} /> : <Text style={styles.inputValue}>{String(data.hseqManager || '')}</Text>;
-            })()}
-          </View>
-
-          <View style={[styles.inputRow, { width: '32%' }]}>
-            <Text style={styles.inputLabel}>COMPLEX MANAGER:</Text>
-            {(() => {
-              const v = data.complexManagerSign || data.complexManager || '';
-              const uri = v ? (String(v).startsWith('data:') ? v : (String(v).length > 100 ? `data:image/png;base64,${String(v).replace(/\s+/g, '')}` : null)) : null;
-              return uri ? <SignatureThumb uri={uri} width={180} height={60} layers={6} spread={1.0} /> : <Text style={styles.inputValue}>{String(data.complexManager || '')}</Text>;
-            })()}
-          </View>
-        </View>
-
-        <View style={styles.resultArea}>
-          <Text style={styles.inputLabel}>Result:</Text>
-          <Text style={styles.resultValue}>{data.result || ''}</Text>
-          <Text style={[styles.inputLabel, { marginTop: 8 }]}>Comment:</Text>
-          <Text style={styles.inputValue}>{data.comment || ''}</Text>
-        </View>
+        ) : null}
 
       </View>
     </ScrollView>
@@ -95,20 +110,38 @@ export default function CertificateOfAnalysisPresentational({ payload }) {
 
 const styles = StyleSheet.create({
   container: { padding: 8, backgroundColor: '#F3F4F6' },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1 },
-  headerRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  logo: { width: 64, height: 64, marginRight: 12, borderRadius: 8, backgroundColor: '#fff' },
-  brandName: { fontSize: 14, fontWeight: '800', color: '#185a9d' },
-  title: { fontSize: 16, fontWeight: '900', color: '#111827' },
+  card: { backgroundColor: '#fff', borderRadius: 10, padding: 12, borderColor: '#1F2937', borderWidth: 1 },
+  headerRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  logo: { width: 55, height: 55, marginRight: 12 },
+  brandName: { fontSize: 13, fontWeight: '800', color: '#185a9d' },
+  title: { fontSize: 15, fontWeight: '900', color: '#111827' },
   metaBox: { alignItems: 'flex-end' },
-  metaText: { fontSize: 11, color: '#4B5563' },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap' },
-  inputRow: { marginBottom: 8 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 4 },
-  inputValue: { fontSize: 14, color: '#111' },
-  testArea: { marginBottom: 12 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', marginBottom: 8 },
-  signatureArea: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 },
-  resultArea: { borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 12 },
-  resultValue: { fontSize: 16, fontWeight: '700', color: '#0f5132' },
+  metaText: { fontSize: 10, color: '#4B5563' },
+
+  tableWrapper: { marginTop: 10, borderWidth: 1, borderColor: '#ccc' },
+  spanningHeaderRow: { flexDirection: 'row', backgroundColor: '#fff' },
+  testsHeaderGroup: { width: 280, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#ccc', backgroundColor: '#fcfcfc', alignItems: 'center', paddingVertical: 4 },
+  testsHeaderText: { fontSize: 9, fontWeight: 'bold' },
+
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f2f2f2', borderBottomWidth: 1, borderColor: '#ccc' },
+  columnHeader: { fontSize: 9, fontWeight: 'bold', padding: 8, textAlign: 'center', borderRightWidth: 1, borderColor: '#ccc' },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#eee', alignItems: 'center' },
+  cellText: { padding: 8, fontSize: 11, borderRightWidth: 1, borderColor: '#ccc', textAlign: 'center', color: '#333' },
+  emptyValue: { color: '#999', fontSize: 11 },
+
+  footerSignatureArea: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, flexWrap: 'wrap' },
+  footerSignBox: { width: '48%', marginBottom: 15 },
+  inputLabel: { fontSize: 11, fontWeight: '600', color: '#374151', marginBottom: 4 },
+  inputValue: { fontSize: 13, color: '#111' },
+  dateBox: { borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10, marginTop: 5 }
+  ,
+  metaBoxRight: { alignItems: 'flex-end' },
+  metaTextSmall: { fontSize: 10, color: '#6b7280' },
+  testsHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  leftLabelsTitle: { fontSize: 12, fontWeight: '700', padding: 6 },
+  rightTestsTitle: { fontSize: 11, fontWeight: '700', padding: 6 },
+  spanningHeaderRowExact: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  testsHeaderGroupExact: { width: 340, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#ccc', backgroundColor: '#fafafa', alignItems: 'center', paddingVertical: 6 },
+  sampledManagersRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' },
+  smallLabel: { fontSize: 11, color: '#374151', fontWeight: '600' }
 });

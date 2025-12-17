@@ -1,93 +1,112 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
 import SignatureField from '../components/SignatureField';
+import EditableFormContainer from '../components/EditableFormContainer';
+import LoadingOverlay from '../components/LoadingOverlay';
+import FormActionBar from '../components/FormActionBar';
+import NotificationModal from '../components/NotificationModal';
 
-const DRAFT_KEY = 'certificate_of_analysis_draft';
-
-const initialFormData = {
+// Template for a single product row matching your refined spreadsheet draft
+const createRow = () => ({
+  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+  product: '',
+  productNo: '',
   time: '',
-  no: '',
-  ingredientProduct: '',
   dateReceived: '',
-  dateSampled: '',
-  batchNumber: '',
   appearance: '',
   weight: '',
   texture: '',
-  organicTaste: '',
-  sampledBy: '',
+  result: '', // Now a text input
+  comment: '',
+  sampledBy: '', // Last column
+});
+
+const initialFormData = {
+  issueDate: '',
+  // Initializing with exactly 5 rows
+  products: [createRow(), createRow(), createRow(), createRow(), createRow()], 
   hseqManager: '',
   complexManager: '',
-  date: '',
-  result: 'PASSED',
-  comment: '',
-  issueDate: '',
+  footerDate: '',
   compiledBy: 'Michael C. Zulu',
 };
 
 export default function CertificateOfAnalysis() {
   const [formData, setFormData] = useState(initialFormData);
   const [busy, setBusy] = useState(false);
-  // load stable draft if present, else populate issue date
+  const [editMode, setEditMode] = useState(false);
+  const [submittedVisible, setSubmittedVisible] = useState(false);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const wrapped = await formStorage.loadForm('CertificateOfAnalysis_draft');
-        if (wrapped && wrapped.payload && mounted) {
-          const payload = wrapped.payload;
-          if (payload.formData && typeof payload.formData === 'object') {
-            setFormData(prev => ({ ...prev, ...payload.formData }));
-          }
+        if (wrapped?.payload?.formData && mounted) {
+          setFormData(prev => ({ ...prev, ...wrapped.payload.formData }));
         } else if (mounted) {
-          const today = new Date();
-          const issueDate = today.toLocaleDateString();
-          const month = today.toLocaleString('default', { month: 'long' });
-          const year = today.getFullYear();
-          setFormData(prev => ({ ...prev, issueDate, month, year }));
+          setFormData(prev => ({ ...prev, issueDate: new Date().toLocaleDateString() }));
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     })();
     return () => { mounted = false; };
   }, []);
 
   const buildPayload = (status = 'draft') => ({
     formType: 'CertificateOfAnalysis',
-    templateVersion: '01',
-    title: 'Certificate of Analysis',
-    metadata: { status, compiledBy: initialFormData.compiledBy, issueDate: formData.issueDate },
-    formData: formData,
-    layoutHints: {},
-    assets: { logoDataUri: null },
+    templateVersion: '05',
+    formData,
     savedAt: new Date().toISOString(),
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: 'CertificateOfAnalysis_draft', clearOnSubmit: () => setFormData(initialFormData), formType: 'CertificateOfAnalysis' });
-
-  useEffect(() => { if (showNotification) { Alert.alert(notificationMessage || 'Saved'); setShowNotification(false); } }, [showNotification]);
-
-  const handleChange = (k, v) => setFormData(prev => {
-    const next = { ...prev, [k]: v };
-    // schedule an autosave for the updated form
-    try { scheduleAutoSave(); } catch (e) { /* ignore if not ready */ }
-    return next;
+  const { isSaving, handleSaveDraft, handleSubmit, scheduleAutoSave } = useFormSave({ 
+    buildPayload, 
+    draftId: 'CertificateOfAnalysis_draft', 
+    clearOnSubmit: () => setFormData(initialFormData), 
+    formType: 'CertificateOfAnalysis' 
   });
 
-  const renderInputLine = (label, key, placeholder = '', type = 'default', width = '48%') => (
-    <View style={[styles.inputRow, { width }]}> 
-      <Text style={styles.inputLabel}>{label}</Text>
-      <TextInput value={formData[key]} onChangeText={t => handleChange(key, t)} placeholder={placeholder} style={styles.input} />
-    </View>
-  );
+  const handleProductChange = (id, key, value) => {
+    setFormData(prev => {
+      const newProducts = prev.products.map(p => p.id === id ? { ...p, [key]: value } : p);
+      const next = { ...prev, products: newProducts };
+      try { scheduleAutoSave(); } catch (e) {}
+      return next;
+    });
+  };
+
+  const addOneMoreRow = () => {
+    if (!editMode) { setEditMode(true); return; }
+    if (formData.products.length >= 6) {
+      Alert.alert("Limit Reached", "You can only add one additional row to this form.");
+      return;
+    }
+    setFormData(prev => ({ ...prev, products: [...prev.products, createRow()] }));
+  };
+
+  const handleSaveLocal = async () => {
+    if (busy || isSaving) return;
+    setBusy(true);
+    try {
+      await handleSubmit(() => setFormData(initialFormData));
+      setSubmittedVisible(true);
+    } catch (e) {
+      Alert.alert('Submit failed', String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={(
+      <FormActionBar onSaveDraft={async ()=>{ await handleSaveDraft(true); }} onSubmit={handleSaveLocal} isSaving={busy || isSaving} />
+    )}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <LoadingOverlay visible={busy || isSaving} message={(busy || isSaving) ? 'Saving...' : ''} />
         <View style={styles.card}>
+          
           <View style={styles.headerRowTop}>
             <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
             <View style={{ flex: 1 }}>
@@ -99,91 +118,103 @@ export default function CertificateOfAnalysis() {
             </View>
           </View>
 
-          <View style={styles.metaRow}>
-            {renderInputLine('Ingredient / Product:', 'ingredientProduct', 'Product name')}
-            {renderInputLine('TIME:', 'time', 'e.g., 14:30')}
-          </View>
+          <ScrollView horizontal nestedScrollEnabled style={styles.tableBorder}>
+            <View pointerEvents={editMode ? 'auto' : 'none'}>
+              {/* Spanning Header: Appearance, Weight, Texture */}
+              <View style={styles.spanningHeaderRow}>
+                <View style={{ width: 410 }} /> 
+                <View style={styles.testsHeaderGroup}>
+                  <Text style={styles.testsHeaderText}>Organoleptic & Morphologistic Tests</Text>
+                </View>
+                <View style={{ width: 410 }} /> 
+              </View>
 
-          <View style={styles.metaRow}>
-            {renderInputLine('NO: 2025-', 'no', 'e.g., 001')}
-            {renderInputLine('DATE RECEIVED:', 'dateReceived', '', 'default')}
-          </View>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.columnHeader, { width: 120 }]}>Product</Text>
+                <Text style={[styles.columnHeader, { width: 110 }]}>Product No:</Text>
+                <Text style={[styles.columnHeader, { width: 80 }]}>Time</Text>
+                <Text style={[styles.columnHeader, { width: 100 }]}>Date Rec.</Text>
+                <Text style={[styles.columnHeader, { width: 100, backgroundColor: '#fdfdfd' }]}>Appearance</Text>
+                <Text style={[styles.columnHeader, { width: 80, backgroundColor: '#fdfdfd' }]}>Weight</Text>
+                <Text style={[styles.columnHeader, { width: 100, backgroundColor: '#fdfdfd' }]}>Texture</Text>
+                <Text style={[styles.columnHeader, { width: 120 }]}>Result</Text>
+                <Text style={[styles.columnHeader, { width: 150 }]}>Comment</Text>
+                <Text style={[styles.columnHeader, { width: 140 }]}>sampled by</Text>
+              </View>
 
-          <View style={styles.testArea}>
-            <Text style={styles.sectionTitle}>Organoleptic & Morphologistic Tests</Text>
-            {renderInputLine('APPEARANCE:', 'appearance', 'E.g., Clear')}
-            {renderInputLine('WEIGHT:', 'weight', 'E.g., 500g')}
-            {renderInputLine('TEXTURE:', 'texture', 'E.g., Smooth')}
-            {renderInputLine('ORGANIC TASTE:', 'organicTaste', 'E.g., Expected')}
-          </View>
+              {formData.products.map((item) => (
+                <View key={item.id} style={styles.tableRow}>
+                  <TextInput style={[styles.cellInput, { width: 120 }]} value={item.product} onChangeText={t => handleProductChange(item.id, 'product', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 110 }]} value={item.productNo} onChangeText={t => handleProductChange(item.id, 'productNo', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 80 }]} value={item.time} onChangeText={t => handleProductChange(item.id, 'time', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 100 }]} value={item.dateReceived} onChangeText={t => handleProductChange(item.id, 'dateReceived', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 100 }]} value={item.appearance} onChangeText={t => handleProductChange(item.id, 'appearance', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 80 }]} value={item.weight} onChangeText={t => handleProductChange(item.id, 'weight', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 100 }]} value={item.texture} onChangeText={t => handleProductChange(item.id, 'texture', t)} editable={editMode} />
+                  
+                  {/* Manual Result Entry */}
+                  <TextInput style={[styles.cellInput, { width: 120 }]} value={item.result} onChangeText={t => handleProductChange(item.id, 'result', t)} placeholder="e.g. PASSED" editable={editMode} />
+                  
+                  <TextInput style={[styles.cellInput, { width: 150 }]} value={item.comment} onChangeText={t => handleProductChange(item.id, 'comment', t)} editable={editMode} />
 
-          <View style={styles.signatureArea}>
-            <View style={{ width: '48%' }}>
-              <Text style={styles.inputLabel}>SAMPLED BY:</Text>
-              <SignatureField value={formData.sampledBy} onChange={(v) => handleChange('sampledBy', v)} editable={true} width={220} height={80} />
-            </View>
-            <View style={{ width: '48%' }}>
-              <Text style={styles.inputLabel}>HSEQ Manager:</Text>
-              <SignatureField value={formData.hseqManager} onChange={(v) => handleChange('hseqManager', v)} editable={true} width={220} height={80} />
-            </View>
-            <View style={{ width: '48%', marginTop: 8 }}>
-              <Text style={styles.inputLabel}>COMPLEX MANAGER:</Text>
-              <SignatureField value={formData.complexManager} onChange={(v) => handleChange('complexManager', v)} editable={true} width={220} height={80} />
-            </View>
-            <View style={{ width: '48%', marginTop: 8 }}>
-              <Text style={styles.inputLabel}>DATE:</Text>
-              <TextInput value={formData.date} onChangeText={t => handleChange('date', t)} placeholder="" style={styles.input} />
-            </View>
-          </View>
-
-          <View style={styles.resultArea}>
-            <View style={styles.resultButtons}>
-              {['PASSED', 'FAILED', 'QUARANTINED'].map(status => (
-                <TouchableOpacity key={status} onPress={() => handleChange('result', status)} style={[styles.resultBtn, formData.result === status && styles.resultBtnActive]}>
-                  <Text style={[styles.resultBtnText, formData.result === status && styles.resultBtnTextActive]}>{status}</Text>
-                </TouchableOpacity>
+                  <View style={{ width: 140, padding: 4 }}>
+                    <SignatureField value={item.sampledBy} onChange={(v) => handleProductChange(item.id, 'sampledBy', v)} editable={editMode} width={130} height={45} />
+                  </View>
+                </View>
               ))}
             </View>
-            <TextInput value={formData.comment} onChangeText={t => handleChange('comment', t)} placeholder="Comment" style={styles.commentInput} multiline />
-          </View>
+          </ScrollView>
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity onPress={async () => { setBusy(true); try { await handleSaveDraft(); Alert.alert('Success', 'Draft saved'); } catch (e) { Alert.alert('Error', 'Failed to save draft'); } finally { setBusy(false); } }} style={[styles.button, styles.draftButton]} disabled={isSaving || busy}>{(isSaving || busy) ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-            <TouchableOpacity onPress={async () => { setBusy(true); try { await handleSubmit(); Alert.alert('Success', 'Certificate submitted successfully'); } catch (e) { Alert.alert('Error', 'Submission failed'); } finally { setBusy(false); } }} style={[styles.button, styles.submitButton]} disabled={isSaving || busy}>{(isSaving || busy) ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Certificate</Text>}</TouchableOpacity>
+          <TouchableOpacity onPress={addOneMoreRow} style={styles.addRowBtn}>
+            <Text style={styles.addRowText}>+ Add One More Row</Text>
+          </TouchableOpacity>
+
+          <View style={styles.footerGrid}>
+            <View style={styles.footerBox}>
+              <Text style={styles.inputLabel}>HSEQ Manager:</Text>
+              <SignatureField value={formData.hseqManager} onChange={(v) => setFormData(p => ({...p, hseqManager: v}))} editable={editMode} width={180} height={70} />
+            </View>
+            <View style={styles.footerBox}>
+              <Text style={styles.inputLabel}>COMPLEX MANAGER:</Text>
+              <SignatureField value={formData.complexManager} onChange={(v) => setFormData(p => ({...p, complexManager: v}))} editable={editMode} width={180} height={70} />
+            </View>
           </View>
         </View>
+        <NotificationModal visible={submittedVisible} message={'Form submitted successfully'} onClose={() => setSubmittedVisible(false)} />
       </ScrollView>
-    </View>
+    </EditableFormContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   scrollContent: { padding: 8 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1 },
-  headerRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  logo: { width: 64, height: 64, marginRight: 12, borderRadius: 8, backgroundColor: '#fff' },
-  brandName: { fontSize: 14, fontWeight: '800', color: '#185a9d' },
-  title: { fontSize: 16, fontWeight: '900', color: '#111827' },
+  card: { backgroundColor: '#fff', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#333' },
+  headerRowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
+  logo: { width: 55, height: 55, marginRight: 12 },
+  brandName: { fontSize: 13, fontWeight: '800', color: '#185a9d' },
+  title: { fontSize: 15, fontWeight: 'bold' },
   metaBox: { alignItems: 'flex-end' },
-  metaText: { fontSize: 11, color: '#4B5563' },
-  metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap' },
-  inputRow: { marginBottom: 8 },
-  inputLabel: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 4 },
-  input: { borderBottomWidth: 1, borderBottomColor: '#9CA3AF', paddingVertical: 4, fontSize: 14, minWidth: 120 },
-  testArea: { marginBottom: 12 },
-  sectionTitle: { fontSize: 13, fontWeight: '800', marginBottom: 8 },
-  signatureArea: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', marginBottom: 12 },
-  resultArea: { borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 12 },
-  resultButtons: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  resultBtn: { flex: 1, paddingVertical: 10, marginHorizontal: 4, borderRadius: 6, backgroundColor: '#E5E7EB', alignItems: 'center' },
-  resultBtnActive: { backgroundColor: '#10B981' },
-  resultBtnText: { fontWeight: '700', color: '#374151' },
-  resultBtnTextActive: { color: '#fff' },
-  commentInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 6, padding: 8, minHeight: 60, textAlignVertical: 'top' },
-  buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 14 },
-  button: { width: 150, marginLeft: 12, paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  draftButton: { backgroundColor: '#F59E0B' },
-  submitButton: { backgroundColor: '#4F46E5' },
-  buttonText: { color: '#fff', fontWeight: '700' },
+  metaText: { fontSize: 10, color: '#666' },
+
+  spanningHeaderRow: { flexDirection: 'row', backgroundColor: '#fff' },
+  testsHeaderGroup: { width: 280, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#ccc', backgroundColor: '#fcfcfc', alignItems: 'center', paddingVertical: 4 },
+  testsHeaderText: { fontSize: 9, fontWeight: 'bold' },
+
+  tableBorder: { borderWidth: 1, borderColor: '#ccc' },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f2f2f2', borderBottomWidth: 1, borderColor: '#ccc' },
+  columnHeader: { fontSize: 10, fontWeight: 'bold', padding: 8, textAlign: 'center', borderRightWidth: 1, borderColor: '#ccc' },
+  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderColor: '#eee', alignItems: 'center' },
+  cellInput: { padding: 6, fontSize: 11, borderRightWidth: 1, borderColor: '#ccc', textAlign: 'center' },
+
+  addRowBtn: { padding: 12, backgroundColor: '#f0f4ff', alignItems: 'center', marginVertical: 10, borderRadius: 5 },
+  addRowText: { color: '#2563EB', fontWeight: 'bold', fontSize: 12 },
+
+  footerGrid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 },
+  footerBox: { width: '48%' },
+  inputLabel: { fontSize: 11, fontWeight: 'bold', marginBottom: 5 },
+  
+  buttonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 15 },
+  button: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 6, marginLeft: 10 },
+  buttonText: { color: '#fff', fontWeight: 'bold' },
 });

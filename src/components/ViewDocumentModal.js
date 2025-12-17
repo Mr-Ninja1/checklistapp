@@ -4,14 +4,15 @@ import SavedFormRenderer from './SavedFormRenderer';
 import Spinner from 'react-native-loading-spinner-overlay';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
-import { exportFormWithViewShot } from '../utils/generatePdfHtml';
-import { Platform } from 'react-native';
+import useExportFormAsPDF from '../utils/useExportFormAsPDF';
+import { Platform, Linking } from 'react-native';
 
 export default function ViewDocumentModal({ visible, form, onClose, onDownload }) {
   // Modal shows a saved form; use onDownload to open the saved PDF rather than re-exporting
   const formRef = useRef(null);
   const [exporting, setExporting] = useState(false);
   const [exportingWide, setExportingWide] = useState(false);
+  const { exportAsPDF } = useExportFormAsPDF();
 
   useEffect(() => {
     // no debug logging in production view
@@ -38,37 +39,62 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
             <TouchableOpacity
               style={[styles.button, { backgroundColor: '#0066cc' }]}
               onPress={async () => {
-                // Use a dedicated handler so state/awaits are clearer in logs
                 if (!form) return;
-                const handleExportPDF = async () => {
-                  try {
-                    setExportingWide(true);
-                    setExporting(true);
-                    const payload = form.meta || form;
-                    const result = await exportFormWithViewShot({ ref: formRef, formData: payload, filenameBase: 'exported-form', onProgress: (stage) => {} });
-                    if (result && result.uri) {
-                      if (Platform.OS === 'ios' || Platform.OS === 'android') {
-                        if (await Sharing.isAvailableAsync()) {
-                          await Sharing.shareAsync(result.uri);
-                        } else {
-                          Alert.alert('Export ready', `PDF saved to: ${result.uri}`);
+                setExportingWide(true);
+                setExporting(true);
+                try {
+                  // Normalize saved payload shapes (match SavedFormRenderer behavior)
+                  const meta = form?.meta || null;
+                  const payload = form.payload || meta?.payload || meta || form;
+
+                  const result = await exportAsPDF({ title: payload.title, date: payload.date, formData: payload, exportOptions: { paperSize: 'A4', orientation: 'landscape', fallbackToScreenshot: true, captureRef: formRef } });
+
+                  if (result && result.pdfPath) {
+                    if (Platform.OS === 'android') {
+                      const fileUri = result.pdfPath.startsWith('file://') ? result.pdfPath : `file://${result.pdfPath}`;
+                      try {
+                        // First try Linking.openURL (no extra native deps). This often opens the file
+                        // with the default viewer or shows a chooser when multiple apps are available.
+                        await Linking.openURL(fileUri);
+                      } catch (linkErr) {
+                        try {
+                          // If Linking fails, try the intent launcher if available (optional native).
+                          const IntentLauncher = require('expo-intent-launcher');
+                          await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+                            data: fileUri,
+                            flags: 1,
+                            type: 'application/pdf',
+                          });
+                        } catch (intentErr) {
+                          // Finally fall back to the share sheet so users can still get the file out.
+                          if (await Sharing.isAvailableAsync()) {
+                            await Sharing.shareAsync(result.pdfPath);
+                          } else {
+                            Alert.alert('Export ready', `PDF saved to: ${result.pdfPath}`);
+                          }
                         }
+                      }
+                    } else if (Platform.OS === 'ios') {
+                      if (await Sharing.isAvailableAsync()) {
+                        await Sharing.shareAsync(result.pdfPath);
                       } else {
-                        Alert.alert('Export ready', `PDF saved to: ${result.uri}`);
+                        Alert.alert('Export ready', `PDF saved to: ${result.pdfPath}`);
                       }
                     } else {
-                      Alert.alert('Export failed', 'Unable to export PDF from view shot.');
+                      Alert.alert('Export ready', `PDF saved to: ${result.pdfPath}`);
                     }
-                  } catch (e) {
-                    console.warn('export failed', e);
-                    Alert.alert('Export failed', 'Unable to export PDF from view shot.');
-                  } finally {
-                    setExportingWide(false);
-                    setExporting(false);
+                  } else if (result && result.pdfDataUri) {
+                    Alert.alert('Export ready', 'PDF generated (web).');
+                  } else {
+                    Alert.alert('Export failed', result && result.error ? result.error : 'Unable to export PDF');
                   }
-                };
-
-                await handleExportPDF();
+                } catch (e) {
+                  console.warn('export failed', e);
+                  Alert.alert('Export failed', 'Unable to export PDF');
+                } finally {
+                  setExportingWide(false);
+                  setExporting(false);
+                }
               }}
               disabled={exporting}
             >
