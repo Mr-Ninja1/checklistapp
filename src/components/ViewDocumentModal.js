@@ -38,63 +38,11 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: '#0066cc' }]}
-              onPress={async () => {
-                if (!form) return;
-                setExportingWide(true);
-                setExporting(true);
-                try {
-                  // Normalize saved payload shapes (match SavedFormRenderer behavior)
-                  const meta = form?.meta || null;
-                  const payload = form.payload || meta?.payload || meta || form;
-
-                  const result = await exportAsPDF({ title: payload.title, date: payload.date, formData: payload, exportOptions: { paperSize: 'A4', orientation: 'landscape', fallbackToScreenshot: true, captureRef: formRef } });
-
-                  if (result && result.pdfPath) {
-                    if (Platform.OS === 'android') {
-                      const fileUri = result.pdfPath.startsWith('file://') ? result.pdfPath : `file://${result.pdfPath}`;
-                      try {
-                        // First try Linking.openURL (no extra native deps). This often opens the file
-                        // with the default viewer or shows a chooser when multiple apps are available.
-                        await Linking.openURL(fileUri);
-                      } catch (linkErr) {
-                        try {
-                          // If Linking fails, try the intent launcher if available (optional native).
-                          const IntentLauncher = require('expo-intent-launcher');
-                          await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
-                            data: fileUri,
-                            flags: 1,
-                            type: 'application/pdf',
-                          });
-                        } catch (intentErr) {
-                          // Finally fall back to the share sheet so users can still get the file out.
-                          if (await Sharing.isAvailableAsync()) {
-                            await Sharing.shareAsync(result.pdfPath);
-                          } else {
-                            Alert.alert('Export ready', `PDF saved to: ${result.pdfPath}`);
-                          }
-                        }
-                      }
-                    } else if (Platform.OS === 'ios') {
-                      if (await Sharing.isAvailableAsync()) {
-                        await Sharing.shareAsync(result.pdfPath);
-                      } else {
-                        Alert.alert('Export ready', `PDF saved to: ${result.pdfPath}`);
-                      }
-                    } else {
-                      Alert.alert('Export ready', `PDF saved to: ${result.pdfPath}`);
-                    }
-                  } else if (result && result.pdfDataUri) {
-                    Alert.alert('Export ready', 'PDF generated (web).');
-                  } else {
-                    Alert.alert('Export failed', result && result.error ? result.error : 'Unable to export PDF');
-                  }
-                } catch (e) {
-                  console.warn('export failed', e);
-                  Alert.alert('Export failed', 'Unable to export PDF');
-                } finally {
-                  setExportingWide(false);
-                  setExporting(false);
-                }
+              onPress={() => {
+                Alert.alert(
+                  'Use Desktop App for Export',
+                  'Use the Bravo app on your computer to download / print the file (use desktop app for export feature)'
+                );
               }}
               disabled={exporting}
             >
