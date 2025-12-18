@@ -51,30 +51,36 @@ export default function CertificateOfAnalysisPresentational({ payload }) {
 
             <View style={styles.tableHeader}>
               <Text style={[styles.columnHeader, { width: 140 }]}>Product</Text>
-              <Text style={[styles.columnHeader, { width: 120 }]}>Product No</Text>
+              <Text style={[styles.columnHeader, { width: 120 }]}>Batch No</Text>
               <Text style={[styles.columnHeader, { width: 90 }]}>Time</Text>
               <Text style={[styles.columnHeader, { width: 110 }]}>Date Rec.</Text>
               <Text style={[styles.columnHeader, { width: 120 }]}>Appearance</Text>
               <Text style={[styles.columnHeader, { width: 100 }]}>Weight</Text>
               <Text style={[styles.columnHeader, { width: 120 }]}>Texture</Text>
+              <Text style={[styles.columnHeader, { width: 100, backgroundColor: '#fdfdfd' }]}>Organic Test</Text>
               <Text style={[styles.columnHeader, { width: 140 }]}>Result</Text>
               <Text style={[styles.columnHeader, { width: 180 }]}>Comment</Text>
               <Text style={[styles.columnHeader, { width: 160 }]}>Sampled By</Text>
+              <Text style={[styles.columnHeader, { width: 140 }]}>SFC sign</Text>
             </View>
 
             {products && products.length ? products.map((item, idx) => (
               <View key={item.id || idx} style={styles.tableRow}>
                 <Text style={[styles.cellText, { width: 140 }]}>{item.product || ''}</Text>
-                <Text style={[styles.cellText, { width: 120 }]}>{item.productNo || ''}</Text>
+                <Text style={[styles.cellText, { width: 120 }]}>{item.batchNo || ''}</Text>
                 <Text style={[styles.cellText, { width: 90 }]}>{item.time || ''}</Text>
                 <Text style={[styles.cellText, { width: 110 }]}>{item.dateReceived || ''}</Text>
                 <Text style={[styles.cellText, { width: 120 }]}>{item.appearance || ''}</Text>
                 <Text style={[styles.cellText, { width: 100 }]}>{item.weight || ''}</Text>
                 <Text style={[styles.cellText, { width: 120 }]}>{item.texture || ''}</Text>
+                <Text style={[styles.cellText, { width: 100 }]}>{item.organicTest || ''}</Text>
                 <Text style={[styles.cellText, { width: 140, fontWeight: '700', color: item.result ? '#065f46' : '#111' }]}>{item.result || ''}</Text>
                 <Text style={[styles.cellText, { width: 180 }]}>{item.comment || ''}</Text>
                 <View style={{ width: 160, padding: 4, alignItems: 'center' }}>
                   {renderSignature(item.sampledBy)}
+                </View>
+                <View style={{ width: 140, padding: 4, alignItems: 'center' }}>
+                  {renderSignature(item.sfcSign)}
                 </View>
               </View>
             )) : (
@@ -141,7 +147,7 @@ const styles = StyleSheet.create({
   leftLabelsTitle: { fontSize: 12, fontWeight: '700', padding: 6 },
   rightTestsTitle: { fontSize: 11, fontWeight: '700', padding: 6 },
   spanningHeaderRowExact: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  testsHeaderGroupExact: { width: 340, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#ccc', backgroundColor: '#fafafa', alignItems: 'center', paddingVertical: 6 },
+  testsHeaderGroupExact: { width: 440, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#ccc', backgroundColor: '#fafafa', alignItems: 'center', paddingVertical: 6 },
   sampledManagersRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' },
   smallLabel: { fontSize: 11, color: '#374151', fontWeight: '600' }
 });

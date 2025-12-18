@@ -12,15 +12,17 @@ import NotificationModal from '../components/NotificationModal';
 const createRow = () => ({
   id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
   product: '',
-  productNo: '',
+  batchNo: '',
   time: '',
   dateReceived: '',
   appearance: '',
   weight: '',
   texture: '',
+  organicTest: '',
   result: '', // Now a text input
   comment: '',
   sampledBy: '', // Last column
+  sfcSign: '',
 });
 
 const initialFormData = {
@@ -123,7 +125,7 @@ export default function CertificateOfAnalysis() {
               {/* Spanning Header: Appearance, Weight, Texture */}
               <View style={styles.spanningHeaderRow}>
                 <View style={{ width: 410 }} /> 
-                <View style={styles.testsHeaderGroup}>
+                <View style={[styles.testsHeaderGroup, { width: 380 }]}>
                   <Text style={styles.testsHeaderText}>Organoleptic & Morphologistic Tests</Text>
                 </View>
                 <View style={{ width: 410 }} /> 
@@ -131,26 +133,29 @@ export default function CertificateOfAnalysis() {
 
               <View style={styles.tableHeader}>
                 <Text style={[styles.columnHeader, { width: 120 }]}>Product</Text>
-                <Text style={[styles.columnHeader, { width: 110 }]}>Product No:</Text>
+                <Text style={[styles.columnHeader, { width: 110 }]}>Batch No:</Text>
                 <Text style={[styles.columnHeader, { width: 80 }]}>Time</Text>
                 <Text style={[styles.columnHeader, { width: 100 }]}>Date Rec.</Text>
                 <Text style={[styles.columnHeader, { width: 100, backgroundColor: '#fdfdfd' }]}>Appearance</Text>
                 <Text style={[styles.columnHeader, { width: 80, backgroundColor: '#fdfdfd' }]}>Weight</Text>
                 <Text style={[styles.columnHeader, { width: 100, backgroundColor: '#fdfdfd' }]}>Texture</Text>
+                <Text style={[styles.columnHeader, { width: 100, backgroundColor: '#fdfdfd' }]}>Organic Test</Text>
                 <Text style={[styles.columnHeader, { width: 120 }]}>Result</Text>
                 <Text style={[styles.columnHeader, { width: 150 }]}>Comment</Text>
                 <Text style={[styles.columnHeader, { width: 140 }]}>sampled by</Text>
+                <Text style={[styles.columnHeader, { width: 140 }]}>SFC sign</Text>
               </View>
 
               {formData.products.map((item) => (
                 <View key={item.id} style={styles.tableRow}>
                   <TextInput style={[styles.cellInput, { width: 120 }]} value={item.product} onChangeText={t => handleProductChange(item.id, 'product', t)} editable={editMode} />
-                  <TextInput style={[styles.cellInput, { width: 110 }]} value={item.productNo} onChangeText={t => handleProductChange(item.id, 'productNo', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 110 }]} value={item.batchNo} onChangeText={t => handleProductChange(item.id, 'batchNo', t)} editable={editMode} />
                   <TextInput style={[styles.cellInput, { width: 80 }]} value={item.time} onChangeText={t => handleProductChange(item.id, 'time', t)} editable={editMode} />
                   <TextInput style={[styles.cellInput, { width: 100 }]} value={item.dateReceived} onChangeText={t => handleProductChange(item.id, 'dateReceived', t)} editable={editMode} />
                   <TextInput style={[styles.cellInput, { width: 100 }]} value={item.appearance} onChangeText={t => handleProductChange(item.id, 'appearance', t)} editable={editMode} />
                   <TextInput style={[styles.cellInput, { width: 80 }]} value={item.weight} onChangeText={t => handleProductChange(item.id, 'weight', t)} editable={editMode} />
                   <TextInput style={[styles.cellInput, { width: 100 }]} value={item.texture} onChangeText={t => handleProductChange(item.id, 'texture', t)} editable={editMode} />
+                  <TextInput style={[styles.cellInput, { width: 100 }]} value={item.organicTest} onChangeText={t => handleProductChange(item.id, 'organicTest', t)} editable={editMode} />
                   
                   {/* Manual Result Entry */}
                   <TextInput style={[styles.cellInput, { width: 120 }]} value={item.result} onChangeText={t => handleProductChange(item.id, 'result', t)} placeholder="e.g. PASSED" editable={editMode} />
@@ -159,6 +164,9 @@ export default function CertificateOfAnalysis() {
 
                   <View style={{ width: 140, padding: 4 }}>
                     <SignatureField value={item.sampledBy} onChange={(v) => handleProductChange(item.id, 'sampledBy', v)} editable={editMode} width={130} height={45} />
+                  </View>
+                  <View style={{ width: 140, padding: 4 }}>
+                    <SignatureField value={item.sfcSign} onChange={(v) => handleProductChange(item.id, 'sfcSign', v)} editable={editMode} width={130} height={45} />
                   </View>
                 </View>
               ))}

@@ -62,3 +62,7 @@ yarn-error.log
 .expo/
 dist/
 web-build/
+
+# Ignore desktop renderer/build artifacts for mobile OTA updates
+Desktop/
+Desktop/**
