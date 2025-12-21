@@ -63,6 +63,5 @@ yarn-error.log
 dist/
 web-build/
 
-# Ignore desktop renderer/build artifacts for mobile OTA updates
-Desktop/
-Desktop/**
+dist/
+node_modules/

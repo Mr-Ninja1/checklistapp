@@ -34,31 +34,41 @@ export default function Bakery_UnderbarShelfLifeInspectionPresentational({ paylo
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 12 }} horizontal>
-      <View style={[styles.table, { width: TABLE_WIDTH }]}>
+    <ScrollView contentContainerStyle={{ padding: 12 }}>
+      <View style={[styles.table, { width: '100%', maxWidth: TABLE_WIDTH }]}>
         <View style={styles.header}>
           <Text style={styles.title}>UNDERBAR CHILLER SHELF-LIFE INSPECTION CHECKLIST</Text>
           <Text style={styles.meta}>{metadata.location || ''}  —  {metadata.date || ''}</Text>
         </View>
 
         <View style={styles.thead}>
-          {COLS.map(c => (
-            <View key={c.key} style={[styles.th, { width: c.width }]}>
-              <Text style={styles.thText}>{c.label}</Text>
-            </View>
-          ))}
+          {COLS.map(c => {
+            const pct = Math.round((c.width / TABLE_WIDTH) * 100);
+            return (
+              <View key={c.key} style={[styles.th, exportingWide ? { width: c.width } : { width: pct + '%' }]}>
+                <Text style={styles.thText}>{c.label}</Text>
+              </View>
+            );
+          })}
         </View>
 
         {data.map((row, i) => (
           <View key={i} style={styles.tr}>
-            {COLS.map(c => (
-              <View key={c.key} style={[styles.td, { width: c.width }]}>{
-                c.key === 'chefSign' ? (() => {
-                  const uri = normalizeSig(row[c.key]);
-                  return uri ? <SignatureThumb uri={uri} width={c.width - 8} height={60} layers={6} spread={1.0} /> : <Text style={styles.tdText}>{row[c.key] || ''}</Text>;
-                })() : <Text style={styles.tdText}>{row[c.key] || ''}</Text>
-              }</View>
-            ))}
+            {COLS.map(c => {
+              const pct = Math.round((c.width / TABLE_WIDTH) * 100);
+              const cellStyle = exportingWide ? { width: c.width } : { width: pct + '%' };
+              return (
+                <View key={c.key} style={[styles.td, cellStyle]}>
+                  {
+                    c.key === 'chefSign' ? (() => {
+                      const uri = normalizeSig(row[c.key]);
+                      const sigW = exportingWide ? (c.width - 8) : 100;
+                      return uri ? <SignatureThumb uri={uri} width={sigW} height={60} layers={6} spread={1.0} /> : <Text style={styles.tdText}>{row[c.key] || ''}</Text>;
+                    })() : <Text style={styles.tdText}>{row[c.key] || ''}</Text>
+                  }
+                </View>
+              );
+            })}
           </View>
         ))}
 
