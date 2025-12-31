@@ -1,23 +1,27 @@
 {
   "expo": {
-  "name": "Bravo manager",
+    "name": "Bravo manager",
     "slug": "bravo-manager",
     "scheme": "checklistapp",
-  "icon": "./src/assets/bravo.png",
+    "icon": "./src/assets/bravo.png",
     "splash": {
       "image": "./src/assets/logo.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#185a9d"
     },
     "extra": {
-      "dropboxAppKey": "fc5bqdv55hchi8e"
+      "dropboxAppKey": "fc5bqdv55hchi8e",
+      "eas": {
+        "projectId": "789eba83-cfa2-47b3-97de-232d7b4ea9bc"
+      }
     },
     "android": {
       "package": "com.mrninja1.bravomanager",
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/bravo.png",
         "backgroundColor": "#185a9d"
-      }
+      },
+      "runtimeVersion": "1.0.0"
     },
     "plugins": [
       [
@@ -35,7 +39,15 @@
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0,
-      "runtimeVersion": { "policy": "sdkVersion" }
+      "runtimeVersion": {
+        "policy": "sdkVersion"
+      },
+      "url": "https://u.expo.dev/789eba83-cfa2-47b3-97de-232d7b4ea9bc"
+    },
+    "ios": {
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     }
   },
   "android": {
