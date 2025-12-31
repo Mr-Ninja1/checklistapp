@@ -279,7 +279,12 @@ export default function Bakery_SanitizingLog_PM() {
             <View key={row.id} style={[styles.row, { minWidth: 900 }]}>
               <View style={[styles.cell, { width: COL_WIDTHS.EQUIP }]}> 
                 {editMode ? (
-                  <TextInput value={row.name} onChangeText={(t) => handleInput(row.id, 'name', t)} style={[styles.cellText, styles.nameInput]} editable={editMode} />
+                  <TextInput
+                    value={row.name}
+                    onChangeText={(t) => handleInput(row.id, 'name', t)}
+                    style={[styles.cellText, styles.nameInput, { minWidth: COL_WIDTHS.EQUIP - 12, color: '#111' }]}
+                    editable={editMode}
+                  />
                 ) : (
                   <Text style={styles.cellText}>{row.name}</Text>
                 )}

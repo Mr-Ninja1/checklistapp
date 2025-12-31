@@ -147,7 +147,7 @@ export default function FOH_DailyCleaningForm_AM() {
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
         {editMode ? (
           <TextInput
-            style={[styles.textInput, { height: s(36), fontSize: ms(12), textAlign: 'left', paddingLeft: 8 }]}
+            style={[styles.textInput, { height: s(36), fontSize: ms(12), textAlign: 'left', paddingLeft: 8, minWidth: COL_WIDTHS.EQUIPMENT - 12, color: '#111' }]}
             value={item.name}
             onChangeText={(t) => handleInputChange(item.id, 'name', t)}
             editable={editMode}
@@ -170,7 +170,7 @@ export default function FOH_DailyCleaningForm_AM() {
       <DataCell width={COL_WIDTHS.SIGNATURE} style={{ alignItems: 'center', justifyContent: 'center' }}>
         <SignatureField value={item.staffSign} onChange={(v) => handleInputChange(item.id, 'staffSign', v)} editable={editMode} width={Math.max(80, COL_WIDTHS.SIGNATURE - 8)} height={56} />
       </DataCell>
-      <DataCell width={COL_WIDTHS.SUP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'SUPName', text)} value={item.SUPName} /></DataCell>
+      <DataCell width={COL_WIDTHS.SUP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'SUPName', text)} value={item.SUPName} editable={editMode} /></DataCell>
       <DataCell width={COL_WIDTHS.SUP_SIGN} style={{ alignItems: 'center', justifyContent: 'center' }}>
         <SignatureField value={item.supSign} onChange={(v) => handleInputChange(item.id, 'supSign', v)} editable={editMode} width={Math.max(80, COL_WIDTHS.SUP_SIGN - 8)} height={56} />
       </DataCell>

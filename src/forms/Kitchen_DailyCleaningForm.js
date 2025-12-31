@@ -184,7 +184,7 @@ export default function Kitchen_DailyCleaningForm() {
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
         {editMode ? (
           <TextInput
-            style={[styles.textInput, { height: s(36), fontSize: ms(12), textAlign: 'left', paddingLeft: 8 }]}
+            style={[styles.textInput, { height: s(36), fontSize: ms(12), textAlign: 'left', paddingLeft: 8, minWidth: COL_WIDTHS.EQUIPMENT - 12, color: '#111' }]}
             value={row.name}
             onChangeText={(t) => handleInput(row.id, 'name', t)}
             editable={editMode}
@@ -195,9 +195,9 @@ export default function Kitchen_DailyCleaningForm() {
         )}
       </DataCell>
       {/* PPM input column */}
-      <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="numeric" placeholder="0" /></DataCell>
+      <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="numeric" placeholder="0" editable={editMode} /></DataCell>
       <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>{TIME_SLOTS.map(t => (<DataCell key={t} width={COL_WIDTHS.TIME_SLOT}><Checkbox checked={row.times[t]} onPress={()=>handleTimeToggle(row.id,t)} /></DataCell>))}</View>
-      <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} /></DataCell>
+      <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} editable={editMode} /></DataCell>
       <DataCell width={COL_WIDTHS.SIGNATURE}>{editMode ? (
         <SignatureField value={row.staffSign} onChange={(v) => handleInput(row.id, 'staffSign', v)} editable={editMode} width={COL_WIDTHS.SIGNATURE - 20} height={s(44)} placeholder="Tap to sign" />
       ) : (
@@ -207,7 +207,7 @@ export default function Kitchen_DailyCleaningForm() {
           <Text style={styles.dataText}>{''}</Text>
         )
       )}</DataCell>
-      <DataCell width={COL_WIDTHS.SLIP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.slipName} onChangeText={(t)=>handleInput(row.id,'slipName',t)} /></DataCell>
+      <DataCell width={COL_WIDTHS.SLIP_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.slipName} onChangeText={(t)=>handleInput(row.id,'slipName',t)} editable={editMode} /></DataCell>
       <DataCell width={COL_WIDTHS.SUP_SIGN}>{editMode ? (
         <SignatureField value={row.supSign} onChange={(v) => handleInput(row.id, 'supSign', v)} editable={editMode} width={COL_WIDTHS.SUP_SIGN - 20} height={s(44)} placeholder="Tap to sign" />
       ) : (
