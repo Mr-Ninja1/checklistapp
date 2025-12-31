@@ -122,6 +122,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         setRows(createRowsFromItems(checklistItems));
       setIssueDate(defaultDate);
       setVerifiedBy('');
+      setVerifiedBySign('');
       setBaristaSign('');
     } catch (e) {
       console.warn('Save failed', e);
@@ -183,7 +184,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
     </View>
   );
 
-  const saveDraftLocal = async () => { await setDraft(draftKey, { rows, issueDate }); alert('Draft saved'); };
+  const saveDraftLocal = async () => { await setDraft(draftKey, { rows, issueDate, verifiedBy, verifiedBySign, baristaSign }); alert('Draft saved'); };
   const actionButtons = (
     <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 12 }}>
       <TouchableOpacity onPress={() => { if (!editMode || busy) return; addRow(); }} style={{ backgroundColor: '#2e7d32', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 8 }} disabled={!editMode || busy}>

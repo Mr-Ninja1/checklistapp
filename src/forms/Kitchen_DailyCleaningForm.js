@@ -182,7 +182,17 @@ export default function Kitchen_DailyCleaningForm() {
   const renderRow = (row) => (
     <View key={row.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(56) }]}>
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
-        <Text numberOfLines={2} style={[styles.dataText, { fontSize: ms(12), flexWrap: 'wrap' }]}>{row.name}</Text>
+        {editMode ? (
+          <TextInput
+            style={[styles.textInput, { height: s(36), fontSize: ms(12), textAlign: 'left', paddingLeft: 8 }]}
+            value={row.name}
+            onChangeText={(t) => handleInput(row.id, 'name', t)}
+            editable={editMode}
+            multiline
+          />
+        ) : (
+          <Text numberOfLines={2} style={[styles.dataText, { fontSize: ms(12), flexWrap: 'wrap' }]}>{row.name}</Text>
+        )}
       </DataCell>
       {/* PPM input column */}
       <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="numeric" placeholder="0" /></DataCell>

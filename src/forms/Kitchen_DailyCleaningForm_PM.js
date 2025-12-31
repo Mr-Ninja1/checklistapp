@@ -165,7 +165,17 @@ export default function Kitchen_DailyCleaningForm_PM() {
   const renderRow = (row) => (
     <View key={row.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(56) }]}>
       <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
-        <Text numberOfLines={2} style={[styles.dataText, { fontSize: ms(12), flexWrap: 'wrap' }]}>{row.name}</Text>
+        {editMode ? (
+          <TextInput
+            style={[styles.textInput, { height: s(36), fontSize: ms(12), textAlign: 'left', paddingLeft: 8 }]}
+            value={row.name}
+            onChangeText={(t) => handleInput(row.id, 'name', t)}
+            editable={editMode}
+            multiline
+          />
+        ) : (
+          <Text numberOfLines={2} style={[styles.dataText, { fontSize: ms(12), flexWrap: 'wrap' }]}>{row.name}</Text>
+        )}
       </DataCell>
       <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="numeric" placeholder="0" /></DataCell>
       <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>{TIME_SLOTS.map(t => (<DataCell key={t} width={COL_WIDTHS.TIME_SLOT}><Checkbox checked={row.times[t]} onPress={()=>handleTimeToggle(row.id,t)} /></DataCell>))}</View>

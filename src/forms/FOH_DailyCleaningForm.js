@@ -150,7 +150,18 @@ export default function FOH_DailyCleaningForm() {
 
   const renderLogRow = (item) => (
     <View key={item.id} style={[styles.row, { width: TOTAL_TABLE_WIDTH, minHeight: s(44) }]}> 
-      <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}><Text style={[styles.dataText, { fontSize: ms(12) }]}>{item.name}</Text></DataCell>
+      <DataCell width={COL_WIDTHS.EQUIPMENT} style={styles.leftAlign}>
+        {editMode ? (
+          <TextInput
+            style={[styles.textInput, { height: s(36), fontSize: ms(12), textAlign: 'left', paddingLeft: 8 }]}
+            value={item.name}
+            onChangeText={(t) => handleInputChange(item.id, 'name', t)}
+            editable={editMode}
+          />
+        ) : (
+          <Text style={[styles.dataText, { fontSize: ms(12) }]}>{item.name}</Text>
+        )}
+      </DataCell>
       <DataCell width={COL_WIDTHS.PPM}>
         <TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'ppm', text)} value={item.ppm} keyboardType="numeric" placeholder="0" editable={editMode} />
       </DataCell>

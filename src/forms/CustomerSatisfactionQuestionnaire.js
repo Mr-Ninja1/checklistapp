@@ -170,7 +170,12 @@ export default function CustomerSatisfactionQuestionnaire() {
                   placeholder="dd/mm/yyyy"
                 />
                 <Text style={[styles.metaLabel,{marginLeft:12}]}>Time:</Text>
-                <Text style={styles.metaValue}>{state.formTime}</Text>
+                <TextInput
+                  style={[styles.metaValue, styles.dateInput]}
+                  value={state.formTime}
+                  onChangeText={v => setField('formTime', v)}
+                  placeholder="HH:MM"
+                />
               </View>
               <View style={styles.headerFields}>
                 <TextInput style={[styles.smallInput, styles.headerField]} value={state.customerName} onChangeText={v=>setField('customerName',v)} placeholder="Customer name" />

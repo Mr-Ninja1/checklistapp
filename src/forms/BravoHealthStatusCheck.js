@@ -48,7 +48,7 @@ const createInitialWeeklyData = (count) => Array.from({ length: count }, (_, i) 
 
 // --- Main Form Component (BRAVO BRANDS HEALTH STATUS CHECK) ---
 const HealthStatusCheck = () => {
-    const [weeklyData, setWeeklyData] = useState(createInitialWeeklyData(10));
+    const [weeklyData, setWeeklyData] = useState(createInitialWeeklyData(25));
     const [localSaving, setLocalSaving] = useState(false);
     const [forceHideOverlay, setForceHideOverlay] = useState(false);
     const [editMode, setEditMode] = useState(false);
@@ -224,7 +224,7 @@ const HealthStatusCheck = () => {
     };
 
     const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: 'HealthStatusCheck_draft', clearOnSubmit: () => {
-        setWeeklyData(createInitialWeeklyData(10)); setSite(''); setWeek(''); setMonth(''); setYear(''); setSupervisorSign(''); setComplexManagerSign(''); setHseqManagerSign('');
+        setWeeklyData(createInitialWeeklyData(25)); setSite(''); setWeek(''); setMonth(''); setYear(''); setSupervisorSign(''); setComplexManagerSign(''); setHseqManagerSign('');
     }, waitForSave: false });
 
     // Clear local UI saving flags when the background save completes
