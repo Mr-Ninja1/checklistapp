@@ -148,7 +148,7 @@ export default function CleaningEquipmentChecklist() {
   // centralized save hook — keeps behavior consistent with other forms
   const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
     setFormData(initialCleaningState);
-    setMetadata(prev => ({ ...prev, week: '', month: currentMonth, year: currentYear, hseqManager: '' }));
+    setMetadata(prev => ({ ...initialMetadata, month: currentMonth, year: currentYear }));
   }, waitForSave: true });
 
   const handleSubmit = async () => {
@@ -173,15 +173,23 @@ export default function CleaningEquipmentChecklist() {
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 }), []);
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
 
-  const renderRow = rowItem => {
-    const stateItem = formData.find(i => i.name === rowItem.name);
+  const renderRow = (rowItem, idx) => {
+    const stateItem = (idx >= 0 && formData[idx]) ? formData[idx] : formData.find(i => i.name === rowItem.name);
     const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
-  const canInteract = !!stateItem && editMode;
+    const canInteract = (idx >= 0 || (!!stateItem && formData.indexOf(stateItem) >= 0)) && editMode;
 
     return (
       <View key={item.id} style={styles.row}>
         <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-          <Text style={styles.equipmentText}>{item.name}</Text>
+          {editMode && idx >= 0 ? (
+            <TextInput
+              value={item.name}
+              onChangeText={t => setFormData(prev => prev.map((it, j) => j === idx ? { ...it, name: t } : it))}
+              style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
+            />
+          ) : (
+            <Text style={styles.equipmentText}>{item.name}</Text>
+          )}
         </View>
         <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
           <Text style={styles.equipmentText}>{item.frequency}</Text>
@@ -198,13 +206,13 @@ export default function CleaningEquipmentChecklist() {
   // the pointer-events blocking children wrapper).
   const actionButtons = (
     <View style={styles.buttonContainer}>
-      <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-      <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={() => handleSaveDraft()} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
     </View>
   );
 
   return (
-    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
+    <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={() => handleSaveDraft()} actionButtons={actionButtons}>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(420, Math.round(windowHeight * 0.8)) }] }>
           <View style={styles.card}>
@@ -293,7 +301,7 @@ export default function CleaningEquipmentChecklist() {
                   </View>
                 ))}
               </View>
-              {CLEANING_EQUIPMENT_LIST.map(renderRow)}
+              {formData.map((item, idx) => renderRow(item, idx))}
             </View>
           </ScrollView>
 

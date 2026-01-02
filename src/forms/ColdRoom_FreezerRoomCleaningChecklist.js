@@ -163,7 +163,7 @@ export default function ColdRoomFreezerChecklist() {
   const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
     // reset UI state once submit completes; preserve auto year
     setFormData(initialCleaningState);
-    setMetadata({ location: '', week: '', month: '', year: currentYear, hseqManager: '' });
+    setMetadata({ location: '', week: '', month: '', year: currentYear, hseqManager: '', hseqSign: '', approvedBy: '', approvedBySign: '' });
   }, waitForSave: true });
 
   const handleSubmit = async () => {
@@ -191,10 +191,18 @@ export default function ColdRoomFreezerChecklist() {
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
   const windowHeight = Dimensions.get('window').height;
 
-  const renderRow = item => (
+  const renderRow = (item, idx) => (
     <View key={item.id} style={styles.row}>
       <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-        <Text style={styles.equipmentText}>{item.name}</Text>
+        {editMode ? (
+          <TextInput
+            value={item.name}
+            onChangeText={t => setFormData(prev => prev.map((it, j) => j === idx ? { ...it, name: t } : it))}
+            style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
+          />
+        ) : (
+          <Text style={styles.equipmentText}>{item.name}</Text>
+        )}
       </View>
       <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
         <Text style={styles.equipmentText}>{item.frequency}</Text>
@@ -219,14 +227,14 @@ export default function ColdRoomFreezerChecklist() {
   // remain tappable when editMode is false.
   const actionButtons = (
     <View style={styles.buttonContainer}>
-      <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-      <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={() => handleSaveDraft()} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={actionButtons}>
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={() => handleSaveDraft()} actionButtons={actionButtons}>
           <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(120, Math.round(windowHeight * 0.25)), flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast"> 
           <View style={styles.card}>
           <View style={styles.header}>
@@ -297,7 +305,7 @@ export default function ColdRoomFreezerChecklist() {
                   </View>
                 ))}
               </View>
-              {formData.map(renderRow)}
+              {formData.map((item, idx) => renderRow(item, idx))}
             </View>
           </ScrollView>
 

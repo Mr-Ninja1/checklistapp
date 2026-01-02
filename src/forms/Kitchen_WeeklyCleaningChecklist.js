@@ -164,7 +164,15 @@ export default function KitchenWeeklyCleaningChecklist() {
   const renderRow = (item) => (
     <View key={item.id} style={styles.row}>
       <View style={[styles.cell, { width: COL_WIDTHS.AREA }]}>
-        <Text style={styles.areaText}>{item.name}</Text>
+        {editMode ? (
+          <TextInput
+            value={item.name}
+            onChangeText={t => setFormData(prev => prev.map(it => it.id === item.id ? { ...it, name: t } : it))}
+            style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
+          />
+        ) : (
+          <Text style={styles.areaText}>{item.name}</Text>
+        )}
       </View>
       <View style={[styles.cell, { width: COL_WIDTHS.FREQ, alignItems: 'center' }]}>
         <Text style={styles.freqText}>{item.frequency}</Text>
@@ -188,11 +196,23 @@ export default function KitchenWeeklyCleaningChecklist() {
 
   // Move the action buttons outside the pointer-events-blocking area so they
   // remain tappable while viewing (editMode false). Use existing handlers.
+  const handleSubmitLocal = async () => {
+    try {
+      await handleSubmit();
+      // Defensive clearing in case clearOnSubmit didn't run
+      setFormData(initialCleaningState);
+      try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', hseqSign: '', complexManagerSign: '', companyName: 'Bravo' });
+    } catch (e) {
+      console.warn('submit failed', e);
+    }
+  };
+
   const actionButtons = (
     <View style={{ flexDirection: 'row', gap: 8 }}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
-      <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
-      <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
+      <TouchableOpacity onPress={() => handleSaveDraft()} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
+      <TouchableOpacity onPress={() => handleSubmitLocal()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
     </View>
   );
 

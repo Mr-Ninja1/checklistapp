@@ -21,7 +21,7 @@ const DRAFT_KEY = 'scullery_area_cleaning_checklist_draft';
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
 
-// Items based on the notes in cat.md (scullery list)
+
 const SCULLERY_EQUIPMENT_LIST = [
   { area: 'Scullery', name: 'Slab', frequency: 'Once a week', isItem: true },
   { area: 'Scullery', name: 'Dish Washing Sink', frequency: 'After each use', isItem: true },
@@ -192,8 +192,11 @@ export default function SculleryAreaChecklist() {
   const handleSubmit = async () => {
     try {
       await hookSubmit();
-      Alert.alert('Success', 'Checklist submitted');
       try { await removeDraft(DRAFT_KEY); } catch (e) {}
+      // Ensure local state is cleared after submit (defensive)
+      setFormData(initialCleaningState);
+      setMetadata({ location: 'SCULLERY', week: '', month: '', year: '', issueDate: '', approvedBy: '', approvedBySign: '', hseqManager: '', hseqManagerSign: '' });
+      Alert.alert('Success', 'Checklist submitted');
     } catch (e) {
       console.warn('submit failed', e);
       Alert.alert('Error', 'Submission failed');
@@ -213,15 +216,23 @@ export default function SculleryAreaChecklist() {
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 }), []);
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
 
-  const renderRow = rowItem => {
-    const stateItem = formData.find(i => i.name === rowItem.name && i.area === rowItem.area);
+  const renderRow = (rowItem, idx) => {
+    const stateItem = formData[idx];
     const item = stateItem || { id: `fallback-${rowItem.area}-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
     const canInteract = !!stateItem && editMode;
 
     return (
       <View key={item.id} style={styles.row}>
         <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-          <Text style={styles.equipmentText}>{item.name}</Text>
+          {editMode && stateItem ? (
+            <TextInput
+              value={item.name}
+              onChangeText={t => setFormData(prev => prev.map((it, j) => j === idx ? { ...it, name: t } : it))}
+              style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
+            />
+          ) : (
+            <Text style={styles.equipmentText}>{item.name}</Text>
+          )}
         </View>
         <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
           <Text style={styles.equipmentText}>{item.frequency}</Text>

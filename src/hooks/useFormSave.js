@@ -212,9 +212,12 @@ export default function useFormSave(a, b = {}) {
         console.warn('useFormSave: failed to remove draft from history', e);
       }
 
-      // clear form via provided callback if available
-      if (typeof onClear === 'function') {
-        try { onClear(); } catch (e) { console.warn('onClear failed', e); }
+      // clear form via provided callback if available. Prefer an explicit
+      // onClear passed to handleSubmit, otherwise fall back to the
+      // `clearOnSubmit` option supplied when the hook was created.
+      const clearFn = typeof onClear === 'function' ? onClear : options.clearOnSubmit;
+      if (typeof clearFn === 'function') {
+        try { clearFn(); } catch (e) { console.warn('onClear/clearOnSubmit failed', e); }
       }
 
       if (mounted.current) {

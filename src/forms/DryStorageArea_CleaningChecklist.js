@@ -83,7 +83,15 @@ export default function DryStorageChecklist() {
     };
   };
 
-  const { handleSaveDraft, handleSubmit: hookSubmit, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialCleaningState); setMetadata(prev => ({ ...prev, week: '', month: '', year: '', hseqManager: '' })); } });
+  const { handleSaveDraft, handleSubmit: hookSubmit, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+    const cleared = DRY_STORAGE_LIST.filter(i => i.isItem).map((item, index) => {
+      const checks = WEEK_DAYS.reduce((acc, d) => { acc[d] = { checked: false, cleanedBy: '' }; return acc; }, {});
+      const slotsNeeded = isNaN(parseInt(item.frequency)) ? WEEK_DAYS.length : parseInt(item.frequency);
+      return { id: index, name: item.name, frequencyText: item.frequency + (isNaN(parseInt(item.frequency)) ? '' : ' (Per Week)'), frequencyValue: item.frequency, checks, slotsNeeded };
+    });
+    setFormData(cleared);
+    setMetadata(initialMetadata);
+  } });
   // keep legacy variable name for scheduleAutoSave use below
   const scheduleAutoSave = scheduleAutoSaveFromHook;
 
@@ -168,15 +176,24 @@ export default function DryStorageChecklist() {
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40 }), []);
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
 
-  const renderRow = rowItem => {
-    const stateItem = formData.find(i => i.name === rowItem.name);
+  const renderRow = (rowItem, stateIdx = -1) => {
+    const stateItem = (stateIdx >= 0 && formData[stateIdx]) ? formData[stateIdx] : formData.find(i => i.name === rowItem.name);
     const item = stateItem || { id: `fallback-${rowItem.name}`, name: rowItem.name, frequencyText: rowItem.frequencyText || rowItem.frequencyValue, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
-    const canInteract = !!stateItem && editMode;
+    const canInteract = (stateIdx >= 0 || (!!stateItem && formData.indexOf(stateItem) >= 0)) && editMode;
+    const effectiveIdx = stateIdx >= 0 ? stateIdx : formData.findIndex(i => i.name === rowItem.name);
 
     return (
       <View key={item.id} style={styles.row}>
         <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-          <Text style={styles.equipmentText}>{item.name}</Text>
+          {editMode && effectiveIdx >= 0 ? (
+            <TextInput
+              value={item.name}
+              onChangeText={t => setFormData(prev => prev.map((it, j) => j === effectiveIdx ? { ...it, name: t } : it))}
+              style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
+            />
+          ) : (
+            <Text style={styles.equipmentText}>{item.name}</Text>
+          )}
         </View>
         <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
           <Text style={styles.equipmentText}>{item.frequencyText || item.frequencyValue}</Text>
@@ -262,7 +279,15 @@ export default function DryStorageChecklist() {
                   </View>
                 ))}
               </View>
-              {DRY_STORAGE_LIST.map(renderRow)}
+              {(() => {
+                let nextIdx = 0;
+                return DRY_STORAGE_LIST.map(row => {
+                  if (!row.isItem) return renderRow(row);
+                  const idx = nextIdx;
+                  nextIdx += 1;
+                  return renderRow(row, idx);
+                });
+              })()}
             </View>
           </ScrollView>
 

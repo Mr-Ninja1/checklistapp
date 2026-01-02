@@ -159,7 +159,7 @@ export default function FrontOfHouseChecklist() {
       await removeDraft(DRAFT_KEY);
       Alert.alert('Success', 'Checklist Submitted successfully!');
       setFormData(initialCleaningState);
-      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '' });
+      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', hseqManagerSign: '' });
     } catch (e) {
       Alert.alert('Error', 'Submission failed.');
     } finally {
@@ -189,10 +189,18 @@ export default function FrontOfHouseChecklist() {
 
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
 
-  const renderRow = (item) => (
+  const renderRow = (item, idx) => (
     <View key={item.id} style={styles.row}>
       <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-        <Text style={styles.equipmentText}>{item.name}</Text>
+        {editMode ? (
+          <TextInput
+            value={item.name}
+            onChangeText={t => setFormData(prev => prev.map((it, j) => j === idx ? { ...it, name: t } : it))}
+            style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
+          />
+        ) : (
+          <Text style={styles.equipmentText}>{item.name}</Text>
+        )}
       </View>
       <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
         <Text style={styles.equipmentText}>{item.frequency}</Text>
@@ -309,7 +317,7 @@ export default function FrontOfHouseChecklist() {
                   </View>
                 ))}
               </View>
-              {formData.map(renderRow)}
+              {formData.map((item, idx) => renderRow(item, idx))}
             </View>
           </ScrollView>
 

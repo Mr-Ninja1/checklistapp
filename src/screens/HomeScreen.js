@@ -148,6 +148,53 @@ export default function HomeScreen() {
   const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateString = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const yearString = now.getFullYear();
+  // show banner only for first 3 days of January
+  const isNewYearSeason = (now.getMonth() === 0 && now.getDate() <= 3);
+  const [showNewYearBanner, setShowNewYearBanner] = useState(true);
+  const confettiColors = ['#FF5252', '#FFEB3B', '#4CAF50', '#2196F3', '#FF9800'];
+  const confetti = React.useMemo(() => new Array(8).fill(0).map((_, i) => ({ id: i, left: `${5 + Math.round(Math.random() * 90)}%`, color: confettiColors[i % confettiColors.length] })), []);
+  const confettiAnims = React.useRef(confetti.map(() => new Animated.Value(0))).current;
+  React.useEffect(() => {
+    // animate confetti particles in a gentle loop
+    try {
+      confettiAnims.forEach((a, i) => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.delay(i * 120),
+            Animated.timing(a, { toValue: 1, duration: 900, useNativeDriver: true }),
+            Animated.timing(a, { toValue: 0, duration: 900, useNativeDriver: true }),
+          ])
+        ).start();
+      });
+    } catch (e) {}
+  }, []);
+  // subtle pulse for the banner text
+  const textPulse = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    Animated.loop(Animated.sequence([Animated.timing(textPulse, { toValue: 1, duration: 900, useNativeDriver: true }), Animated.timing(textPulse, { toValue: 0, duration: 900, useNativeDriver: true })])).start();
+  }, []);
+
+  // Full-screen seasonal decorations (header pulse + confetti)
+  const headerPulse = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    Animated.loop(Animated.sequence([Animated.timing(headerPulse, { toValue: 1, duration: 1200, useNativeDriver: true }), Animated.timing(headerPulse, { toValue: 0, duration: 1200, useNativeDriver: true })])).start();
+  }, []);
+
+  // global confetti particles for the whole screen
+  const globalConfetti = React.useMemo(() => new Array(22).fill(0).map((_, i) => ({ id: i, left: Math.round(Math.random() * 100) + '%', size: 6 + (i % 4) * 2, color: confettiColors[i % confettiColors.length], delay: Math.round(Math.random() * 800) })), []);
+  const globalAnims = React.useRef(globalConfetti.map(() => new Animated.Value(0))).current;
+  React.useEffect(() => {
+    try {
+      globalAnims.forEach((a, i) => {
+        Animated.loop(Animated.sequence([
+          Animated.delay(globalConfetti[i].delay),
+          Animated.timing(a, { toValue: 1, duration: 2400 + (i % 5) * 300, useNativeDriver: true }),
+          Animated.timing(a, { toValue: 0, duration: 200, useNativeDriver: true }),
+          Animated.delay(400 + (i % 3) * 200),
+        ])).start();
+      });
+    } catch (e) {}
+  }, []);
 
   // Filter forms by category and search; exclude cards that don't link to a form
   function getFilteredForms(category) {
@@ -186,6 +233,61 @@ export default function HomeScreen() {
 
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Updates modal state (one-time modal with snooze)
+  const [showUpdatesModal, setShowUpdatesModal] = useState(false);
+  const updatesSnoozeTimer = React.useRef(null);
+  const SNOOZE_MS = 2 * 60 * 1000; // 2 minutes
+
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem('@updates_modal_seen');
+        const snooze = await AsyncStorage.getItem('@updates_modal_snooze_until');
+        const now = Date.now();
+        if (seen === 'true') {
+          if (mounted) setShowUpdatesModal(false);
+          return;
+        }
+        if (snooze) {
+          const until = parseInt(snooze, 10) || 0;
+          if (now >= until) {
+            if (mounted) setShowUpdatesModal(true);
+          } else {
+            // schedule show when snooze expires
+            const wait = Math.max(0, until - now);
+            if (mounted) setShowUpdatesModal(false);
+            if (updatesSnoozeTimer.current) clearTimeout(updatesSnoozeTimer.current);
+            updatesSnoozeTimer.current = setTimeout(() => { if (mounted) setShowUpdatesModal(true); }, wait);
+          }
+        } else {
+          // never seen and not snoozed -> show now
+          if (mounted) setShowUpdatesModal(true);
+        }
+      } catch (e) {
+        if (mounted) setShowUpdatesModal(true);
+      }
+    })();
+    return () => { mounted = false; if (updatesSnoozeTimer.current) clearTimeout(updatesSnoozeTimer.current); };
+  }, []);
+
+  const handleUpdatesSeen = async () => {
+    try {
+      await AsyncStorage.setItem('@updates_modal_seen', 'true');
+    } catch (e) {}
+    setShowUpdatesModal(false);
+  };
+
+  const handleUpdatesSnooze = async () => {
+    try {
+      const until = Date.now() + SNOOZE_MS;
+      await AsyncStorage.setItem('@updates_modal_snooze_until', String(until));
+      if (updatesSnoozeTimer.current) clearTimeout(updatesSnoozeTimer.current);
+      updatesSnoozeTimer.current = setTimeout(() => { setShowUpdatesModal(true); }, SNOOZE_MS);
+    } catch (e) {}
+    setShowUpdatesModal(false);
+  };
 
   // Flatten all forms for quick search
   const allForms = Object.keys(formCategories).reduce((acc, key) => {
@@ -448,6 +550,45 @@ export default function HomeScreen() {
     // ensure the root fills the viewport on web by setting a minHeight based on window height
     <View style={{ flex: 1, backgroundColor: theme.background, width: '100%', minHeight: height }}>
       <LoadingOverlay visible={loadingCard} message={loadingMsg} />
+      {/* Updates modal: one-time, with snooze */}
+      <Modal visible={showUpdatesModal} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.updatesModalOverlay}>
+          <View style={styles.updatesModal}>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New</Text>
+            <View style={styles.updatesList}>
+              <Text style={styles.updateItem}>1. All forms are now editable.</Text>
+               <Text style={styles.updateItem}>2. All forms are now saving draft </Text>
+              <Text style={styles.updateItem}>3. All weekly checklist forms will clear once submit is clicked.</Text>
+              <Text style={styles.updateItem}>4. When you save forms ensure you download them on desktop for sharing.</Text>
+              <Text style={styles.updateItem}>5. Ensure all devices are connected to Dropbox.</Text>
+
+            </View>
+            <Text style={{ marginTop: 8, marginBottom: 12 }}>Have you seen these updates?</Text>
+            <View style={styles.updatesButtonRow}>
+              <TouchableOpacity style={styles.updatesButtonPrimary} onPress={handleUpdatesSeen}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Yes, I have</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.updatesButtonSecondary} onPress={handleUpdatesSnooze}>
+                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Wait, let me check</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Full-screen seasonal overlay (confetti + warm tint) */}
+      {isNewYearSeason && showNewYearBanner ? (
+        <Animated.View pointerEvents="none" style={{ ...StyleSheet.absoluteFillObject, zIndex: 90 }}>
+          <LinearGradient colors={[ 'rgba(255,245,224,0.12)', 'rgba(255,235,205,0.06)' ]} style={{ ...StyleSheet.absoluteFillObject }} />
+          {globalConfetti.map((p, i) => {
+            const translateY = globalAnims[i].interpolate({ inputRange: [0, 1], outputRange: [-40, 260] });
+            const rotate = globalAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+            const opacity = globalAnims[i].interpolate({ inputRange: [0, 0.1, 0.9, 1], outputRange: [0, 1, 1, 0] });
+            return (
+              <Animated.View key={p.id} style={{ position: 'absolute', left: p.left, top: -40, width: p.size, height: p.size * 0.6, backgroundColor: p.color, borderRadius: 3, transform: [{ translateY }, { rotate }], opacity }} />
+            );
+          })}
+        </Animated.View>
+      ) : null}
       {/* Floating Search Button - draggable */}
       <Animated.View
         {...searchPan.panHandlers}
@@ -510,6 +651,7 @@ export default function HomeScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+      <Animated.View style={{ transform: [{ scale: headerPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }}>
       <LinearGradient
         colors={[theme.accent, theme.accent, theme.primary]}
         style={{
@@ -667,6 +809,30 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </LinearGradient>
+
+      </Animated.View>
+
+      {/* New Year seasonal banner (shows during early January) */}
+      {isNewYearSeason && showNewYearBanner ? (
+        <LinearGradient colors={['#FFD54F', '#FF8A65']} style={{ margin: 12, borderRadius: 12, padding: 12, alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
+          {/* confetti particles */}
+          {confetti.map((p, i) => {
+            const translateY = confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: [-6, 18] });
+            const opacity = confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
+            return (
+              <Animated.View key={p.id} style={{ position: 'absolute', left: p.left, top: 4, width: 10, height: 10, borderRadius: 6, backgroundColor: p.color, transform: [{ translateY }, { rotate: confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] , opacity }} />
+            );
+          })}
+
+          <Animated.Text style={{ fontSize: 16, fontWeight: '800', color: '#4B2E1E', transform: [{ scale: textPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }], letterSpacing: 1 }}>
+            RC DIGITAL & MT LABS ARE WISHING YOU A HAPPY NEW YEAR ! 🎉🎊
+          </Animated.Text>
+
+          <TouchableOpacity onPress={() => setShowNewYearBanner(false)} style={{ position: 'absolute', right: 8, top: 6, padding: 6 }}>
+            <Text style={{ color: '#4B2E1E', fontWeight: '700' }}>x</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+      ) : null}
 
       {/* Dev Dropbox test access removed — button intentionally hidden in Home screen */}
 
@@ -1035,5 +1201,55 @@ const styles = StyleSheet.create({
   },
   categoryTabTextActive: {
     color: '#ffffff'
+  }
+  ,
+  updatesModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    zIndex: 9999
+  },
+  updatesModal: {
+    width: '92%',
+    maxWidth: 720,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'stretch',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 20,
+  },
+  updatesList: {
+    marginTop: 6,
+  },
+  updateItem: {
+    marginBottom: 6,
+    color: '#333'
+  },
+  updatesButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  updatesButtonPrimary: {
+    flex: 1,
+    backgroundColor: '#185a9d',
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    marginRight: 8
+  },
+  updatesButtonSecondary: {
+    flex: 1,
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#185a9d'
   }
 });

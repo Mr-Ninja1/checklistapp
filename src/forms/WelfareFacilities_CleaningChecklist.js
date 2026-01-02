@@ -170,8 +170,14 @@ export default function WelfareFacilitiesChecklist() {
     setBusy(true);
     try {
       await handleSubmit(() => {
-        setFormData(initialCleaningState);
-        setMetadata({ location: '', week: '', month: new Date().toLocaleString('default', { month: 'long' }), year: currentYear, hseqManager: '' });
+        // create a fresh cleared copy of the initial cleaning state so we don't
+        // accidentally reuse mutated references from earlier edits
+        const cleared = WELFARE_EQUIPMENT_LIST.filter(i => i.isItem).map((item, index) => {
+          const checks = WEEK_DAYS.reduce((acc, d) => { acc[d] = { checked: false, cleanedBy: '' }; return acc; }, {});
+          return { id: index, area: item.area, name: item.name, frequency: item.frequency, checks };
+        });
+        setFormData(cleared);
+        setMetadata({ location: '', week: '', month: new Date().toLocaleString('default', { month: 'long' }), year: currentYear, hseqManager: '', hseqManagerSign: '' });
       });
       // Aggressively delete any drafts that may exist: legacy key and
       // the default stable draft used by the save hook (if any).
@@ -198,7 +204,7 @@ export default function WelfareFacilitiesChecklist() {
   const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
   const windowHeight = Dimensions.get('window').height;
 
-  const renderRow = rowItem => {
+  const renderRow = (rowItem, stateIdx = -1) => {
     // If this is an area header, render a special header row that displays the area name and empty cells
     if (rowItem.isHeader) {
       return (
@@ -218,21 +224,32 @@ export default function WelfareFacilitiesChecklist() {
     }
 
     // Item row — prefer live state entry, but fall back to the template data so UI always shows labels
-    const stateItem = formData.find(i => i.name === rowItem.name && i.area === rowItem.area);
+    const stateItem = (stateIdx >= 0 && formData[stateIdx]) ? formData[stateIdx] : formData.find(i => i.name === rowItem.name && i.area === rowItem.area);
     const item = stateItem || { id: `fallback-${rowItem.area}-${rowItem.name}`, name: rowItem.name, frequency: rowItem.frequency, checks: WEEK_DAYS.reduce((a, d) => { a[d] = { checked: false, cleanedBy: '' }; return a; }, {}) };
 
     // Determine if interaction is allowed (i.e., if it's a real item in the state)
-  const canInteract = !!stateItem && editMode; 
+    const canInteract = (stateIdx >= 0 || (!!stateItem && formData.indexOf(stateItem) >= 0)) && editMode;
+
+    // derive index to use for stable updates (prefer explicit stateIdx)
+    const effectiveIdx = stateIdx >= 0 ? stateIdx : formData.findIndex(i => i.name === rowItem.name && i.area === rowItem.area);
 
     return (
       <View key={item.id} style={styles.row}>
         <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-          <Text style={styles.equipmentText}>{item.name}</Text>
+          {editMode && effectiveIdx >= 0 ? (
+            <TextInput
+              value={item.name}
+              onChangeText={t => setFormData(prev => prev.map((it, j) => j === effectiveIdx ? { ...it, name: t } : it))}
+              style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
+            />
+          ) : (
+            <Text style={styles.equipmentText}>{item.name}</Text>
+          )}
         </View>
         <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
           <Text style={styles.equipmentText}>{item.frequency}</Text>
         </View>
-        
+
         {/* Use the new CleaningCell component */}
         {WEEK_DAYS.map(day => (
             <CleaningCell
@@ -324,12 +341,21 @@ export default function WelfareFacilitiesChecklist() {
                 ))}
               </View>
               {/* Render headers and items in the order described by the template list */}
-              {WELFARE_EQUIPMENT_LIST.map(renderRow)}
+              {(() => {
+                let nextIdx = 0;
+                return WELFARE_EQUIPMENT_LIST.map((row) => {
+                  if (!row.isItem) return renderRow(row);
+                  // pull the next item from formData in the original template order
+                  const idx = nextIdx;
+                  nextIdx += 1;
+                  return renderRow(row, idx);
+                });
+              })()}
             </View>
           </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} showSavePdf={false} />
+              <View style={styles.buttonContainer}>
+            <FormActionBar onBack={() => {}} onSaveDraft={() => handleSaveDraft()} onSubmit={handleSubmitLocal} showSavePdf={false} />
           </View>
           <LoadingOverlay visible={isSaving} />
           <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
