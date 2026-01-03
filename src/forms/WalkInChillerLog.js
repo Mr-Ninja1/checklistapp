@@ -110,7 +110,7 @@ function formatTempDisplay(v) {
   <View style={styles.slotRow}>
     {editable ? (
       <>
-        <TextInput value={value.temp} onChangeText={t => onChange('temp', normalizeTempInput(t))} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
+        <TextInput value={value.temp} onChangeText={t => onChange('temp', normalizeTempInput(t))} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="default" />
         <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
         <SignatureField value={value.sign} onChange={(v) => onChange('sign', v)} editable={editable} width={signatureWidth} height={signatureHeight} placeholder="Sign" />
       </>

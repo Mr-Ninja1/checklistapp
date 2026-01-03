@@ -195,7 +195,7 @@ export default function Kitchen_DailyCleaningForm() {
         )}
       </DataCell>
       {/* PPM input column */}
-      <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="numeric" placeholder="0" editable={editMode} /></DataCell>
+      <DataCell width={COL_WIDTHS.PPM}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInput(row.id, 'ppm', text)} value={row.ppm} keyboardType="default" placeholder="0" editable={editMode} /></DataCell>
       <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>{TIME_SLOTS.map(t => (<DataCell key={t} width={COL_WIDTHS.TIME_SLOT}><Checkbox checked={row.times[t]} onPress={()=>handleTimeToggle(row.id,t)} /></DataCell>))}</View>
       <DataCell width={COL_WIDTHS.STAFF_NAME}><TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} value={row.staffName} onChangeText={(t)=>handleInput(row.id,'staffName',t)} editable={editMode} /></DataCell>
       <DataCell width={COL_WIDTHS.SIGNATURE}>{editMode ? (

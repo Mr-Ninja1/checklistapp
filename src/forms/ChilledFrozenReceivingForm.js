@@ -159,12 +159,12 @@ const ChilledFrozenReceivingForm = () => {
                 </View>
             )}
             {editMode ? (
-                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} editable onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} editable onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="default" placeholder="°C" />
             ) : (
                 <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{item.temp}</Text>
             )}
             {editMode ? (
-                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]} value={item.tempOfChldFrznProduct} editable onChangeText={(t) => updateReceivingField(item.id, 'tempOfChldFrznProduct', t)} keyboardType="numeric" placeholder="°C" />
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]} value={item.tempOfChldFrznProduct} editable onChangeText={(t) => updateReceivingField(item.id, 'tempOfChldFrznProduct', t)} keyboardType="default" placeholder="°C" />
             ) : (
                 <Text style={[dailyStyles.dataCell, dailyStyles.tempOfBeverageCol]}>{item.tempOfChldFrznProduct}</Text>
             )}

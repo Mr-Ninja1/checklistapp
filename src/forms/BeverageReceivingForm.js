@@ -168,7 +168,7 @@ const BeverageReceivingForm = () => {
                     value={item.temp}
                     editable
                     onChangeText={(t) => updateReceivingField(item.id, 'temp', t)}
-                    keyboardType="numeric"
+                    keyboardType="default"
                     placeholder="°C"
                 />
             ) : (
@@ -181,7 +181,7 @@ const BeverageReceivingForm = () => {
                     value={item.tempOfBeverage}
                     editable
                     onChangeText={(t) => updateReceivingField(item.id, 'tempOfBeverage', t)}
-                    keyboardType="numeric"
+                    keyboardType="default"
                     placeholder="°C"
                 />
             ) : (

@@ -556,7 +556,7 @@ export default function FormSavesScreen() {
               <View style={{ width: '85%', backgroundColor: '#fff', borderRadius: 12, padding: 18 }}>
                 <Text style={{ fontWeight: '700', marginBottom: 8 }}>Filter last N days</Text>
                 <Text style={{ color: '#374151', marginBottom: 12 }}>Enter number of days (e.g., 2 for last 2 days)</Text>
-                <TextInput keyboardType="numeric" placeholder="Days" value={lastDaysValue} onChangeText={setLastDaysValue} style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 10, borderRadius: 8, marginBottom: 12 }} />
+                <TextInput keyboardType="default" placeholder="Days" value={lastDaysValue} onChangeText={setLastDaysValue} style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 10, borderRadius: 8, marginBottom: 12 }} />
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
                   <TouchableOpacity style={[styles.clearBtn, { marginRight: 8 }]} onPress={() => setLastDaysModalVisible(false)}>
                     <Text style={styles.clearBtnText}>Cancel</Text>

@@ -48,6 +48,11 @@ export default function DisplayChillerTemperaturePresentational({ payload }) {
   const TABLE_WIDTH = COL.DATE + (COL.TEMP + COL.SIGN) * 3 + COL.CORRECTIVE_ACTION + COL.SUP_NAME_SIGN + COL.COMPLEX_SIGN + COL.FSC_SIGN + COL.HSEQ_SIGN;
 
   const chillerName = metadata.displayChillerName || '';
+  const typeStr = (p.formType || p.formTypeName || p.title || metadata.subject || '').toString();
+  const isGelato = /gelato/i.test(typeStr) || /gelato/i.test(chillerName);
+  const instructionText = metadata.instruction
+    ? metadata.instruction
+    : (isGelato ? 'The temperature of the freezer should not be below -2°C.' : 'The temperature of the chiller should be between 0°C and 4°C.');
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -92,7 +97,7 @@ export default function DisplayChillerTemperaturePresentational({ payload }) {
         </View>
 
         <View style={styles.instructionBox}>
-          <Text style={styles.instructionText}><Text style={{ fontWeight: '800' }}>Instruction:</Text> {metadata.instruction || 'The temperature of the chiller should be between 0°C and 4°C.'}</Text>
+          <Text style={styles.instructionText}><Text style={{ fontWeight: '800' }}>Instruction:</Text> {instructionText}</Text>
         </View>
 
         <ScrollView horizontal={true} nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} contentContainerStyle={{ minWidth: TABLE_WIDTH }}>

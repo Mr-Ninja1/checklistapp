@@ -556,12 +556,13 @@ export default function HomeScreen() {
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New</Text>
             <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>1. All forms are now editable.</Text>
-               <Text style={styles.updateItem}>2. All forms are now saving draft </Text>
-              <Text style={styles.updateItem}>3. All weekly checklist forms will clear once submit is clicked.</Text>
-              <Text style={styles.updateItem}>4. When you save forms ensure you download them on desktop for sharing.</Text>
-              <Text style={styles.updateItem}>5. Ensure all devices are connected to Dropbox.</Text>
-
+              <Text style={styles.updateItem}>1. The Daily showering log has been updated and is now working properly.</Text>
+              <Text style={styles.updateItem}>2. The Gelato freezer form and all other Temp forms now use a default keyboard which allows characters like negative (-) and degrees Celsius (°C).</Text>
+              <Text style={styles.updateItem}>3. All forms are now Editable!</Text>
+              <Text style={styles.updateItem}>4. All forms are now saving drafts .</Text>
+              <Text style={styles.updateItem}>5. All weekly checklist forms will clear once submit is clicked.</Text>
+              <Text style={styles.updateItem}>6. When you save forms ensure you download them on desktop for sharing.</Text>
+              <Text style={styles.updateItem}>7. Always ensure all devices are connected to Dropbox.</Text>
             </View>
             <Text style={{ marginTop: 8, marginBottom: 12 }}>Have you seen these updates?</Text>
             <View style={styles.updatesButtonRow}>
@@ -575,20 +576,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-      {/* Full-screen seasonal overlay (confetti + warm tint) */}
-      {isNewYearSeason && showNewYearBanner ? (
-        <Animated.View pointerEvents="none" style={{ ...StyleSheet.absoluteFillObject, zIndex: 90 }}>
-          <LinearGradient colors={[ 'rgba(255,245,224,0.12)', 'rgba(255,235,205,0.06)' ]} style={{ ...StyleSheet.absoluteFillObject }} />
-          {globalConfetti.map((p, i) => {
-            const translateY = globalAnims[i].interpolate({ inputRange: [0, 1], outputRange: [-40, 260] });
-            const rotate = globalAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-            const opacity = globalAnims[i].interpolate({ inputRange: [0, 0.1, 0.9, 1], outputRange: [0, 1, 1, 0] });
-            return (
-              <Animated.View key={p.id} style={{ position: 'absolute', left: p.left, top: -40, width: p.size, height: p.size * 0.6, backgroundColor: p.color, borderRadius: 3, transform: [{ translateY }, { rotate }], opacity }} />
-            );
-          })}
-        </Animated.View>
-      ) : null}
+      {/* Seasonal overlay removed */}
       {/* Floating Search Button - draggable */}
       <Animated.View
         {...searchPan.panHandlers}
@@ -812,27 +800,7 @@ export default function HomeScreen() {
 
       </Animated.View>
 
-      {/* New Year seasonal banner (shows during early January) */}
-      {isNewYearSeason && showNewYearBanner ? (
-        <LinearGradient colors={['#FFD54F', '#FF8A65']} style={{ margin: 12, borderRadius: 12, padding: 12, alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
-          {/* confetti particles */}
-          {confetti.map((p, i) => {
-            const translateY = confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: [-6, 18] });
-            const opacity = confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] });
-            return (
-              <Animated.View key={p.id} style={{ position: 'absolute', left: p.left, top: 4, width: 10, height: 10, borderRadius: 6, backgroundColor: p.color, transform: [{ translateY }, { rotate: confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] , opacity }} />
-            );
-          })}
-
-          <Animated.Text style={{ fontSize: 16, fontWeight: '800', color: '#4B2E1E', transform: [{ scale: textPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }], letterSpacing: 1 }}>
-            RC DIGITAL & MT LABS ARE WISHING YOU A HAPPY NEW YEAR ! 🎉🎊
-          </Animated.Text>
-
-          <TouchableOpacity onPress={() => setShowNewYearBanner(false)} style={{ position: 'absolute', right: 8, top: 6, padding: 6 }}>
-            <Text style={{ color: '#4B2E1E', fontWeight: '700' }}>x</Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      ) : null}
+      {/* New Year banner removed */}
 
       {/* Dev Dropbox test access removed — button intentionally hidden in Home screen */}
 

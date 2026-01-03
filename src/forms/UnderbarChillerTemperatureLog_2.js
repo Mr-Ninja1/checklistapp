@@ -262,7 +262,7 @@ export default function UnderbarChillerTemperatureLog2() {
             </View>
             <View style={styles.monthlyInputRow}>
               <Text style={styles.monthlyLabel}>Year:</Text>
-              {editMode ? <TextInput style={styles.monthlyInput} value={meta.year} onChangeText={v => setMetaField('year', v)} placeholder="e.g., 2025" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.year}</Text>}
+              {editMode ? <TextInput style={styles.monthlyInput} value={meta.year} onChangeText={v => setMetaField('year', v)} placeholder="e.g., 2025" keyboardType="default" editable={editMode} /> : <Text style={styles.readOnlyMeta}>{meta.year}</Text>}
             </View>
             <View style={styles.monthlyInputRow}>
               <Text style={styles.monthlyLabel}>Location:</Text>
@@ -333,7 +333,7 @@ export default function UnderbarChillerTemperatureLog2() {
               </View>
 
               {/* Morning Record */}
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempMorning} onChangeText={v => setCell(ri, 'tempMorning', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempMorning}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempMorning} onChangeText={v => setCell(ri, 'tempMorning', v)} placeholder="°C" keyboardType="default" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempMorning}</Text>}</View>
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>
                 {editMode ? (
                   <SignatureField value={row.staffSignMorning} onChange={(v) => setCell(ri, 'staffSignMorning', v)} editable={editMode} width={140} height={40} placeholder="Sign" />
@@ -345,7 +345,7 @@ export default function UnderbarChillerTemperatureLog2() {
               </View>
 
               {/* Afternoon Record */}
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempAfternoon} onChangeText={v => setCell(ri, 'tempAfternoon', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempAfternoon}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempAfternoon} onChangeText={v => setCell(ri, 'tempAfternoon', v)} placeholder="°C" keyboardType="default" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempAfternoon}</Text>}</View>
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>
                 {editMode ? (
                   <SignatureField value={row.staffSignAfternoon} onChange={(v) => setCell(ri, 'staffSignAfternoon', v)} editable={editMode} width={140} height={40} placeholder="Sign" />
@@ -357,7 +357,7 @@ export default function UnderbarChillerTemperatureLog2() {
               </View>
 
               {/* Evening Record */}
-              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempEvening} onChangeText={v => setCell(ri, 'tempEvening', v)} placeholder="°C" keyboardType="numeric" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempEvening}</Text>}</View>
+              <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TEMP }]}>{editMode ? <TextInput style={styles.input} value={row.tempEvening} onChangeText={v => setCell(ri, 'tempEvening', v)} placeholder="°C" keyboardType="default" editable={editMode} /> : <Text style={styles.readOnlyCell}>{row.tempEvening}</Text>}</View>
               <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.SIGN }]}>
                 {editMode ? (
                   <SignatureField value={row.staffSignEvening} onChange={(v) => setCell(ri, 'staffSignEvening', v)} editable={editMode} width={140} height={40} placeholder="Sign" />

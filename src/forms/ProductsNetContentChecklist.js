@@ -201,35 +201,35 @@ export default function ProductsNetContentChecklist() {
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
                 {editMode ? (
-                  <TextInput style={styles.input} value={item.weight1} onChangeText={v => handleEntryChange(idx, 'weight1', v)} keyboardType="numeric" />
+                  <TextInput style={styles.input} value={item.weight1} onChangeText={v => handleEntryChange(idx, 'weight1', v)} keyboardType="default" />
                 ) : (
                   <Text style={styles.readOnlyText}>{item.weight1}</Text>
                 )}
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
                 {editMode ? (
-                  <TextInput style={styles.input} value={item.weight2} onChangeText={v => handleEntryChange(idx, 'weight2', v)} keyboardType="numeric" />
+                  <TextInput style={styles.input} value={item.weight2} onChangeText={v => handleEntryChange(idx, 'weight2', v)} keyboardType="default" />
                 ) : (
                   <Text style={styles.readOnlyText}>{item.weight2}</Text>
                 )}
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
                 {editMode ? (
-                  <TextInput style={styles.input} value={item.weight3} onChangeText={v => handleEntryChange(idx, 'weight3', v)} keyboardType="numeric" />
+                  <TextInput style={styles.input} value={item.weight3} onChangeText={v => handleEntryChange(idx, 'weight3', v)} keyboardType="default" />
                 ) : (
                   <Text style={styles.readOnlyText}>{item.weight3}</Text>
                 )}
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
                 {editMode ? (
-                  <TextInput style={styles.input} value={item.weight4} onChangeText={v => handleEntryChange(idx, 'weight4', v)} keyboardType="numeric" />
+                  <TextInput style={styles.input} value={item.weight4} onChangeText={v => handleEntryChange(idx, 'weight4', v)} keyboardType="default" />
                 ) : (
                   <Text style={styles.readOnlyText}>{item.weight4}</Text>
                 )}
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
                 {editMode ? (
-                  <TextInput style={styles.input} value={item.weight5} onChangeText={v => handleEntryChange(idx, 'weight5', v)} keyboardType="numeric" />
+                  <TextInput style={styles.input} value={item.weight5} onChangeText={v => handleEntryChange(idx, 'weight5', v)} keyboardType="default" />
                 ) : (
                   <Text style={styles.readOnlyText}>{item.weight5}</Text>
                 )}

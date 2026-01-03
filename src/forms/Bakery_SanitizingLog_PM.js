@@ -289,7 +289,7 @@ export default function Bakery_SanitizingLog_PM() {
                   <Text style={styles.cellText}>{row.name}</Text>
                 )}
               </View>
-              <View style={[styles.cell, { width: COL_WIDTHS.PPM }]}><TextInput value={row.ppm} onChangeText={(t)=>handleInput(row.id,'ppm',t)} style={styles.smallInput} keyboardType="numeric" editable={editMode} /></View>
+              <View style={[styles.cell, { width: COL_WIDTHS.PPM }]}><TextInput value={row.ppm} onChangeText={(t)=>handleInput(row.id,'ppm',t)} style={styles.smallInput} keyboardType="default" editable={editMode} /></View>
               <View style={{ flexDirection: 'row', width: COL_WIDTHS.TIME * TIME_SLOTS.length }}>
                 {TIME_SLOTS.map(t => (
                   <View key={t} style={[styles.cell, { width: COL_WIDTHS.TIME }]}>

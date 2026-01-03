@@ -360,7 +360,7 @@ export default function CoolingTemperatureLog() {
 
                             {/* 1st Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time1}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp1}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="default" /> : <Text style={styles.readOnlyCell}>{row.temp1}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign1} onChange={v => setCell(ri, 'sign1', v)} editable={editMode} width={100} height={48} placeholder="Tap to sign" /> : (() => {
                                 // render image preview when available to avoid showing long data URLs
                                 const uri = resolvePreviewUri(row.sign1);
@@ -370,7 +370,7 @@ export default function CoolingTemperatureLog() {
 
                             {/* 2nd Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time2}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp2}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="default" /> : <Text style={styles.readOnlyCell}>{row.temp2}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign2} onChange={v => setCell(ri, 'sign2', v)} editable={editMode} width={100} height={48} placeholder="Tap to sign" /> : (() => {
                                 const uri = resolvePreviewUri(row.sign2);
                                 if (uri) return (<View style={{ alignItems: 'center', justifyContent: 'center' }}><SignatureThumb uri={uri} width={80} height={48} layers={10} spread={1.2} /></View>);
@@ -379,7 +379,7 @@ export default function CoolingTemperatureLog() {
 
                             {/* 3rd Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /> : <Text style={styles.readOnlyCell}>{row.time3}</Text>}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /> : <Text style={styles.readOnlyCell}>{row.temp3}</Text>}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="default" /> : <Text style={styles.readOnlyCell}>{row.temp3}</Text>}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <SignatureField value={row.sign3} onChange={v => setCell(ri, 'sign3', v)} editable={editMode} width={100} height={48} placeholder="Tap to sign" /> : (() => {
                                 const uri = resolvePreviewUri(row.sign3);
                                 if (uri) return (<View style={{ alignItems: 'center', justifyContent: 'center' }}><SignatureThumb uri={uri} width={80} height={48} layers={10} spread={1.2} /></View>);

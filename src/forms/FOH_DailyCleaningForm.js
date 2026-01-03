@@ -163,7 +163,7 @@ export default function FOH_DailyCleaningForm() {
         )}
       </DataCell>
       <DataCell width={COL_WIDTHS.PPM}>
-        <TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'ppm', text)} value={item.ppm} keyboardType="numeric" placeholder="0" editable={editMode} />
+        <TextInput style={[styles.textInput, { height: s(36), fontSize: ms(12) }]} onChangeText={(text) => handleInputChange(item.id, 'ppm', text)} value={item.ppm} keyboardType="default" placeholder="0" editable={editMode} />
       </DataCell>
       <View style={{ flexDirection: 'row', width: TIME_SLOTS_WIDTH }}>
         {TIME_SLOTS.map(time => (

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
 import { getDraft } from '../utils/formDrafts';
@@ -9,629 +9,321 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import FormActionBar from '../components/FormActionBar';
 import SignatureField from '../components/SignatureField';
-// centralized signature modal removed - use per-cell SignatureField instead
-// Note: Delayed focus wrapper removed — using native TextInput for editability
+import Signature from 'react-native-signature-canvas';
 
 // --- Configuration Constants ---
-
 const W_FIXED = {
-  headerHeight: 40, // Height of one header band (total height of table header is 2 * 40 = 80)
-  rowHeight: 35,
-  dailyTimeCol: 60, // Increased from 45 to 60 for better space
-  dailySignCol: 90, // Increased to allow drawn signature capture
-  supSignCol: 160, // Sup Sign (increased to allow a clear signature thumbnail)
+  headerHeight: 40,
+  rowHeight: 45, // Slightly increased for better touch targets on tablets
+  dailyTimeCol: 70, 
+  dailySignCol: 100,
+  supSignCol: 160,
+  largeCol: 180, // Fixed width for Full Name
+  mediumCol: 120, // Fixed width for Job Title
 };
 
 const DATA_ROWS = 15;
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Width of one pair of daily columns (Shower Time + Sign)
-const DAILY_BLOCK_WIDTH = W_FIXED.dailyTimeCol + W_FIXED.dailySignCol; 
-// Total width of all 7 daily blocks plus the Supervisor block
-const TOTAL_LOG_WIDTH = (DAILY_BLOCK_WIDTH * 7) + W_FIXED.supSignCol; 
+// Calculated constant widths to prevent recalculation during render
+const DAILY_BLOCK_WIDTH = W_FIXED.dailyTimeCol + W_FIXED.dailySignCol;
+const TABLE_WIDTH = W_FIXED.largeCol + W_FIXED.mediumCol + (DAILY_BLOCK_WIDTH * 7) + W_FIXED.supSignCol;
 
-// Initial minimum width set for the flexible columns
-const W_FLEX = {
-  largeCol: 150, // Full Name (Min width, slightly adjusted)
-  mediumCol: 90, // Job Title (Min width, slightly adjusted)
-};
+const FINAL_WIDTHS = [
+  W_FIXED.largeCol,
+  W_FIXED.mediumCol,
+  ...Array.from({ length: 7 * 2 }, (_, i) => i % 2 === 0 ? W_FIXED.dailyTimeCol : W_FIXED.dailySignCol),
+  W_FIXED.supSignCol
+];
 
-// Total required minimum width of the entire table 
-const TOTAL_TABLE_WIDTH_MIN = W_FLEX.largeCol + W_FLEX.mediumCol + TOTAL_LOG_WIDTH;
+// --- Memoized Row Component ---
+// This prevents the entire table from lagging when typing in one cell
+const DataRow = memo(({ rowIndex, rowData, editMode, onCellChange, onSignPress }) => {
+  return (
+    <View style={styles.dataRow}>
+      {FINAL_WIDTHS.map((w, cIdx) => {
+        const isSupSign = cIdx === FINAL_WIDTHS.length - 1;
+        const dayIndex = cIdx - 2;
+        const isDailySign = !isSupSign && dayIndex >= 0 && (dayIndex % 2 === 1);
+        const cellValue = rowData[cIdx];
 
-// Total width allocated to flexible columns (used for calculating dynamic ratios)
-const TOTAL_FLEX_WIDTH_MIN = W_FLEX.largeCol + W_FLEX.mediumCol;
-
-// Define how the additional space should be distributed:
-// We want more weight on Full Name, less on Job Title.
-const LARGE_COL_RATIO = W_FLEX.largeCol / TOTAL_FLEX_WIDTH_MIN;
-const MEDIUM_COL_RATIO = W_FLEX.mediumCol / TOTAL_FLEX_WIDTH_MIN;
-
-// Calculate dynamic widths based on the available space
-const calculateDynamicWidths = (screenWidth) => {
-  // Padding of mainContent is 24 (12 on each side)
-  const availableScreenContentWidth = screenWidth - 24; 
-
-  // If the screen is less than the required minimum width, use minimum widths
-  if (availableScreenContentWidth < TOTAL_TABLE_WIDTH_MIN) {
-    return {
-      largeCol: W_FLEX.largeCol,
-      mediumCol: W_FLEX.mediumCol,
-      totalTableWidth: TOTAL_TABLE_WIDTH_MIN
-    };
-  }
-
-  // Calculate the excess space available beyond the fixed log columns
-  const availableFlexSpace = availableScreenContentWidth - TOTAL_LOG_WIDTH;
-
-  // Distribute the available flex space using ratios
-  let dynamicLargeCol, dynamicMediumCol;
-
-  if (availableFlexSpace > TOTAL_FLEX_WIDTH_MIN) {
-      // If there is excess space, distribute it based on the established ratio
-      dynamicLargeCol = availableFlexSpace * LARGE_COL_RATIO;
-      dynamicMediumCol = availableFlexSpace * MEDIUM_COL_RATIO;
-  } else {
-      // If available space is less than or equal to the minimum flex space, stick to the minimums
-      dynamicLargeCol = W_FLEX.largeCol;
-      dynamicMediumCol = W_FLEX.mediumCol;
-  }
-  
-  return {
-    largeCol: dynamicLargeCol,
-    mediumCol: dynamicMediumCol,
-    totalTableWidth: dynamicLargeCol + dynamicMediumCol + TOTAL_LOG_WIDTH
-  };
-};
-
-// --- Main Component ---
+        return (
+          <View key={`cell-${rowIndex}-${cIdx}`} style={[styles.cell, { width: w, height: W_FIXED.rowHeight }, styles.bottomBorder, cIdx === FINAL_WIDTHS.length - 1 ? styles.lastCell : styles.rightBorder]}>
+            {isDailySign || isSupSign ? (
+              <TouchableOpacity
+                onPress={() => editMode && onSignPress(rowIndex, cIdx)}
+                style={styles.cellTouch}
+                disabled={!editMode}
+              >
+                {cellValue ? (
+                  <Image source={{ uri: cellValue }} style={styles.sigImageInsideCell} />
+                ) : (
+                  <Text style={styles.placeholder}>{editMode ? 'Tap to sign' : ''}</Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TextInput
+                style={styles.inputField}
+                editable={editMode}
+                value={cellValue}
+                onChangeText={(text) => onCellChange(rowIndex, cIdx, text)}
+                underlineColorAndroid="transparent"
+              />
+            )}
+          </View>
+        );
+      })}
+    </View>
+  );
+});
 
 export default function FoodHandlersDailyShoweringForm() {
   const now = new Date();
-  const dateVal = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  const dateVal = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
   const monthName = (new Intl.DateTimeFormat('en-US', { month: 'long' })).format(now).toUpperCase();
 
+  // Basic States
   const [week, setWeek] = useState('A');
   const [month, setMonth] = useState(monthName);
   const [year, setYear] = useState(`${now.getFullYear()}`);
   const [compiledBy, setCompiledBy] = useState('Michael Zulu C.');
   const [approvedBy, setApprovedBy] = useState('Hassani Ali');
   const [verifiedBy, setVerifiedBy] = useState('');
-  
-  const screenWidth = Dimensions.get('window').width;
-  const { largeCol, mediumCol, totalTableWidth } = calculateDynamicWidths(screenWidth);
+  const [editMode, setEditMode] = useState(false);
 
-  // Recalculate the array of widths whenever dynamic widths change
-  const finalWidths = [
-    largeCol, // Full Name (Dynamic width)
-    mediumCol, // Job Title (Dynamic width)
-    // 7 days of (Time, Sign)
-    ...Array.from({ length: 7 * 2 }, (_, i) => i % 2 === 0 ? W_FIXED.dailyTimeCol : W_FIXED.dailySignCol), 
-    W_FIXED.supSignCol // Sup Sign
-  ];
-
-  // Initializing log entries state (Data not fully implemented for brevity, but structure is ready)
-  const initialLog = Array.from({ length: DATA_ROWS }, () => Array(finalWidths.length).fill(''));
+  // Table Data State
+  const initialLog = Array.from({ length: DATA_ROWS }, () => Array(FINAL_WIDTHS.length).fill(''));
   const [logEntries, setLogEntries] = useState(initialLog);
   const [logoDataUri, setLogoDataUri] = useState(null);
-  // per-cell SignatureField will handle modal state internally
 
-  // useFormSave integration
-  const draftId = 'FoodHandlersDailyShowering_draft';
+  // Modal States
+  const [sigModalVisible, setSigModalVisible] = useState(false);
+  const [sigTarget, setSigTarget] = useState(null);
+  const sigRef = useRef(null);
+
+  // Optimized Update Functions (useCallback prevents unnecessary re-renders)
+  const handleCellChange = useCallback((rIdx, cIdx, text) => {
+    setLogEntries(prev => {
+      const next = [...prev];
+      next[rIdx] = [...next[rIdx]]; // Shallow clone only the affected row
+      next[rIdx][cIdx] = text;
+      return next;
+    });
+    scheduleAutoSave();
+  }, []);
+
+  const openSignatureModal = useCallback((rIdx, cIdx) => {
+    setSigTarget({ rIdx, cIdx });
+    setSigModalVisible(true);
+  }, []);
+
+  // Payload Builder
   const buildPayload = () => ({
     formType: 'FoodHandlersDailyShowering',
     templateVersion: 'v1.0',
     title: 'Food Handlers Daily Showering Log',
-    week,
-    month,
-    year,
-    compiledBy,
-    approvedBy,
-    verifiedBy,
+    week, month, year, compiledBy, approvedBy, verifiedBy,
     logEntries,
-    layoutHints: { largeCol, mediumCol, widths: finalWidths },
-    _tableWidth: totalTableWidth,
+    _tableWidth: TABLE_WIDTH,
     assets: logoDataUri ? { logoDataUri } : {},
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-    setLogEntries(initialLog);
-    setWeek('A');
-    setMonth(monthName);
-    setYear(`${now.getFullYear()}`);
-    setCompiledBy('Michael Zulu C.');
-    setApprovedBy('Hassani Ali');
-    setVerifiedBy('');
-  }, waitForSave: false });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({
+    buildPayload,
+    draftId: 'FoodHandlersDailyShowering_draft',
+    clearOnSubmit: () => {
+      setLogEntries(initialLog);
+      setWeek('A');
+      setVerifiedBy('');
+    },
+    waitForSave: false
+  });
 
-  // Edit mode toggles whether inputs are editable. Default: read-only so scrolling works everywhere.
-  const [editMode, setEditMode] = useState(false);
-
-  // Load draft on mount so previously saved drafts are restored
+  // Load Draft Logic
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const d = await getDraft(draftId).catch(() => null);
-        if (!d || !mounted) return;
-        // getDraft returns the saved payload (we wrote payload via useFormSave)
-        if (d.logEntries) setLogEntries(d.logEntries);
-        if (d.week) setWeek(d.week);
-        if (d.month) setMonth(d.month);
-        if (d.year) setYear(String(d.year));
-        if (d.compiledBy) setCompiledBy(d.compiledBy);
-        if (d.approvedBy) setApprovedBy(d.approvedBy);
-        if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
-        if (d.assets && d.assets.logoDataUri) setLogoDataUri(d.assets.logoDataUri);
-      } catch (e) { /* ignore */ }
+        const d = await getDraft('FoodHandlersDailyShowering_draft');
+        if (d) {
+          if (d.logEntries) setLogEntries(d.logEntries);
+          if (d.week) setWeek(d.week);
+          if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
+          if (d.compiledBy) setCompiledBy(d.compiledBy);
+          if (d.approvedBy) setApprovedBy(d.approvedBy);
+        }
+      } catch (e) { console.log("Draft Load Error", e); }
     })();
-    return () => { mounted = false; };
   }, []);
-
-  // embed logo as base64 for deterministic presentational rendering
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
-        if (!asset.localUri) await asset.downloadAsync();
-        const uri = asset.localUri || asset.uri;
-        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-        if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
-      } catch (e) { /* ignore */ }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={90} style={{ flex: 1 }}>
-        <ScrollView
-          style={styles.container}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          contentContainerStyle={{ flexGrow: 1 }}
-          // Let moves (drag gestures) be captured so scrolling can start even when touching inputs
-          onStartShouldSetResponderCapture={() => false}
-          onMoveShouldSetResponderCapture={() => true}
-        >
+        <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.mainContent}>
-          
-          {/* Document Header & Info */}
-          <View style={styles.docInfoContainer}>
             
-            {/* Top Banner Row */}
-            <View style={styles.docInfoRow}>
-              <View style={styles.headerColLeft}>
-                <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
-                <View style={{ flexDirection: 'column', marginLeft: 8 }}>
-                  <Text style={styles.companyName}>BRAVO BRANDS LIMITED</Text>
-                  <Text style={styles.subtitleText}>Food Safety Management System</Text>
+            {/* Header Section */}
+            <View style={styles.docInfoContainer}>
+              <View style={styles.docInfoRow}>
+                <View style={styles.headerColLeft}>
+                  <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />
+                  <View style={{ marginLeft: 8 }}>
+                    <Text style={styles.companyName}>BRAVO BRANDS LIMITED</Text>
+                    <Text style={styles.subtitleText}>Food Safety Management System</Text>
+                  </View>
+                </View>
+                <View style={styles.headerTable}>
+                  <View style={styles.headerTableRow}><Text style={styles.headerTableCellKey}>Issue Date:</Text><Text style={styles.headerTableCellValue}>{dateVal}</Text></View>
+                  <View style={styles.headerTableRow}><Text style={styles.headerTableCellKey}>Review Date:</Text><Text style={styles.headerTableCellValue}>N/A</Text></View>
                 </View>
               </View>
 
-              <View style={styles.headerTable}>
-                <View style={styles.headerTableRow}>
-                  <Text style={styles.headerTableCellKey}>Issue Date:</Text>
-                  <Text style={styles.headerTableCellValue}>{dateVal}</Text>
-                </View>
-                <View style={styles.headerTableRow}>
-                  <Text style={styles.headerTableCellKey}>Review Date:</Text>
-                  <Text style={styles.headerTableCellValue}>N/A</Text>
-                </View>
+              <View style={[styles.textRow, { marginTop: 10 }]}>
+                <Text style={styles.labelText}>Subject:</Text>
+                <Text style={[styles.valueTextBold, { fontSize: 18 }]}>FOOD HANDLERS DAILY SHOWERING LOG</Text>
               </View>
 
-              <Text style={styles.pageText}>Page 1 of 1</Text>
-            </View>
+              <View style={styles.textRow}>
+                <Text style={styles.labelText}>Compiled By:</Text>
+                <TextInput style={styles.valueTextInput} editable={editMode} value={compiledBy} onChangeText={setCompiledBy} />
+                <Text style={styles.labelText}>Approved By:</Text>
+                <TextInput style={styles.valueTextInput} editable={editMode} value={approvedBy} onChangeText={setApprovedBy} />
+              </View>
 
-            {/* Subject and Version Row */}
-            <View style={[styles.textRow, { marginTop: 10 }]}> 
-              <Text style={styles.labelText}>Subject:</Text>
-              <Text style={[styles.valueTextBold, { fontSize: 20 }]}>FOOD HANDLERS DAILY SHOWERING LOG</Text>
-            </View>
-
-            {/* Compiled/Approved Row */}
-            <View style={styles.textRow}>
-              <Text style={styles.labelText}>Compiled By:</Text>
-              {editMode ? (
-                <TextInput style={[styles.valueTextInput, { flex: 1 }]} editable={editMode} value={compiledBy} onChangeText={setCompiledBy} />
-              ) : (
-                <Text style={[styles.valueTextInput, { flex: 1 }, styles.readOnlyText]}>{compiledBy}</Text>
-              )}
-              <Text style={styles.labelText}>Approved By:</Text>
-              {editMode ? (
-                <TextInput style={[styles.valueTextInput, { flex: 1 }]} editable={editMode} value={approvedBy} onChangeText={setApprovedBy} />
-              ) : (
-                <Text style={[styles.valueTextInput, { flex: 1 }, styles.readOnlyText]}>{approvedBy}</Text>
-              )}
-            </View>
-
-            {/* Week/Month/Year/Verified Row */}
-            <View style={styles.textRow}>
-              <Text style={styles.labelText}>Week:</Text>
-              {editMode ? (
+              <View style={styles.textRow}>
+                <Text style={styles.labelText}>Week:</Text>
                 <TextInput style={styles.underlineTextInput} editable={editMode} value={week} onChangeText={setWeek} />
-              ) : (
-                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{week}</Text>
-              )}
-              <Text style={styles.labelText}>Month:</Text>
-              {editMode ? (
+                <Text style={styles.labelText}>Month:</Text>
                 <TextInput style={styles.underlineTextInput} editable={editMode} value={month} onChangeText={setMonth} />
-              ) : (
-                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{month}</Text>
-              )}
-              <Text style={styles.labelText}>Year:</Text>
-              {editMode ? (
+                <Text style={styles.labelText}>Year:</Text>
                 <TextInput style={styles.underlineTextInput} editable={editMode} value={year} onChangeText={setYear} />
-              ) : (
-                <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{year}</Text>
-              )}
-              <Text style={styles.labelText}>Verified By:</Text>
-              {editMode ? (
-                <SignatureField value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={220} height={60} placeholder="Tap to sign - Verified By" />
-              ) : (
-                verifiedBy ? (
-                  <Image source={{ uri: String(verifiedBy).startsWith('data:') ? verifiedBy : `data:image/png;base64,${verifiedBy}` }} style={{ width: 220, height: 60, resizeMode: 'contain' }} />
-                ) : (
-                  <Text style={[styles.underlineTextInput, styles.readOnlyText]}>{verifiedBy}</Text>
-                )
-              )}
-            </View>
-          </View>
-          {/* Table Container - Allows horizontal scrolling, now fills screen width */}
-
-          {/* Action buttons: moved outside scrolling content to avoid touch interception */}
-
-          {/* Table Container - Allows horizontal scrolling, now fills screen width */}
-          <ScrollView
-            horizontal
-            nestedScrollEnabled={true}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
-            onStartShouldSetResponderCapture={() => false}
-            onMoveShouldSetResponderCapture={() => true}
-            contentContainerStyle={[
-              styles.horizontalScrollContent,
-              // Ensure minWidth is set correctly to expand up to screen width if needed
-              { minWidth: Math.max(totalTableWidth, screenWidth - 24) }
-            ]}
-          >
-            <View
-              style={[styles.tableContainer, { minWidth: totalTableWidth, flex: 1 }]}
-              // capture move gestures at the table container level to allow scrolling
-              onStartShouldSetResponderCapture={() => false}
-              onMoveShouldSetResponderCapture={() => true}
-            >
-              
-              {/* --- HEADER ROWS (Layered) --- */}
-              
-              {/* Top Header Band (Day Headers) - Row 1 */}
-              <View style={[styles.headerRow, { height: W_FIXED.headerHeight, borderBottomWidth: 0 }]}>
-                {/* Fixed Columns (Empty cells in top band, but reserve space) */}
-                <View style={{ width: largeCol + mediumCol }} />
-                
-                {/* Day Headers (Sun, Mon, ..., Sat) */}
-                {daysOfWeek.map((day, i) => (
-                  <View key={`day-${i}`} style={[styles.headerCell, styles.dayHeaderCell, { width: DAILY_BLOCK_WIDTH, borderTopWidth: 0, borderBottomWidth: 0 }]}>
-                    <Text style={styles.headerText}>{day}</Text>
-                  </View>
-                ))}
-
-                {/* Space for the absolutely positioned Sup Sign cell in Row 2 */}
-                <View style={{ width: W_FIXED.supSignCol, borderRightWidth: 0 }} /> 
+                <Text style={styles.labelText}>Verified By:</Text>
+                <SignatureField value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={150} height={40} />
               </View>
+            </View>
 
-              {/* Bottom Header Band (Sub-Headers) - Row 2 */}
-              <View style={[styles.headerRow, { height: W_FIXED.headerHeight }]}>
+            {/* Table Horizontal Scroll */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={true} persistentScrollbar={true}>
+              <View style={[styles.tableContainer, { width: TABLE_WIDTH }]}>
                 
-                {/* Full Name & Job Title (Cells spanning both rows) - ABSOLUTELY positioned to overlap rows 1 & 2 */}
-                <View style={[styles.headerCell, styles.headerSpanningCell, { width: largeCol, height: W_FIXED.headerHeight * 2, position: 'absolute', top: -W_FIXED.headerHeight, left: 0, justifyContent: 'center' }]}>
-                  <Text style={styles.headerText}>Full Name</Text>
-                </View>
-                <View style={[styles.headerCell, styles.headerSpanningCell, { width: mediumCol, height: W_FIXED.headerHeight * 2, position: 'absolute', top: -W_FIXED.headerHeight, left: largeCol, justifyContent: 'center' }]}>
-                  <Text style={styles.headerText}>Job Title</Text>
-                </View>
-
-                {/* SUPERVISOR SIGN (Cells spanning both rows) - ABSOLUTELY positioned - FIX APPLIED HERE */}
-                <View 
-                  style={[
-                    styles.headerCell, 
-                    styles.headerSpanningCell, 
-                    { 
-                      width: W_FIXED.supSignCol, 
-                      height: W_FIXED.headerHeight * 2, 
-                      position: 'absolute', 
-                      top: -W_FIXED.headerHeight, 
-                      right: 0, 
-                      justifyContent: 'center',
-                      // Ensure borders are fully drawn for this spanning cell
-                      borderLeftWidth: 1, 
-                      borderRightWidth: 1, 
-                      borderTopWidth: 1, 
-                      borderBottomWidth: 1, 
-                    }
-                  ]}
-                >
-                  {/* FIXED: Use newline character for full text visibility */}
-                  <Text style={styles.headerText}>Sup{"\n"}Sign</Text> 
-                </View>
-
-                {/* Content Flow for Row 2 (Sub-headers) */}
-                <View style={{ flexDirection: 'row', borderTopWidth: 1, borderColor: '#000' }}>
-                  {/* Offset for fixed columns (to push the sub-headers to the right) */}
-                  <View style={{ width: largeCol + mediumCol }} /> 
-
-                  {/* Sub Headers (Shower Time / Sign) */}
-                  {daysOfWeek.flatMap(() => [
-                    { width: W_FIXED.dailyTimeCol, text: 'Shower Time' },
-                    { width: W_FIXED.dailySignCol, text: 'Sign' }
-                  ]).map((col, idx) => (
-                    <View key={`sub-${idx}`} style={[styles.headerCell, { width: col.width, height: W_FIXED.headerHeight, backgroundColor: '#f0f0f0' }]}>
-                      <Text style={styles.headerText}>{col.text.replace(' ', '\n')}</Text>
-                    </View>
+                {/* Header Row 1 */}
+                <View style={[styles.headerRow, { height: W_FIXED.headerHeight }]}>
+                  <View style={[styles.headerCell, { width: W_FIXED.largeCol + W_FIXED.mediumCol }]}><Text style={styles.headerText}>Staff Details</Text></View>
+                  {daysOfWeek.map((day) => (
+                    <View key={day} style={[styles.headerCell, { width: DAILY_BLOCK_WIDTH }]}><Text style={styles.headerText}>{day}</Text></View>
                   ))}
+                  <View style={[styles.headerCell, { width: W_FIXED.supSignCol }]}><Text style={styles.headerText}>Supervisor</Text></View>
                 </View>
-                
-                {/* Space for Supervisor Sign (already handled by the spanning cell) */}
-                <View style={{ width: W_FIXED.supSignCol, borderRightWidth: 0 }} /> 
-              </View>
 
-              {/* --- DATA ROWS --- */}
-              <View> 
-                {Array.from({ length: DATA_ROWS }).map((_, rIdx) => (
-                  <View key={`row-${rIdx}`} style={styles.dataRow}>
-                    {/* The 17 columns of input fields */}
-                    {finalWidths.map((w, cIdx) => {
-                                // Determine whether this column is a sign column
-                                // Column mapping: 0=FullName,1=JobTitle, then pairs for 7 days (time, sign), last = sup sign
-                                const isSupSign = cIdx === finalWidths.length - 1;
-                                const dayIndex = cIdx - 2; // zero-based index into day columns
-                                const isDailySign = !isSupSign && dayIndex >= 0 && (dayIndex % 2 === 1);
-                                const cellValue = logEntries[rIdx]?.[cIdx];
-                                return (
-                                  <View 
-                                    key={`cell-${rIdx}-${cIdx}`} 
-                                    style={[
-                                      styles.cell, 
-                                      { width: w, height: W_FIXED.rowHeight },
-                                      styles.bottomBorder,
-                                      cIdx === finalWidths.length - 1 ? styles.lastCell : styles.rightBorder
-                                    ]}
-                                  >
-                                    {isDailySign || isSupSign ? (
-                                      editMode ? (
-                                        // Use per-cell SignatureField (opens its own modal)
-                                        <View style={{ width: Math.max(48, w - 8), height: Math.max(40, W_FIXED.rowHeight), alignItems: 'center', justifyContent: 'center' }}>
-                                          <SignatureField
-                                            value={cellValue}
-                                            onChange={(dataUri) => {
-                                              setLogEntries(prev => {
-                                                const next = prev.map(row => row.slice());
-                                                next[rIdx][cIdx] = dataUri;
-                                                return next;
-                                              });
-                                              scheduleAutoSave();
-                                            }}
-                                            editable={editMode}
-                                            width={Math.max(48, w - 8)}
-                                            height={isSupSign ? Math.max(80, W_FIXED.supSignCol - 20) : Math.max(40, W_FIXED.rowHeight)}
-                                          />
-                                        </View>
-                                      ) : (
-                                        cellValue ? (
-                                          <Image source={{ uri: String(cellValue).startsWith('data:') ? cellValue : `data:image/png;base64,${cellValue}` }} style={{ width: Math.max(48, w - 8), height: Math.max(40, W_FIXED.rowHeight), resizeMode: 'contain' }} />
-                                        ) : (
-                                          <Text style={[styles.inputField, styles.readOnlyCell]}>{cellValue || ''}</Text>
-                                        )
-                                      )
-                                    ) : (
-                                      editMode ? (
-                                        <TextInput
-                                          style={styles.inputField}
-                                          editable={editMode}
-                                          value={cellValue}
-                                          onChangeText={(text) => {
-                                            setLogEntries(prev => {
-                                              const next = prev.map(row => row.slice());
-                                              next[rIdx][cIdx] = text;
-                                              return next;
-                                            });
-                                            scheduleAutoSave();
-                                          }}
-                                        />
-                                      ) : (
-                                        <Text style={[styles.inputField, styles.readOnlyCell]}>{cellValue}</Text>
-                                      )
-                                    )}
-                                  </View>
-                                );
-                    })}
-                  </View>
+                {/* Header Row 2 */}
+                <View style={[styles.headerRow, { height: W_FIXED.headerHeight }]}>
+                  <View style={[styles.headerCell, { width: W_FIXED.largeCol }]}><Text style={styles.headerText}>Full Name</Text></View>
+                  <View style={[styles.headerCell, { width: W_FIXED.mediumCol }]}><Text style={styles.headerText}>Job Title</Text></View>
+                  {daysOfWeek.flatMap((d, i) => [
+                    <View key={`t-${i}`} style={[styles.headerCell, { width: W_FIXED.dailyTimeCol }]}><Text style={styles.subHeaderText}>Time</Text></View>,
+                    <View key={`s-${i}`} style={[styles.headerCell, { width: W_FIXED.dailySignCol }]}><Text style={styles.subHeaderText}>Sign</Text></View>
+                  ])}
+                  <View style={[styles.headerCell, { width: W_FIXED.supSignCol }]}><Text style={styles.headerText}>Sup Sign</Text></View>
+                </View>
+
+                {/* Memoized Data Rows */}
+                {logEntries.map((row, idx) => (
+                  <DataRow 
+                    key={`row-${idx}`}
+                    rowIndex={idx}
+                    rowData={row}
+                    editMode={editMode}
+                    onCellChange={handleCellChange}
+                    onSignPress={openSignatureModal}
+                  />
                 ))}
               </View>
+            </ScrollView>
+
+            <View style={styles.instructionFooter}>
+              <Text style={styles.instructionText}><Text style={{ fontWeight: 'bold' }}>Instruction:</Text> All food handlers who handle food directly are required to take a shower before starting work.</Text>
             </View>
-          </ScrollView>
 
-          {/* Instruction Footer */}
-          <View style={[styles.instructionFooter, styles.border]}>
-            <Text style={styles.instructionText}>
-                <Text style={{fontWeight: '900'}}>Instruction:</Text> All food handlers who handle food directly are required to take a shower before starting work.
-            </Text>
+            <View style={styles.actionBarTop}>
+              <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
+            </View>
           </View>
-
-          <LoadingOverlay visible={isSaving} />
-          <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
-        </View>
         </ScrollView>
-      </KeyboardAvoidingView>
-              {/* Fixed action bar so buttons are always reachable and not inside scrollable content */}
-              <View style={styles.actionBarFixed} pointerEvents="box-none">
-                <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
+
+        {/* Floating Toggle */}
+        <TouchableOpacity style={[styles.fabLarge, editMode ? styles.fabActiveLarge : null]} onPress={() => { Keyboard.dismiss(); setEditMode(!editMode); }}>
+          <Text style={styles.fabTextLarge}>{editMode ? 'Done' : 'Edit'}</Text>
+        </TouchableOpacity>
+
+        {/* Optimized Signature Modal */}
+        <Modal visible={sigModalVisible} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Signature
+                ref={sigRef}
+                onOK={(base64) => {
+                  handleCellChange(sigTarget.rIdx, sigTarget.cIdx, base64);
+                  setSigModalVisible(false);
+                }}
+                descriptionText="Please Sign Below"
+                clearText="Clear"
+                confirmText="Save Signature"
+                webStyle={`.m-signature-pad--footer { display: none; }`}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={() => setSigModalVisible(false)} style={[styles.signBtn, { backgroundColor: '#6b7280' }]}><Text style={styles.btnText}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => sigRef.current.readSignature()} style={styles.signBtn}><Text style={styles.btnText}>Save</Text></TouchableOpacity>
               </View>
-              {/* per-cell SignatureField used instead of centralized modal */}
-      {/* Floating Edit toggle button */}
-      <TouchableOpacity
-        accessible={true}
-        accessibilityLabel={editMode ? 'Finish editing form' : 'Edit form'}
-        accessibilityRole="button"
-        style={[styles.fabLarge, editMode ? styles.fabActiveLarge : null]}
-        onPress={async () => {
-            if (editMode) {
-              // Leaving edit mode: blur keyboard but do NOT auto-save. User should use Save Draft explicitly.
-              Keyboard.dismiss();
-            }
-            setEditMode(prev => !prev);
-          }}
-      >
-        <Text style={styles.fabTextLarge}>{editMode ? 'Done' : 'Edit'}</Text>
-      </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        <LoadingOverlay visible={isSaving} />
+        <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1 },
   mainContent: { padding: 12 },
-  
-  // --- Global Styles ---
-  border: { borderWidth: 1, borderColor: '#000' },
-  rightBorder: { borderRightWidth: 1, borderRightColor: '#000' },
-  bottomBorder: { borderBottomWidth: 1, borderBottomColor: '#000' },
-  topBottomBorder: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#000' }, 
-
-  // --- Header Info Styles ---
-  docInfoContainer: { marginBottom: 14 },
-  docInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 8 },
-  headerColLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 },
-  companyName: { fontSize: 16, fontWeight: '900', color: '#000' },
-  logoImage: { width: 72, height: 36 },
-  subtitleText: { fontSize: 12, color: '#333' },
-  pageText: { fontSize: 9, position: 'absolute', top: 0, right: 0 },
-  
-  headerTable: { borderWidth: 1, borderColor: '#000', padding: 4, backgroundColor: '#f5f5f5' },
+  docInfoContainer: { marginBottom: 15 },
+  docInfoRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  headerColLeft: { flexDirection: 'row', alignItems: 'center' },
+  logoImage: { width: 60, height: 40 },
+  companyName: { fontSize: 14, fontWeight: 'bold' },
+  subtitleText: { fontSize: 10, color: '#666' },
+  headerTable: { borderWidth: 1, padding: 4 },
   headerTableRow: { flexDirection: 'row' },
-  headerTableCellKey: { fontSize: 12, fontWeight: 'bold', marginRight: 6, minWidth: 60 },
-  headerTableCellValue: { fontSize: 12 },
-  
-  textRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 2 },
-  labelText: { fontSize: 10, fontWeight: 'bold', marginRight: 6, color: '#444' },
-  valueTextInput: { fontSize: 10, flexGrow: 1, borderBottomWidth: 1, borderStyle: 'dotted', borderColor: '#000', marginRight: 12, height: 20, padding: 0 },
-  underlineTextInput: { fontSize: 10, borderBottomWidth: 1, borderColor: '#000', minWidth: 40, textAlign: 'center', marginRight: 12, height: 20, padding: 0 },
-  valueTextBold: { fontSize: 10, fontWeight: '900', marginRight: 12, minWidth: 150 },
-  versionText: { fontSize: 9, fontWeight: '500', marginLeft: 8 },
-
-  // --- Table Styles ---
-  horizontalScrollContent: { 
-    flexGrow: 1, 
-  },
-  tableContainer: {
-    borderWidth: 1, 
-    borderColor: '#000',
-  },
-  headerRow: { flexDirection: 'row', backgroundColor: '#e0e0e0' },
-  headerCell: { 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    borderRightWidth: 1, 
-    borderColor: '#000', 
-    paddingHorizontal: 1
-  },
-  headerSpanningCell: {
-    // These styles are applied when the cell is spanning two rows via absolute positioning
-    borderWidth: 1, 
-    borderColor: '#000',
-    backgroundColor: '#e0e0e0',
-    zIndex: 5,
-    elevation: 5,
-  },
-  dayHeaderCell: {
-    borderLeftWidth: 1, 
-    borderColor: '#000', 
-    justifyContent: 'center', 
-    alignItems: 'center'
-  },
-  headerText: { fontSize: 11, fontWeight: 'bold', textAlign: 'center', lineHeight: 16 },
-  
+  headerTableCellKey: { fontSize: 10, fontWeight: 'bold', width: 80 },
+  headerTableCellValue: { fontSize: 10 },
+  textRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 4 },
+  labelText: { fontSize: 11, fontWeight: 'bold', marginRight: 5 },
+  valueTextInput: { flex: 1, borderBottomWidth: 1, borderColor: '#ccc', fontSize: 11, padding: 2 },
+  underlineTextInput: { width: 60, borderBottomWidth: 1, textAlign: 'center', fontSize: 11, marginRight: 10 },
+  tableContainer: { borderWidth: 1, borderColor: '#000' },
+  headerRow: { flexDirection: 'row', backgroundColor: '#f3f4f6' },
+  headerCell: { borderRightWidth: 1, borderBottomWidth: 1, justifyContent: 'center', alignItems: 'center', padding: 2 },
+  headerText: { fontSize: 10, fontWeight: 'bold', textAlign: 'center' },
+  subHeaderText: { fontSize: 9 },
   dataRow: { flexDirection: 'row' },
-  cell: { 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    borderRightWidth: 1, 
-    borderColor: '#000', 
-    paddingHorizontal: 0, 
-    paddingVertical: 0 
-  },
-  inputField: { 
-    width: '100%', 
-    height: '100%', 
-    fontSize: 9, 
-    padding: 0, 
-    textAlign: 'center' 
-  },
-  lastCell: { 
-    borderRightWidth: 0, 
-  },
-  
-  // --- Footer ---
-  instructionFooter: { marginTop: 12, padding: 8, backgroundColor: '#f9f9f9' },
-  instructionText: { fontSize: 10, lineHeight: 14, color: '#444' },
-  actionBarTop: { alignItems: 'center', marginVertical: 10 },
-  fab: {
-    position: 'absolute',
-    right: 18,
-    top: '48%',
-    backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 24,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    zIndex: 50,
-  },
-  fabActive: { backgroundColor: '#34C759' },
-  fabText: { color: '#fff', fontWeight: '700' },
-  // Large, attention-grabbing floating button styles
-  fabLarge: {
-    position: 'absolute',
-    right: 14,
-    top: '44%',
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#FF3B30',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    zIndex: 200,
-  },
-  fabActiveLarge: {
-    backgroundColor: '#34C759'
-  },
-  actionBarFixed: {
-    position: 'absolute',
-    top: 8,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 250,
-    elevation: 250,
-    paddingHorizontal: 12,
-    pointerEvents: 'box-none'
-  },
-  fabTextLarge: { color: '#fff', fontWeight: '900', fontSize: 16 },
-  readOnlyInput: { backgroundColor: 'transparent' },
-  readOnlyCell: { backgroundColor: 'transparent' },
-  readOnlyText: { color: '#000', paddingVertical: 2, textAlign: 'center' },
-  placeholder: { color: '#9ca3af' },
-  signBtn: { backgroundColor: '#185a9d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, minWidth: 84, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: '700' },
+  cell: { borderRightWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  bottomBorder: { borderBottomWidth: 1 },
+  lastCell: { borderRightWidth: 0 },
+  inputField: { width: '100%', height: '100%', textAlign: 'center', fontSize: 10, padding: 0 },
+  cellTouch: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  sigImageInsideCell: { width: '90%', height: '80%', resizeMode: 'contain' },
+  placeholder: { fontSize: 8, color: '#999' },
+  instructionFooter: { marginTop: 15, padding: 10, backgroundColor: '#f9fafb', borderRadius: 5 },
+  instructionText: { fontSize: 11, color: '#4b5563' },
+  actionBarTop: { marginTop: 20, marginBottom: 40 },
+  fabLarge: { position: 'absolute', right: 20, bottom: 40, width: 65, height: 65, borderRadius: 33, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  fabActiveLarge: { backgroundColor: '#10b981' },
+  fabTextLarge: { color: '#fff', fontWeight: 'bold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { height: 400, backgroundColor: '#fff', borderRadius: 10, overflow: 'hidden' },
+  modalActions: { flexDirection: 'row', justifyContent: 'space-around', padding: 15 },
+  signBtn: { paddingVertical: 10, paddingHorizontal: 30, borderRadius: 5, backgroundColor: '#2563eb' },
+  btnText: { color: '#fff', fontWeight: 'bold' }
 });

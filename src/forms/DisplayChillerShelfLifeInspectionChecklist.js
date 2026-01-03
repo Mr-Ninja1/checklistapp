@@ -164,7 +164,7 @@ export default function DisplayChillerShelfLifeInspectionChecklist() {
         <Text style={[styles.cell, styles.staffCol]}>{item.staffName}</Text>
       )}
       {editMode ? (
-        <TextInput style={[styles.cell, styles.qtyCol]} value={item.quantity} onChangeText={(t) => updateField(item.id, 'quantity', t)} keyboardType="numeric" editable />
+        <TextInput style={[styles.cell, styles.qtyCol]} value={item.quantity} onChangeText={(t) => updateField(item.id, 'quantity', t)} keyboardType="default" editable />
       ) : (
         <Text style={[styles.cell, styles.qtyCol]}>{item.quantity}</Text>
       )}

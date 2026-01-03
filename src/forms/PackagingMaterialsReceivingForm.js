@@ -115,7 +115,7 @@ const PackagingMaterialsReceivingForm = () => {
             )}
 
             {editMode ? (
-                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="numeric" placeholder="°C" />
+                <TextInput style={[dailyStyles.dataCell, dailyStyles.tempCol]} value={item.temp} editable={true} onChangeText={(t) => updateReceivingField(item.id, 'temp', t)} keyboardType="default" placeholder="°C" />
             ) : (
                 <Text style={[dailyStyles.dataCell, dailyStyles.tempCol]}>{item.temp}</Text>
             )}

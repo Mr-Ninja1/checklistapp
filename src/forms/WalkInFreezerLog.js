@@ -78,7 +78,7 @@ const Slot = React.memo(({ value, onChange, editable, signWidth = 140, signHeigh
   <View style={styles.slotRow}>
     {editable ? (
       <>
-        <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="numeric" />
+        <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="default" />
         <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
         <SignatureField value={value.sign} onChange={(v) => onChange('sign', v)} editable={editable} width={signWidth} height={signHeight} placeholder="Sign" debugMode={true} />
       </>

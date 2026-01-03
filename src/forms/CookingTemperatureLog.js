@@ -302,7 +302,7 @@ export default function CookingTemperatureLog() {
 
                             {/* 1st Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time1} onChangeText={v => setCell(ri, 'time1', v)} placeholder="HH:MM" /> : <SafeText style={styles.readOnlyCell} value={row.time1} />}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="numeric" /> : <SafeText style={styles.readOnlyCell} value={row.temp1} />}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp1} onChangeText={v => setCell(ri, 'temp1', v)} placeholder="°C" keyboardType="default" /> : <SafeText style={styles.readOnlyCell} value={row.temp1} />}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>
                                 {editMode ? (
                                     <SignatureField value={row.sign1} onChange={v => setCell(ri, 'sign1', v)} editable={editMode} width={100} height={48} />
@@ -316,7 +316,7 @@ export default function CookingTemperatureLog() {
 
                             {/* 2nd Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time2} onChangeText={v => setCell(ri, 'time2', v)} placeholder="HH:MM" /> : <SafeText style={styles.readOnlyCell} value={row.time2} />}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="numeric" /> : <SafeText style={styles.readOnlyCell} value={row.temp2} />}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp2} onChangeText={v => setCell(ri, 'temp2', v)} placeholder="°C" keyboardType="default" /> : <SafeText style={styles.readOnlyCell} value={row.temp2} />}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>
                                 {editMode ? (
                                     <SignatureField value={row.sign2} onChange={v => setCell(ri, 'sign2', v)} editable={editMode} width={100} height={48} />
@@ -330,7 +330,7 @@ export default function CookingTemperatureLog() {
 
                             {/* 3rd Record */}
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.time3} onChangeText={v => setCell(ri, 'time3', v)} placeholder="HH:MM" /> : <SafeText style={styles.readOnlyCell} value={row.time3} />}</View>
-                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="numeric" /> : <SafeText style={styles.readOnlyCell} value={row.temp3} />}</View>
+                            <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>{editMode ? <TextInput style={styles.input} value={row.temp3} onChangeText={v => setCell(ri, 'temp3', v)} placeholder="°C" keyboardType="default" /> : <SafeText style={styles.readOnlyCell} value={row.temp3} />}</View>
                             <View style={[styles.cell, styles.borderRight, { flex: COL_FLEX.TIME_TEMP_SIGN }]}>
                                 {editMode ? (
                                     <SignatureField value={row.sign3} onChange={v => setCell(ri, 'sign3', v)} editable={editMode} width={100} height={48} />

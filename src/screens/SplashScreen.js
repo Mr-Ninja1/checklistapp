@@ -8,11 +8,7 @@ export default function SplashScreen({ navigation }) {
   const greetingOpacity = useRef(new Animated.Value(0)).current;
   const greetingScale = useRef(new Animated.Value(1)).current;
   const logoScale = useRef(new Animated.Value(1)).current;
-  const confettiDots = React.useMemo(() => new Array(10).fill(0).map((_, i) => ({ id: i, left: `${6 + i * 8}%`, color: ['#FFD54F','#FF8A65','#FF5252','#4CAF50'][i % 4] })), []);
-  const confettiAnims = useRef(confettiDots.map(() => new Animated.Value(0))).current;
   const today = new Date();
-  // show new year greeting only through January 3rd (inclusive)
-  const isNewYearSeason = (today.getMonth() === 0 && today.getDate() <= 3);
 
   useEffect(() => {
     // show greeting briefly then navigate to Home
@@ -32,21 +28,7 @@ export default function SplashScreen({ navigation }) {
       ]))
     ]).start();
 
-    // confetti (only run during new year season)
-    if (isNewYearSeason) {
-      try {
-        confettiAnims.forEach((a, i) => {
-          Animated.loop(
-            Animated.sequence([
-              Animated.delay(i * 120),
-              Animated.timing(a, { toValue: 1, duration: 1200 + (i % 3) * 240, useNativeDriver: true }),
-              Animated.timing(a, { toValue: 0, duration: 260, useNativeDriver: true }),
-              Animated.delay(400 + (i % 2) * 160),
-            ])
-          ).start();
-        });
-      } catch (e) {}
-    }
+    // no seasonal confetti on splash
 
     // navigate to Home after a short delay so the splash is visible
     const navTimer = setTimeout(() => { if (mounted) navigation.replace('Home'); }, 2200);
@@ -60,17 +42,7 @@ export default function SplashScreen({ navigation }) {
       <View style={styles.logoContainer}>
         <Animated.Image source={require('../assets/logo.jpeg')} style={[styles.logo, { transform: [{ scale: logoScale }] }]} resizeMode="contain" />
       </View>
-      <Animated.Text style={[styles.bravo, { opacity: greetingOpacity, transform: [{ scale: greetingScale }], fontSize: 44, letterSpacing: 6 }]}>HAPPY NEW YEAR!</Animated.Text>
-
-      {/* full-screen confetti (covers entire splash) */}
-      {isNewYearSeason && confettiDots.map((c, i) => {
-        const translateY = confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: [-60, 260] });
-        const opacityA = confettiAnims[i].interpolate({ inputRange: [0, 0.1, 0.9, 1], outputRange: [0, 0.9, 0.9, 0] });
-        const rotate = confettiAnims[i].interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-        return (
-          <Animated.View key={c.id} pointerEvents="none" style={{ position: 'absolute', left: c.left, top: -60, width: 10, height: 10, borderRadius: 6, backgroundColor: c.color, transform: [{ translateY }, { rotate }], opacity: opacityA }} />
-        );
-      })}
+      <Animated.Text style={[styles.bravo, { opacity: greetingOpacity, transform: [{ scale: greetingScale }], fontSize: 44, letterSpacing: 6 }]}>Bravo!</Animated.Text>
     </LinearGradient>
   );
 }
