@@ -23,7 +23,6 @@ const EQUIPMENT_LIST = [
   'MARY CHEF',
   'BLENDERS',
   'JUICE MAKER',
-  'FIRE EXTINGUISHERS',
 ];
 
 const initialEquipmentState = EQUIPMENT_LIST.map((name, index) => {

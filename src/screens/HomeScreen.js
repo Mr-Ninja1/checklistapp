@@ -556,13 +556,12 @@ export default function HomeScreen() {
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New</Text>
             <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>1. The Daily showering log has been updated ,check it and comfirm its not lagging (slow) anymore.</Text>
-              <Text style={styles.updateItem}>2. The Gelato freezer form and all other Temp forms now use a default keyboard which allows characters like negative (-) and degrees Celsius (°C).</Text>
-              <Text style={styles.updateItem}>3. All forms are now Editable!</Text>
+              <Text style={styles.updateItem}>1. All temperature logs have an editable date field.</Text>
+              <Text style={styles.updateItem}>2. Removed the fire extinguisher field (as requested).</Text>
+              <Text style={styles.updateItem}>3. Baking control sheet has been fixed too </Text>
               <Text style={styles.updateItem}>4. All forms are now saving drafts .</Text>
-              <Text style={styles.updateItem}>5. All weekly checklist forms will clear once submit is clicked.</Text>
-              <Text style={styles.updateItem}>6. When you save forms ensure you download them on desktop for sharing.</Text>
-              <Text style={styles.updateItem}>7. Always ensure all devices are connected to Dropbox.</Text>
+              <Text style={styles.updateItem}>. THESE ARE THE ONLY PROBLEMS REMAINING AND HAVE BEN PATCHED.</Text>
+             
             </View>
             <Text style={{ marginTop: 8, marginBottom: 12 }}>Have you seen these updates?</Text>
             <View style={styles.updatesButtonRow}>
