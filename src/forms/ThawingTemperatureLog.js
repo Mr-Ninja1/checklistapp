@@ -60,7 +60,6 @@ export default function ThawingTemperatureLog() {
                 }
             } catch (e) { console.warn('load draft', e); }
         })();
-        // embed logo as base64 for deterministic saved payload rendering
         (async () => {
             try {
                 const asset = Asset.fromModule(require('../assets/logo.jpeg'));
@@ -82,10 +81,8 @@ export default function ThawingTemperatureLog() {
     const setCell = useCallback((r,k,v) => setRows(prev => prev.map((row,i) => i===r?{...row,[k]:v}:row)), []);
     const setMetaField = (k,v) => setMeta(prev => ({ ...prev, [k]: v }));
 
-    // Normalize various signature shapes into an image URI usable by <Image/>
     const resolvePreviewUri = (val) => {
         if (!val) return null;
-        // strings
         if (typeof val === 'string') {
             const s = val.trim();
             if (!s) return null;
@@ -96,7 +93,6 @@ export default function ThawingTemperatureLog() {
             if (compact.length > 100 && base64ish.test(compact)) return `data:image/png;base64,${compact}`;
             return null;
         }
-        // object shapes: { uri } or { data }
         if (typeof val === 'object') {
             if (val.uri) return val.uri;
             if (val.data) {
@@ -109,22 +105,17 @@ export default function ThawingTemperatureLog() {
     };
 
     const handleSubmit = async () => {
-        // save all rows (including empty) so presentational matches editable form
         const logData = rows.map((r, i) => ({ index: i + 1, ...r }));
         setBusy(true);
         try {
             const normalizedMeta = { companyName: 'BRAVO BRANDS LIMITED', ...meta };
-            // Use a slightly narrower TABLE_WIDTH optimized for A4 landscape printing (approx 1000px -> 900px)
             const TABLE_WIDTH = 900;
             const flexMap = COL_FLEX || {};
             const flexTotal = Object.values(flexMap).reduce((s,v)=>s+(Number(v)||0),0) || 1;
-            // Compute column pixel widths expected by presentational renderer.
-            // Presentational expects WIDTHS keys: INDEX, FOOD_ITEM, TIME, TEMP, SIGN, STAFF_NAME
             const widthFor = k => Math.round((TABLE_WIDTH * (Number(flexMap[k]) || 0)) / flexTotal);
             const WIDTHS = {
                 INDEX: widthFor('INDEX'),
                 FOOD_ITEM: widthFor('FOOD_ITEM'),
-                // TIME_TEMP_SIGN represents the flex for each of TIME/TEMP/SIGN columns
                 TIME: widthFor('TIME_TEMP_SIGN'),
                 TEMP: widthFor('TIME_TEMP_SIGN'),
                 SIGN: widthFor('TIME_TEMP_SIGN'),
@@ -145,18 +136,25 @@ export default function ThawingTemperatureLog() {
             };
 
             await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
-            await removeDraft(DRAFT_KEY);
-            setRows(initialRows);
-            setMeta(prev => ({ ...initialMeta, issueDate: getTodayDate(), complexManagerSignature: '' }));
-            Alert.alert('Saved', 'Form saved');
-        } catch (e) { console.warn('submit error', e); Alert.alert('Error','Failed to submit log.'); }
+            
+            // KEY CHANGE: removeDraft(DRAFT_KEY) is removed so the draft persists in storage.
+            // Also, state resets (setRows/setMeta) are removed to keep UI populated.
+
+            Alert.alert('Success', 'Form submitted. Your data and draft have been preserved.');
+        } catch (e) { 
+            console.warn('submit error', e); 
+            Alert.alert('Error','Failed to submit log.'); 
+        }
         setBusy(false);
     };
 
-    const handleSaveDraft = async () => { setBusy(true); try { await setDraft(DRAFT_KEY, { rows, meta }); } catch (e) { console.warn('save draft', e); } setBusy(false); };
+    const handleSaveDraft = async () => { 
+        setBusy(true); 
+        try { await setDraft(DRAFT_KEY, { rows, meta }); } 
+        catch (e) { console.warn('save draft', e); } 
+        setBusy(false); 
+    };
 
-    // Action buttons rendered outside the pointer-events-blocking children wrapper
-    // so they remain tappable even when editMode is false.
     const actionButtons = (
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
             <TouchableOpacity
@@ -176,8 +174,6 @@ export default function ThawingTemperatureLog() {
         </View>
     );
 
-    // Reduce the INDEX and FOOD_ITEM relative widths so the table fits better on A4 landscape
-    // Give more relative weight to STAFF_NAME so long names fit when saved
     const COL_FLEX = { INDEX: 0.45, FOOD_ITEM: 1.5, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 2.5 };
 
     return (
@@ -195,12 +191,16 @@ export default function ThawingTemperatureLog() {
                         </View>
                         <View style={styles.docInfoGrid}>
                             <Text style={styles.docInfoLabel}>Issue Date:</Text>
-                            <TextInput
-                                style={styles.docInfoValue}
-                                value={meta.issueDate}
-                                onChangeText={v => setMetaField('issueDate', v)}
-                                placeholder="dd/mm/yyyy"
-                            />
+                            {editMode ? (
+                                <TextInput
+                                    style={styles.docInfoValue}
+                                    value={meta.issueDate}
+                                    onChangeText={v => setMetaField('issueDate', v)}
+                                    placeholder="dd/mm/yyyy"
+                                />
+                            ) : (
+                                <Text style={styles.docInfoValue}>{meta.issueDate}</Text>
+                            )}
                         </View>
                     </View>
                     <View style={styles.metaBottomRow}>
@@ -331,7 +331,6 @@ export default function ThawingTemperatureLog() {
                         </View>
                 </View>
 
-                {/* spacer so content can scroll above the floating actionButtons */}
                 <View style={{ height: 110 }} />
 
             </ScrollView>

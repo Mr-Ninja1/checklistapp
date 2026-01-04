@@ -22,29 +22,27 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 
-const DRAFT_KEY = 'coldroom_freezer_room_cleaning_checklist_draft';
+const DRAFT_KEY = 'coldroom_freezer_room_cleaning_checklist_v2_draft';
+const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'];
 
-const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thurs', 'Fri', 'Sat'];
-
-// Suggested equipment/areas for cold rooms/freezers
+// Updated equipment list based on the image provided
 const EQUIPMENT_LIST = [
-  { name: 'Shelving & Racking', frequency: 'Weekly' },
-  { name: 'Floor Drains & Gutters', frequency: 'Weekly' },
-  { name: 'Door Seals / Gaskets', frequency: 'Daily' },
-  { name: 'Walls & Ceilings', frequency: 'Monthly' },
-  { name: 'Evaporator Fans', frequency: 'Monthly' },
-  { name: 'Condensate Trays', frequency: 'Monthly' },
-  { name: 'Lighting & Lenses', frequency: 'Monthly' },
-  { name: 'Temperature Sensors / Probes', frequency: 'Weekly' },
-  { name: 'Defrost Drains', frequency: 'Weekly' },
-  { name: 'Door Thresholds', frequency: 'Weekly' },
-  { name: 'External Condenser Area', frequency: 'Monthly' },
-  { name: 'Gaskets & Hinges Lubrication', frequency: 'Monthly' },
+  { name: 'Door', frequency: '2' },
+  { name: 'Door handle', frequency: 'Daily' },
+  { name: 'Door curtains', frequency: '1' },
+  { name: 'Shelves', frequency: '3' },
+  { name: 'Hard to reach floors & skirting', frequency: '3' },
+  { name: 'Wall', frequency: '1' },
+  { name: 'Ceiling', frequency: 'As required' },
+  { name: 'Floor', frequency: '7' },
+  { name: 'Lights', frequency: 'As required' },
+  { name: 'Cooling Unit & Fan covers', frequency: 'As required' },
+  { name: 'Drain', frequency: '2' },
 ];
 
 const initialCleaningState = EQUIPMENT_LIST.map((item, index) => {
   const dailyChecks = WEEK_DAYS.reduce((acc, day) => {
-    acc[day] = { checked: false, cleanedBy: '' };
+    acc[day] = { checked: false, cleanedBy: '', supSign: '' };
     return acc;
   }, {});
   return { id: index, name: item.name, frequency: item.frequency, checks: dailyChecks };
@@ -57,13 +55,30 @@ const Checkbox = ({ checked, onPress }) => (
 );
 
 export default function ColdRoomFreezerChecklist() {
-  const [formData, setFormData] = useState(initialCleaningState);
   const currentYear = new Date().getFullYear().toString();
-  const [metadata, setMetadata] = useState({ location: '', week: '', month: '', year: currentYear, hseqManager: '', hseqSign: '', approvedBy: '', approvedBySign: '' });
+  const [formData, setFormData] = useState(initialCleaningState);
+  const [metadata, setMetadata] = useState({ 
+    location: '', week: '', month: '', year: currentYear,
+    hseqDaySigns: WEEK_DAYS.reduce((acc, d) => ({ ...acc, [d]: '' }), {}),
+    managerDaySigns: WEEK_DAYS.reduce((acc, d) => ({ ...acc, [d]: '' }), {}),
+  });
+  
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState(null);
   const saveTimer = useRef(null);
   const [editMode, setEditMode] = useState(false);
+
+  // Column Widths
+  const COL_WIDTHS = useMemo(() => ({ 
+    AREA: 220, 
+    FREQ: 80, 
+    DAY_GROUP: 240, 
+    CHECK: 40, 
+    NAME: 90, 
+    SUP_SIGN: 110 
+  }), []);
+
+  const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQ + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP);
 
   useEffect(() => {
     let mounted = true;
@@ -72,19 +87,11 @@ export default function ColdRoomFreezerChecklist() {
         const d = await getDraft(DRAFT_KEY);
         if (d && mounted) {
           if (d.formData) setFormData(d.formData);
-          if (d.metadata) {
-            // ensure year defaults to current if missing in draft
-            const merged = { ...d.metadata };
-            if (!merged.year || String(merged.year).trim() === '') merged.year = currentYear;
-            setMetadata(merged);
-          }
-        } else if (mounted) {
-          // no draft: ensure year is set
-          setMetadata(prev => ({ ...prev, year: currentYear }));
+          if (d.metadata) setMetadata(d.metadata);
         }
       } catch (e) { console.warn('load draft failed', e); }
     })();
-    // preload logo as base64 for embedding into saved payloads (best-effort)
+    // Preload Logo
     (async () => {
       try {
         const asset = Asset.fromModule(require('../assets/logo.jpeg'));
@@ -93,44 +100,17 @@ export default function ColdRoomFreezerChecklist() {
           const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 }).catch(() => null);
           if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) { }
     })();
     return () => { mounted = false; };
   }, []);
-
-  function normalizeSignatureToDataUri(v) {
-    if (!v) return null;
-    if (typeof v === 'string' && v.startsWith('data:')) return v;
-    if (typeof v === 'object') {
-      if (v.uri && typeof v.uri === 'string') return v.uri;
-      if (v.data && typeof v.data === 'string') return v.data.startsWith('data:') ? v.data : `data:image/png;base64,${v.data}`;
-      if (v.signature && typeof v.signature === 'string') return v.signature.startsWith('data:') ? v.signature : `data:image/png;base64,${v.signature}`;
-      if (v.base64 && typeof v.base64 === 'string') return `data:image/png;base64,${v.base64}`;
-    }
-    if (typeof v === 'string') {
-      const compact = v.replace(/\s+/g, '');
-      if (compact.length > 100 && /^[A-Za-z0-9+/=]+$/.test(compact)) return `data:image/png;base64,${compact}`;
-    }
-    return null;
-  }
-
-  useEffect(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => setDraft(DRAFT_KEY, { formData, metadata }), 700);
-    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [formData, metadata]);
 
   const handleCellChange = (id, day, type, value) => {
     setFormData(prev => prev.map(item => {
       if (item.id === id) {
         const newChecks = { ...item.checks };
-        if (type === 'checked') {
-          newChecks[day].checked = !newChecks[day].checked;
-          if (!newChecks[day].checked) newChecks[day].cleanedBy = '';
-        } else if (type === 'cleanedBy') {
-          newChecks[day].cleanedBy = value;
-          if (value.trim() !== '') newChecks[day].checked = true;
-        }
+        newChecks[day][type] = value;
+        if (type !== 'checked' && value) newChecks[day].checked = true;
         return { ...item, checks: newChecks };
       }
       return item;
@@ -139,245 +119,185 @@ export default function ColdRoomFreezerChecklist() {
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
-  // Build canonical payload used by the shared save hook
-  const buildPayload = (status = 'draft') => {
-    const COL_WIDTHS_LOCAL = { AREA: 300, FREQUENCY: 150, DAY_GROUP_WIDTH: 150, CHECK: 60, CLEANED_BY: 90 };
-    const tableWidth = COL_WIDTHS_LOCAL.AREA + COL_WIDTHS_LOCAL.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS_LOCAL.DAY_GROUP_WIDTH);
-    const layoutHints = { area: COL_WIDTHS_LOCAL.AREA, frequency: COL_WIDTHS_LOCAL.FREQUENCY, dayGroup: COL_WIDTHS_LOCAL.DAY_GROUP_WIDTH, checkWidth: COL_WIDTHS_LOCAL.CHECK, cleanedByWidth: COL_WIDTHS_LOCAL.CLEANED_BY };
-    return {
-      formType: 'ColdRoom_FreezerRoomCleaningChecklist',
-      templateVersion: '01',
-      title: 'COLD ROOM & FREEZER ROOM CLEANING CHECKLIST',
-      date: new Date().toLocaleDateString(),
-      metadata,
-      formData,
-      layoutHints,
-      _tableWidth: tableWidth,
-      assets: logoDataUri ? { logoDataUri } : {},
-      savedAt: Date.now(),
-      status,
-    };
+  const buildPayload = (status = 'draft') => ({
+    formType: 'ColdRoom_FreezerRoom_V2',
+    templateVersion: '02',
+    title: 'COLD ROOM & FREEZER ROOM CLEANING CHECKLIST',
+    metadata,
+    formData,
+    assets: logoDataUri ? { logoDataUri } : {},
+    savedAt: Date.now(),
+    status,
+  });
+
+  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ 
+    buildPayload, 
+    draftId: DRAFT_KEY, 
+    clearOnSubmit: () => {
+      setFormData(initialCleaningState);
+      setMetadata({ 
+        location: '', week: '', month: '', year: currentYear,
+        hseqDaySigns: WEEK_DAYS.reduce((acc, d) => ({ ...acc, [d]: '' }), {}),
+        managerDaySigns: WEEK_DAYS.reduce((acc, d) => ({ ...acc, [d]: '' }), {}),
+      });
+    } 
+  });
+
+  const renderSignature = (value, onChange, width, height = 40) => {
+    if (editMode) {
+      return <SignatureField value={value} onChange={onChange} editable={true} width={width} height={height} />;
+    }
+    return value ? <SignatureThumb uri={value} width={width} height={height} /> : null;
   };
 
-  // use centralized save hook so behavior matches other forms (history, drafts, safety timers)
-  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
-    // reset UI state once submit completes; preserve auto year
-    setFormData(initialCleaningState);
-    setMetadata({ location: '', week: '', month: '', year: currentYear, hseqManager: '', hseqSign: '', approvedBy: '', approvedBySign: '' });
-  }, waitForSave: true });
-
-  const handleSubmit = async () => {
-    setBusy(true);
-    try {
-      await hookSubmit();
-      try { await removeDraft(DRAFT_KEY); } catch (e) {}
-    } catch (e) {
-      console.warn('submit failed', e);
-      Alert.alert('Error', 'Submission failed');
-    } finally { setBusy(false); }
-  };
-
-  const handleSaveDraft = async () => {
-    setBusy(true);
-    try {
-      await hookSaveDraft();
-    } catch (e) {
-      console.warn('save draft failed', e);
-      Alert.alert('Error', 'Failed to save draft');
-    } finally { setBusy(false); }
-  };
-
-  const COL_WIDTHS = useMemo(() => ({ AREA: 300, FREQUENCY: 150, DAY_GROUP_WIDTH: 150, CHECK: 60, CLEANED_BY: 90 }), []);
-  const TABLE_WIDTH = COL_WIDTHS.AREA + COL_WIDTHS.FREQUENCY + (WEEK_DAYS.length * COL_WIDTHS.DAY_GROUP_WIDTH);
-  const windowHeight = Dimensions.get('window').height;
-
-  const renderRow = (item, idx) => (
-    <View key={item.id} style={styles.row}>
-      <View style={[styles.cell, { width: COL_WIDTHS.AREA }, styles.leftContent]}>
-        {editMode ? (
-          <TextInput
-            value={item.name}
-            onChangeText={t => setFormData(prev => prev.map((it, j) => j === idx ? { ...it, name: t } : it))}
-            style={[styles.cellInput, { textAlign: 'left', minWidth: COL_WIDTHS.AREA - 12, color: '#111' }]}
-          />
-        ) : (
-          <Text style={styles.equipmentText}>{item.name}</Text>
-        )}
-      </View>
-      <View style={[styles.cell, { width: COL_WIDTHS.FREQUENCY }, styles.centerContent]}>
-        <Text style={styles.equipmentText}>{item.frequency}</Text>
-      </View>
-      {WEEK_DAYS.map(day => (
-        <View key={day} style={[styles.dayGroupCell, { width: COL_WIDTHS.DAY_GROUP_WIDTH }]}>
-          <View style={[styles.cell, styles.centerContent, { width: COL_WIDTHS.CHECK, borderRightWidth: 0, paddingHorizontal: 0 }]}>
-            <Checkbox checked={item.checks[day].checked} onPress={() => handleCellChange(item.id, day, 'checked')} />
-          </View>
-          <View style={[styles.cell, styles.centerContent, { flex: 1, borderLeftWidth: 1, borderLeftColor: '#4B5563', paddingHorizontal: 4 }]}>
-            {editMode ? (
-              <TextInput value={item.checks[day].cleanedBy} onChangeText={t => handleCellChange(item.id, day, 'cleanedBy', t)} placeholder="Name" style={styles.cellInput} maxLength={6} />
-            ) : (
-              <Text style={styles.cellReadText}>{item.checks[day].cleanedBy}</Text>
-            )}
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-  // Action buttons rendered outside pointer-events-blocking children so they
-  // remain tappable when editMode is false.
   const actionButtons = (
     <View style={styles.buttonContainer}>
-      <TouchableOpacity onPress={() => handleSaveDraft()} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
-      <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={() => hookSaveDraft()} style={[styles.button, styles.draftButton]} disabled={isSaving}>
+        <Text style={styles.buttonText}>Save Draft</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => hookSubmit()} style={[styles.button, styles.submitButton]} disabled={isSaving}>
+        <Text style={styles.buttonText}>Submit Checklist</Text>
+      </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={() => handleSaveDraft()} actionButtons={actionButtons}>
-          <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(120, Math.round(windowHeight * 0.25)), flexGrow: 1 }]} keyboardShouldPersistTaps="handled" scrollEventThrottle={16} decelerationRate="fast"> 
+      <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={hookSaveDraft} actionButtons={actionButtons}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.card}>
-          <View style={styles.header}>
-            <View style={styles.brandRow}>
-              <Image source={require('../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.brandName}>Bravo! Food Safety Inspections</Text>
-                <Text style={styles.brandSub}>Bravo Brands Central</Text>
-              </View>
-            </View>
-            <View style={styles.headerMeta}>
-              <Text style={styles.docText}>Doc No: BBN-SHEQ-P-XX | Issue Date: N/A</Text>
-              <Text style={styles.docText}>Page 1 of 1</Text>
-            </View>
-            <Text style={styles.mainTitle}>COLD ROOM & FREEZER ROOM CLEANING CHECKLIST</Text>
-            <View style={styles.areaMetaRow}>
-              <View style={[styles.metaField, { flex: 2 }]}>
-                <Text style={styles.metaLabel}>LOCATION:</Text>
-                <TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} />
-              </View>
-              <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>WEEK:</Text>
-                <TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} placeholder="Week No." />
-              </View>
-              <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>MONTH:</Text>
-                <TextInput value={metadata.month} onChangeText={t => handleMetadataChange('month', t)} style={styles.metaInput} />
-              </View>
-              <View style={styles.metaField}>
-                <Text style={styles.metaLabel}>YEAR:</Text>
-                <TextInput value={metadata.year} onChangeText={t => handleMetadataChange('year', t)} style={styles.metaInput} placeholder="YYYY" />
-              </View>
-            </View>
-            <Text style={styles.areaTitle}>COLD ROOM / FREEZER ROOM</Text>
-          </View>
-
-          <View style={styles.verificationRow}>
-            <View style={[styles.verificationCell, { flex: 1 }]}>
-              <Text style={styles.verificationLabel}>Verified By: HSEQ Manager:</Text>
-              {editMode ? (
-                <SignatureField value={metadata.hseqSign} onChange={v => handleMetadataChange('hseqSign', v)} editable={true} width={260} height={80} />
-              ) : (
-                (() => {
-                  const uri = normalizeSignatureToDataUri(metadata.hseqSign || metadata.hseqManager);
-                  return uri ? <SignatureThumb uri={uri} width={260} height={80} layers={6} spread={0.9} /> : <Text style={styles.verificationValue}>{metadata.hseqManager}</Text>;
-                })()
-              )}
-            </View>
-          </View>
-
-          <ScrollView horizontal style={styles.tableScroll} nestedScrollEnabled directionalLockEnabled onStartShouldSetResponderCapture={() => true}>
-            <View style={{ width: TABLE_WIDTH }}>
-              <View style={styles.headerRow}>
-                <View style={[styles.headerCell, { width: COL_WIDTHS.AREA, height: 40 }]}>
-                  <Text style={styles.headerText}>Area to be cleaned</Text>
+            {/* ORIGINAL HEADER LOGIC */}
+            <View style={styles.header}>
+              <View style={styles.brandRow}>
+                <Image source={require('../assets/logo.jpeg')} style={styles.brandLogo} resizeMode="contain" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.brandName}>Bravo! Food Safety Inspections</Text>
+                  <Text style={styles.brandSub}>Bravo Brands Central</Text>
                 </View>
-                <View style={[styles.headerCell, { width: COL_WIDTHS.FREQUENCY, height: 40 }]}>
-                  <Text style={styles.headerText}>Frequency</Text>
-                </View>
-                {WEEK_DAYS.map(day => (
-                  <View key={day} style={[styles.dayHeaderGroup, { width: COL_WIDTHS.DAY_GROUP_WIDTH }]}>
-                    <View style={[styles.headerCell, { width: COL_WIDTHS.CHECK, height: 40, borderBottomWidth: 0, borderRightWidth: 0 }]}>
+              </View>
+              <View style={styles.headerMeta}>
+                <Text style={styles.docText}>Doc No: BBN-SHEQ-P-16-R-11b</Text>
+                <Text style={styles.docText}>Page 1 of 1</Text>
+              </View>
+              <Text style={styles.mainTitle}>COLD ROOM & FREEZER ROOM CLEANING CHECKLIST</Text>
+              
+              <View style={styles.areaMetaRow}>
+                <View style={styles.metaField}><Text style={styles.metaLabel}>LOCATION:</Text><TextInput value={metadata.location} onChangeText={t => handleMetadataChange('location', t)} style={styles.metaInput} /></View>
+                <View style={styles.metaField}><Text style={styles.metaLabel}>WEEK:</Text><TextInput value={metadata.week} onChangeText={t => handleMetadataChange('week', t)} style={styles.metaInput} /></View>
+                <View style={styles.metaField}><Text style={styles.metaLabel}>MONTH:</Text><TextInput value={metadata.month} onChangeText={t => handleMetadataChange('month', t)} style={styles.metaInput} /></View>
+                <View style={styles.metaField}><Text style={styles.metaLabel}>YEAR:</Text><TextInput value={metadata.year} onChangeText={t => handleMetadataChange('year', t)} style={styles.metaInput} /></View>
+              </View>
+            </View>
+
+            {/* UPDATED TABLE STRUCTURE */}
+            <ScrollView horizontal style={styles.tableScroll}>
+              <View style={{ width: TABLE_WIDTH }}>
+                <View style={styles.headerRow}>
+                  <View style={[styles.headerCell, { width: COL_WIDTHS.AREA }]}><Text style={styles.headerText}>Area to be cleaned</Text></View>
+                  <View style={[styles.headerCell, { width: COL_WIDTHS.FREQ }]}><Text style={styles.headerText}>Freq</Text></View>
+                  {WEEK_DAYS.map(day => (
+                    <View key={day} style={[styles.dayHeaderGroup, { width: COL_WIDTHS.DAY_GROUP }]}>
                       <Text style={styles.headerText}>{day}</Text>
+                      <View style={styles.subHeaderRow}>
+                        <Text style={[styles.subHeaderText, { width: COL_WIDTHS.CHECK }]}>✓</Text>
+                        <Text style={[styles.subHeaderText, { width: COL_WIDTHS.NAME }]}>Cleaned By</Text>
+                        <Text style={[styles.subHeaderText, { width: COL_WIDTHS.SUP_SIGN, borderRightWidth: 0 }]}>SUP SIGN</Text>
+                      </View>
                     </View>
-                    <View style={[styles.headerCell, { width: COL_WIDTHS.CLEANED_BY, height: 40, borderLeftWidth: 1, borderLeftColor: '#1F2937', borderBottomWidth: 0 }]}>
-                      <Text style={styles.headerText}>Cleaned BY</Text>
-                    </View>
+                  ))}
+                </View>
+
+                {formData.map((item) => (
+                  <View key={item.id} style={styles.row}>
+                    <View style={[styles.cell, { width: COL_WIDTHS.AREA }]}><Text style={styles.equipmentText}>{item.name}</Text></View>
+                    <View style={[styles.cell, { width: COL_WIDTHS.FREQ, alignItems: 'center' }]}><Text style={styles.equipmentText}>{item.frequency}</Text></View>
+                    {WEEK_DAYS.map(day => (
+                      <View key={day} style={[styles.dayGroupCell, { width: COL_WIDTHS.DAY_GROUP }]}>
+                        <View style={[styles.cell, { width: COL_WIDTHS.CHECK, borderRightWidth: 1, alignItems: 'center' }]}>
+                          <Checkbox checked={item.checks[day].checked} onPress={() => handleCellChange(item.id, day, 'checked', !item.checks[day].checked)} />
+                        </View>
+                        <TextInput style={[styles.cellInput, { width: COL_WIDTHS.NAME, borderRightWidth: 1 }]} value={item.checks[day].cleanedBy} onChangeText={t => handleCellChange(item.id, day, 'cleanedBy', t)} />
+                        <View style={{ width: COL_WIDTHS.SUP_SIGN, justifyContent: 'center' }}>
+                          {renderSignature(item.checks[day].supSign, v => handleCellChange(item.id, day, 'supSign', v), COL_WIDTHS.SUP_SIGN)}
+                        </View>
+                      </View>
+                    ))}
                   </View>
                 ))}
-              </View>
-              {formData.map((item, idx) => renderRow(item, idx))}
-            </View>
-          </ScrollView>
 
-          <View style={{ height: 12 }} />
-          <View style={styles.signaturesRow}>
-            <View style={styles.signatureCell}>
-              <Text style={styles.signatureLabel}>Approved By:</Text>
-              {editMode ? (
-                <SignatureField value={metadata.approvedBySign} onChange={v => handleMetadataChange('approvedBySign', v)} editable={true} width={220} height={60} />
-              ) : (
-                (() => {
-                  const uri = normalizeSignatureToDataUri(metadata.approvedBySign || metadata.approvedBy);
-                  return uri ? <SignatureThumb uri={uri} width={220} height={60} layers={6} spread={0.9} /> : <Text style={styles.signatureValue}>{metadata.approvedBy || ''}</Text>;
-                })()
-              )}
-            </View>
-          </View>
-          {/* buttons moved into EditableFormContainer via actionButtons prop */}
-            <LoadingOverlay visible={isSaving} />
-            <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
+                {/* FOOTER SIGNATURES (Spanning columns as requested) */}
+                <View style={styles.footerSignatureRow}>
+                  <View style={[styles.cell, { width: COL_WIDTHS.AREA + COL_WIDTHS.FREQ, backgroundColor: '#f3f4f6' }]}><Text style={styles.footerLabel}>HSEQ SIGN</Text></View>
+                  {WEEK_DAYS.map(day => (
+                    <View key={day} style={[styles.dayGroupCell, { width: COL_WIDTHS.DAY_GROUP }]}>
+                      <View style={{ width: COL_WIDTHS.CHECK, borderRightWidth: 1, backgroundColor: '#f3f4f6', justifyContent: 'center' }}><Text style={styles.dayIndicatorText}>{day}</Text></View>
+                      <View style={{ width: COL_WIDTHS.NAME + COL_WIDTHS.SUP_SIGN, justifyContent: 'center' }}>
+                        {renderSignature(metadata.hseqDaySigns[day], v => handleMetadataChange('hseqDaySigns', { ...metadata.hseqDaySigns, [day]: v }), COL_WIDTHS.NAME + COL_WIDTHS.SUP_SIGN, 50)}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.footerSignatureRow}>
+                  <View style={[styles.cell, { width: COL_WIDTHS.AREA + COL_WIDTHS.FREQ, backgroundColor: '#f3f4f6' }]}><Text style={styles.footerLabel}>COMPLEX MANAGER / FSC SIGN</Text></View>
+                  {WEEK_DAYS.map(day => (
+                    <View key={day} style={[styles.dayGroupCell, { width: COL_WIDTHS.DAY_GROUP }]}>
+                      <View style={{ width: COL_WIDTHS.CHECK, borderRightWidth: 1, backgroundColor: '#f3f4f6', justifyContent: 'center' }}><Text style={styles.dayIndicatorText}>{day}</Text></View>
+                      <View style={{ width: COL_WIDTHS.NAME + COL_WIDTHS.SUP_SIGN, justifyContent: 'center' }}>
+                        {renderSignature(metadata.managerDaySigns[day], v => handleMetadataChange('managerDaySigns', { ...metadata.managerDaySigns, [day]: v }), COL_WIDTHS.NAME + COL_WIDTHS.SUP_SIGN, 50)}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </ScrollView>
       </EditableFormContainer>
+      <LoadingOverlay visible={isSaving} />
+      <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
-  // paddingBottom is increased dynamically at render-time to ensure full scroll depth
-  scrollContent: { padding: 8 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1, elevation: 4 },
+  scrollContent: { padding: 8, flexGrow: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 20, borderColor: '#1F2937', borderWidth: 1 },
   header: { borderBottomColor: '#1F2937', borderBottomWidth: 1, paddingBottom: 10, marginBottom: 10 },
   brandRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  brandLogo: { width: 56, height: 56, marginRight: 12, borderRadius: 8, backgroundColor: '#fff' },
+  brandLogo: { width: 56, height: 56, marginRight: 12, borderRadius: 8 },
   brandName: { fontSize: 16, fontWeight: '700', color: '#185a9d' },
   brandSub: { fontSize: 12, color: '#43cea2' },
   headerMeta: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   docText: { fontSize: 10, color: '#6B7280' },
-  mainTitle: { fontSize: 18, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 10 },
-  areaMetaRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 15, borderWidth: 1, borderColor: '#1F2937' },
-  metaField: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 100, paddingVertical: 4, paddingHorizontal: 8, borderRightWidth: 1, borderRightColor: '#1F2937' },
-  metaLabel: { fontSize: 11, fontWeight: '600', color: '#4B5563', marginRight: 4 },
-  metaInput: { flex: 1, borderBottomColor: '#9CA3AF', borderBottomWidth: 1, fontSize: 12, paddingVertical: 2 },
-  verificationRow: { flexDirection: 'row', borderWidth: 1, borderColor: '#1F2937', marginBottom: 10, backgroundColor: '#E5E7EB' },
-  verificationCell: { padding: 8, borderRightWidth: 1, borderRightColor: '#1F2937' },
-  verificationLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4, color: '#1F2937' },
-  verificationInput: { borderBottomColor: '#9CA3AF', borderBottomWidth: 1, fontSize: 14, paddingVertical: 2 },
-  tableScroll: { borderRadius: 4, borderWidth: 1, borderColor: '#1F2937' },
-  headerRow: { flexDirection: 'row', backgroundColor: '#6B7280', minHeight: 40, borderBottomWidth: 2, borderBottomColor: '#1F2937' },
+  mainTitle: { fontSize: 16, fontWeight: '800', color: '#1F2937', textAlign: 'center', marginBottom: 10 },
+  areaMetaRow: { flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, borderColor: '#1F2937' },
+  metaField: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 100, padding: 4, borderRightWidth: 1, borderRightColor: '#1F2937' },
+  metaLabel: { fontSize: 10, fontWeight: '600', color: '#4B5563', marginRight: 4 },
+  metaInput: { flex: 1, fontSize: 11, paddingVertical: 2 },
+  tableScroll: { borderWidth: 1, borderColor: '#1F2937', marginTop: 10 },
+  headerRow: { flexDirection: 'row', backgroundColor: '#6B7280' },
   headerCell: { padding: 5, justifyContent: 'center', alignItems: 'center', borderRightWidth: 1, borderRightColor: '#1F2937' },
   headerText: { fontSize: 11, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'center' },
-  dayHeaderGroup: { flexDirection: 'row', borderRightWidth: 1, borderRightColor: '#1F2937' },
-  row: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#4B5563', minHeight: 40 },
+  dayHeaderGroup: { borderRightWidth: 1, borderRightColor: '#1F2937', alignItems: 'center' },
+  subHeaderRow: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#fff' },
+  subHeaderText: { color: '#fff', fontSize: 9, textAlign: 'center', paddingVertical: 4, borderRightWidth: 1, borderRightColor: '#fff' },
+  row: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#4B5563', minHeight: 45 },
   dayGroupCell: { flexDirection: 'row', borderRightWidth: 1, borderRightColor: '#4B5563' },
-  cell: { paddingHorizontal: 4, paddingVertical: 6, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#4B5563', minHeight: 40 },
-  leftContent: { alignItems: 'flex-start' },
-  centerContent: { alignItems: 'center' },
-  equipmentText: { fontSize: 12, color: '#1F2937' },
-  cellInput: { width: '100%', textAlign: 'center', fontSize: 12, height: 30, padding: 0 },
-  cellReadText: { textAlign: 'center', fontSize: 12, paddingVertical: 6, color: '#111827' },
+  cell: { padding: 4, justifyContent: 'center', borderRightWidth: 1, borderRightColor: '#4B5563' },
+  cellInput: { fontSize: 11, textAlign: 'center', padding: 0 },
+  equipmentText: { fontSize: 11, color: '#1F2937' },
+  footerSignatureRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#000', minHeight: 65 },
+  footerLabel: { fontSize: 9, fontWeight: 'bold', textAlign: 'right', paddingRight: 10 },
+  dayIndicatorText: { fontSize: 8, textAlign: 'center', fontWeight: 'bold', color: '#666' },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   checkboxChecked: { borderColor: '#10B981', backgroundColor: '#10B981' },
   checkboxUnchecked: { borderColor: '#4B5563', backgroundColor: '#FFFFFF' },
-  checkboxTick: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold', lineHeight: 20 },
-  buttonContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, paddingHorizontal: 8 },
-  button: { width: 150, marginLeft: 16, paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
+  checkboxTick: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
+  buttonContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24 },
+  button: { width: 140, marginLeft: 12, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   draftButton: { backgroundColor: '#FBBF24' },
   submitButton: { backgroundColor: '#4F46E5' },
-  buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
-  signaturesRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  signatureCell: { flex: 1, padding: 8 },
-  signatureLabel: { fontSize: 12, color: '#4B5563', fontWeight: '600' },
-  signatureValue: { fontSize: 14, color: '#1F2937', marginTop: 6 }
+  buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 }
 });

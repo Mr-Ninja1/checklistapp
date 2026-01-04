@@ -81,8 +81,9 @@ export default function CertificateOfAnalysis() {
 
   const addOneMoreRow = () => {
     if (!editMode) { setEditMode(true); return; }
-    if (formData.products.length >= 6) {
-      Alert.alert("Limit Reached", "You can only add one additional row to this form.");
+    const MAX_ROWS = 30;
+    if (formData.products.length >= MAX_ROWS) {
+      Alert.alert("Limit Reached", `You can only add up to ${MAX_ROWS} rows.`);
       return;
     }
     setFormData(prev => ({ ...prev, products: [...prev.products, createRow()] }));
