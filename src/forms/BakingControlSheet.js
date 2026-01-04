@@ -164,6 +164,20 @@ export default function BakingControlSheet({ navigation }) {
     </View>
   );
 
+  const renderMetadataSignature = (val, width = 200) => {
+    if (!val) return <Text style={styles.metaSmall}>{''}</Text>;
+    const s = String(val || '').trim();
+    if (s.startsWith('data:') || s.startsWith('http:') || s.startsWith('https:') || s.startsWith('file:') || s.startsWith('blob:')) {
+      return <Image source={{ uri: s }} style={{ width, height: 64, resizeMode: 'contain' }} />;
+    }
+    const compact = s.replace(/\s+/g, '');
+    const base64ish = /^[A-Za-z0-9+/=\r\n]+$/;
+    if (compact.length > 100 && base64ish.test(compact)) {
+      return <Image source={{ uri: `data:image/png;base64,${compact}` }} style={{ width, height: 64, resizeMode: 'contain' }} />;
+    }
+    return <Text style={styles.metaSmall}>{s}</Text>;
+  };
+
   // wrap submit to ensure notification shows reliably across platforms
   const submitHandler = async () => {
     try {
@@ -200,7 +214,7 @@ export default function BakingControlSheet({ navigation }) {
               {editMode ? (
                 <SignatureField value={metadata.compiledBy} onChange={v => setMetadata(prev => ({ ...prev, compiledBy: v }))} editable={editMode} width={200} height={80} />
               ) : (
-                <Text style={styles.metaSmall}>{metadata.compiledBy}</Text>
+                renderMetadataSignature(metadata.compiledBy, 200)
               )}
             </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
@@ -208,7 +222,7 @@ export default function BakingControlSheet({ navigation }) {
               {editMode ? (
                 <SignatureField value={metadata.approvedBy} onChange={v => setMetadata(prev => ({ ...prev, approvedBy: v }))} editable={editMode} width={200} height={80} />
               ) : (
-                <Text style={styles.metaSmall}>{metadata.approvedBy}</Text>
+                renderMetadataSignature(metadata.approvedBy, 200)
               )}
             </View>
           </View>

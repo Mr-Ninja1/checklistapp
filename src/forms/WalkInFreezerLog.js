@@ -198,7 +198,11 @@ export default function WalkInFreezerLog() {
                 <Text style={styles.brandSub}>Bravo Brands Central</Text>
               </View>
               <View style={styles.metaBox}>
-                <Text style={styles.metaText}>Issue Date: {metadata.issueDate}</Text>
+                {editMode ? (
+                  <TextInput value={metadata.issueDate} onChangeText={t => handleMetadataChangeWithAuto('issueDate', t)} placeholder="dd/mm/yyyy" style={styles.metaInput} />
+                ) : (
+                  <Text style={styles.metaText}>Issue Date: {metadata.issueDate}</Text>
+                )}
               </View>
             </View>
 

@@ -556,7 +556,7 @@ export default function HomeScreen() {
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New</Text>
             <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>1. The Daily showering log has been updated and is now working properly.</Text>
+              <Text style={styles.updateItem}>1. The Daily showering log has been updated ,check it and comfirm its not lagging (slow) anymore.</Text>
               <Text style={styles.updateItem}>2. The Gelato freezer form and all other Temp forms now use a default keyboard which allows characters like negative (-) and degrees Celsius (°C).</Text>
               <Text style={styles.updateItem}>3. All forms are now Editable!</Text>
               <Text style={styles.updateItem}>4. All forms are now saving drafts .</Text>

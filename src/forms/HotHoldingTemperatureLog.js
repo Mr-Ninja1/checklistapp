@@ -188,7 +188,12 @@ export default function HotHoldingTemperatureLog() {
                         </View>
                         <View style={styles.docInfoGrid}>
                             <Text style={styles.docInfoLabel}>Issue Date:</Text>
-                            <Text style={styles.docInfoValue}>{meta.issueDate}</Text>
+                            <TextInput
+                                style={styles.docInfoValue}
+                                value={meta.issueDate}
+                                onChangeText={v => setMetaField('issueDate', v)}
+                                placeholder="dd/mm/yyyy"
+                            />
                         </View>
                     </View>
                     <View style={styles.metaBottomRow}>
