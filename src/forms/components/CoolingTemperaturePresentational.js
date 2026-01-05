@@ -142,16 +142,10 @@ export default function CoolingTemperatureLog() {
 
             // save: pass payload so addFormHistory preserves it for SavedFormRenderer
             await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
-            await removeDraft(DRAFT_KEY);
-            // Reset form
-            setRows(initialRows);
-            // Reset meta to initial state (fixed values from image) but clear signatures
-            setMeta(prev => ({
-                ...initialMeta,
-                chefSignature: '',
-                correctiveAction: '',
-                complexManagerSignature: ''
-            }));
+            // NOTE: do not remove the draft on submit — keep draft persisted so users can continue where they left off.
+            // Intentionally do not call `removeDraft(DRAFT_KEY)` or reset local state here to avoid overwriting
+            // the persisted draft via the autosave effect. If you want to clear the draft manually, provide
+            // an explicit "Clear Draft" action instead.
             Alert.alert('Saved', 'Form saved');
         } catch (e) {
             console.warn('submit error', e);
@@ -229,8 +223,17 @@ export default function CoolingTemperatureLog() {
                             <Text style={[styles.docInfoLabel, styles.docInfoHalf]}>Doc No: </Text>
                             <Text style={[styles.docInfoValue, styles.docInfoHalf]}>{meta.docNo}</Text>
                             
-                                <Text style={[styles.docInfoLabel, styles.docInfoHalf]}>Issue Date: </Text>
+                            <Text style={[styles.docInfoLabel, styles.docInfoHalf]}>Issue Date: </Text>
+                            {editMode ? (
+                                <TextInput
+                                    style={[styles.docInfoValue, styles.docInfoHalf, styles.headerInput]}
+                                    value={meta.issueDate}
+                                    onChangeText={v => setMetaField('issueDate', v)}
+                                    placeholder="DD/MM/YYYY"
+                                />
+                            ) : (
                                 <Text style={[styles.docInfoValue, styles.docInfoHalf]}>{meta.issueDate}</Text>
+                            )}
 
                             <Text style={[styles.docInfoLabel, styles.docInfoHalf, styles.noBorderBottom]}>Revision Date: </Text>
                             <Text style={[styles.docInfoValue, styles.docInfoHalf, styles.noBorderBottom]}>{meta.revisionDate}</Text>
@@ -275,7 +278,16 @@ export default function CoolingTemperatureLog() {
                         <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>PROBE THERMOMETER TEMPERATURE LOG FOR COOLING FOOD</Text> 
                         <View style={{ alignItems: 'flex-end' }}>
                             <Text style={[styles.logHeaderRow1Text, { fontSize: 12 }]}>DATE</Text>
-                            <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>{meta.date || meta.issueDate}</Text>
+                            {editMode ? (
+                                <TextInput
+                                    style={[styles.logHeaderRow1Text, { fontSize: 14, textAlign: 'right' }]}
+                                    value={meta.date}
+                                    onChangeText={v => setMetaField('date', v)}
+                                    placeholder="DD/MM/YYYY"
+                                />
+                            ) : (
+                                <Text style={[styles.logHeaderRow1Text, { fontSize: 14 }]}>{meta.date || meta.issueDate}</Text>
+                            )}
                         </View>
                     </View>
                     

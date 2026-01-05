@@ -4,7 +4,7 @@ import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { getDraft, setDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import formStorage from '../utils/formStorage';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -141,19 +141,7 @@ export default function DisplayChillerTemperatureLog_Upright(props = {}) {
       } catch (e) {
         try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload }); } catch (err) { /* ignore */ }
       }
-      try { Alert.alert('Saved', 'Form saved'); } catch (e) { /* ignore */ }
-      const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_upright_draft`;
-      await removeDraft(draftKey);
-      setRows(initialRows);
-      setMeta(prev => ({
-        ...initialMeta,
-        year: new Date().getFullYear().toString(),
-        month: '',
-        location: '',
-        displayChillerName: props.defaultDisplayChillerName || 'Upright',
-        hseqManagerSign: '',
-        complexManagerSign: ''
-      }));
+      try { Alert.alert('Success', 'Form submitted. Data and draft have been preserved.'); } catch (e) { /* ignore */ }
     } catch (e) {
       console.warn('submit error', e);
       Alert.alert('Error', 'Failed to submit log. Please try again.');

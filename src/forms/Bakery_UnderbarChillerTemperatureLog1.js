@@ -4,7 +4,7 @@ import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
-import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
+import { getDraft, setDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
 import formatTemp from '../utils/formatTemp';
@@ -124,18 +124,7 @@ export default function Bakery_UnderbarChillerTemperatureLog1() {
         savedAt: Date.now(),
       };
       await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
-      try { Alert.alert('Saved', 'Form saved'); } catch (e) { /* ignore */ }
-      await removeDraft(DRAFT_KEY);
-      setRows(initialRows);
-      setMeta(prev => ({
-        ...initialMeta,
-        year: new Date().getFullYear().toString(),
-        month: '',
-        location: 'Bakery - Underbar Chiller 1',
-        hseqManagerSign: '',
-        complexManagerSign: '',
-        fscSign: ''
-      }));
+      Alert.alert('Success', 'Form submitted. Data and draft have been preserved.');
     } catch (e) {
       console.warn('submit error', e);
       Alert.alert('Error', 'Failed to submit log. Please try again.');

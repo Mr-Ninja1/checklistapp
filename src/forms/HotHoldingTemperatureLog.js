@@ -24,7 +24,6 @@ const initialRows = Array.from({ length: MAX_ROWS }, () => ({ ...emptyRow }));
 
 const initialMeta = {
     subject: 'TEMPERATURE RECORD FOR HOT HOLDING (HOT PASS)',
-    // issueDate will be auto-set when no draft exists
     issueDate: '',
     compiledBy: 'Michael C. Zulu',
     approvedBy: 'Hassani Ali',
@@ -79,34 +78,30 @@ export default function HotHoldingTemperatureLog() {
         if (nonEmpty.length === 0) { Alert.alert('Cannot Submit', 'Please enter at least one food item before submitting the log.'); return; }
         setBusy(true);
         try {
-            // Build canonical payload
-            const TABLE_WIDTH = 900; // A4-like width used for deterministic saved renderings
-            const COL_FLEX = { INDEX: 0.6, FOOD_ITEM: 2.5, TIME_INTO_HOLD: 1.5, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 2.0 };
-            const totalFlex = COL_FLEX.INDEX + COL_FLEX.FOOD_ITEM + COL_FLEX.TIME_INTO_HOLD + (COL_FLEX.TIME_TEMP_SIGN * 9) + COL_FLEX.STAFF_NAME;
+            const TABLE_WIDTH = 900; 
+            const COL_FLEX_LAYOUT = { INDEX: 0.6, FOOD_ITEM: 2.5, TIME_INTO_HOLD: 1.5, TIME_TEMP_SIGN: 1.0, STAFF_NAME: 2.0 };
+            const totalFlex = COL_FLEX_LAYOUT.INDEX + COL_FLEX_LAYOUT.FOOD_ITEM + COL_FLEX_LAYOUT.TIME_INTO_HOLD + (COL_FLEX_LAYOUT.TIME_TEMP_SIGN * 9) + COL_FLEX_LAYOUT.STAFF_NAME;
             const baseUnit = TABLE_WIDTH / totalFlex;
             const widths = {
-                INDEX: Math.round(baseUnit * COL_FLEX.INDEX),
-                FOOD_ITEM: Math.round(baseUnit * COL_FLEX.FOOD_ITEM),
-                TIME_INTO_HOLD: Math.round(baseUnit * COL_FLEX.TIME_INTO_HOLD),
-                // time/temp/sign for 3 records
-                TIME1: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                TEMP1: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                SIGN1: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                TIME2: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                TEMP2: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                SIGN2: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                TIME3: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                TEMP3: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                SIGN3: Math.round(baseUnit * COL_FLEX.TIME_TEMP_SIGN),
-                STAFF_NAME: Math.round(baseUnit * COL_FLEX.STAFF_NAME),
+                INDEX: Math.round(baseUnit * COL_FLEX_LAYOUT.INDEX),
+                FOOD_ITEM: Math.round(baseUnit * COL_FLEX_LAYOUT.FOOD_ITEM),
+                TIME_INTO_HOLD: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_INTO_HOLD),
+                TIME1: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                TEMP1: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                SIGN1: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                TIME2: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                TEMP2: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                SIGN2: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                TIME3: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                TEMP3: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                SIGN3: Math.round(baseUnit * COL_FLEX_LAYOUT.TIME_TEMP_SIGN),
+                STAFF_NAME: Math.round(baseUnit * COL_FLEX_LAYOUT.STAFF_NAME),
             };
 
-            // Fix rounding delta by adding leftover to STAFF_NAME
             const allocated = Object.values(widths).reduce((s, v) => s + v, 0);
             const delta = TABLE_WIDTH - allocated;
             if (delta > 0) widths.STAFF_NAME += delta;
 
-            // Embed logo as base64 data uri (deterministic rendering)
             let logoDataUri = null;
             try {
                 const asset = Asset.fromModule(require('../assets/logo.jpeg'));
@@ -115,7 +110,6 @@ export default function HotHoldingTemperatureLog() {
                 logoDataUri = `data:image/jpeg;base64,${b64}`;
             } catch (e) { console.warn('logo embed failed', e); }
 
-            // Normalize temperatures to include °C when missing
             const normalizedRows = rows.map(r => ({
                 ...r,
                 temp1: formatTemp(r.temp1),
@@ -128,7 +122,6 @@ export default function HotHoldingTemperatureLog() {
                 templateVersion: '1.0',
                 title: 'Hot Holding Temperature Log',
                 date: meta.issueDate || getTodayDate(),
-                // include signature and corrective fields from meta so presentational views can render them
                 metadata: {
                     companyName: 'BRAVO BRANDS LIMITED',
                     compiledBy: meta.compiledBy,
@@ -136,30 +129,36 @@ export default function HotHoldingTemperatureLog() {
                     chefSignature: meta.chefSignature || '',
                     complexManagerSignature: meta.complexManagerSignature || '',
                     correctiveAction: meta.correctiveAction || '',
-                    // support hseq key if present
                     hseqManagerSignature: meta.hseqManagerSignature || meta.hseqManagerSign || '',
                 },
-                // Save all rows (including empty ones) so presentational rendering matches the editor
                 formData: normalizedRows,
-                layoutHints: { COL_FLEX, WIDTHS: widths },
+                layoutHints: { COL_FLEX: COL_FLEX_LAYOUT, WIDTHS: widths },
                 _tableWidth: TABLE_WIDTH,
                 assets: { logoDataUri },
                 savedAt: Date.now(),
             };
 
             await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
-            await removeDraft(DRAFT_KEY);
-            setRows(initialRows);
-            setMeta(prev => ({ ...initialMeta, issueDate: getTodayDate(), chefSignature: '', correctiveAction: '', complexManagerSignature: '' }));
-            Alert.alert('Saved', 'Form saved');
-        } catch (e) { console.warn('submit error', e); Alert.alert('Error', 'Failed to submit log. Please try again.'); }
+            
+            // CHANGES MADE HERE:
+            // 1. Removed removeDraft(DRAFT_KEY) to keep draft in storage.
+            // 2. Removed setRows(initialRows) and setMeta state resets to keep UI populated.
+
+            Alert.alert('Success', 'Form submitted successfully. Data and draft have been retained.');
+        } catch (e) { 
+            console.warn('submit error', e); 
+            Alert.alert('Error', 'Failed to submit log.'); 
+        }
         setBusy(false);
     };
 
-    const handleSaveDraft = async () => { setBusy(true); try { await setDraft(DRAFT_KEY, { rows, meta }); } catch (e) { console.warn('save draft error', e); } setBusy(false); };
+    const handleSaveDraft = async () => { 
+        setBusy(true); 
+        try { await setDraft(DRAFT_KEY, { rows, meta }); } 
+        catch (e) { console.warn('save draft error', e); } 
+        setBusy(false); 
+    };
 
-    // Action buttons rendered outside the pointer-events-blocking children wrapper
-    // so they remain tappable even when editMode is false.
     const actionButtons = (
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
             <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={() => { if (busy) return; handleSaveDraft(); }} disabled={busy}>
@@ -319,7 +318,6 @@ export default function HotHoldingTemperatureLog() {
                     </View>
                 </View>
 
-                {/* spacer so content can scroll above the floating actionButtons */}
                 <View style={{ height: 110 }} />
 
             </ScrollView>
