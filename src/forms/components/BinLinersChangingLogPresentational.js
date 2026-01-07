@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'bin_liners_changing_log';
 export default function BinLinersChangingLogPresentational({ payload }) {
   const p = payload || {};
   const entries = p.logEntries || [];

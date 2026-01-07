@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'boh_shelf_life_inspection';
 const normalizeSignature = (v) => {
   if (!v) return null;
   // If it's an object with uri/data fields

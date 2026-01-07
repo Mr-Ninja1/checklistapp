@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'visitors_log_book';
 function normalizeSignature(v) {
   if (!v) return null;
   if (String(v).startsWith('data:')) return v;

@@ -1,38 +1,52 @@
-That's exactly right, especially when you are using **Expo's managed workflow** or **EAS Build**\!
-
-For most modern Expo projects, you only need to define **one high-resolution source image** for your main app icon and one for your adaptive icon foreground (if you are using adaptive icons). Expo's build service handles the rest, including:
-
-  * **Resizing:** Creating all the necessary density-specific sizes (mdpi, hdpi, xhdpi, etc.).
-  * **Format Conversion:** Generating both the necessary **`.png`** and modern **`.webp`** files to ensure compatibility across all Android devices, which is what led to your "Duplicate resources" error when the files existed simultaneously in the wrong place.
-
-### ✅ What You Should Do
-
-1.  **Locate your Source Icons:** Make sure your `app.json` or `app.config.js` points to a single, high-resolution source file (usually a PNG) for the main icon and adaptive icon.
-
-    **Example (in `app.json`):**
-
-    ```json
-    {
-      "expo": {
-        // ...
-        "icon": "./assets/app-icon.png", // Main, legacy icon source
-        "android": {
-          // ...
-          "adaptiveIcon": {
-            "foregroundImage": "./assets/adaptive-foreground.png", // Adaptive icon foreground source
-            "backgroundImage": "#FFFFFF"
-          }
-        }
-      }
-    }
-    ```
-
-2.  **Remove Generated Files:** If you are *not* using a custom development client or have *not* ejected, you typically **don't have to touch the `android/` directory**. If you *do* have an `android/` folder, make sure the icon files within the `android/app/src/main/res/mipmap-*` folders were not manually added or conflicting with the files Expo/Gradle generates.
-
-3.  **Clear Cache and Rebuild (Crucial):** This forces Expo to generate the new, clean set of files without the old duplicates.
-
-    ```bash
-   
-    ```
-
-By using the official Expo configuration, you let the tools manage the complex resource generation, avoiding the duplicate file conflict you encountered.
+ ERROR  [TypeError: Cannot set property 'FOH_DailyCleaningForm_PM' of undefined]
+ ERROR  [TypeError: Cannot set property 'PPEIssuanceForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'VisitorsLogBook' of undefined]
+ ERROR  [TypeError: Cannot set property 'PersonalHygieneChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'BravoHealthStatusCheck' of undefined]
+ ERROR  [TypeError: Cannot set property 'DryStorageArea_CleaningChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'SculleryArea_CleaningChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'ColdRoom_FreezerRoomCleaningChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'WalkInChillerLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'WelfareFacilities_CleaningChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'CleaningEquipment_CleaningChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'WalkInFreezerLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'CoolingTemperatureLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'DeepFreezerTemperatureLog_Storage' of undefined]
+ ERROR  [TypeError: Cannot set property 'Bakery_UnderbarChillerTemperatureLog1' of undefined]
+ ERROR  [TypeError: Cannot set property 'Bakery_SanitizingLog_AM' of undefined]
+ ERROR  [TypeError: Cannot set property 'Bakery_CleaningChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'BakingControlSheet' of undefined]
+ ERROR  [TypeError: Cannot set property 'MixingControlSheet' of undefined]
+ ERROR  [TypeError: Cannot set property 'ProductsNetContentChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'MouldingProofingBakingLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'BOH_ShelfLifeInspectionChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'Kitchen_DailyCleaningForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'Kitchen_WeeklyCleaningChecklist' of undefined]
+ ERROR  [TypeError: Cannot set property 'UnderbarChillerTemperatureLog1' of undefined]
+ ERROR  [TypeError: Cannot set property 'CookingTemperatureLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'ThawingTemperatureLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'HotHoldingTemperatureLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'PreShiftMeetingAttendanceRegister' of undefined]
+ ERROR  [TypeError: Cannot set property 'ProductRejectionForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'BinLinersChangingLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'BeverageReceivingForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'DryGoodsReceivingForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'ChilledFrozenReceivingForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'ChemicalsReceivingForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'EggsReceivingForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'CertificateOfAnalysis' of undefined]
+ ERROR  [TypeError: Cannot set property 'PackagingMaterialsReceivingForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'VegetablesFruitsReceivingForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'ToolboxTalkRegister' of undefined]
+ ERROR  [TypeError: Cannot set property 'PastInspectionForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'CustomerSatisfactionQuestionnaire' of undefined]
+ ERROR  [TypeError: Cannot set property 'ProcessQualityOutOfControlReport' of undefined]
+ ERROR  [TypeError: Cannot set property 'ProductReleaseForm' of undefined]
+ ERROR  [TypeError: Cannot set property 'FoodHandlersHandwashingForm_AM' of undefined]
+ ERROR  [TypeError: Cannot set property 'FoodSamplesCollectionLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'FruitWashingLog' of undefined]
+ ERROR  [TypeError: Cannot set property 'TrainingAttendanceRegister' of undefined]
+ ERROR  [TypeError: Cannot set property 'Display Chiller Shelf-Life Inspection' of undefined]
+ ERROR  [TypeError: Cannot set property 'DISPLAY CHILLER TEMPERATURE LOG SHEET - Upright' of undefined]
+ ERROR  [TypeError: Cannot set property 'Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — AM' of undefined] 
+ ERROR  [TypeError: Cannot set property 'Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery — AM' of undefined] 

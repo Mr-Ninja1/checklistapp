@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'food_handlers_daily_showering';
 export default function FoodHandlersDailyShoweringPresentational({ payload }) {
   if (!payload) return null;
 
@@ -117,7 +119,7 @@ export default function FoodHandlersDailyShoweringPresentational({ payload }) {
                       {(() => {
                         const signVal = row[2 + d * 2 + 1];
                         const uri = signVal ? (String(signVal).startsWith('data:') ? signVal : `data:image/png;base64,${signVal}`) : null;
-                        return uri ? <SignatureThumb uri={uri} width={(dailyCols[d * 2 + 1] || 45) - 4} height={40} layers={5} spread={0.8} /> : <Text style={[styles.dataCell, { width: (dailyCols[d * 2 + 1] || 45) }]} numberOfLines={1} ellipsizeMode="tail">{row[2 + d * 2 + 1] || ''}</Text>;
+                          return uri ? <SignatureThumb uri={uri} width={(dailyCols[d * 2 + 1] || 45) - 4} height={48} layers={7} spread={1.2} /> : <Text style={[styles.dataCell, { width: (dailyCols[d * 2 + 1] || 45) }]} numberOfLines={1} ellipsizeMode="tail">{row[2 + d * 2 + 1] || ''}</Text>;
                       })()}
                     </React.Fragment>
                   ))}
@@ -125,7 +127,7 @@ export default function FoodHandlersDailyShoweringPresentational({ payload }) {
                   {(() => {
                     const supVal = row[2 + 7 * 2];
                     const supUri = supVal ? (String(supVal).startsWith('data:') ? supVal : `data:image/png;base64,${supVal}`) : null;
-                    return supUri ? <SignatureThumb uri={supUri} width={Math.max(60, supCol - 8)} height={40} layers={6} spread={1.0} /> : <Text style={[styles.dataCell, { width: supCol }]} numberOfLines={1} ellipsizeMode="tail">{row[2 + 7 * 2] || ''}</Text>;
+                      return supUri ? <SignatureThumb uri={supUri} width={Math.max(60, supCol - 8)} height={52} layers={8} spread={1.4} /> : <Text style={[styles.dataCell, { width: supCol }]} numberOfLines={1} ellipsizeMode="tail">{row[2 + 7 * 2] || ''}</Text>;
                   })()}
                 </View>
               ))

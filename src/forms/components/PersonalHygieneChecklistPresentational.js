@@ -2,6 +2,8 @@ import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'personal_hygiene_checklist';
 // Exact numeric widths used by the editable form
 const columnWidths = {
 	date: 70,

@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'food_samples_collection';
 export default function FoodSamplesCollectionPresentational({ payload }) {
   if (!payload) return null;
   // Support both legacy shapes and canonical saved payloads

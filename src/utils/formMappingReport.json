@@ -1,0 +1,1688 @@
+[
+  {
+    "file": "Bakery_CleaningChecklist.js",
+    "titles": [
+      "Bakery Area Cleaning Checklist",
+      "Bakery Cleaning Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Bakery Area Cleaning Checklist",
+        "keys": [
+          "bakery_area_cleaning_checklist",
+          "bakeryareacleaningchecklist"
+        ],
+        "generator": "./generate_bakerycleaningchecklist_html"
+      },
+      {
+        "title": "Bakery Cleaning Checklist",
+        "keys": [
+          "bakery_cleaning_checklist",
+          "bakerycleaningchecklist"
+        ],
+        "generator": "./generate_bakerycleaningchecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "Bakery_SanitizingLog.js",
+    "titles": [
+      "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery"
+    ],
+    "mappings": [
+      {
+        "title": "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_bakery",
+          "foodcontactsurfacecleaningandsanitizinglogsheetbakery"
+        ],
+        "generator": "./generate_bakerysanitizing_html"
+      }
+    ]
+  },
+  {
+    "file": "Bakery_SanitizingLog_AM.js",
+    "titles": [
+      "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery — AM"
+    ],
+    "mappings": [
+      {
+        "title": "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery — AM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_bakery_am",
+          "foodcontactsurfacecleaningandsanitizinglogsheetbakeryam"
+        ],
+        "generator": "./generate_bakerysanitizing_html"
+      }
+    ]
+  },
+  {
+    "file": "Bakery_SanitizingLog_PM.js",
+    "titles": [
+      "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery — PM"
+    ],
+    "mappings": [
+      {
+        "title": "Food Contact Surface Cleaning and Sanitizing Log Sheet - Bakery — PM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_bakery_pm",
+          "foodcontactsurfacecleaningandsanitizinglogsheetbakerypm"
+        ],
+        "generator": "./generate_bakerysanitizing_html"
+      }
+    ]
+  },
+  {
+    "file": "Bakery_UnderbarChillerTemperatureLog1.js",
+    "titles": [
+      "Bakery - Underbar Chiller Temperature Log 1"
+    ],
+    "mappings": [
+      {
+        "title": "Bakery - Underbar Chiller Temperature Log 1",
+        "keys": [
+          "bakery_underbar_chiller_temperature_log_1",
+          "bakeryunderbarchillertemperaturelog1"
+        ],
+        "generator": "./generate_underbarchiller_temperature_html"
+      }
+    ]
+  },
+  {
+    "file": "Bakery_UnderbarChillerTemperatureLog2.js",
+    "titles": [
+      "Bakery - Underbar Chiller Temperature Log 2"
+    ],
+    "mappings": [
+      {
+        "title": "Bakery - Underbar Chiller Temperature Log 2",
+        "keys": [
+          "bakery_underbar_chiller_temperature_log_2",
+          "bakeryunderbarchillertemperaturelog2"
+        ],
+        "generator": "./generate_underbarchiller_temperature_html"
+      }
+    ]
+  },
+  {
+    "file": "Bakery_UnderbarShelfLifeInspectionChecklist.js",
+    "titles": [
+      "UNDERBAR CHILLER SHELF-LIFE INSPECTION CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "UNDERBAR CHILLER SHELF-LIFE INSPECTION CHECKLIST",
+        "keys": [
+          "underbar_chiller_shelf_life_inspection_checklist",
+          "underbarchillershelflifeinspectionchecklist"
+        ],
+        "generator": "./generate_bakery_underbar_shelflife_html"
+      }
+    ]
+  },
+  {
+    "file": "BakingControlSheet.js",
+    "titles": [
+      "Baking Control Sheet"
+    ],
+    "mappings": [
+      {
+        "title": "Baking Control Sheet",
+        "keys": [
+          "baking_control_sheet",
+          "bakingcontrolsheet"
+        ],
+        "generator": "./generate_bakingcontrolsheet_html"
+      }
+    ]
+  },
+  {
+    "file": "BeverageReceivingForm.js",
+    "titles": [
+      "Beverage and Water Receiving Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Beverage and Water Receiving Checklist",
+        "keys": [
+          "beverage_and_water_receiving_checklist",
+          "beverageandwaterreceivingchecklist"
+        ],
+        "generator": "./generate_beveragereceiving_html"
+      }
+    ]
+  },
+  {
+    "file": "BinLinersChangingLog.js",
+    "titles": [
+      "BIN LINERS CHANGING LOG"
+    ],
+    "mappings": [
+      {
+        "title": "BIN LINERS CHANGING LOG",
+        "keys": [
+          "bin_liners_changing_log",
+          "binlinerschanginglog"
+        ],
+        "generator": "./generate_binlinerschanginglog_html"
+      }
+    ]
+  },
+  {
+    "file": "BOH_ShelfLifeInspectionChecklist.js",
+    "titles": [
+      "BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "BOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST",
+        "keys": [
+          "boh_products_shelf_life_inspection_checklist",
+          "bohproductsshelflifeinspectionchecklist"
+        ],
+        "generator": "./generate_boh_shelflifeinspection_html"
+      }
+    ]
+  },
+  {
+    "file": "BravoHealthStatusCheck.js",
+    "titles": [
+      "BRAVO BRANDS HEALTH STATUS CHECK"
+    ],
+    "mappings": [
+      {
+        "title": "BRAVO BRANDS HEALTH STATUS CHECK",
+        "keys": [
+          "bravo_brands_health_status_check",
+          "bravobrandshealthstatuscheck"
+        ],
+        "generator": "./generate_bravohealthstatuscheck_html"
+      }
+    ]
+  },
+  {
+    "file": "CertificateOfAnalysis.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "ChemicalsReceivingForm.js",
+    "titles": [
+      "Chemicals Receiving Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Chemicals Receiving Checklist",
+        "keys": [
+          "chemicals_receiving_checklist",
+          "chemicalsreceivingchecklist"
+        ],
+        "generator": "./generate_chemicalsreceiving_html"
+      }
+    ]
+  },
+  {
+    "file": "ChilledFrozenReceivingForm.js",
+    "titles": [
+      "Chilled & Frozen Receiving Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Chilled & Frozen Receiving Checklist",
+        "keys": [
+          "chilled_frozen_receiving_checklist",
+          "chilledfrozenreceivingchecklist"
+        ],
+        "generator": "./generate_chilledfrozenreceiving_html"
+      }
+    ]
+  },
+  {
+    "file": "CleaningEquipment_CleaningChecklist.js",
+    "titles": [
+      "CLEANING EQUIPMENT CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "CLEANING EQUIPMENT CHECKLIST",
+        "keys": [
+          "cleaning_equipment_checklist",
+          "cleaningequipmentchecklist"
+        ],
+        "generator": "./generate_cleaningequipment_cleaningchecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "ColdRoom_FreezerRoomCleaningChecklist.js",
+    "titles": [
+      "COLD ROOM & FREEZER ROOM CLEANING CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "COLD ROOM & FREEZER ROOM CLEANING CHECKLIST",
+        "keys": [
+          "cold_room_freezer_room_cleaning_checklist",
+          "coldroomfreezerroomcleaningchecklist"
+        ],
+        "generator": "./generate_coldroom_freezerroomcleaningchecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "components/BakeryCleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BakerySanitizingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/Bakery_UnderbarShelfLifeInspectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BakingControlSheetPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BeverageReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BinLinersChangingLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BOH_ShelfLifeInspectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BravoHealthStatusCheckPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CertificateOfAnalysisPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ChemicalsReceivingPresentational.js",
+    "titles": [
+      "Chemicals Receiving"
+    ],
+    "mappings": [
+      {
+        "title": "Chemicals Receiving",
+        "keys": [
+          "chemicals_receiving",
+          "chemicalsreceiving"
+        ],
+        "generator": null
+      }
+    ]
+  },
+  {
+    "file": "components/ChilledFrozenReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CleaningEquipment_CleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ColdRoom_FreezerRoomCleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CookingTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CoolingTemperaturePresentational.js",
+    "titles": [
+      "Temperature Record for Cooling (Cooling Temperature Log)"
+    ],
+    "mappings": [
+      {
+        "title": "Temperature Record for Cooling (Cooling Temperature Log)",
+        "keys": [
+          "temperature_record_for_cooling_cooling_temperature_log",
+          "temperaturerecordforcoolingcoolingtemperaturelog"
+        ],
+        "generator": "./generate_coolingtemperature_html"
+      }
+    ]
+  },
+  {
+    "file": "components/CoolingTemperatureSavedPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CustomerSatisfactionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CustomerSatisfactionQuestionnairePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DeepFreezerTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DisplayChillerShelfLifeInspectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DisplayChillerTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DryGoodsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DryStorageArea_CleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/EggsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FOH_DailyCleaningPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FOH_FrontOfHouseCleaningPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FoodHandlersDailyShoweringPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FoodHandlersPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FoodSamplesCollectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FruitWashingLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/HotHoldingTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/KitchenDailyCleaningPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/KitchenWeeklyCleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/MixingControlSheetPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/MouldingProofingBakingLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PackagingMaterialsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PastInspectionFormPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PersonalHygieneChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PPEIssuancePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PreShiftMeetingAttendancePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProcessQualityOutOfControlPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProductRejectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProductReleasePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProductsNetContentChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/SculleryArea_CleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ThawingTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ToolboxTalkRegisterPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/TrainingAttendanceRegisterPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/UnderbarChillerTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/VegetablesFruitsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/VisitorsLogBookPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/WalkInChillerLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/WalkInFreezerLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/WelfareFacilitiesPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "CookingTemperatureLog.js",
+    "titles": [
+      "Cooking Temperature Log"
+    ],
+    "mappings": [
+      {
+        "title": "Cooking Temperature Log",
+        "keys": [
+          "cooking_temperature_log",
+          "cookingtemperaturelog"
+        ],
+        "generator": "./generate_cookingtemperature_html"
+      }
+    ]
+  },
+  {
+    "file": "CoolingTemperatureLog.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "CustomerSatisfactionQuestionnaire.js",
+    "titles": [
+      "RELIABILITY",
+      "ASSURANCE",
+      "TANGIBLES",
+      "EMPATHY",
+      "RESPONSIVENESS",
+      "Customer Feedback"
+    ],
+    "mappings": [
+      {
+        "title": "RELIABILITY",
+        "keys": [
+          "reliability",
+          "reliability"
+        ],
+        "generator": null
+      },
+      {
+        "title": "ASSURANCE",
+        "keys": [
+          "assurance",
+          "assurance"
+        ],
+        "generator": null
+      },
+      {
+        "title": "TANGIBLES",
+        "keys": [
+          "tangibles",
+          "tangibles"
+        ],
+        "generator": null
+      },
+      {
+        "title": "EMPATHY",
+        "keys": [
+          "empathy",
+          "empathy"
+        ],
+        "generator": null
+      },
+      {
+        "title": "RESPONSIVENESS",
+        "keys": [
+          "responsiveness",
+          "responsiveness"
+        ],
+        "generator": null
+      },
+      {
+        "title": "Customer Feedback",
+        "keys": [
+          "customer_feedback",
+          "customerfeedback"
+        ],
+        "generator": "./generate_customersatisfaction_html"
+      }
+    ]
+  },
+  {
+    "file": "DeepFreezerTemperatureLog.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DeepFreezerTemperatureLog_Blast.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DeepFreezerTemperatureLog_Production.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DeepFreezerTemperatureLog_Storage.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DisplayChillerShelfLifeInspectionChecklist.js",
+    "titles": [
+      "DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "DISPLAY CHILLER & FOH PRODUCTS SHELF-LIFE INSPECTION CHECKLIST",
+        "keys": [
+          "display_chiller_foh_products_shelf_life_inspection_checklist",
+          "displaychillerfohproductsshelflifeinspectionchecklist"
+        ],
+        "generator": "./generate_displaychiller_shelflife_html"
+      }
+    ]
+  },
+  {
+    "file": "DisplayChillerTemperatureLog_Gelato.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DisplayChillerTemperatureLog_GrabAndGo.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DisplayChillerTemperatureLog_Underbar.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DisplayChillerTemperatureLog_Upright.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "DryGoodsReceivingForm.js",
+    "titles": [
+      "Dry Goods Receiving Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Dry Goods Receiving Checklist",
+        "keys": [
+          "dry_goods_receiving_checklist",
+          "drygoodsreceivingchecklist"
+        ],
+        "generator": "./generate_drygoodsreceiving_html"
+      }
+    ]
+  },
+  {
+    "file": "DryStorageArea_CleaningChecklist.js",
+    "titles": [
+      "DRY STORAGE AREA CLEANING CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "DRY STORAGE AREA CLEANING CHECKLIST",
+        "keys": [
+          "dry_storage_area_cleaning_checklist",
+          "drystorageareacleaningchecklist"
+        ],
+        "generator": "./generate_drystoragearea_cleaningchecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "EggsReceivingForm.js",
+    "titles": [
+      "Eggs Receiving Checklist",
+      "Eggs Receiving Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Eggs Receiving Checklist",
+        "keys": [
+          "eggs_receiving_checklist",
+          "eggsreceivingchecklist"
+        ],
+        "generator": "./generate_eggsreceiving_html"
+      },
+      {
+        "title": "Eggs Receiving Checklist",
+        "keys": [
+          "eggs_receiving_checklist",
+          "eggsreceivingchecklist"
+        ],
+        "generator": "./generate_eggsreceiving_html"
+      }
+    ]
+  },
+  {
+    "file": "FOH_DailyCleaningForm.js",
+    "titles": [
+      "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — PM",
+      "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH- PM"
+    ],
+    "mappings": [
+      {
+        "title": "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — PM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_foh_pm",
+          "foodcontactsurfacecleaningandsanitizinglogsheetfohpm"
+        ],
+        "generator": "./generate_foh_frontofhouse_html"
+      },
+      {
+        "title": "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH- PM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_foh_pm",
+          "foodcontactsurfacecleaningandsanitizinglogsheetfohpm"
+        ],
+        "generator": "./generate_foh_frontofhouse_html"
+      }
+    ]
+  },
+  {
+    "file": "FOH_DailyCleaningForm_AM.js",
+    "titles": [
+      "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM",
+      "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM"
+    ],
+    "mappings": [
+      {
+        "title": "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_foh_am",
+          "foodcontactsurfacecleaningandsanitizinglogsheetfoham"
+        ],
+        "generator": "./generate_foh_frontofhouse_html"
+      },
+      {
+        "title": "FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_foh_am",
+          "foodcontactsurfacecleaningandsanitizinglogsheetfoham"
+        ],
+        "generator": "./generate_foh_frontofhouse_html"
+      }
+    ]
+  },
+  {
+    "file": "FOH_FrontOfHouseCleaningChecklist.js",
+    "titles": [
+      "Front of House Cleaning Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Front of House Cleaning Checklist",
+        "keys": [
+          "front_of_house_cleaning_checklist",
+          "frontofhousecleaningchecklist"
+        ],
+        "generator": "./generate_foh_frontofhouse_html"
+      }
+    ]
+  },
+  {
+    "file": "FoodHandlersDailyShoweringForm.js",
+    "titles": [
+      "Food Handlers Daily Showering Log"
+    ],
+    "mappings": [
+      {
+        "title": "Food Handlers Daily Showering Log",
+        "keys": [
+          "food_handlers_daily_showering_log",
+          "foodhandlersdailyshoweringlog"
+        ],
+        "generator": "./generate_foodhandlers_log_html"
+      }
+    ]
+  },
+  {
+    "file": "FoodHandlersHandwashingForm.js",
+    "titles": [
+      "Food Handlers Daily Handwashing Tracking Log Sheet",
+      "Food Handlers Daily Handwashing Tracking Log Sheet"
+    ],
+    "mappings": [
+      {
+        "title": "Food Handlers Daily Handwashing Tracking Log Sheet",
+        "keys": [
+          "food_handlers_daily_handwashing_tracking_log_sheet",
+          "foodhandlersdailyhandwashingtrackinglogsheet"
+        ],
+        "generator": "./generate_foodhandlers_log_html"
+      },
+      {
+        "title": "Food Handlers Daily Handwashing Tracking Log Sheet",
+        "keys": [
+          "food_handlers_daily_handwashing_tracking_log_sheet",
+          "foodhandlersdailyhandwashingtrackinglogsheet"
+        ],
+        "generator": "./generate_foodhandlers_log_html"
+      }
+    ]
+  },
+  {
+    "file": "FoodHandlersHandwashingForm_AM.js",
+    "titles": [
+      "Food Handlers Daily Handwashing Tracking Log Sheet — AM",
+      "Food Handlers Daily Handwashing Tracking Log Sheet — AM"
+    ],
+    "mappings": [
+      {
+        "title": "Food Handlers Daily Handwashing Tracking Log Sheet — AM",
+        "keys": [
+          "food_handlers_daily_handwashing_tracking_log_sheet_am",
+          "foodhandlersdailyhandwashingtrackinglogsheetam"
+        ],
+        "generator": "./generate_foodhandlers_log_html"
+      },
+      {
+        "title": "Food Handlers Daily Handwashing Tracking Log Sheet — AM",
+        "keys": [
+          "food_handlers_daily_handwashing_tracking_log_sheet_am",
+          "foodhandlersdailyhandwashingtrackinglogsheetam"
+        ],
+        "generator": "./generate_foodhandlers_log_html"
+      }
+    ]
+  },
+  {
+    "file": "FoodHandlersHandwashingForm_PM.js",
+    "titles": [
+      "Food Handlers Daily Handwashing Tracking Log Sheet — PM",
+      "Food Handlers Daily Handwashing Tracking Log Sheet — PM"
+    ],
+    "mappings": [
+      {
+        "title": "Food Handlers Daily Handwashing Tracking Log Sheet — PM",
+        "keys": [
+          "food_handlers_daily_handwashing_tracking_log_sheet_pm",
+          "foodhandlersdailyhandwashingtrackinglogsheetpm"
+        ],
+        "generator": "./generate_foodhandlers_log_html"
+      },
+      {
+        "title": "Food Handlers Daily Handwashing Tracking Log Sheet — PM",
+        "keys": [
+          "food_handlers_daily_handwashing_tracking_log_sheet_pm",
+          "foodhandlersdailyhandwashingtrackinglogsheetpm"
+        ],
+        "generator": "./generate_foodhandlers_log_html"
+      }
+    ]
+  },
+  {
+    "file": "FoodSamplesCollectionLog.js",
+    "titles": [
+      "Food Samples Collection Log"
+    ],
+    "mappings": [
+      {
+        "title": "Food Samples Collection Log",
+        "keys": [
+          "food_samples_collection_log",
+          "foodsamplescollectionlog"
+        ],
+        "generator": "./generate_foodsamplescollection_html"
+      }
+    ]
+  },
+  {
+    "file": "FruitWashingLog.js",
+    "titles": [
+      "FRUIT ,VEGETABLE & EGG WASHING + SANITIZING LOG"
+    ],
+    "mappings": [
+      {
+        "title": "FRUIT ,VEGETABLE & EGG WASHING + SANITIZING LOG",
+        "keys": [
+          "fruit_vegetable_egg_washing_sanitizing_log",
+          "fruitvegetableeggwashingsanitizinglog"
+        ],
+        "generator": "./generate_fruit_washing_log_html"
+      }
+    ]
+  },
+  {
+    "file": "HotHoldingTemperatureLog.js",
+    "titles": [
+      "Hot Holding Temperature Log"
+    ],
+    "mappings": [
+      {
+        "title": "Hot Holding Temperature Log",
+        "keys": [
+          "hot_holding_temperature_log",
+          "hotholdingtemperaturelog"
+        ],
+        "generator": "./generate_hotholdingtemperature_html"
+      }
+    ]
+  },
+  {
+    "file": "Kitchen_DailyCleaningForm.js",
+    "titles": [
+      "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — AM"
+    ],
+    "mappings": [
+      {
+        "title": "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — AM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_kitchen_am",
+          "foodcontactsurfacecleaningandsanitizinglogsheetkitchenam"
+        ],
+        "generator": "./generate_kitchen_daily_cleaning_html"
+      }
+    ]
+  },
+  {
+    "file": "Kitchen_DailyCleaningForm_PM.js",
+    "titles": [
+      "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — PM"
+    ],
+    "mappings": [
+      {
+        "title": "Food Contact Surface Cleaning and Sanitizing Log Sheet (Kitchen) — PM",
+        "keys": [
+          "food_contact_surface_cleaning_and_sanitizing_log_sheet_kitchen_pm",
+          "foodcontactsurfacecleaningandsanitizinglogsheetkitchenpm"
+        ],
+        "generator": "./generate_kitchen_daily_cleaning_html"
+      }
+    ]
+  },
+  {
+    "file": "Kitchen_WeeklyCleaningChecklist.js",
+    "titles": [
+      "Kitchen Weekly Cleaning Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Kitchen Weekly Cleaning Checklist",
+        "keys": [
+          "kitchen_weekly_cleaning_checklist",
+          "kitchenweeklycleaningchecklist"
+        ],
+        "generator": "./generate_kitchenweeklycleaningchecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "MixingControlSheet.js",
+    "titles": [
+      "Mixing Control Sheet"
+    ],
+    "mappings": [
+      {
+        "title": "Mixing Control Sheet",
+        "keys": [
+          "mixing_control_sheet",
+          "mixingcontrolsheet"
+        ],
+        "generator": "./generate_mixingcontrolsheet_html"
+      }
+    ]
+  },
+  {
+    "file": "MouldingProofingBakingLog.js",
+    "titles": [
+      "MOULDING PROOFING AND BAKING LOG SHEET"
+    ],
+    "mappings": [
+      {
+        "title": "MOULDING PROOFING AND BAKING LOG SHEET",
+        "keys": [
+          "moulding_proofing_and_baking_log_sheet",
+          "mouldingproofingandbakinglogsheet"
+        ],
+        "generator": "./generate_mouldingproofingbakinglog_html"
+      }
+    ]
+  },
+  {
+    "file": "NewProductionForm.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "PackagingMaterialsReceivingForm.js",
+    "titles": [
+      "Packaging Materials Receiving Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Packaging Materials Receiving Checklist",
+        "keys": [
+          "packaging_materials_receiving_checklist",
+          "packagingmaterialsreceivingchecklist"
+        ],
+        "generator": "./generate_packagingmaterialsreceiving_html"
+      }
+    ]
+  },
+  {
+    "file": "PastInspectionForm.js",
+    "titles": [
+      "Food Safety Management System",
+      "Pest Inspection Form"
+    ],
+    "mappings": [
+      {
+        "title": "Food Safety Management System",
+        "keys": [
+          "food_safety_management_system",
+          "foodsafetymanagementsystem"
+        ],
+        "generator": null
+      },
+      {
+        "title": "Pest Inspection Form",
+        "keys": [
+          "pest_inspection_form",
+          "pestinspectionform"
+        ],
+        "generator": "./generate_pastinspectionform_html"
+      }
+    ]
+  },
+  {
+    "file": "PersonalHygieneChecklist.js",
+    "titles": [
+      "Personal Hygiene Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Personal Hygiene Checklist",
+        "keys": [
+          "personal_hygiene_checklist",
+          "personalhygienechecklist"
+        ],
+        "generator": "./generate_personalhygienechecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "PPEIssuanceForm.js",
+    "titles": [
+      "Personal  Protective Equipment Log"
+    ],
+    "mappings": [
+      {
+        "title": "Personal  Protective Equipment Log",
+        "keys": [
+          "personal_protective_equipment_log",
+          "personalprotectiveequipmentlog"
+        ],
+        "generator": "./generate_ppe_log_html"
+      }
+    ]
+  },
+  {
+    "file": "PreShiftMeetingAttendanceRegister.js",
+    "titles": [
+      "PRE-SHIFT MEETING ATTENDANCE REGISTER"
+    ],
+    "mappings": [
+      {
+        "title": "PRE-SHIFT MEETING ATTENDANCE REGISTER",
+        "keys": [
+          "pre_shift_meeting_attendance_register",
+          "preshiftmeetingattendanceregister"
+        ],
+        "generator": "./generate_preshiftmeetingattendance_html"
+      }
+    ]
+  },
+  {
+    "file": "Process_Quality_OutOfControlReport.js",
+    "titles": [
+      "Food Safety Management System",
+      "Process & Quality Out of Control Report"
+    ],
+    "mappings": [
+      {
+        "title": "Food Safety Management System",
+        "keys": [
+          "food_safety_management_system",
+          "foodsafetymanagementsystem"
+        ],
+        "generator": null
+      },
+      {
+        "title": "Process & Quality Out of Control Report",
+        "keys": [
+          "process_quality_out_of_control_report",
+          "processqualityoutofcontrolreport"
+        ],
+        "generator": "./generate_processqualityoutofcontrol_html"
+      }
+    ]
+  },
+  {
+    "file": "ProductRejectionForm.js",
+    "titles": [
+      "PRODUCT REJECTION FORM",
+      "PRODUCT REJECTION FORM"
+    ],
+    "mappings": [
+      {
+        "title": "PRODUCT REJECTION FORM",
+        "keys": [
+          "product_rejection_form",
+          "productrejectionform"
+        ],
+        "generator": "./generate_productrejection_html"
+      },
+      {
+        "title": "PRODUCT REJECTION FORM",
+        "keys": [
+          "product_rejection_form",
+          "productrejectionform"
+        ],
+        "generator": "./generate_productrejection_html"
+      }
+    ]
+  },
+  {
+    "file": "ProductReleaseForm.js",
+    "titles": [
+      "Product Release Form"
+    ],
+    "mappings": [
+      {
+        "title": "Product Release Form",
+        "keys": [
+          "product_release_form",
+          "productreleaseform"
+        ],
+        "generator": "./generate_productrelease_html"
+      }
+    ]
+  },
+  {
+    "file": "ProductsNetContentChecklist.js",
+    "titles": [
+      "Products Net Content Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Products Net Content Checklist",
+        "keys": [
+          "products_net_content_checklist",
+          "productsnetcontentchecklist"
+        ],
+        "generator": "./generate_productsnetcontentchecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "SculleryArea_CleaningChecklist.js",
+    "titles": [
+      "SCULLERY AREA CLEANING CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "SCULLERY AREA CLEANING CHECKLIST",
+        "keys": [
+          "scullery_area_cleaning_checklist",
+          "sculleryareacleaningchecklist"
+        ],
+        "generator": "./generate_sculleryarea_cleaningchecklist_html"
+      }
+    ]
+  },
+  {
+    "file": "ThawingTemperatureLog.js",
+    "titles": [
+      "Thawing Temperature Log"
+    ],
+    "mappings": [
+      {
+        "title": "Thawing Temperature Log",
+        "keys": [
+          "thawing_temperature_log",
+          "thawingtemperaturelog"
+        ],
+        "generator": "./generate_thawingtemperature_html"
+      }
+    ]
+  },
+  {
+    "file": "ToolboxTalkRegister.js",
+    "titles": [
+      "Toolbox Talk Register"
+    ],
+    "mappings": [
+      {
+        "title": "Toolbox Talk Register",
+        "keys": [
+          "toolbox_talk_register",
+          "toolboxtalkregister"
+        ],
+        "generator": "./generate_toolboxtalkregister_html"
+      }
+    ]
+  },
+  {
+    "file": "TrainingAttendanceRegister.js",
+    "titles": [
+      "Training Attendance Register"
+    ],
+    "mappings": [
+      {
+        "title": "Training Attendance Register",
+        "keys": [
+          "training_attendance_register",
+          "trainingattendanceregister"
+        ],
+        "generator": "./generate_trainingattendanceregister_html"
+      }
+    ]
+  },
+  {
+    "file": "UnderbarChillerTemperatureLog.js",
+    "titles": [
+      "Kitchen - Underbar Chiller Temperature Log 1"
+    ],
+    "mappings": [
+      {
+        "title": "Kitchen - Underbar Chiller Temperature Log 1",
+        "keys": [
+          "kitchen_underbar_chiller_temperature_log_1",
+          "kitchenunderbarchillertemperaturelog1"
+        ],
+        "generator": "./generate_underbarchiller_temperature_html"
+      }
+    ]
+  },
+  {
+    "file": "UnderbarChillerTemperatureLog_2.js",
+    "titles": [
+      "Kitchen - Underbar Chiller Temperature Log 2"
+    ],
+    "mappings": [
+      {
+        "title": "Kitchen - Underbar Chiller Temperature Log 2",
+        "keys": [
+          "kitchen_underbar_chiller_temperature_log_2",
+          "kitchenunderbarchillertemperaturelog2"
+        ],
+        "generator": "./generate_underbarchiller_temperature_html"
+      }
+    ]
+  },
+  {
+    "file": "VegetablesFruitsReceivingForm.js",
+    "titles": [
+      "Vegetables and Fruits Receiving Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Vegetables and Fruits Receiving Checklist",
+        "keys": [
+          "vegetables_and_fruits_receiving_checklist",
+          "vegetablesandfruitsreceivingchecklist"
+        ],
+        "generator": "./generate_vegetablesfruitsreceiving_html"
+      }
+    ]
+  },
+  {
+    "file": "VisitorsLogBook.js",
+    "titles": [
+      "Visitors Log Book"
+    ],
+    "mappings": [
+      {
+        "title": "Visitors Log Book",
+        "keys": [
+          "visitors_log_book",
+          "visitorslogbook"
+        ],
+        "generator": "./generate_visitorslogbook_html"
+      }
+    ]
+  },
+  {
+    "file": "WalkInChillerLog.js",
+    "titles": [
+      "WALK-IN CHILLER TEMPERATURE CHECKLIST"
+    ],
+    "mappings": [
+      {
+        "title": "WALK-IN CHILLER TEMPERATURE CHECKLIST",
+        "keys": [
+          "walk_in_chiller_temperature_checklist",
+          "walkinchillertemperaturechecklist"
+        ],
+        "generator": "./generate_walkinchillerlog_html"
+      }
+    ]
+  },
+  {
+    "file": "WalkInFreezerLog.js",
+    "titles": [
+      "WALK-IN FREEZER TEMPERATURE LOG SHEET"
+    ],
+    "mappings": [
+      {
+        "title": "WALK-IN FREEZER TEMPERATURE LOG SHEET",
+        "keys": [
+          "walk_in_freezer_temperature_log_sheet",
+          "walkinfreezertemperaturelogsheet"
+        ],
+        "generator": "./generate_walkinfreezerlog_html"
+      }
+    ]
+  },
+  {
+    "file": "WelfareFacilities_CleaningChecklist.js",
+    "titles": [
+      "Welfare Facilities Cleaning Checklist"
+    ],
+    "mappings": [
+      {
+        "title": "Welfare Facilities Cleaning Checklist",
+        "keys": [
+          "welfare_facilities_cleaning_checklist",
+          "welfarefacilitiescleaningchecklist"
+        ],
+        "generator": "./generate_welfarefacilities_html"
+      }
+    ]
+  },
+  {
+    "file": "components/BakeryCleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BakerySanitizingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/Bakery_UnderbarShelfLifeInspectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BakingControlSheetPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BeverageReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BinLinersChangingLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BOH_ShelfLifeInspectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/BravoHealthStatusCheckPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CertificateOfAnalysisPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ChemicalsReceivingPresentational.js",
+    "titles": [
+      "Chemicals Receiving"
+    ],
+    "mappings": [
+      {
+        "title": "Chemicals Receiving",
+        "keys": [
+          "chemicals_receiving",
+          "chemicalsreceiving"
+        ],
+        "generator": null
+      }
+    ]
+  },
+  {
+    "file": "components/ChilledFrozenReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CleaningEquipment_CleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ColdRoom_FreezerRoomCleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CookingTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CoolingTemperaturePresentational.js",
+    "titles": [
+      "Temperature Record for Cooling (Cooling Temperature Log)"
+    ],
+    "mappings": [
+      {
+        "title": "Temperature Record for Cooling (Cooling Temperature Log)",
+        "keys": [
+          "temperature_record_for_cooling_cooling_temperature_log",
+          "temperaturerecordforcoolingcoolingtemperaturelog"
+        ],
+        "generator": "./generate_coolingtemperature_html"
+      }
+    ]
+  },
+  {
+    "file": "components/CoolingTemperatureSavedPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CustomerSatisfactionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/CustomerSatisfactionQuestionnairePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DeepFreezerTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DisplayChillerShelfLifeInspectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DisplayChillerTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DryGoodsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/DryStorageArea_CleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/EggsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FOH_DailyCleaningPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FOH_FrontOfHouseCleaningPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FoodHandlersDailyShoweringPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FoodHandlersPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FoodSamplesCollectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/FruitWashingLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/HotHoldingTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/KitchenDailyCleaningPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/KitchenWeeklyCleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/MixingControlSheetPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/MouldingProofingBakingLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PackagingMaterialsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PastInspectionFormPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PersonalHygieneChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PPEIssuancePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/PreShiftMeetingAttendancePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProcessQualityOutOfControlPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProductRejectionPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProductReleasePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ProductsNetContentChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/SculleryArea_CleaningChecklistPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ThawingTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/ToolboxTalkRegisterPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/TrainingAttendanceRegisterPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/UnderbarChillerTemperaturePresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/VegetablesFruitsReceivingPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/VisitorsLogBookPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/WalkInChillerLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/WalkInFreezerLogPresentational.js",
+    "titles": [],
+    "mappings": []
+  },
+  {
+    "file": "components/WelfareFacilitiesPresentational.js",
+    "titles": [],
+    "mappings": []
+  }
+]

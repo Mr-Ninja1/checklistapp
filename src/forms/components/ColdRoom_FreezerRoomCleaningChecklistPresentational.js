@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'cold_room_freezer_room_cleaning_checklist';
 function normalizeSignature(v) {
   if (!v) return null;
   const s = String(v).trim();

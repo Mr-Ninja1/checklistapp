@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'bakery_underbar_shelf_life_inspection';
 export default function Bakery_UnderbarShelfLifeInspectionPresentational({ payload = {}, exportingWide = false }) {
   const data = payload.formData || [];
   const metadata = payload.metadata || payload.meta || {};

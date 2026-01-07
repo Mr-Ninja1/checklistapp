@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'chilled_frozen_receiving';
 export default function ChilledFrozenReceivingPresentational({ payload }) {
   const meta = payload?.metadata || {};
   const data = payload?.formData || [];

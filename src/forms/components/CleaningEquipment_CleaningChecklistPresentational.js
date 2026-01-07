@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'cleaning_equipment_cleaning_checklist';
 function normalizeSignature(v) {
   if (!v && v !== '') return null;
   // support object-shaped signatures saved as { uri } or { data }

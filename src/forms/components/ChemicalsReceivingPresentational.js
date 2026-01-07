@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'chemicals_receiving';
 const ChemicalsReceivingPresentational = ({ payload }) => {
     const { metadata = {}, formData = [] } = payload || {};
 

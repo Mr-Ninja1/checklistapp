@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'fruit_washing_log';
 export default function FruitWashingLogPresentational({ payload }) {
   if (!payload) return null;
   const p = payload.payload || payload;

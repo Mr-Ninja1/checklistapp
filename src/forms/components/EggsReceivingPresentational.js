@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'eggs_receiving';
 export default function EggsReceivingPresentational({ payload }) {
   if (!payload) return null;
   const p = payload.payload || payload;

@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'pre_shift_meeting_attendance';
 export default function PreShiftMeetingAttendancePresentational({ payload }) {
   if (!payload) return null;
   const { metadata = {}, agenda = '', presenter = '', dateVal = '', issues = [], table = {}, layoutHints = {}, assets = {} } = payload;

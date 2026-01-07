@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'hot_holding_temperature';
 export default function HotHoldingTemperaturePresentational({ payload }) {
   const rows = payload?.formData || [];
   const widths = payload?.layoutHints?.WIDTHS || {};

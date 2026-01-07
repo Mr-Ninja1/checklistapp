@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'packaging_materials_receiving';
 const resolveSignatureUri = (v) => {
   if (!v) return null;
   const s = String(v).trim();

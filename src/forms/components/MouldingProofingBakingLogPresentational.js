@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, useWindowDimensions } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'moulding_proofing_baking_log';
 const A4_WIDTH = 794;
 
 export default function MouldingProofingBakingLogPresentational({ payload = {}, exportingWide = false }) {

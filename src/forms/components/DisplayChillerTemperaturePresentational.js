@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'display_chiller_temperature';
 export default function DisplayChillerTemperaturePresentational({ payload }) {
   if (!payload) return null;
   const p = payload.payload || payload;

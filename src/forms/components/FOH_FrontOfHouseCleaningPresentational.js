@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, ScrollView, Image, StyleSheet } from 'react-native';
 
+
+export const EXPORT_KEY = 'foh_front_of_house_cleaning';
 const DEFAULT_DAYS = ['Sun','Mon','Tue','Wed','Thurs','Fri','Sat'];
 
 const EXPORT_WIDTH = 900;

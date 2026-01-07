@@ -1,6 +1,8 @@
 import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
 
+
+export const EXPORT_KEY = 'customer_satisfaction';
 export default function CustomerSatisfactionPresentational({ payload }) {
   if (!payload) return null;
   const data = payload.formData || {};

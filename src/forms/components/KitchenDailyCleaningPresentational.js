@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'kitchen_daily_cleaning';
 export default function KitchenDailyCleaningPresentational({ payload }) {
   if (!payload) return null;
   const p = payload.payload || payload;

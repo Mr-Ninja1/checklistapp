@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'ppeissuance';
 // normalizeSignature: accepts data: URIs or legacy base64 blobs and returns a data: URI or null
 const normalizeSignature = (v) => {
   if (!v) return null;

@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'food_handlers';
 const normalizeSignature = (v) => {
   if (!v) return null;
   // If already an object with uri, use it

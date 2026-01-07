@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'mixing_control_sheet';
 // Dummy presentational used for debugging: ignores payload and renders static content
 // A4 width in pixels at 96dpi: ~794
 const A4_WIDTH = 794;

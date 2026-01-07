@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'baking_control_sheet';
 // A4 width in pixels at 72dpi: 595, at 96dpi: 794, at 300dpi: 2480. For RN, use ~794 for web, ~595 for PDF, but can be tuned.
 const A4_WIDTH = 794;
 

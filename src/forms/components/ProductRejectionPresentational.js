@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import ResponsiveTable from '../../components/ResponsiveTable';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'product_rejection';
 export default function ProductRejectionPresentational({ payload }) {
   if (!payload) return null;
   const {

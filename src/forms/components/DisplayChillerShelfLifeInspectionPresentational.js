@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'display_chiller_shelf_life_inspection';
 const A4_WIDTH = 794;
 export default function DisplayChillerShelfLifeInspectionPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;

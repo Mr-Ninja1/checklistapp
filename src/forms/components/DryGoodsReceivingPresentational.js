@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'dry_goods_receiving';
 export default function DryGoodsReceivingPresentational({ payload }) {
   const meta = payload?.metadata || {};
   const data = payload?.formData || [];

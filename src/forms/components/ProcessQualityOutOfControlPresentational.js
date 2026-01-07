@@ -2,6 +2,8 @@ import React from 'react';
 import { ScrollView, View, Text, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'process_quality_out_of_control';
 const normalizeSignature = (v) => {
   if (!v) return null;
   if (typeof v !== 'string') return null;

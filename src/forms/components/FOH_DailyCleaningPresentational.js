@@ -2,6 +2,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 
+
+export const EXPORT_KEY = 'foh_daily_cleaning';
 const EXPORT_WIDTH = 1000;
 export default function FOH_DailyCleaningPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;

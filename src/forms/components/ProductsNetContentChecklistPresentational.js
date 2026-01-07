@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'products_net_content_checklist';
 const normalizeSignature = (v) => {
   if (!v) return null;
   if (typeof v !== 'string') return null;

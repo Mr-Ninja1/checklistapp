@@ -9,6 +9,8 @@ import SignatureField from '../../components/SignatureField';
 import SignatureThumb from '../../components/SignatureThumb';
 
 
+
+export const EXPORT_KEY = 'cooling_temperature';
 const DRAFT_KEY = 'cooling_temperature_log_draft';
 const MAX_ROWS = 20; // Set to 20 rows per request
 

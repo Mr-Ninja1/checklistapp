@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'scullery_area_cleaning_checklist';
 const normalizeSignature = (v) => {
   if (!v) return null;
   // already a data uri

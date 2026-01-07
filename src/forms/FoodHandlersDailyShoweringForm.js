@@ -267,7 +267,18 @@ export default function FoodHandlersDailyShoweringForm() {
                 descriptionText="Please Sign Below"
                 clearText="Clear"
                 confirmText="Save Signature"
-                webStyle={`.m-signature-pad--footer { display: none; }`}
+                webStyle={`
+                  .m-signature-pad--footer { display: none; }
+                  .m-signature-pad--body { height: 100%; }
+                  .m-signature-pad--body canvas { width: 100% !important; height: 100% !important; }
+                `}
+                // increase pen thickness and make strokes more consistent/darker
+                penColor="#000000"
+                minWidth={4}
+                maxWidth={10}
+                dotSize={3}
+                velocityFilterWeight={0.7}
+                backgroundColor="rgba(255,255,255,1)"
               />
               <View style={styles.modalActions}>
                 <TouchableOpacity onPress={() => setSigModalVisible(false)} style={[styles.signBtn, { backgroundColor: '#6b7280' }]}><Text style={styles.btnText}>Cancel</Text></TouchableOpacity>

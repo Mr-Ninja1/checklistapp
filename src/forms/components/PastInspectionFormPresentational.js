@@ -2,6 +2,8 @@ import React, { useRef, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, Animated, Easing } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'past_inspection_form';
 export default function PastInspectionFormPresentational({ payload }) {
   if (!payload) return null;
   const p = payload.payload || payload;

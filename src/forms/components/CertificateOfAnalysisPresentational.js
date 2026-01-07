@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'certificate_of_analysis';
 export default function CertificateOfAnalysisPresentational({ payload }) {
   if (!payload) return null;
   const p = payload.payload || payload;

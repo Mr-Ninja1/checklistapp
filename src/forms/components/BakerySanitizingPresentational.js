@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, Image, ScrollView, StyleSheet } from 'react-native';
 
+
+export const EXPORT_KEY = 'bakery_sanitizing';
 // Pixel-faithful presentational renderer for Bakery Sanitizing Log
 // Accepts: { payload }
 export default function BakerySanitizingPresentational({ payload = {}, embedded = false }) {

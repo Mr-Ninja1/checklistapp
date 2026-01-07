@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, Image, StyleSheet } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'vegetables_fruits_receiving';
 const A4_WIDTH = 794;
 export default function VegetablesFruitsReceivingPresentational({ payload, exportingWide = false }) {
   if (!payload) return null;

@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Image } from 'react-native';
 import SignatureThumb from '../../components/SignatureThumb';
 
+
+export const EXPORT_KEY = 'cooking_temperature';
 const A4_WIDTH = 794;
 export default function CookingTemperaturePresentational({ payload, exportingWide = false }) {
   if (!payload) return null;
