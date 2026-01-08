@@ -59,27 +59,36 @@ module.exports = function generate(payloadWrapper) {
   };
   const dateLine = formatDate(metadata.date || metadata.issueDate || p.date || metadata.createdAt || metadata.timestamp || '');
 
-  // Flatten questions so we always render the full question text (no section titles)
-  const questionsToRender = (() => {
-    const pickQ = (q) => ({ question: q.question || q.text || q.label || q.name || q.prompt || '', answer: (q.answer !== undefined && q.answer !== null) ? q.answer : (q.value || q.rating || '') });
-    if (Array.isArray(data.sections) && data.sections.length) return data.sections.flatMap(s => Array.isArray(s.questions) ? s.questions.map(pickQ) : []);
-    if (Array.isArray(data.groups) && data.groups.length) return data.groups.flatMap(g => Array.isArray(g.questions || g.items) ? (g.questions || g.items).map(pickQ) : []);
-    if (Array.isArray(data.questions) && data.questions.length) return data.questions.map(pickQ);
-    // fallback — canonical full list of questions (preserve original wording, answers may be empty)
+  const sectionsToRender = (() => {
+    if (Array.isArray(data.sections) && data.sections.length) return data.sections;
+    if (Array.isArray(data.groups) && data.groups.length) return data.groups.map(g=>({ title: g.title || g.name || '', questions: g.questions || g.items || [] }));
+    if (Array.isArray(data.questions) && data.questions.length) return [{ title: '', questions: data.questions }];
+    // Fallback to canonical questionnaire sections/questions from the original form
     return [
-      { question: 'Was our service delivered quickly and accurately?', answer: '' },
-      { question: 'Was your meal correct as per your order?', answer: '' },
-      { question: 'Was the food of good quality?', answer: '' },
-      { question: 'Was our service personnel polite, friendly and helpful?', answer: '' },
-      { question: 'Were the tables chairs and floors clean?', answer: '' },
-      { question: 'Was the shop clean at the time of your visit?', answer: '' },
-      { question: 'Did the service by our personnel make you feel you were given individual attention?', answer: '' },
-      { question: 'How fast was the service? At the till?', answer: '' }
+      { title: 'RELIABILITY', questions: [
+        { question: 'Was our service delivered quickly and accurately?' },
+        { question: 'Was your meal correct as per your order?' },
+        { question: 'Was the food of good quality?' }
+      ]},
+      { title: 'ASSURANCE', questions: [
+        { question: 'Was our service personnel polite, friendly and helpful?' }
+      ]},
+      { title: 'TANGIBLES', questions: [
+        { question: 'Were the tables chairs and floors clean?' },
+        { question: 'Was the shop clean at the time of your visit?' }
+      ]},
+      { title: 'EMPATHY', questions: [
+        { question: 'Did the service by our personnel make you feel you were given individual attention?' }
+      ]},
+      { title: 'RESPONSIVENESS', questions: [
+        { question: 'How fast was the service? At the till?' }
+      ]}
     ];
   })();
 
-  const renderQuestions = () => {
-    const headerBlock = `
+  const renderSections = () => {
+    if (!sectionsToRender) {
+      return `
       <div class="section">
         <div class="label">Customer</div>
         <div>${escapeHtml(customerName)}</div>
@@ -114,14 +123,17 @@ module.exports = function generate(payloadWrapper) {
         <div class="label">Staff</div>
         <div>Waiter: ${escapeHtml(waiterName)} &nbsp; Cashier: ${escapeHtml(cashierName)} &nbsp; Chef: ${escapeHtml(chefName)}</div>
       </div>`;
-
-    const rows = (Array.isArray(questionsToRender) ? questionsToRender : []).map(q => {
-      const questionText = q.question || '';
-      const answer = (q.answer !== undefined && q.answer !== null) ? q.answer : '';
-      return `<div class="question-row"><div class="q">${escapeHtml(questionText)}</div><div class="a">${escapeHtml(answer)}</div></div>`;
+    }
+    return sectionsToRender.map(s=>{
+      const title = s.title || '';
+      const qs = Array.isArray(s.questions) ? s.questions : [];
+      const rows = qs.map(q=>{
+        const questionText = q.question || q.label || q.name || q.prompt || '';
+        const answer = (q.answer !== undefined && q.answer !== null) ? q.answer : (q.value || q.rating || '');
+        return `<div class="question-row"><div class="q">${escapeHtml(questionText)}</div><div class="a">${escapeHtml(answer)}</div></div>`;
+      }).join('\n');
+      return `<div class="section" style="margin-top:8px"><div class="section-title">${escapeHtml(title)}</div>${rows}</div>`;
     }).join('\n');
-
-    return headerBlock + '\n' + `<div class="section" style="margin-top:8px">${rows}</div>`;
   };
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
