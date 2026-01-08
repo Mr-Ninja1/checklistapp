@@ -1,9 +1,10 @@
 import warnOnce from '../utils/warnOnce';
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../utils/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder, KeyboardAvoidingView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import appConfig from '../app.json';
 import { httpProbe, processQueue } from '../utils/uploadQueue';
 import * as drive from '../utils/drive';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -138,6 +139,7 @@ const getPriorityColor = (priority) => {
 
 export default function HomeScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const { theme, setThemeMode } = useTheme();
   const [activeCategory, setActiveCategory] = useState('foh');
   const [searchTerm, setSearchTerm] = useState('');
@@ -234,57 +236,32 @@ export default function HomeScreen() {
   const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Updates modal state (one-time modal with snooze)
+  // Updates modal state — show once per app version (persist seen version)
   const [showUpdatesModal, setShowUpdatesModal] = useState(false);
-  const updatesSnoozeTimer = React.useRef(null);
-  const SNOOZE_MS = 2 * 60 * 1000; // 2 minutes
+  const currentAppVersion = (appConfig && appConfig.expo && appConfig.expo.version) ? appConfig.expo.version : (appConfig.version || '1.0.0');
 
   React.useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const seen = await AsyncStorage.getItem('@updates_modal_seen');
-        const snooze = await AsyncStorage.getItem('@updates_modal_snooze_until');
-        const now = Date.now();
-        if (seen === 'true') {
-          if (mounted) setShowUpdatesModal(false);
-          return;
-        }
-        if (snooze) {
-          const until = parseInt(snooze, 10) || 0;
-          if (now >= until) {
-            if (mounted) setShowUpdatesModal(true);
+        const seenVersion = await AsyncStorage.getItem('@updates_modal_seen_version');
+        if (mounted) {
+          if (!seenVersion || seenVersion !== currentAppVersion) {
+            setShowUpdatesModal(true);
           } else {
-            // schedule show when snooze expires
-            const wait = Math.max(0, until - now);
-            if (mounted) setShowUpdatesModal(false);
-            if (updatesSnoozeTimer.current) clearTimeout(updatesSnoozeTimer.current);
-            updatesSnoozeTimer.current = setTimeout(() => { if (mounted) setShowUpdatesModal(true); }, wait);
+            setShowUpdatesModal(false);
           }
-        } else {
-          // never seen and not snoozed -> show now
-          if (mounted) setShowUpdatesModal(true);
         }
       } catch (e) {
         if (mounted) setShowUpdatesModal(true);
       }
     })();
-    return () => { mounted = false; if (updatesSnoozeTimer.current) clearTimeout(updatesSnoozeTimer.current); };
-  }, []);
+    return () => { mounted = false; };
+  }, [currentAppVersion]);
 
   const handleUpdatesSeen = async () => {
     try {
-      await AsyncStorage.setItem('@updates_modal_seen', 'true');
-    } catch (e) {}
-    setShowUpdatesModal(false);
-  };
-
-  const handleUpdatesSnooze = async () => {
-    try {
-      const until = Date.now() + SNOOZE_MS;
-      await AsyncStorage.setItem('@updates_modal_snooze_until', String(until));
-      if (updatesSnoozeTimer.current) clearTimeout(updatesSnoozeTimer.current);
-      updatesSnoozeTimer.current = setTimeout(() => { setShowUpdatesModal(true); }, SNOOZE_MS);
+      await AsyncStorage.setItem('@updates_modal_seen_version', String(currentAppVersion));
     } catch (e) {}
     setShowUpdatesModal(false);
   };
@@ -563,18 +540,16 @@ export default function HomeScreen() {
               </View>
             </View>
             <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>• Your can no share forms from tablet no dektop(pc) App needed!.</Text>
+              <Text style={styles.updateItem}>• Your can now share forms from tablet no dektop(pc) App needed!.</Text>
               <Text style={styles.updateItem}>• Improved speed and reliability.</Text>
               <Text style={styles.updateItem}>• Improved app speed and perfomance</Text>
+               <Text style={styles.updateItem}>• There is no need of using the Desktop(computer) app , the tablet app  can do all the work!</Text>
              
             </View>
             <Text style={{ marginTop: 8, marginBottom: 12 }}>TRY USING THE NEW FORM SHARING FEATURE AND COMFIRM ITS WORKING </Text>
-            <View style={styles.updatesButtonRow}>
-              <TouchableOpacity style={styles.updatesButtonPrimary} onPress={handleUpdatesSeen}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Okay </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.updatesButtonSecondary} onPress={handleUpdatesSnooze}>
-                <Text style={{ color: '#185a9d', fontWeight: '700' }}>ignore</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+              <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Okay, got it</Text>
               </TouchableOpacity>
             </View>
           </View>

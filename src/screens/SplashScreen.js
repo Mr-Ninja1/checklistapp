@@ -31,7 +31,7 @@ export default function SplashScreen({ navigation }) {
     // no seasonal confetti on splash
 
     // navigate to Home after a short delay so the splash is visible
-    const navTimer = setTimeout(() => { if (mounted) navigation.replace('Home'); }, 2200);
+    const navTimer = setTimeout(() => { if (mounted) navigation.replace('Home', { showWhatsNew: true }); }, 2200);
     return () => { mounted = false; clearTimeout(navTimer); };
   }, []);
 

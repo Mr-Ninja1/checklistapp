@@ -28,11 +28,22 @@ module.exports = function generate(payloadWrapper) {
   const logo = getLogoDataUri(p) || metadata.logo || null;
 
   const subject = data.subject || metadata.subject || 'Customer Satisfaction Questionnaire';
+  const companyName = data.companyName || metadata.companyName || 'Bravo';
+  const companySubtitle = data.companySubtitle || metadata.companySubtitle || '';
+  const issueDate = data.issueDate || metadata.issueDate || data.formDate || metadata.formDate || '';
+  const formDate = data.formDate || '';
+  const formTime = data.formTime || '';
+  const compiledBy = data.compiledBy || '';
   const customerName = data.customerName || '';
   const contactInfo = data.contactInfo || '';
-  const notes = data.notes || '';
+  const mealWithin15 = data.mealWithin15 || '';
+  const mealDelay = data.mealDelay || '';
+  const mealOrdered = data.mealOrdered || '';
+  const otherComment = data.otherComment || data.notes || '';
+  const waiterName = data.waiterName || '';
+  const cashierName = data.cashierName || '';
+  const chefName = data.chefName || '';
 
-  const companyName = metadata.companyName || 'Bravo';
   const formatDate = (iso) => {
     if (!iso) return '';
     try {
@@ -48,16 +59,27 @@ module.exports = function generate(payloadWrapper) {
   };
   const dateLine = formatDate(metadata.date || metadata.issueDate || p.date || metadata.createdAt || metadata.timestamp || '');
 
-  const sectionsToRender = (() => {
-    if (Array.isArray(data.sections) && data.sections.length) return data.sections;
-    if (Array.isArray(data.groups) && data.groups.length) return data.groups.map(g=>({ title: g.title || g.name || '', questions: g.questions || g.items || [] }));
-    if (Array.isArray(data.questions) && data.questions.length) return [{ title: '', questions: data.questions }];
-    return null;
+  // Flatten questions so we always render the full question text (no section titles)
+  const questionsToRender = (() => {
+    const pickQ = (q) => ({ question: q.question || q.text || q.label || q.name || q.prompt || '', answer: (q.answer !== undefined && q.answer !== null) ? q.answer : (q.value || q.rating || '') });
+    if (Array.isArray(data.sections) && data.sections.length) return data.sections.flatMap(s => Array.isArray(s.questions) ? s.questions.map(pickQ) : []);
+    if (Array.isArray(data.groups) && data.groups.length) return data.groups.flatMap(g => Array.isArray(g.questions || g.items) ? (g.questions || g.items).map(pickQ) : []);
+    if (Array.isArray(data.questions) && data.questions.length) return data.questions.map(pickQ);
+    // fallback — canonical full list of questions (preserve original wording, answers may be empty)
+    return [
+      { question: 'Was our service delivered quickly and accurately?', answer: '' },
+      { question: 'Was your meal correct as per your order?', answer: '' },
+      { question: 'Was the food of good quality?', answer: '' },
+      { question: 'Was our service personnel polite, friendly and helpful?', answer: '' },
+      { question: 'Were the tables chairs and floors clean?', answer: '' },
+      { question: 'Was the shop clean at the time of your visit?', answer: '' },
+      { question: 'Did the service by our personnel make you feel you were given individual attention?', answer: '' },
+      { question: 'How fast was the service? At the till?', answer: '' }
+    ];
   })();
 
-  const renderSections = () => {
-    if (!sectionsToRender) {
-      return `
+  const renderQuestions = () => {
+    const headerBlock = `
       <div class="section">
         <div class="label">Customer</div>
         <div>${escapeHtml(customerName)}</div>
@@ -69,20 +91,37 @@ module.exports = function generate(payloadWrapper) {
       </div>
 
       <div class="section" style="margin-top:8px">
-        <div class="label">Notes</div>
-        <div>${escapeHtml(notes)}</div>
+        <div class="label">Meal ordered</div>
+        <div>${escapeHtml(mealOrdered)}</div>
+      </div>
+
+      <div class="section" style="margin-top:8px">
+        <div class="label">Meal within 15 mins</div>
+        <div>${escapeHtml(mealWithin15)}</div>
+      </div>
+
+      <div class="section" style="margin-top:8px">
+        <div class="label">Meal delay</div>
+        <div>${escapeHtml(mealDelay)}</div>
+      </div>
+
+      <div class="section" style="margin-top:8px">
+        <div class="label">Other comments</div>
+        <div>${escapeHtml(otherComment)}</div>
+      </div>
+      
+      <div class="section" style="margin-top:8px">
+        <div class="label">Staff</div>
+        <div>Waiter: ${escapeHtml(waiterName)} &nbsp; Cashier: ${escapeHtml(cashierName)} &nbsp; Chef: ${escapeHtml(chefName)}</div>
       </div>`;
-    }
-    return sectionsToRender.map(s=>{
-      const title = s.title || '';
-      const qs = Array.isArray(s.questions) ? s.questions : [];
-      const rows = qs.map(q=>{
-        const questionText = q.question || q.label || q.name || q.prompt || '';
-        const answer = (q.answer !== undefined && q.answer !== null) ? q.answer : (q.value || '');
-        return `<div class="question-row"><div class="q">${escapeHtml(questionText)}</div><div class="a">${escapeHtml(answer)}</div></div>`;
-      }).join('\n');
-      return `<div class="section" style="margin-top:8px"><div class="section-title">${escapeHtml(title)}</div>${rows}</div>`;
+
+    const rows = (Array.isArray(questionsToRender) ? questionsToRender : []).map(q => {
+      const questionText = q.question || '';
+      const answer = (q.answer !== undefined && q.answer !== null) ? q.answer : '';
+      return `<div class="question-row"><div class="q">${escapeHtml(questionText)}</div><div class="a">${escapeHtml(answer)}</div></div>`;
     }).join('\n');
+
+    return headerBlock + '\n' + `<div class="section" style="margin-top:8px">${rows}</div>`;
   };
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -104,8 +143,10 @@ module.exports = function generate(payloadWrapper) {
       ${logo ? `<img class="logo" src="${logo}"/>` : `<div style="width:48px;height:48px;background:#eee"></div>`}
       <div style="flex:1">
         <div class="company">${escapeHtml(companyName)}</div>
+        ${companySubtitle ? `<div style="font-size:12px;color:#374151;">${escapeHtml(companySubtitle)}</div>` : ''}
         <div class="title">${escapeHtml(subject)}</div>
         <div class="date">${escapeHtml(dateLine)}</div>
+        <div style="margin-top:6px; font-size:12px;"><strong>Form date:</strong> ${escapeHtml(formDate)} &nbsp; <strong>Time:</strong> ${escapeHtml(formTime)} &nbsp; <strong>Compiled by:</strong> ${escapeHtml(compiledBy)}</div>
       </div>
     </div>
 
