@@ -282,22 +282,7 @@ export default function FOH_DailyCleaningForm() {
         </View>
 
         {/* Second row: Verified By (with signature below) and complex manager sign */}
-        <View style={styles.metaRowInlineSecond}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>Verified By:</Text>
-            <TextInput style={[styles.metadataInputInline, { fontSize: ms(11) }]} value={metadata.verifiedBy} onChangeText={(t) => handleMetadataChange('verifiedBy', t)} />
-            <View style={{ marginTop: 6 }}>
-              <SignatureField value={metadata.verifiedBySign} onChange={(v) => handleMetadataChange('verifiedBySign', v)} editable={editMode} width={240} height={80} />
-            </View>
-          </View>
-        </View>
-
-        <View style={{ marginTop: 8 }}>
-          <Text style={[styles.metadataLabel, { fontSize: ms(11) }]}>COMPLEX MANAGER SIGN:</Text>
-          <View style={{ marginTop: 6 }}>
-            <SignatureField value={metadata.managerSign} onChange={(v) => handleMetadataChange('managerSign', v)} editable={editMode} width={260} height={100} />
-          </View>
-        </View>
+       
 
         <View style={styles.tickBadge}><Text style={{ color: '#085f1a', fontWeight: '700' }}>✓ TICK AFTER CLEANING</Text></View>
       </View>

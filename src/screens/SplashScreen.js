@@ -43,7 +43,35 @@ export default function SplashScreen({ navigation }) {
         <Animated.Image source={require('../assets/logo.jpeg')} style={[styles.logo, { transform: [{ scale: logoScale }] }]} resizeMode="contain" />
       </View>
       <Animated.Text style={[styles.bravo, { opacity: greetingOpacity, transform: [{ scale: greetingScale }], fontSize: 44, letterSpacing: 6 }]}>Bravo!</Animated.Text>
+      <WindowsSpinner size={44} dotSize={6} color="#ffffff" />
     </LinearGradient>
+  );
+}
+
+function WindowsSpinner({ size = 44, dotSize = 6, color = '#fff' }) {
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.timing(spin, { toValue: 1, duration: 1000, easing: Easing.linear, useNativeDriver: true })).start();
+  }, [spin]);
+
+  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const count = 8;
+  const radius = Math.max((size / 2) - dotSize, 8);
+  const dots = Array.from({ length: count });
+
+  return (
+    <View style={{ marginTop: 12, marginBottom: 6 }}>
+      <Animated.View style={{ width: size, height: size, transform: [{ rotate }], alignSelf: 'center' }}>
+        {dots.map((_, i) => {
+          const angle = (i / count) * Math.PI * 2 - Math.PI / 2; // start at top
+          const x = Math.cos(angle) * radius + size / 2 - dotSize / 2;
+          const y = Math.sin(angle) * radius + size / 2 - dotSize / 2;
+          return (
+            <View key={i} style={{ position: 'absolute', left: x, top: y, width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: color, opacity: 0.95 }} />
+          );
+        })}
+      </Animated.View>
+    </View>
   );
 }
 

@@ -308,25 +308,7 @@ export default function Kitchen_DailyCleaningForm() {
             ))}
 
             {/* Verified By: prefer a signature. In edit mode the user can tap to sign; when viewing we show the saved signature or fallback to text. */}
-            <View key="verified" style={styles.metadataItem}>
-              <Text style={[styles.metadataLabel, { fontSize: ms(10) }]}>Verified By:</Text>
-              {editMode ? (
-                <SignatureField
-                  value={metadata.verifiedSign || metadata.verifiedBy || ''}
-                  onChange={(v) => handleMetadataChange('verifiedSign', v)}
-                  editable={true}
-                  width={s(180)}
-                  height={s(56)}
-                  placeholder="Tap to sign"
-                />
-              ) : (
-                metadata.verifiedSign ? (
-                  <Image source={{ uri: String(metadata.verifiedSign).startsWith('data:') ? metadata.verifiedSign : `data:image/png;base64,${metadata.verifiedSign}` }} style={{ width: s(180), height: s(56), resizeMode: 'contain' }} />
-                ) : (
-                  <Text style={styles.dataText}>{metadata.verifiedBy || ''}</Text>
-                )
-              )}
-            </View>
+            
           </View>
           <Text style={[styles.tickInstruction, { fontSize: ms(11) }]}>✓ TICK AFTER CLEANING</Text>
         </View>

@@ -78,13 +78,26 @@ const Slot = React.memo(({ value, onChange, editable, signWidth = 140, signHeigh
   <View style={styles.slotRow}>
     {editable ? (
       <>
-        <TextInput value={value.temp} onChangeText={t => onChange('temp', t)} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="default" />
-        <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+          <TextInput
+            value={value.temp}
+            onChangeText={t => onChange('temp', t)}
+            placeholder={''}
+            style={[styles.slotInput, { flex: 1 }]}
+            keyboardType="default"
+          />
+          <Text style={styles.unitText}>°C</Text>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { width: '100%' }]} />
+        </View>
+
         <SignatureField value={value.sign} onChange={(v) => onChange('sign', v)} editable={editable} width={signWidth} height={signHeight} placeholder="Sign" debugMode={true} />
       </>
     ) : (
       <>
-        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.temp}</Text>
+        <Text style={[styles.slotReadText, { flex: 1 }]}>{value.temp ? `${value.temp}°C` : ''}</Text>
         <Text style={[styles.slotReadText, { flex: 1 }]}>{value.time}</Text>
         {(() => {
           const uri = resolveSignatureUri(value.sign);
@@ -128,7 +141,18 @@ export default function WalkInFreezerLog() {
     title: 'WALK-IN FREEZER TEMPERATURE LOG SHEET',
     date: new Date().toLocaleDateString(),
     metadata,
-    formData,
+    formData: (Array.isArray(formData) ? formData.map(r => {
+      const copy = { ...r };
+      TIME_SLOTS.forEach(slot => {
+        if (copy[slot] && typeof copy[slot].temp !== 'undefined') {
+          const s = String(copy[slot].temp || '').trim();
+          const stripped = s.replace(/[°℃]/g, '').trim();
+          const m = stripped.match(/[+-]?\d+(?:\.\d+)?/);
+          copy[slot] = { ...copy[slot], temp: (m ? `${m[0]}°C` : (stripped ? `${stripped}°C` : '')) };
+        }
+      });
+      return copy;
+    }) : formData),
     layoutHints: {},
     _tableWidth: TABLE_MIN_WIDTH,
     savedAt: Date.now(),
@@ -312,6 +336,7 @@ const styles = StyleSheet.create({
   recordSlot: { borderRightWidth: 1, borderRightColor: '#E5E7EB', padding: 4 },
   slotRow: { flexDirection: 'row', alignItems: 'center' },
   slotInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, marginHorizontal: 6, borderRadius: 4, textAlign: 'center', fontSize: 14 },
+  unitText: { marginLeft: 6, fontSize: 14, color: '#111827' },
   actionInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, fontSize: 14 },
   signatureInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, textAlign: 'center', fontSize: 14 },
   slotReadText: { paddingVertical: 10, paddingHorizontal: 6, textAlign: 'center', fontSize: 14, color: '#111827' },

@@ -4,7 +4,7 @@ import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
-import { getDraft, setDraft } from '../utils/formDrafts';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import formStorage from '../utils/formStorage';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -176,6 +176,23 @@ export default function DeepFreezerTemperatureLog(props = {}) {
     setBusy(false);
   };
 
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { if (saveTimer.current) clearTimeout(saveTimer.current); } catch (e) {}
+    const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_default_draft`;
+    try { await removeDraft(draftKey); } catch (e) { console.warn('removeDraft failed', e); }
+    setRows(initialRows);
+    setMeta(initialMeta);
+    setLogoDataUri(null);
+    setEditMode(false);
+  };
+
   const actionButtons = (
     <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
       <TouchableOpacity onPress={handleSaveDraft} style={[styles.btn, { backgroundColor: '#f6c342' }]} disabled={busy}>
@@ -183,6 +200,9 @@ export default function DeepFreezerTemperatureLog(props = {}) {
       </TouchableOpacity>
       <TouchableOpacity onPress={handleSubmit} style={[styles.btn, { backgroundColor: '#3b82f6' }]} disabled={busy}>
         <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleClearDraft} style={[styles.btn, { backgroundColor: '#e53e3e' }]} disabled={busy}>
+        <Text style={styles.btnText}>Clear Draft</Text>
       </TouchableOpacity>
     </View>
   );

@@ -33,6 +33,7 @@ const gen_foh_frontofhouse = require('./generate_foh_frontofhouse_html');
 const gen_foodcontactsurfacecleaningandsanitizinglogsheet_kitchen = require('./generate_foodcontactsurfacecleaningandsanitizinglogsheet_kitchen_html');
 const gen_foodcontactsurface_kitchen = require('./generate_foodcontactsurface_kitchen_html');
 const gen_foodhandlers_log = require('./generate_foodhandlers_log_html');
+const gen_foodhandlers_handwashing = require('./generate_foodhandlers_handwashing_html');
 const gen_foodsamplescollection = require('./generate_foodsamplescollection_html');
 const gen_fruit_washing_log = require('./generate_fruit_washing_log_html');
 const gen_hotholdingtemperature = require('./generate_hotholdingtemperature_html');
@@ -92,6 +93,7 @@ const mapping = {
 	foodcontactsurfacecleaningandsanitizinglogsheet_kitchen: gen_foodcontactsurfacecleaningandsanitizinglogsheet_kitchen,
 	foodcontactsurface_kitchen: gen_foodcontactsurface_kitchen,
 	foodhandlers_log: gen_foodhandlers_log,
+	foodhandlers_handwashing: gen_foodhandlers_handwashing,
 	foodsamplescollection: gen_foodsamplescollection,
 	fruit_washing_log: gen_fruit_washing_log,
 	hotholdingtemperature: gen_hotholdingtemperature,
@@ -246,6 +248,19 @@ const explicitOverrides = {
 	bakery_underbar_shelf_life_inspection: mapping.bakery_underbar_shelflife,
 	display_chiller_shelf_life_inspection: mapping.displaychiller_shelflife,
 	food_handlers_daily_showering: mapping.foodhandlers_log,
+	// Legacy / alternate keys for handwashing forms that sometimes appear as
+	// different `formType` values in saved payloads. Map them explicitly to
+	// the `foodhandlers_log` generator so handwashing sheets render correctly.
+	FoodHandlersHandwashing: mapping.foodhandlers_handwashing,
+	FoodHandlersHandwashing_AM: mapping.foodhandlers_handwashing,
+	FoodHandlersHandwashing_PM: mapping.foodhandlers_handwashing,
+	'Food Handlers Daily Handwashing Tracking Log Sheet': mapping.foodhandlers_handwashing,
+	'Food Handlers Daily Handwashing Tracking Log Sheet — AM': mapping.foodhandlers_handwashing,
+	'Food Handlers Daily Handwashing Tracking Log Sheet — PM': mapping.foodhandlers_handwashing,
+	food_handlers_daily_handwashing_tracking_log_sheet: mapping.foodhandlers_handwashing,
+	food_handlers_daily_handwashing_tracking_log_sheet_am: mapping.foodhandlers_handwashing,
+	food_handlers_daily_handwashing_tracking_log_sheet_pm: mapping.foodhandlers_handwashing,
+	FoodHandlersDailyHandwashingTrackingLogSheet: mapping.foodhandlers_handwashing,
 	fruit_washing_log: mapping.fruit_washing_log,
 	ppeissuance: mapping.ppe_log,
 	underbar_chiller_temperature: mapping.underbarchiller_temperature,
@@ -303,6 +318,25 @@ Object.keys(routeMapping).forEach((origKey) => {
         if (explicitOverrides[v]) return; // explicit wins
         if (!routeMapping[v]) routeMapping[v] = routeMapping[origKey];
     });
+});
+
+// Extra defensive mappings: some saved payloads use a variety of route/formType
+// strings (including camelCase, spaces, or suffixed AM/PM variants). Ensure
+// common Food Handlers handwashing keys explicitly resolve to the
+// `foodhandlers_log` generator so the correct template is always used.
+[
+	'FoodHandlersHandwashing',
+	'FoodHandlersHandwashing_AM',
+	'FoodHandlersHandwashing_PM',
+	'FoodHandlersHandwashingForm_AM',
+	'FoodHandlersHandwashingForm_PM',
+	'FoodHandlersDailyHandwashing',
+	'Food Handlers Daily Handwashing Tracking Log Sheet',
+	'Food Handlers Daily Handwashing Tracking Log Sheet — AM',
+	'Food Handlers Daily Handwashing Tracking Log Sheet — PM'
+].forEach((k) => {
+	if (!k) return;
+	if (!routeMapping[k]) routeMapping[k] = mapping.foodhandlers_handwashing;
 });
 
 // Helper: derive candidate keys from a payload (mirrors desktop logic but

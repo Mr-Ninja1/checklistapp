@@ -155,6 +155,22 @@ export default function ThawingTemperatureLog() {
         setBusy(false); 
     };
 
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { if (saveTimer.current) clearTimeout(saveTimer.current); } catch (e) {}
+        try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+        setRows(initialRows);
+        setMeta(initialMeta);
+        setLogoDataUri(null);
+        setEditMode(false);
+    };
+
     const actionButtons = (
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
             <TouchableOpacity
@@ -170,6 +186,9 @@ export default function ThawingTemperatureLog() {
                 disabled={busy}
             >
                 <Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#e53e3e' }]} onPress={() => { if (busy) return; handleClearDraft(); }} disabled={busy}>
+                <Text style={styles.btnText}>Clear Draft</Text>
             </TouchableOpacity>
         </View>
     );

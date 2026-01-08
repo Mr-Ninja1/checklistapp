@@ -71,22 +71,33 @@ module.exports = function generate(payloadWrapper) {
     logo = null;
   }
 
-  const sigHtml = (v, h = 26) => {
+  const sigHtml = (v, h = 44) => {
     const uri = resolveSignatureUri(v);
-    if (uri) return `<img src="${uri}" style="max-height:${h}px; width:auto; object-fit:contain; display:block; mix-blend-mode:multiply;"/>`;
-    return `<div style="font-size:7px; color:#94a3b8;">${escapeHtml(v || '')}</div>`;
+    if (uri) return `<img src="${uri}" style="max-height:${h}px; width:auto; object-fit:contain; display:block;"/>`;
+    return `<div style="font-size:8px; color:#94a3b8;">${escapeHtml(v || '')}</div>`;
   };
 
+  // Build rows rendering all expected signature fields so we don't accidentally
+  // render long base64/data URIs as plain text in PDFs.
   const rowsHtml = rowData.map((r, i) => {
     return `
       <div class="tr">
         <div class="td date-cell" style="width:${colPct(COL.DATE)}">${escapeHtml(r.day || r.date || i + 1)}</div>
+
         <div class="td" style="width:${colPct(COL.TEMP)}">${escapeHtml(r.tempMorning || '')}</div>
         <div class="td" style="width:${colPct(COL.SIGN)}">${sigHtml(r.staffSignMorning)}</div>
+
         <div class="td" style="width:${colPct(COL.TEMP)}">${escapeHtml(r.tempAfternoon || '')}</div>
-            // Disk-based logo lookup removed for mobile environment.
-            // Expect payload.assets.logoDataUri when a logo is needed.
-            break; // Exit the loop since we are not using disk-based logos anymore.
+        <div class="td" style="width:${colPct(COL.SIGN)}">${sigHtml(r.staffSignAfternoon)}</div>
+
+        <div class="td" style="width:${colPct(COL.TEMP)}">${escapeHtml(r.tempEvening || '')}</div>
+        <div class="td" style="width:${colPct(COL.SIGN)}">${sigHtml(r.staffSignEvening)}</div>
+
+        <div class="td action-cell" style="width:${colPct(COL.ACTION)}">${escapeHtml(r.outOfSpecAction || r.correctiveAction || '')}</div>
+
+        <div class="td" style="width:${colPct(COL.SUPER)}">${sigHtml(r.supNameSign || r.supSign)}</div>
+        <div class="td" style="width:${colPct(COL.SUPER)}">${sigHtml(r.complexManagerSign)}</div>
+        <div class="td" style="width:${colPct(COL.SUPER)}">${sigHtml(r.fscSign)}</div>
         <div class="td" style="width:${colPct(COL.SUPER)}">${sigHtml(r.hseqManagerSign)}</div>
       </div>`;
   }).join('\n');
@@ -140,6 +151,19 @@ module.exports = function generate(payloadWrapper) {
     </div>
 
     <div class="title">${escapeHtml(subject)}</div>
+
+    <div style="display:flex; justify-content:flex-end; gap:12px; margin-bottom:6px;">
+      <div style="width:220px; border-left:1px solid #cbd5e1; padding-left:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="font-weight:800; font-size:10px;">COMPILED BY:</div>
+          <div style="min-width:120px;">${sigHtml(metadata.compiledBySign || metadata.compiledBy, 50) || escapeHtml(metadata.compiledBy || '')}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-weight:800; font-size:10px;">APPROVED BY:</div>
+          <div style="min-width:120px;">${sigHtml(metadata.approvedBySign || metadata.approvedBy, 50) || escapeHtml(metadata.approvedBy || '')}</div>
+        </div>
+      </div>
+    </div>
 
     <div class="table">
       <div class="thead-group">

@@ -119,16 +119,7 @@ export default function KitchenDailyCleaningPresentational({ payload }) {
         </ScrollView>
 
         {/* Footer: Verified by signature (show signature thumbnail if present, else text) */}
-        <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' }}>
-          <View style={{ marginRight: 24 }}>
-            <Text style={{ fontWeight: '700' }}>Verified By:</Text>
-            {(() => {
-              const raw = p.verifiedSign || metadata.verifiedSign || metadata.verified_by || metadata.verifiedBy || metadata.verified || null;
-              const uri = resolveSignatureUri(raw);
-              return uri ? <SignatureThumb uri={uri} width={(COL.SIGNATURE || 120) + 60} height={56} layers={8} spread={1.0} /> : <Text style={{ marginTop: 6 }}>{metadata.verifiedBy || ''}</Text>;
-            })()}
-          </View>
-        </View>
+       
       </View>
     </ScrollView>
   );

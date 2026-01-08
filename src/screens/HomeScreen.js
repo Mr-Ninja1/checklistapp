@@ -555,21 +555,26 @@ export default function HomeScreen() {
         <View style={styles.updatesModalOverlay}>
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New</Text>
+            <View style={{ marginBottom: 12 }}>
+              <View style={{ padding: 12, backgroundColor: '#f0f9ff', borderRadius: 10, marginBottom: 8 }}>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#185a9d', textAlign: 'center', marginBottom: 6 }}>Share forms directly from the app — no desktop needed!</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>Share to WhatsApp, Email, Bluetooth, Nearby Share, Print and more.</Text>
+                <Text style={{ fontSize: 15, textAlign: 'center' }}><Text style={{ fontWeight: '700' }}>How to:</Text> Open Saved Forms → Open a saved form → Tap Share</Text>
+              </View>
+            </View>
             <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>1. All temperature logs have an editable date field.</Text>
-              <Text style={styles.updateItem}>2. Removed the fire extinguisher field (as requested).</Text>
-              <Text style={styles.updateItem}>3. Baking control sheet has been fixed too </Text>
-              <Text style={styles.updateItem}>4. All forms are now saving drafts .</Text>
-              <Text style={styles.updateItem}>. THESE ARE THE ONLY PROBLEMS REMAINING AND HAVE BEN PATCHED.</Text>
+              <Text style={styles.updateItem}>• Your can no share forms from tablet no dektop(pc) App needed!.</Text>
+              <Text style={styles.updateItem}>• Improved speed and reliability.</Text>
+              <Text style={styles.updateItem}>• Improved app speed and perfomance</Text>
              
             </View>
-            <Text style={{ marginTop: 8, marginBottom: 12 }}>Have you seen these updates?</Text>
+            <Text style={{ marginTop: 8, marginBottom: 12 }}>TRY USING THE NEW FORM SHARING FEATURE AND COMFIRM ITS WORKING </Text>
             <View style={styles.updatesButtonRow}>
               <TouchableOpacity style={styles.updatesButtonPrimary} onPress={handleUpdatesSeen}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Yes, I have</Text>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Okay </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.updatesButtonSecondary} onPress={handleUpdatesSnooze}>
-                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Wait, let me check</Text>
+                <Text style={{ color: '#185a9d', fontWeight: '700' }}>ignore</Text>
               </TouchableOpacity>
             </View>
           </View>

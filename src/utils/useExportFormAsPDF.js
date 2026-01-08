@@ -14,7 +14,13 @@ function generateHtmlForPayload(payloadWrapper, opts = {}) {
   const exactType = payload.formType || payload.template || payload.title || payload.name || '';
   // Strict, exact lookup only — mapping keys must be EXPORT_KEY values.
   if (routeMapping && exactType && typeof routeMapping[exactType] === 'function') {
-    return routeMapping[exactType](payloadWrapper, opts);
+    const html = routeMapping[exactType](payloadWrapper, opts);
+    try {
+      const footerer = require('./htmlGenerators/footer');
+      return footerer.injectFooterIntoHtml(html, payloadWrapper);
+    } catch (e) {
+      return html;
+    }
   }
 
   // Allow a debug/dev fallback when requested (e.g. Debug HTML Export).
@@ -99,37 +105,60 @@ export function useExportFormAsPDF() {
       // Exports are ephemeral and should not create or update Saved Forms
       // history entries. Do not write or modify history here.
 
-      // Create a short, predictable cache copy so it's easier to locate later
-      // (e.g. for quick debugging or to pick up via a file manager). This copy
-      // will be at `FileSystem.cacheDirectory + 'latest_export.pdf'`.
-      let cachePath = null;
+      // Try to save the exported PDF to a user-visible location so it appears
+      // in the device's Files/Downloads app. We do a best-effort attempt:
+      // 1) On Android try to copy to /storage/emulated/0/Download/
+      // 2) Fallback to using `expo-media-library` to create an asset/album
+      // If both fail we still return the internal `pdfPath`.
+      let savedPath = null;
       try {
-        if (FileSystem.cacheDirectory) {
-          cachePath = FileSystem.cacheDirectory + 'latest_export.pdf';
-          const info = await FileSystem.getInfoAsync(cachePath);
-          if (info.exists) await FileSystem.deleteAsync(cachePath, { idempotent: true });
-          // copyAsync is available in Expo FileSystem
-          await FileSystem.copyAsync({ from: pdfPath, to: cachePath });
+        if (Platform.OS === 'android') {
+          try {
+            const downloadsDir = '/storage/emulated/0/Download/';
+            const dest = downloadsDir + baseName;
+            await FileSystem.copyAsync({ from: pdfPath, to: dest });
+            savedPath = dest;
+          } catch (e) {
+            // If direct copy fails (permissions), try MediaLibrary fallback below
+            console.warn('Copy to Downloads failed', e && e.message);
+          }
+        }
+
+        if (!savedPath) {
+          // Try expo-media-library (works on managed expo, may require permission)
+          try {
+            // require dynamically so Node tools won't fail when analyzing
+            const MediaLibrary = require('expo-media-library');
+            const perm = await MediaLibrary.requestPermissionsAsync();
+            if (perm && (perm.status === 'granted' || perm.granted)) {
+              const asset = await MediaLibrary.createAssetAsync(pdfPath);
+              try {
+                // Attempt to place into a folder named 'Downloads' (best-effort)
+                await MediaLibrary.createAlbumAsync('Downloads', asset, false).catch(() => {});
+              } catch (e) {}
+              savedPath = asset.uri || pdfPath;
+            }
+          } catch (e) {
+            console.warn('MediaLibrary save failed', e && e.message);
+          }
         }
       } catch (e) {
-        console.warn('Cache copy failed', e.message);
-        cachePath = null;
+        console.warn('Save to user-visible folder failed', e && e.message);
       }
 
-      // Attempt to share the PDF so the user can save/open it outside the app.
+      // Attempt to share the PDF so the user can open it immediately.
       let shared = false;
       try {
         const avail = await Sharing.isAvailableAsync();
         if (avail) {
-          // Prefer sharing the user-friendly cache copy when available
-          await Sharing.shareAsync(cachePath || pdfPath);
+          await Sharing.shareAsync(savedPath || pdfPath);
           shared = true;
         }
       } catch (e) {
-        console.warn('Sharing failed', e.message);
+        console.warn('Sharing failed', e && e.message);
       }
 
-      return { pdfPath, cachePath, shared };
+      return { pdfPath, savedPath, shared };
     } catch (e) {
       return { error: 'Export failed: ' + e.message };
     }

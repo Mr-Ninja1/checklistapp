@@ -21,10 +21,10 @@ const resolveSignatureUri = (val) => {
   return null;
 };
 
-const renderSig = (v, w = 260, h = 80) => {
+const renderSig = (v, w = 200, h = 60) => {
   const uri = resolveSignatureUri(v);
-  if (!uri) return `<div style="border-bottom:1px dotted #ccc; width:260px; height:20px; margin-top:8px"></div>`;
-  return `<img src="${uri}" style="max-width:${w}px; max-height:${h}px; width:auto; display:block; object-fit:contain;"/>`;
+  if (!uri) return `<div style="border-bottom:1px dotted #ccc; width:180px; height:20px; margin-top:8px"></div>`;
+  return `<img src="${uri}" style="max-width:${w}px; max-height:${h}px; width:auto; display:block; object-fit:contain; mix-blend-mode: multiply;"/>`;
 };
 
 const getLogoDataUri = (p) => {
@@ -40,82 +40,88 @@ module.exports = function generate(payloadWrapper) {
   const meta = p.metadata || {};
   const rows = Array.isArray(p.formData) ? p.formData : [];
 
-  const columnWidths = {
-    date: 70,
-    name: 180,
-    check: 75,
-    comment: 140,
-    checkedBy: 110,
+  // Optimized proportional widths for A4 Landscape (Total ~100%)
+  const COL = {
+    DATE: '7%',
+    NAME: '15%',
+    CHECK: '5.5%', // 10 checks * 5.5% = 55%
+    COMMENT: '13%',
+    CHECKEDBY: '10%'
   };
-  const totalWidth = columnWidths.date + columnWidths.name + (columnWidths.check * 10) + columnWidths.comment + columnWidths.checkedBy;
 
   const checks = ['hairCover','shortNails','workSuit','jewellery','lipstick','persistentDiarrhoea','persistentCough','runningNose','skinInfection','openWound'];
 
-  const rowsHtml = rows.length ? rows.map(r => {
+  const rowsHtml = (rows.length ? rows : Array.from({length: 12}).map(()=>({}))).map(r => {
     const checksHtml = checks.map(k => {
       const v = r[k];
-      const disp = v === 'tick' ? '✔️' : (v === 'cross' ? '✖️' : '');
-      return `<td style="width:${columnWidths.check}px; padding:6px; border:1px solid #000; text-align:center">${escapeHtml(disp)}</td>`;
+      const disp = v === 'tick' || v === true ? '✔️' : (v === 'cross' || v === false ? '✖️' : '');
+      return `<td style="width:${COL.CHECK}; padding:4px; border:1px solid #000; text-align:center; font-size:12px">${escapeHtml(disp)}</td>`;
     }).join('');
+    
     return `
-      <tr>
-        <td style="width:${columnWidths.date}px; padding:6px; border:1px solid #000">${escapeHtml(r.date || '')}</td>
-        <td style="width:${columnWidths.name}px; padding:6px; border:1px solid #000; text-align:left">${escapeHtml(r.name || '')}</td>
+      <tr style="page-break-inside:avoid">
+        <td style="width:${COL.DATE}; padding:4px; border:1px solid #000; font-size:9px">${escapeHtml(r.date || '')}</td>
+        <td style="width:${COL.NAME}; padding:4px; border:1px solid #000; text-align:left; font-size:10px">${escapeHtml(r.name || '')}</td>
         ${checksHtml}
-        <td style="width:${columnWidths.comment}px; padding:6px; border:1px solid #000; text-align:left">${escapeHtml(r.comment || '')}</td>
-        <td style="width:${columnWidths.checkedBy}px; padding:6px; border:1px solid #000; text-align:left">${escapeHtml(r.checkedBy || '')}</td>
+        <td style="width:${COL.COMMENT}; padding:4px; border:1px solid #000; text-align:left; font-size:9px">${escapeHtml(r.comment || '')}</td>
+        <td style="width:${COL.CHECKEDBY}; padding:4px; border:1px solid #000; text-align:left; font-size:9px">${escapeHtml(r.checkedBy || '')}</td>
       </tr>
     `;
-  }).join('') : Array.from({length:8}).map(()=>{
-    return `<tr>${'<td style="width:'+columnWidths.date+'px; padding:6px; border:1px solid #000">&nbsp;</td>'}<td style="width:${columnWidths.name}px; padding:6px; border:1px solid #000">&nbsp;</td>${'<td style="width:'+columnWidths.check+'px; padding:6px; border:1px solid #000">&nbsp;</td>'.repeat(10)}<td style="width:${columnWidths.comment}px; padding:6px; border:1px solid #000">&nbsp;</td><td style="width:${columnWidths.checkedBy}px; padding:6px; border:1px solid #000">&nbsp;</td></tr>`;
   }).join('');
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page{size:A4; margin:8mm}
+    @page{size:A4 landscape; margin:7mm}
     *{box-sizing:border-box}
-    body{font-family:Arial, Helvetica, sans-serif; margin:0; color:#111}
-    .wrap{padding:12px}
-    .headerRowTop{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px}
-    .logo{width:64px; height:48px; object-fit:contain}
-    .formTitle{font-size:20px; font-weight:900; text-align:center}
-    .subject{font-size:12px; margin-bottom:6px}
-    .infoRowTop{display:flex; justify-content:space-between; margin-bottom:8px}
-    .tableWrap{overflow:auto}
-    table{border-collapse:collapse; width:${totalWidth + 20}px}
-    th{padding:8px; border:1px solid #000; background:#eee; text-align:center; font-weight:700}
-    td{padding:6px; border:1px solid #000; text-align:center}
-    .footerSignaturesRow{display:flex; gap:24px; margin-top:12px}
-    .signatureBlock{display:flex; flex-direction:column; align-items:flex-start}
-    .footerLabel{font-weight:700; margin-bottom:6px}
+    body{font-family: Arial, sans-serif; margin:0; padding:0; color:#111; line-height:1.2}
+    .wrap{width:100%; padding:0}
+    .headerRowTop{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; border: 1px solid #000; padding: 8px;}
+    .logo{width:50px; height:40px; object-fit:contain}
+    .formTitle{font-size:18px; font-weight:900; text-transform:uppercase}
+    .infoRowTop{display:flex; justify-content:space-between; margin-bottom:8px; font-size:11px}
+    table{border-collapse:collapse; width:100%; table-layout: fixed; border: 1.5px solid #000;}
+    th{padding:4px 2px; border:1px solid #000; background:#eee; text-align:center; font-weight:700; font-size:8px; height:50px}
+    td{border:1px solid #000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+    .footerSignaturesRow{display:flex; gap:30px; margin-top:15px; page-break-inside:avoid}
+    .signatureBlock{flex: 1; display:flex; flex-direction:column; border: 1px solid #000; padding: 8px;}
+    .footerLabel{font-weight:700; font-size:10px; margin-bottom:4px; color: #444; border-bottom: 1px solid #eee; padding-bottom: 2px;}
   </style></head><body>
 
   <div class="wrap">
     <div class="headerRowTop">
-      <div style="display:flex; align-items:center; gap:8px">
+      <div style="display:flex; align-items:center; gap:10px">
         <img src="${getLogoDataUri(p) || ''}" class="logo"/>
-        <div style="display:flex; flex-direction:column"><div style="font-weight:900; font-size:14px">BRAVO BRANDS LIMITED</div><div style="font-size:11px">Food Safety Management System</div></div>
+        <div style="display:flex; flex-direction:column">
+          <div style="font-weight:900; font-size:13px">BRAVO BRANDS LIMITED</div>
+          <div style="font-size:10px">Food Safety Management System</div>
+        </div>
       </div>
-      <div style="text-align:center" class="formTitle">${escapeHtml(p.title || 'Personal Hygiene Checklist')}</div>
-      <div style="width:140px; text-align:right"><div style="font-size:12px"><strong>Issue Date:</strong> ${escapeHtml(meta.issueDate || p.savedAt || '')}</div></div>
+      <div class="formTitle">${escapeHtml(p.title || 'Personal Hygiene Checklist')}</div>
+      <div style="text-align:right">
+        <div style="font-size:10px"><strong>Doc Ref:</strong> BBN-FSMS-CL-01</div>
+        <div style="font-size:10px"><strong>Issue Date:</strong> ${escapeHtml(meta.issueDate || p.savedAt || '')}</div>
+      </div>
     </div>
 
-    <div class="subject"><strong>Subject:</strong> Personnel Hygiene Checklist</div>
-    <div class="infoRowTop"><div><strong>Compiled By:</strong> ${escapeHtml(meta.compiledBy || '')}</div><div><strong>Approved By:</strong> ${escapeHtml(meta.approvedBy || 'Hassani Ali')}</div></div>
+    <div class="infoRowTop">
+      <div><strong>Subject:</strong> Personnel Hygiene Checklist</div>
+      <div><strong>Compiled By:</strong> ${escapeHtml(meta.compiledBy || 'HSEQ Department')}</div>
+      <div><strong>Approved By:</strong> ${escapeHtml(meta.approvedBy || 'Hassani Ali')}</div>
+    </div>
 
-    <div class="tableWrap"><table>
+    <table>
       <thead>
         <tr>
-          <th style="width:${columnWidths.date}px; min-height:70px">DATE</th>
-          <th style="width:${columnWidths.name}px">NAME</th>
-          ${'<th style="width:'+columnWidths.check+'px; min-height:70px">CHECK</th>'.repeat(10)}
-          <th style="width:${columnWidths.comment}px">COMMENT</th>
-          <th style="width:${columnWidths.checkedBy}px">CHECKED BY?</th>
+          <th style="width:${COL.DATE}">DATE</th>
+          <th style="width:${COL.NAME}">NAME</th>
+          ${['HAIR<br/>COVER','SHORT<br/>NAILS','WORK<br/>SUIT','JEWEL<br/>LERY','LIP<br/>STICK','DIAR<br/>RHOEA','COUGH','RUNNING<br/>NOSE','SKIN<br/>INF','OPEN<br/>WOUND'].map(l=>`<th style="width:${COL.CHECK}">${l}?</th>`).join('')}
+          <th style="width:${COL.COMMENT}">COMMENT</th>
+          <th style="width:${COL.CHECKEDBY}">CHECKED BY</th>
         </tr>
       </thead>
       <tbody>
         ${rowsHtml}
       </tbody>
-    </table></div>
+    </table>
 
     <div class="footerSignaturesRow">
       <div class="signatureBlock">

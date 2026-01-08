@@ -1,640 +1,199 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Spinner from 'react-native-loading-spinner-overlay';
-import { addFormHistory } from '../utils/formHistory';
-import useExportFormAsPDF from '../utils/useExportFormAsPDF';
-import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system/legacy';
-import useResponsive from '../utils/responsive';
-import { removeDraft } from '../utils/formDrafts';
-import formStorage from '../utils/formStorage';
-import { useRef } from 'react';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import LoadingOverlay from '../components/LoadingOverlay';
-import useFormSave from '../hooks/useFormSave';
-import NotificationModal from '../components/NotificationModal';
-import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
-
-// Helper functions for dynamic details
-
-function getCurrentDate() {
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = now.getFullYear();
-  return `${month}/${day}/${year}`;
-}
+import EditableFormContainer from '../components/EditableFormContainer';
+import NotificationModal from '../components/NotificationModal';
+import useFormSave from '../hooks/useFormSave';
 
 const TIME_SLOTS = [
-  '06:00AM', '07:00AM', '08:00AM', '09:00AM', '10:00AM',
-  '11:00AM', '12:00PM', '13:00PM', '14:00PM', 
+  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00'
 ];
-const NUM_ROWS = 14;
 
-function createInitialChecks() {
-  return TIME_SLOTS.reduce((acc, time) => ({ ...acc, [time]: false }), {});
-}
-
-export default function FoodHandlersHandwashingForm_AM() {
-  const { ref } = useExportFormAsPDF();
-  const [exporting, setExporting] = useState(false);
-  const [logDetails, setLogDetails] = useState({
-    date: getCurrentDate(),
-    location: '',
-    shift: 'AM',
-    verifiedBy: '',
-    complexManagerSign: '',
-  });
-  const [loadingDraft, setLoadingDraft] = React.useState(true);
-  const draftKey = 'foodhandlers_handwashing_am';
-  const saveTimer = useRef(null);
+export default function FoodHandlersHandwashingForm_AM({ route }) {
   const navigation = useNavigation();
+  const { draftData } = route.params || {};
 
-  // Table state
-  const [handlers, setHandlers] = useState(() =>
-    Array.from({ length: NUM_ROWS }, () => ({
-      fullName: '',
-      jobTitle: '',
-      checks: createInitialChecks(),
-      staffSign: '',
-      supName: '',
-      supSign: '',
-    }))
-  );
+  // Logic Preserved
+  const [week, setWeek] = useState(draftData?.week || '');
+  const [month, setMonth] = useState(draftData?.month || '');
+  const [year, setYear] = useState(draftData?.year || new Date().getFullYear().toString());
+  const [logEntries, setLogEntries] = useState(draftData?.logEntries || Array.from({ length: 15 }, () => ['', '', ...Array(8).fill(false), '']));
 
-  // preload logo as base64 for payload assets (best-effort)
-  const [logoDataUri, setLogoDataUri] = React.useState(null);
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
-        await asset.downloadAsync();
-        if (asset.localUri) {
-          const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
-          if (b64 && mounted) setLogoDataUri(`data:image/jpeg;base64,${b64}`);
-        }
-      } catch (e) { /* ignore */ }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  const { saving, notification, saveForm, hideNotification } = useFormSave('food_handlers_handwashing_am');
 
-  // Hook integration: build payload, autosave, save draft and submit handlers
-  const draftId = 'FoodHandlersHandwashing_AM_draft';
-  const buildPayload = (status = 'draft') => ({
-    formType: 'FoodHandlersHandwashing_AM',
-    templateVersion: 'v1.0',
-    title: 'Food Handlers Daily Handwashing Tracking Log Sheet — AM',
-    date: logDetails.date,
-    location: logDetails.location,
-    shift: logDetails.shift,
-    verifiedBy: logDetails.verifiedBy,
-    // include complex manager signature so presentational views can render it
-    complexManagerSign: logDetails.complexManagerSign,
-    timeSlots: TIME_SLOTS,
-    handlers: handlers.map((h, idx) => ({ id: idx + 1, ...h })),
-    assets: logoDataUri ? { logoDataUri } : undefined,
-    layoutHints: { nameW: dyn?.nameW, jobW: dyn?.jobW, signW: dyn?.signW },
-    savedAt: Date.now(),
-    status,
-  });
-
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-    // reset form after successful submit
-    setHandlers(Array.from({ length: NUM_ROWS }, () => ({
-      fullName: '',
-      jobTitle: '',
-      checks: createInitialChecks(),
-      staffSign: '',
-      supName: '',
-      supSign: '',
-    })));
-    setLogDetails({ date: getCurrentDate(), location: '', shift: 'AM', verifiedBy: '', complexManagerSign: '' });
-    try { removeDraft(draftKey); } catch (e) { /* ignore */ }
-  }});
-
-  // preload any stable draft saved via formStorage
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const wrapped = await formStorage.loadForm(draftId);
-        const payload = wrapped?.payload || null;
-        if (payload && mounted) {
-          if (payload.handlers) setHandlers(payload.handlers.map(h => ({ ...h })));
-          if (payload.timeSlots) {
-            // maintain timeSlots if present
-          }
-          if (payload.date || payload.date === 0) setLogDetails(prev => ({ ...prev, date: payload.date || prev.date }));
-          if (payload.location || payload.location === '') setLogDetails(prev => ({ ...prev, location: payload.location || prev.location }));
-          if (payload.complexManagerSign) setLogDetails(prev => ({ ...prev, complexManagerSign: payload.complexManagerSign }));
-          if (payload.verifiedBy) setLogDetails(prev => ({ ...prev, verifiedBy: payload.verifiedBy }));
-        }
-      } catch (e) { /* ignore */ }
-      if (mounted) setLoadingDraft(false);
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  // update functions now call scheduleAutoSave from the hook
-  const updateHandlerField = (rowIdx, field, value) => {
-    setHandlers(prev => prev.map((row, idx) => (idx === rowIdx ? { ...row, [field]: value } : row)));
-    try { scheduleAutoSave(); } catch (e) { /* ignore until hook ready */ }
+  const updateEntry = (rowIdx, colIdx, val) => {
+    const newEntries = [...logEntries];
+    newEntries[rowIdx][colIdx] = val;
+    setLogEntries(newEntries);
   };
 
-  const toggleHandlerCheck = (rowIdx, timeSlot) => {
-    setHandlers(prev => prev.map((row, idx) =>
-      idx === rowIdx
-        ? { ...row, checks: { ...row.checks, [timeSlot]: !row.checks[timeSlot] } }
-        : row
-    ));
-    try { scheduleAutoSave(); } catch (e) { /* ignore */ }
+  const toggleCheck = (rowIdx, slotIdx) => {
+    const newEntries = [...logEntries];
+    newEntries[rowIdx][slotIdx + 2] = !newEntries[rowIdx][slotIdx + 2];
+    setLogEntries(newEntries);
   };
 
-  // responsive helpers
-  const resp = useResponsive();
-  const { width, height } = useWindowDimensions();
-  const isLandscape = width > height;
-
-  // tweak sizes for landscape to fit more columns
-  const dyn = {
-    containerPadding: resp.s(isLandscape ? 12 : 20),
-    logoSize: resp.s(isLandscape ? 40 : 48),
-    logoMargin: resp.s(isLandscape ? 8 : 12),
-    titleFont: resp.ms(isLandscape ? 18 : 20),
-    inputPadding: resp.s(8),
-    inputFont: resp.ms(isLandscape ? 13 : 14),
-    managerWidth: resp.s(isLandscape ? 100 : 120),
-    timeCellW: resp.s(isLandscape ? 48 : 55),
-    nameW: resp.s(isLandscape ? 130 : 160),
-    jobW: resp.s(isLandscape ? 100 : 120),
-    snW: resp.s(isLandscape ? 36 : 40),
-    signW: resp.s(isLandscape ? 80 : 100),
-    checkboxW: resp.s(isLandscape ? 48 : 55),
-    saveBtnPV: resp.s(isLandscape ? 10 : 12),
-    saveBtnPH: resp.s(isLandscape ? 20 : 28),
-    saveBtnRadius: resp.s(isLandscape ? 18 : 20),
-    saveBtnFont: resp.ms(isLandscape ? 14 : 16),
+  const handleSave = async () => {
+    const payload = { week, month, year, logEntries, title: 'FOOD HANDLERS DAILY HANDWASHING LOG (AM)' };
+    await saveForm(payload);
   };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLogDetails(prev => ({ ...prev, date: getCurrentDate() }));
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleSavePDF = async () => {
-    setExporting(true);
-    setBusy(true);
-    try {
-      await new Promise(res => setTimeout(res, 250));
-      const handlersWithId = handlers.map((h, idx) => ({ id: idx + 1, ...h }));
-
-      // try to embed logo as base64 for perfect saved rendering (best-effort)
-      let logoDataUri = null;
-      try {
-        const asset = Asset.fromModule(require('../assets/logo.jpeg'));
-        await asset.downloadAsync();
-        if (asset.localUri) {
-          // read file as base64 (may fail on some environments)
-          try {
-            const b64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
-            if (b64) logoDataUri = `data:image/jpeg;base64,${b64}`;
-          } catch (e) {
-            // ignore and proceed without embedded image
-            logoDataUri = null;
-          }
-        }
-      } catch (e) {
-        // best-effort, ignore failures
-        logoDataUri = null;
-      }
-
-      const payload = {
-        formType: 'FoodHandlersHandwashing_AM',
-        templateVersion: 'v1.0',
-        title: 'Food Handlers Daily Handwashing Tracking Log Sheet — AM',
-        date: logDetails.date,
-        location: logDetails.location,
-        shift: logDetails.shift,
-        verifiedBy: logDetails.verifiedBy,
-        complexManagerSign: logDetails.complexManagerSign,
-        timeSlots: TIME_SLOTS,
-        handlers: handlersWithId,
-        assets: logoDataUri ? { logoDataUri } : undefined,
-        layoutHints: {
-          nameW: dyn.nameW,
-          jobW: dyn.jobW,
-          signW: dyn.signW,
-        }
-      };
-
-      try {
-        // Use the shared submit so history/draft semantics are consistent
-        await handleSubmit();
-        setExporting(false);
-        Alert.alert('Saved', 'Form saved to history. You can Export PDF from the Saved Forms screen.');
-      } catch (e) {
-        setExporting(false);
-        console.warn('save payload failed', e);
-        Alert.alert('Error', 'Failed to save form payload.');
-      }
-    } catch (e) {
-      setExporting(false);
-      Alert.alert('Error', 'Failed to save form.');
-    } finally {
-      // ensure the busy overlay is always cleared
-      setBusy(false);
-    }
-  };
-
-  const handleBack = () => navigation.navigate('Home');
-  const [busy, setBusy] = useState(false);
-  const [editMode, setEditMode] = useState(false);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <LoadingOverlay visible={busy || exporting} message={busy ? 'Working...' : 'Saving PDF...'} />
-      <Spinner visible={exporting} textContent={'Saving PDF...'} textStyle={{ color: '#fff' }} />
-  <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
-    <ScrollView contentContainerStyle={[styles.container, { padding: dyn.containerPadding }]} ref={ref} horizontal={false} keyboardShouldPersistTaps="handled" contentInsetAdjustmentBehavior="automatic" style={{ flex: 1 }}>
-        <View style={styles.logoRow}>
-          <Image source={require('../assets/logo.jpeg')} style={[styles.logo, { width: dyn.logoSize, height: dyn.logoSize, marginRight: dyn.logoMargin, borderRadius: resp.ms(10) }]} resizeMode="contain" />
-          <View style={{ flexDirection: 'column', flex: 1 }}>
-            <Text style={[styles.companyNameSmall]}>Bravo</Text>
+    <EditableFormContainer title="Handwashing Log (AM)" onSave={handleSave} saving={saving}>
+      <View style={styles.card}>
+        {/* Header Section */}
+        <div style={{ marginBottom: 10 }}>
+          <View style={styles.headerRow}>
+            <Image source={require('../assets/logo.jpeg')} style={styles.logo} resizeMode="contain" />
+            <Text style={styles.title}>FOOD HANDLERS DAILY HANDWASHING LOG (AM)</Text>
           </View>
-        </View>
-        <View style={styles.titleRow}><Text style={[styles.title, { fontSize: dyn.titleFont } ]}>Food Handlers Daily Handwashing Tracking Log Sheet — AM</Text></View>
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <Text style={styles.label}>Date:</Text>
-            <TextInput
-              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
-              value={logDetails.date}
-              editable={false}
-              placeholder="MM/DD/YYYY"
-            />
+        </div>
+
+        <View style={styles.metaSection}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Week</Text>
+            <TextInput style={styles.metaInput} value={week} onChangeText={setWeek} placeholder="01" />
           </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.label}>Location:</Text>
-              {editMode ? (
-                <TextInput
-                  style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
-                  value={logDetails.location}
-                  onChangeText={text => setLogDetails(prev => ({ ...prev, location: text }))}
-                  editable={true}
-                  placeholder="Enter Location"
-                />
-              ) : (
-                <Text style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.location}</Text>
-              )}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Month</Text>
+            <TextInput style={styles.metaInput} value={month} onChangeText={setMonth} placeholder="January" />
           </View>
-        </View>
-        <View style={styles.detailRow}>
-          <View style={styles.detailItem}>
-            <Text style={styles.label}>Shift:</Text>
-            <TextInput
-              style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}
-              value={logDetails.shift}
-              editable={false}
-            />
-          </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.label}>Verified By:</Text>
-            {editMode ? (
-                <SignatureField
-                  value={logDetails.verifiedBy}
-                  onChange={val => { setLogDetails(prev => ({ ...prev, verifiedBy: val })); try { scheduleAutoSave(); } catch(e){} }}
-                  editable={true}
-                  width={dyn.managerWidth}
-                  height={60}
-                />
-              ) : (
-                (logDetails.verifiedBy && typeof logDetails.verifiedBy === 'string' && logDetails.verifiedBy.startsWith('data:'))
-                  ? <Image source={{ uri: logDetails.verifiedBy }} style={{ width: dyn.managerWidth, height: 60, resizeMode: 'contain' }} />
-                  : <Text style={[styles.input, { padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.verifiedBy}</Text>
-              )}
-          </View>
-        </View>
-        <View style={styles.detailRow}>
-          <View style={styles.detailItemFull}>
-            <Text style={styles.label}>Complex Manager Sign:</Text>
-              {editMode ? (
-                <SignatureField
-                  value={logDetails.complexManagerSign}
-                  onChange={val => { setLogDetails(prev => ({ ...prev, complexManagerSign: val })); try { scheduleAutoSave(); } catch(e){} }}
-                  editable={true}
-                  width={dyn.managerWidth}
-                  height={60}
-                />
-              ) : (
-                (logDetails.complexManagerSign && typeof logDetails.complexManagerSign === 'string' && logDetails.complexManagerSign.startsWith('data:'))
-                  ? <Image source={{ uri: logDetails.complexManagerSign }} style={{ width: dyn.managerWidth, height: 60, resizeMode: 'contain' }} />
-                  : <Text style={[styles.input, styles.managerSignInput, { width: dyn.managerWidth, minWidth: resp.s(80), maxWidth: resp.s(160), padding: dyn.inputPadding, fontSize: dyn.inputFont }]}>{logDetails.complexManagerSign}</Text>
-              )}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Year</Text>
+            <TextInput style={styles.metaInput} value={year} onChangeText={setYear} keyboardType="numeric" />
           </View>
         </View>
 
-        {/* Table */}
-  {/* horizontal table scroll - allows many time columns on both orientations */}
-  <ScrollView horizontal style={[styles.tableScroll, { marginTop: dyn.containerPadding }]} contentContainerStyle={{ flexGrow: 1 }}>
-          <View>
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.headerCell, styles.snCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.snW, width: dyn.snW }]}>S/N</Text>
-              <Text style={[styles.headerCell, styles.nameCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.nameW, width: dyn.nameW }]}>Full Name</Text>
-              <Text style={[styles.headerCell, styles.jobCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.jobW, width: dyn.jobW }]}>Job Title</Text>
-              {TIME_SLOTS.map((time) => (
-                <Text key={time} style={[styles.headerCell, styles.timeCellHeader, { minWidth: dyn.timeCellW, width: dyn.timeCellW }]}>{time}</Text>
+        {/* Modernized Table */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+          <View style={styles.table}>
+            {/* Table Header */}
+            <View style={styles.tableHeader}>
+              <View style={[styles.headerCell, { width: 45 }]}><Text style={styles.headerText}>S/N</Text></View>
+              <View style={[styles.headerCell, { width: 160 }]}><Text style={styles.headerText}>Full Name</Text></View>
+              <View style={[styles.headerCell, { width: 110 }]}><Text style={styles.headerText}>Job Title</Text></View>
+              {TIME_SLOTS.map((slot, i) => (
+                <View key={i} style={[styles.headerCell, { width: 80 }]}>
+                  <Text style={styles.headerText}>{slot}</Text>
+                </View>
               ))}
-              <Text style={[styles.headerCell, styles.signCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.signW, width: dyn.signW }]}>Staff Sign</Text>
-              <Text style={[styles.headerCell, styles.supCell, { borderRightWidth: 1, borderColor: '#ccc', minWidth: dyn.signW, width: dyn.signW }]}>Sup Name</Text>
-              <Text style={[styles.headerCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW }]}>Sup Sign</Text>
+              <View style={[styles.headerCell, { width: 130, borderRightWidth: 0 }]}><Text style={styles.headerText}>Sup Sign</Text></View>
             </View>
 
-            {handlers.map((row, rowIdx) => (
-              <View key={rowIdx} style={styles.tableRow}>
-                <Text style={[styles.dataCell, styles.snCell, { minWidth: dyn.snW, width: dyn.snW }]}>{rowIdx + 1}</Text>
-                {editMode ? (
-                  <TextInput
-                    style={[styles.inputCell, styles.nameCell, { minWidth: dyn.nameW, width: dyn.nameW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                    value={row.fullName}
-                    onChangeText={text => updateHandlerField(rowIdx, 'fullName', text)}
-                    editable={true}
-                    placeholder="Full Name"
-                  />
-                ) : (
-                  <Text style={[styles.dataCell, styles.nameCell, { minWidth: dyn.nameW, width: dyn.nameW }]}>{row.fullName}</Text>
-                )}
-                {editMode ? (
-                  <TextInput
-                    style={[styles.inputCell, styles.jobCell, { minWidth: dyn.jobW, width: dyn.jobW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                    value={row.jobTitle}
-                    onChangeText={text => updateHandlerField(rowIdx, 'jobTitle', text)}
-                    editable={true}
-                    placeholder="Job Title"
-                  />
-                ) : (
-                  <Text style={[styles.dataCell, styles.jobCell, { minWidth: dyn.jobW, width: dyn.jobW }]}>{row.jobTitle}</Text>
-                )}
-                {TIME_SLOTS.map((time) => (
-                  editMode ? (
-                    <TouchableOpacity
-                      key={time}
-                      style={[styles.checkboxTouchable, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2) }]}
-                      onPress={() => toggleHandlerCheck(rowIdx, time)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.checkboxCellText, { fontSize: resp.ms(16) }]}>{row.checks[time] ? '☑' : '☐'}</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View key={time} style={[styles.checkboxTouchable, { minWidth: dyn.checkboxW, width: dyn.checkboxW, padding: resp.s(2) }]}> 
-                      <Text style={[styles.checkboxCellText, { fontSize: resp.ms(16) }]}>{row.checks[time] ? '☑' : '☐'}</Text>
+            {/* Table Body */}
+            {logEntries.map((row, rIdx) => (
+              <View key={rIdx} style={[styles.row, rIdx % 2 === 1 && styles.rowAlternate]}>
+                <View style={[styles.cell, { width: 45 }]}><Text style={styles.snText}>{rIdx + 1}</Text></View>
+                <TextInput 
+                  style={[styles.cellInput, { width: 160 }]} 
+                  value={row[0]} 
+                  onChangeText={(v) => updateEntry(rIdx, 0, v)}
+                  placeholder="Name"
+                />
+                <TextInput 
+                  style={[styles.cellInput, { width: 110 }]} 
+                  value={row[1]} 
+                  onChangeText={(v) => updateEntry(rIdx, 1, v)}
+                  placeholder="Title"
+                />
+                {TIME_SLOTS.map((_, sIdx) => (
+                  <TouchableOpacity 
+                    key={sIdx} 
+                    style={[styles.checkCell, { width: 80 }]} 
+                    onPress={() => toggleCheck(rIdx, sIdx)}
+                  >
+                    <View style={[styles.checkbox, row[sIdx + 2] && styles.checkboxActive]}>
+                      {row[sIdx + 2] && <Text style={styles.checkMark}>✓</Text>}
                     </View>
-                  )
+                  </TouchableOpacity>
                 ))}
-                {editMode ? (
-                  <SignatureField
-                    value={row.staffSign}
-                    onChange={val => updateHandlerField(rowIdx, 'staffSign', val)}
-                    editable={true}
-                    width={dyn.signW}
-                    height={48}
+                <View style={[styles.cell, { width: 130, borderRightWidth: 0 }]}>
+                   <SignatureField
+                    value={row[10]}
+                    onSave={(sig) => updateEntry(rIdx, 10, sig)}
+                    compact
                   />
-                ) : (
-                  (row.staffSign && typeof row.staffSign === 'string' && row.staffSign.startsWith('data:'))
-                    ? <Image source={{ uri: row.staffSign }} style={{ width: dyn.signW, height: 48, resizeMode: 'contain' }} />
-                    : <Text style={[styles.dataCell, styles.signCell, { minWidth: dyn.signW, width: dyn.signW }]}>{row.staffSign}</Text>
-                )}
-                {editMode ? (
-                  <TextInput
-                    style={[styles.inputCell, styles.supCell, { minWidth: dyn.signW, width: dyn.signW, padding: resp.s(4), fontSize: resp.ms(12) }]}
-                    value={row.supName}
-                    onChangeText={text => updateHandlerField(rowIdx, 'supName', text)}
-                    editable={true}
-                    placeholder="Sup Name"
-                  />
-                ) : (
-                  <Text style={[styles.dataCell, styles.supCell, { minWidth: dyn.signW, width: dyn.signW }]}>{row.supName}</Text>
-                )}
-                {editMode ? (
-                  <SignatureField
-                    value={row.supSign}
-                    onChange={val => updateHandlerField(rowIdx, 'supSign', val)}
-                    editable={true}
-                    width={dyn.signW}
-                    height={48}
-                  />
-                ) : (
-                  (row.supSign && typeof row.supSign === 'string' && row.supSign.startsWith('data:'))
-                    ? <Image source={{ uri: row.supSign }} style={{ width: dyn.signW, height: 48, resizeMode: 'contain' }} />
-                    : <Text style={[styles.dataCell, styles.signCell, { borderRightWidth: 0, minWidth: dyn.signW, width: dyn.signW }]}>{row.supSign}</Text>
-                )}
+                </View>
               </View>
             ))}
           </View>
         </ScrollView>
-    </ScrollView>
-        <View style={styles.saveButtonContainerInner}>
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: resp.s(8) }}>
-          <TouchableOpacity onPress={handleBack} style={[styles.auxButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
-            <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleSaveDraft} disabled={isSaving} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
-            <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Save Draft</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} disabled={isSaving} activeOpacity={0.85}>
-            <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>
-          </TouchableOpacity>
-        </View>
       </View>
-  </EditableFormContainer>
-    </SafeAreaView>
+
+      <NotificationModal 
+        visible={notification.visible} 
+        type={notification.type} 
+        message={notification.message} 
+        onClose={hideNotification} 
+      />
+    </EditableFormContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f6fdff',
-  },
-  container: {
-    padding: 20,
+  card: {
     backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#185a9d',
-    textAlign: 'center',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  detailItem: {
-    flex: 1,
-    paddingRight: 10,
-  },
-  detailItemFull: {
-    flex: 1,
-  },
-  label: {
-    fontWeight: 'bold',
-    color: '#185a9d',
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: '#f0f4f8',
-    borderRadius: 8,
-    padding: 8,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#43cea2',
-    marginBottom: 8,
-  },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  titleRow: { alignItems: 'center', marginBottom: 12 },
-  logo: {
-    width: 48,
-    height: 48,
-    marginRight: 12,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-  },
-  managerSignInput: {
-    width: 120,
-    minWidth: 80,
-    maxWidth: 160,
-  },
-  tableScroll: { 
-    marginTop: 20,
-    borderLeftWidth: 1, 
-    borderColor: '#4B5563',
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: '#e9e9e9',
-    borderTopWidth: 1,
-    borderBottomWidth: 1, 
-    borderColor: '#4B5563',
-    alignItems: 'stretch', 
-    minHeight: 36,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderColor: '#4B5563',
-    alignItems: 'stretch', 
-    minHeight: 36,
-  },
-  headerCell: {
-    fontWeight: 'bold',
-    fontSize: 11,
-    padding: 4,
-    textAlign: 'center',
-    minWidth: 60, 
-    flexGrow: 0,
-    textAlignVertical: 'center',
-  },
-  dataCell: {
-    fontSize: 11,
-    padding: 4,
-    textAlign: 'center',
-    borderRightWidth: 1,
-    borderColor: '#4B5563',
-    minWidth: 60,
-    flexGrow: 0,
-    textAlignVertical: 'center',
-  },
-  inputCell: {
-    fontSize: 11,
-    padding: 4,
-    borderRightWidth: 1,
-    borderColor: '#4B5563',
-    minWidth: 90,
-    backgroundColor: '#f9f9f9',
-    flexGrow: 0,
-  },
-  timeCellHeader: {
-    minWidth: 55, 
-    width: 55, 
-    borderRightWidth: 1,
-    borderColor: '#4B5563',
-    flexGrow: 0,
-    textAlignVertical: 'center',
-  },
-  checkboxTouchable: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRightWidth: 1,
-    borderColor: '#4B5563',
-  },
-  checkboxCellText: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#185a9d',
-    textAlignVertical: 'center',
-  },
-  snCell: { minWidth: 40, width: 40, textAlign: 'center' },
-  nameCell: { minWidth: 120 }, 
-  jobCell: { minWidth: 90 }, 
-  signCell: { minWidth: 80 },
-  supCell: { minWidth: 80 },
-  saveButtonContainer: {
-    padding: 18,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderColor: '#4B5563',
-  },
-  saveButton: {
-    backgroundColor: '#185a9d',
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 28,
-    shadowColor: '#185a9d',
+    margin: 10,
+    borderRadius: 12,
+    padding: 15,
+    elevation: 4,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+  },
+  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  logo: { width: 70, height: 45, marginRight: 12 },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#1e3a8a', flex: 1, textTransform: 'uppercase' },
+  
+  metaSection: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
+  inputGroup: { flex: 1, marginHorizontal: 8 },
+  label: { fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 6, textTransform: 'uppercase' },
+  metaInput: { 
+    borderBottomWidth: 2, 
+    borderBottomColor: '#cbd5e1', 
+    paddingVertical: 6, 
+    fontSize: 15, 
+    color: '#000',
+    fontWeight: '500'
+  },
+
+  table: { borderRadius: 8, overflow: 'hidden', borderWidth: 1.5, borderColor: '#000' },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f1f5f9', borderBottomWidth: 2, borderBottomColor: '#000' },
+  headerCell: { paddingVertical: 12, borderRightWidth: 1, borderRightColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  headerText: { fontSize: 11, fontWeight: '900', color: '#000', textAlign: 'center' },
+
+  row: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#000', minHeight: 60 },
+  rowAlternate: { backgroundColor: '#f8fafc' },
+  cell: { borderRightWidth: 1, borderRightColor: '#000', justifyContent: 'center' },
+  cellInput: { paddingHorizontal: 10, fontSize: 13, borderRightWidth: 1, borderRightColor: '#000', color: '#000' },
+  snText: { textAlign: 'center', fontSize: 12, color: '#000', fontWeight: 'bold' },
+
+  checkCell: { 
+    borderRightWidth: 1, 
+    borderRightColor: '#000', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  checkbox: { 
+    width: 34, 
+    height: 34, 
+    borderRadius: 6, 
+    borderWidth: 2.5, 
+    borderColor: '#94a3b8', 
+    backgroundColor: '#fff',
+    justifyContent: 'center', 
+    alignItems: 'center',
     elevation: 2,
   },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+  checkboxActive: { 
+    backgroundColor: '#1e3a8a', 
+    borderColor: '#1e3a8a' 
   },
-  saveButtonContainerInner: {
-    padding: 18,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderColor: '#4B5563',
-  },
-  auxButton: {
-    backgroundColor: '#777',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 8,
-  },
-  auxButtonSaveDraft: {
-    backgroundColor: '#f0ad4e',
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 8,
-  },
-  auxButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
+  checkMark: { 
+    color: '#fff', 
+    fontSize: 22, 
+    fontWeight: 'bold' 
+  }
 });

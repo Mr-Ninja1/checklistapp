@@ -152,6 +152,22 @@ export default function CookingTemperatureLog() {
         setBusy(false);
     };
 
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { if (saveTimer.current) clearTimeout(saveTimer.current); } catch (e) {}
+        try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+        setRows(initialRows);
+        setMeta(initialMeta);
+        setLogoDataUri(null);
+        setEditMode(false);
+    };
+
     const actionButtons = (
         <View style={styles.buttonRow}>
             <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}>
@@ -159,6 +175,9 @@ export default function CookingTemperatureLog() {
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}>
                 <Text style={[styles.btnText, { fontSize: 14 }]}>{busy ? 'Submitting...' : 'Submit Log'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#e53e3e' }]} onPress={handleClearDraft} disabled={busy}>
+                <Text style={[styles.btnText, { fontSize: 14 }]}>{'Clear Draft'}</Text>
             </TouchableOpacity>
         </View>
     );

@@ -91,12 +91,22 @@ function normalizeTempInput(t) {
   // strip any degree symbols and try to extract numeric value
   const stripped = s.replace(/[°℃]/g, '').trim();
   const m = stripped.match(/[+-]?\d+(?:\.\d+)?/);
-  if (m) return `${m[0]}°C`;
-  // fallback: return stripped with °C appended
-  return `${stripped}°C`;
+  if (m) return `${m[0]}`;
+  // fallback: return stripped without unit (user may be typing)
+  return `${stripped}`;
 }
 
 function formatTempDisplay(v) {
+  if (v === null || typeof v === 'undefined') return '';
+  const s = String(v).trim();
+  if (s === '') return '';
+  const stripped = s.replace(/[°℃]/g, '').trim();
+  const m = stripped.match(/[+-]?\d+(?:\.\d+)?/);
+  if (m) return `${m[0]}°C`;
+  return `${stripped}°C`;
+}
+
+function formatTempForSave(v) {
   if (v === null || typeof v === 'undefined') return '';
   const s = String(v).trim();
   if (s === '') return '';
@@ -110,8 +120,21 @@ function formatTempDisplay(v) {
   <View style={styles.slotRow}>
     {editable ? (
       <>
-        <TextInput value={value.temp} onChangeText={t => onChange('temp', normalizeTempInput(t))} placeholder="°C" style={[styles.slotInput, { flex: 1 }]} keyboardType="default" />
-        <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { flex: 1 }]} />
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+          <TextInput
+            value={value.temp}
+            onChangeText={t => onChange('temp', normalizeTempInput(t))}
+            placeholder={''}
+            style={[styles.slotInput, { flex: 1 }]}
+            keyboardType="default"
+          />
+          <Text style={styles.unitText}>°C</Text>
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <TextInput value={value.time} onChangeText={t => onChange('time', t)} placeholder="hh:mm" style={[styles.slotInput, { width: '100%' }]} />
+        </View>
+
         <SignatureField value={value.sign} onChange={(v) => onChange('sign', v)} editable={editable} width={signatureWidth} height={signatureHeight} placeholder="Sign" />
       </>
     ) : (
@@ -141,7 +164,15 @@ export default function WalkInChillerLog() {
     title: 'WALK-IN CHILLER TEMPERATURE CHECKLIST',
     date: metadata.issueDate || new Date().toLocaleDateString(),
     metadata,
-    formData,
+    formData: (Array.isArray(formData) ? formData.map(r => {
+      const copy = { ...r };
+      TIME_SLOTS.forEach(slot => {
+        if (copy[slot] && typeof copy[slot].temp !== 'undefined') {
+          copy[slot] = { ...copy[slot], temp: formatTempForSave(copy[slot].temp) };
+        }
+      });
+      return copy;
+    }) : formData),
     layoutHints: { DATE: COL_WIDTHS.DATE, RECORD_SLOT_WIDTH: COL_WIDTHS.RECORD_SLOT_WIDTH, ACTION: COL_WIDTHS.ACTION, SIGNATURE: COL_WIDTHS.SIGNATURE },
     _tableWidth: TABLE_MIN_WIDTH,
     assets: {},
@@ -343,6 +374,7 @@ const styles = StyleSheet.create({
   recordSlot: { borderRightWidth: 1, borderRightColor: '#E5E7EB', padding: 4 },
   slotRow: { flexDirection: 'row', alignItems: 'center' },
   slotInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, marginHorizontal: 6, borderRadius: 4, textAlign: 'center', fontSize: 14 },
+  unitText: { marginLeft: 6, fontSize: 14, color: '#111827' },
   actionInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, fontSize: 14 },
   signatureInput: { borderWidth: 1, borderColor: '#E5E7EB', padding: 10, borderRadius: 6, textAlign: 'center', fontSize: 14 },
   footerSign: { marginTop: 12 },

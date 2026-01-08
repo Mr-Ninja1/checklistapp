@@ -30,6 +30,11 @@ module.exports = function generate(payloadWrapper) {
   const metadata = p.metadata || {};
   const rows = Array.isArray(p.formData) ? p.formData : [];
 
+  const verifiedBy = metadata.verifiedBy || metadata.verified_by || metadata.verifier || '';
+  const verifiedBySign = metadata.verifiedBySign || metadata.verified_by_sign || '';
+  const complexManagerSign = metadata.complexManagerSign || metadata.managerSign || metadata.complex_manager_sign || '';
+  const complexManager = metadata.complexManager || metadata.manager || '';
+
   const DEFAULT_DAYS = p.weekDays || p.timeSlots || ['Sun','Mon','Tue','Wed','Thurs','Fri','Sat'];
   const days = Array.isArray(DEFAULT_DAYS) && DEFAULT_DAYS.length ? DEFAULT_DAYS : ['Sun','Mon','Tue','Wed','Thurs','Fri','Sat'];
 
@@ -95,7 +100,13 @@ module.exports = function generate(payloadWrapper) {
       <div class="metaCol"><div style="font-weight:700; font-size: 9px; color: #666;">MONTH:</div><div>${escapeHtml(metadata.month || p.month || '')}</div></div>
       <div class="metaCol"><div style="font-weight:700; font-size: 9px; color: #666;">YEAR:</div><div>${escapeHtml(metadata.year || p.year || '')}</div></div>
       <div class="metaCol"><div style="font-weight:700; font-size: 9px; color: #666;">VERIFIED BY HSEQ:</div>
-        <div style="margin-top:2px">${ resolveSignatureUri(metadata.hseqManagerSign || metadata.hseqManager || '') ? `<img src="${escapeHtml(resolveSignatureUri(metadata.hseqManagerSign || metadata.hseqManager || ''))}" style="max-height:45px; object-fit:contain; mix-blend-mode: multiply;"/>` : escapeHtml(metadata.hseqManager || '') }</div>
+        <div style="margin-top:2px">${ resolveSignatureUri(metadata.hseqManagerSign || metadata.hseqManager || '') ? `<img src="${escapeHtml(resolveSignatureUri(metadata.hseqManagerSign || metadata.hseqManager || ''))}" style="max-height:45px; object-fit:contain;"/>` : escapeHtml(metadata.hseqManager || '') }</div>
+      </div>
+      <div class="metaCol"><div style="font-weight:700; font-size: 9px; color: #666;">VERIFIED BY:</div>
+        <div style="margin-top:2px">${ resolveSignatureUri(verifiedBySign || verifiedBy || '') ? `<img src="${escapeHtml(resolveSignatureUri(verifiedBySign || verifiedBy || ''))}" style="max-height:45px; object-fit:contain;"/>` : escapeHtml(verifiedBy || '') }</div>
+      </div>
+      <div class="metaCol"><div style="font-weight:700; font-size: 9px; color: #666;">COMPLEX MANAGER SIGN:</div>
+        <div style="margin-top:2px">${ resolveSignatureUri(complexManagerSign || '') ? `<img src="${escapeHtml(resolveSignatureUri(complexManagerSign || ''))}" style="max-height:45px; object-fit:contain;"/>` : escapeHtml(complexManager || '') }</div>
       </div>
     </div>
 

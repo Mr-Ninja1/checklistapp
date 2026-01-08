@@ -102,27 +102,9 @@ export default function FOH_DailyCleaningPresentational({ payload, exportingWide
           </View>
 
           {/* Verified By: render the signature inline next to the label/value */}
-          <View style={[styles.metaRight, styles.inlineSignatureRow]}>
-            <View style={{ flexDirection: 'column', flex: 1 }}>
-              <Text style={styles.metaLabel}>Verified By:</Text>
-              <Text style={styles.metaValue}>{verifiedBy}</Text>
-            </View>
-            {md.verifiedBySign ? (
-              <View style={{ marginLeft: 8, alignItems: 'center', justifyContent: 'center' }}>
-                {renderSignatureCell(md.verifiedBySign, 140, 60)}
-              </View>
-            ) : null}
-          </View>
+          
 
-          {/* Complex manager sign: show label and manager signature inline to the right */}
-          <View style={[styles.metaManagerInline]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.metaLabel}>COMPLEX MANAGER SIGN:</Text>
-            </View>
-            <View style={{ marginLeft: 8, alignItems: 'center', justifyContent: 'center' }}>
-              {managerSign ? renderSignatureCell(managerSign, 220, 80) : <Text style={[styles.metaValue, styles.managerSign]}>{managerSign}</Text>}
-            </View>
-          </View>
+          
           {tickAfterCleaning ? (
             <View style={styles.tickBadgeInline}>
               <Text style={styles.tickText}>✓ TICK AFTER CLEANING</Text>

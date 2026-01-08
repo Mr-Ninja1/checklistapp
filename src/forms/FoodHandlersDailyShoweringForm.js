@@ -40,7 +40,7 @@ const FINAL_WIDTHS = [
 // This prevents the entire table from lagging when typing in one cell
 const DataRow = memo(({ rowIndex, rowData, editMode, onCellChange, onSignPress }) => {
   return (
-    <View style={styles.dataRow}>
+    <View style={styles.dataRow} pointerEvents={editMode ? 'auto' : 'none'}>
       {FINAL_WIDTHS.map((w, cIdx) => {
         const isSupSign = cIdx === FINAL_WIDTHS.length - 1;
         const dayIndex = cIdx - 2;
@@ -162,7 +162,7 @@ export default function FoodHandlersDailyShoweringForm() {
           <View style={styles.mainContent}>
             
             {/* Header Section */}
-            <View style={styles.docInfoContainer}>
+            <View style={styles.docInfoContainer} pointerEvents={editMode ? 'auto' : 'none'}>
               <View style={styles.docInfoRow}>
                 <View style={styles.headerColLeft}>
                   <Image source={require('../assets/logo.jpeg')} style={styles.logoImage} resizeMode="contain" />

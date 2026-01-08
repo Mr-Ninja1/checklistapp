@@ -323,7 +323,7 @@ const PersonalHygieneChecklist = () => {
 
                     {/* Inline action buttons placed here so they appear close to the end of the table */}
                     <View style={{ paddingVertical: 8 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                        <View style={{ flexDirection: 'grid', justifyContent: 'flex-start', gap: 8 }}>
                             <TouchableOpacity onPress={() => { if (isSaving) return; handleSaveDraft && handleSaveDraft(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }} disabled={isSaving}>
                                 <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
                             </TouchableOpacity>
