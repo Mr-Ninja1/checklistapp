@@ -17,7 +17,8 @@ const W_FIXED = {
   rowHeight: 45, // Slightly increased for better touch targets on tablets
   dailyTimeCol: 70, 
   dailySignCol: 100,
-  supSignCol: 160,
+  dailySignCol: 120,
+  supSignCol: 200,
   largeCol: 180, // Fixed width for Full Name
   mediumCol: 120, // Fixed width for Job Title
 };
@@ -197,7 +198,7 @@ export default function FoodHandlersDailyShoweringForm() {
                 <Text style={styles.labelText}>Year:</Text>
                 <TextInput style={styles.underlineTextInput} editable={editMode} value={year} onChangeText={setYear} />
                 <Text style={styles.labelText}>Verified By:</Text>
-                <SignatureField value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={150} height={40} />
+                <SignatureField value={verifiedBy} onChange={(v) => { setVerifiedBy(v); scheduleAutoSave(); }} editable={editMode} width={180} height={70} />
               </View>
             </View>
 
@@ -274,10 +275,10 @@ export default function FoodHandlersDailyShoweringForm() {
                 `}
                 // increase pen thickness and make strokes more consistent/darker
                 penColor="#000000"
-                minWidth={4}
-                maxWidth={10}
-                dotSize={3}
-                velocityFilterWeight={0.7}
+                minWidth={6}
+                maxWidth={12}
+                dotSize={4}
+                velocityFilterWeight={0.85}
                 backgroundColor="rgba(255,255,255,1)"
               />
               <View style={styles.modalActions}>
@@ -325,6 +326,7 @@ const styles = StyleSheet.create({
   inputField: { width: '100%', height: '100%', textAlign: 'center', fontSize: 10, padding: 0 },
   cellTouch: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   sigImageInsideCell: { width: '90%', height: '80%', resizeMode: 'contain' },
+  sigImageInsideCell: { width: '96%', height: '92%', resizeMode: 'contain', backgroundColor: '#fff', borderRadius: 4 },
   placeholder: { fontSize: 8, color: '#999' },
   instructionFooter: { marginTop: 15, padding: 10, backgroundColor: '#f9fafb', borderRadius: 5 },
   instructionText: { fontSize: 11, color: '#4b5563' },

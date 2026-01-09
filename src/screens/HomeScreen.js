@@ -531,22 +531,22 @@ export default function HomeScreen() {
       <Modal visible={showUpdatesModal} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.updatesModalOverlay}>
           <View style={styles.updatesModal}>
-            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New (Read all)</Text>
             <View style={{ marginBottom: 12 }}>
               <View style={{ padding: 12, backgroundColor: '#f0f9ff', borderRadius: 10, marginBottom: 8 }}>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#185a9d', textAlign: 'center', marginBottom: 6 }}>Share forms directly from the app — no desktop needed!</Text>
-                <Text style={{ fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>Share to WhatsApp, Email, Bluetooth, Nearby Share, Print and more.</Text>
-                <Text style={{ fontSize: 15, textAlign: 'center' }}><Text style={{ fontWeight: '700' }}>How to:</Text> Open Saved Forms → Open a saved form → Tap Share</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#185a9d', textAlign: 'center', marginBottom: 6 }}>Update no:19  9 JAN, 2026</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>Fixed all mentioned forms read below</Text>
+                <Text style={{ fontSize: 15, textAlign: 'center' }}><Text style={{ fontWeight: '700' }}>Tip:</Text>Updated all Temperature logs, showering log,Handwashing log </Text>
               </View>
             </View>
             <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>• Your can now share forms from tablet no dektop(pc) App needed!.</Text>
-              <Text style={styles.updateItem}>• Improved speed and reliability.</Text>
-              <Text style={styles.updateItem}>• Improved app speed and perfomance</Text>
-               <Text style={styles.updateItem}>• There is no need of using the Desktop(computer) app , the tablet app  can do all the work!</Text>
-             
+              <Text style={styles.updateItem}>• Fixed the handwashing log ,its now opening</Text>
+              <Text style={styles.updateItem}>• improved signatures for showering log  Clear the form and try adding new signatures</Text>
+              <Text style={styles.updateItem}>• ALL temperature logs will keep  draft even after submitting</Text>
+              <Text style={styles.updateItem}>• Always save Draft after working with the form</Text>
+              <Text style={styles.updateItem}>• Always confirm the updates as soon as possible</Text>
             </View>
-            <Text style={{ marginTop: 8, marginBottom: 12 }}>TRY USING THE NEW FORM SHARING FEATURE AND COMFIRM ITS WORKING </Text>
+            <Text style={{ marginTop: 8, marginBottom: 12 }}>TRY c  </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Okay, got it</Text>

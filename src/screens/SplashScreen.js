@@ -31,7 +31,7 @@ export default function SplashScreen({ navigation }) {
     // no seasonal confetti on splash
 
     // navigate to Home after a short delay so the splash is visible
-    const navTimer = setTimeout(() => { if (mounted) navigation.replace('Home', { showWhatsNew: true }); }, 2200);
+    const navTimer = setTimeout(() => { if (mounted) navigation.replace('Home', { showWhatsNew: true }); }, 9200);
     return () => { mounted = false; clearTimeout(navTimer); };
   }, []);
 
@@ -44,6 +44,7 @@ export default function SplashScreen({ navigation }) {
       </View>
       <Animated.Text style={[styles.bravo, { opacity: greetingOpacity, transform: [{ scale: greetingScale }], fontSize: 44, letterSpacing: 6 }]}>Bravo!</Animated.Text>
       <WindowsSpinner size={44} dotSize={6} color="#ffffff" />
+      <TipsSlideshow />
     </LinearGradient>
   );
 }
@@ -72,6 +73,38 @@ function WindowsSpinner({ size = 44, dotSize = 6, color = '#fff' }) {
         })}
       </Animated.View>
     </View>
+  );
+}
+
+function TipsSlideshow({ tips, interval = 3000 }) {
+  const defaultTips = [
+    'Always save Draft after you type something',
+    'Ensure Dropbox is always connected',
+    'You can manually check for updates on the history page',
+  ];
+  const messages = tips && tips.length ? tips : defaultTips;
+  const [index, setIndex] = useState(0);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(6)).current;
+
+  useEffect(() => {
+    const t = setInterval(() => setIndex(i => (i + 1) % messages.length), interval);
+    return () => clearInterval(t);
+  }, [messages.length, interval]);
+
+  useEffect(() => {
+    opacity.setValue(0);
+    translateY.setValue(6);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 420, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 420, useNativeDriver: true }),
+    ]).start();
+  }, [index, opacity, translateY]);
+
+  return (
+    <Animated.View style={[styles.tipsContainer, { opacity, transform: [{ translateY }] }]}> 
+      <Text style={styles.tipsText}>{messages[index]}</Text>
+    </Animated.View>
   );
 }
 
@@ -137,5 +170,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textAlign: 'center',
     maxWidth: '80%',
+  },
+  tipsContainer: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  tipsText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    maxWidth: '84%',
+    letterSpacing: 0.4,
   },
 });
