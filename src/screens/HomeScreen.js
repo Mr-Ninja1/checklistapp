@@ -546,7 +546,7 @@ export default function HomeScreen() {
               <Text style={styles.updateItem}>• Always save Draft after working with the form</Text>
               <Text style={styles.updateItem}>• Always confirm the updates as soon as possible</Text>
             </View>
-            <Text style={{ marginTop: 8, marginBottom: 12 }}>TRY c  </Text>
+            <Text style={{ marginTop: 8, marginBottom: 12 }}>TRY WORKING WITH ALL THE MENTIONED FORMS AND REPORT BACK TO US!  </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Okay, got it</Text>
