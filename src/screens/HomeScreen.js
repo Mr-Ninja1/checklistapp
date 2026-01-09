@@ -531,22 +531,19 @@ export default function HomeScreen() {
       <Modal visible={showUpdatesModal} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.updatesModalOverlay}>
           <View style={styles.updatesModal}>
-            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What’s New (Read all)</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New — Update 19 (9 Jan 2026)</Text>
             <View style={{ marginBottom: 12 }}>
               <View style={{ padding: 12, backgroundColor: '#f0f9ff', borderRadius: 10, marginBottom: 8 }}>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#185a9d', textAlign: 'center', marginBottom: 6 }}>Update no:19  9 JAN, 2026</Text>
-                <Text style={{ fontSize: 16, fontWeight: '800', textAlign: 'center', marginBottom: 8 }}>Fixed all mentioned forms read below</Text>
-                <Text style={{ fontSize: 15, textAlign: 'center' }}><Text style={{ fontWeight: '700' }}>Tip:</Text>Updated all Temperature logs, showering log,Handwashing log </Text>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center' }}>We've released an update with bug fixes and improvements.</Text>
               </View>
             </View>
             <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>• Fixed the handwashing log ,its now opening</Text>
-              <Text style={styles.updateItem}>• improved signatures for showering log  Clear the form and try adding new signatures</Text>
-              <Text style={styles.updateItem}>• ALL temperature logs will keep  draft even after submitting</Text>
-              <Text style={styles.updateItem}>• Always save Draft after working with the form</Text>
-              <Text style={styles.updateItem}>• Always confirm the updates as soon as possible</Text>
+              <Text style={styles.updateItem}>• Handwashing log: fixed an issue that prevented the form from opening.</Text>
+              <Text style={styles.updateItem}>• Showering log: improved signature capture. Please clear the form and re-sign to see the changes.</Text>
+              <Text style={styles.updateItem}>• Temperature logs: drafts are now preserved after submitting.</Text>
+              <Text style={styles.updateItem}>• General stability and UI improvements.</Text>
             </View>
-            <Text style={{ marginTop: 8, marginBottom: 12 }}>TRY WORKING WITH ALL THE MENTIONED FORMS AND REPORT BACK TO US!  </Text>
+            <Text style={{ marginTop: 8, marginBottom: 12 }}>try the updated forms and report any issues through whatsapp/call. your quick feedback will make a big difference.</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Okay, got it</Text>
