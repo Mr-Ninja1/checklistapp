@@ -4,6 +4,9 @@ import { useTheme } from '../utils/ThemeContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder, KeyboardAvoidingView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+let UpdatesModule = null;
+try { UpdatesModule = require('expo-updates'); } catch (e) { UpdatesModule = null; }
 import appConfig from '../app.json';
 import { httpProbe, processQueue } from '../utils/uploadQueue';
 import * as drive from '../utils/drive';
@@ -242,30 +245,43 @@ export default function HomeScreen() {
   const [abduVerified, setAbduVerified] = useState(false);
   const [abduModalVisible, setAbduModalVisible] = useState(false);
   const abduSnoozeTimer = React.useRef(null);
-  const currentAppVersion = (appConfig && appConfig.expo && appConfig.expo.version) ? appConfig.expo.version : (appConfig.version || '1.0.0');
+  // Determine app version at runtime. Prefer the runtime manifest / expoConfig when available
+  const runtimeVersionFromConstants = (Constants && (Constants.manifest && Constants.manifest.version)) || (Constants && Constants.expoConfig && Constants.expoConfig.version) || (Constants && Constants.manifest2 && Constants.manifest2.version);
+  const currentAppVersion = runtimeVersionFromConstants || (appConfig && appConfig.expo && appConfig.expo.version) || (appConfig.version || '1.0.0');
+
+  // Detect an OTA/bundle update id when available (Expo Updates / manifest fields)
+  const currentUpdateId = (UpdatesModule && UpdatesModule.updateId) ||
+    (Constants && Constants.manifest && (Constants.manifest.releaseId || Constants.manifest.id || Constants.manifest.revisionId)) ||
+    (Constants && Constants.manifest2 && (Constants.manifest2.revisionId || Constants.manifest2.id)) ||
+    (Constants && Constants.expoConfig && Constants.expoConfig.updates && Constants.expoConfig.updates.updateId) ||
+    null;
 
   React.useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const seenVersion = await AsyncStorage.getItem('@updates_modal_seen_version');
-        if (mounted) {
-          if (!seenVersion || seenVersion !== currentAppVersion) {
-            setShowUpdatesModal(true);
-          } else {
-            setShowUpdatesModal(false);
-          }
-        }
+        const lastSeenUpdateId = await AsyncStorage.getItem('@updates_last_seen_id');
+
+        // Show modal if app version changed OR if an OTA update id changed
+        let shouldShow = false;
+        if (!seenVersion || seenVersion !== currentAppVersion) shouldShow = true;
+        if (currentUpdateId && (!lastSeenUpdateId || lastSeenUpdateId !== currentUpdateId)) shouldShow = true;
+
+        if (mounted) setShowUpdatesModal(Boolean(shouldShow));
       } catch (e) {
         if (mounted) setShowUpdatesModal(true);
       }
     })();
     return () => { mounted = false; };
-  }, [currentAppVersion]);
+  }, [currentAppVersion, currentUpdateId]);
 
   const handleUpdatesSeen = async () => {
     try {
       await AsyncStorage.setItem('@updates_modal_seen_version', String(currentAppVersion));
+      if (typeof currentUpdateId === 'string' && currentUpdateId) {
+        try { await AsyncStorage.setItem('@updates_last_seen_id', String(currentUpdateId)); } catch (e) {}
+      }
     } catch (e) {}
     setShowUpdatesModal(false);
     try {
