@@ -238,6 +238,10 @@ export default function HomeScreen() {
 
   // Updates modal state — show once per app version (persist seen version)
   const [showUpdatesModal, setShowUpdatesModal] = useState(false);
+  const [abduVerificationRequired, setAbduVerificationRequired] = useState(false);
+  const [abduVerified, setAbduVerified] = useState(false);
+  const [abduModalVisible, setAbduModalVisible] = useState(false);
+  const abduSnoozeTimer = React.useRef(null);
   const currentAppVersion = (appConfig && appConfig.expo && appConfig.expo.version) ? appConfig.expo.version : (appConfig.version || '1.0.0');
 
   React.useEffect(() => {
@@ -264,7 +268,46 @@ export default function HomeScreen() {
       await AsyncStorage.setItem('@updates_modal_seen_version', String(currentAppVersion));
     } catch (e) {}
     setShowUpdatesModal(false);
+    try {
+      // mark that the post-update verification by Mr Abdu is required
+      await AsyncStorage.setItem('@abdu_verification_required', '1');
+      setAbduVerificationRequired(true);
+    } catch (e) {}
   };
+
+  // Load Abdu verification flags on mount
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const v = await AsyncStorage.getItem('@abdu_verified');
+        const req = await AsyncStorage.getItem('@abdu_verification_required');
+        if (!mounted) return;
+        const verified = Boolean(v);
+        setAbduVerified(verified);
+        setAbduVerificationRequired(!!req && !verified);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // sync modal visibility with requirement/verified state
+  React.useEffect(() => {
+    if (abduVerificationRequired && !abduVerified) {
+      setAbduModalVisible(true);
+    } else {
+      setAbduModalVisible(false);
+    }
+  }, [abduVerificationRequired, abduVerified]);
+
+  // cleanup snooze timer on unmount
+  React.useEffect(() => {
+    return () => {
+      try { if (abduSnoozeTimer.current) clearTimeout(abduSnoozeTimer.current); } catch (e) {}
+    };
+  }, []);
 
   // Flatten all forms for quick search
   const allForms = Object.keys(formCategories).reduce((acc, key) => {
@@ -549,6 +592,55 @@ export default function HomeScreen() {
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Okay, got it</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Persistent verification modal for Mr Abdu — appears until verified. Includes snooze and a secret remover dot. */}
+      <Modal visible={abduModalVisible} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.updatesModalOverlay}>
+          <View style={styles.updatesModal}>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>Verification required — Present to Mr Abdu</Text>
+            <ScrollView style={{ maxHeight: 320, marginBottom: 12 }}>
+              <Text style={{ marginBottom: 12 }}>We need a favour: please present this app to Mr Abdu so he can verify it. Since deployment we've implemented requested fixes and provided support, but the on-site manager has not confirmed the app's functionality to Mr Abdu. This reminder will continue until Mr Abdu confirms verification.</Text>
+              <Text style={{ marginBottom: 6, fontWeight: '700' }}>When you show the app to Mr Abdu, the developers will explain how to remove this reminder.</Text>
+            </ScrollView>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8 }}>
+              <TouchableOpacity style={[styles.updatesButtonSecondary, { maxWidth: 140 }]} onPress={() => {
+                // snooze for 25 seconds then show again (until verified)
+                setAbduModalVisible(false);
+                try { if (abduSnoozeTimer.current) clearTimeout(abduSnoozeTimer.current); } catch (e) {}
+                abduSnoozeTimer.current = setTimeout(() => {
+                  if (!abduVerified) setAbduModalVisible(true);
+                }, 10000);
+              }}>
+                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Remind me later</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 200 }]} onPress={async () => {
+                try {
+                  await AsyncStorage.setItem('@abdu_verified', '1');
+                  await AsyncStorage.removeItem('@abdu_verification_required');
+                } catch (e) {}
+                setAbduVerified(true);
+                setAbduVerificationRequired(false);
+                setAbduModalVisible(false);
+              }}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>I've presented to Mr Abdu — confirm</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* subtle secret red dot centered in the modal — pressing it will also mark verified (developers will instruct Mr Abdu) */}
+            <TouchableOpacity onPress={async () => {
+                try {
+                  await AsyncStorage.setItem('@abdu_verified', '1');
+                  await AsyncStorage.removeItem('@abdu_verification_required');
+                } catch (e) {}
+                try { if (abduSnoozeTimer.current) clearTimeout(abduSnoozeTimer.current); } catch (e) {}
+                setAbduVerified(true);
+                setAbduVerificationRequired(false);
+                setAbduModalVisible(false);
+              }} style={styles.secretDot} accessibilityLabel="verification-secret">
+              <View style={styles.secretDotInner} />
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1195,5 +1287,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#185a9d'
+  }
+  ,
+  secretDot: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 28,
+    height: 28,
+    marginLeft: -14,
+    marginTop: -14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    opacity: 0.9
+  },
+  secretDotInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 12,
+    backgroundColor: '#c62828',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 6
   }
 });

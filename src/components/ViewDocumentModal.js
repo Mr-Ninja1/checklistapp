@@ -268,9 +268,12 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
 
           <View style={styles.buttonRow}>
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#0a8a0a' }]}
-              onPress={handleDebugHtmlExport}
-              disabled={exporting}
+              style={[styles.button, { backgroundColor: '#777' }]}
+              onPress={() => {
+                Alert.alert('Export on desktop', 'use the  desktop(computer app) for (export+sharing) it has been updated with some new interesting features and export is now fast.\n\nMr Abdu must verify this app for this feature to start working again kindly present the app to him!');
+              }}
+              // keep visual disabled style but allow showing the notice
+              disabled={false}
             >
                 <Text style={styles.buttonText}>{exporting ? 'Exporting...' : 'Share'}</Text>
             </TouchableOpacity>
