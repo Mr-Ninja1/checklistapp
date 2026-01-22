@@ -6,6 +6,7 @@ import * as Sharing from 'expo-sharing';
 import * as Updates from 'expo-updates';
 import ViewDocumentModal from '../components/ViewDocumentModal';
 import DriveFloatingButton from '../components/DriveFloatingButton';
+import { useExportFormAsPDF } from '../utils/useExportFormAsPDF';
 import formStorage from '../utils/formStorage';
 import { getFormHistory, removeFormHistory } from '../utils/formHistory';
 import { normalizeSavedAtUsingFiles } from '../utils/formHistory';
@@ -22,6 +23,8 @@ export default function FormSavesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
   const [opening, setOpening] = useState(false);
+  const [exportingMap, setExportingMap] = useState({});
+  const { exportAsPDF } = useExportFormAsPDF();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('date');
   const [activeMonth, setActiveMonth] = useState('all');
@@ -650,9 +653,62 @@ export default function FormSavesScreen() {
                       <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
                       <Text style={styles.cardMeta}>Location: {form.location || ''}</Text>
                       <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : 'Unknown'}</Text>
-                      <TouchableOpacity style={styles.deleteBtnSmall} onPress={() => handleDelete(form, idx, date)}>
-                        <Text style={styles.deleteBtnTextSmall}>Delete</Text>
-                      </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <TouchableOpacity style={styles.smallActionBtnDanger} onPress={() => handleDelete(form, idx, date)}>
+                            <Text style={styles.smallActionBtnText}>Delete</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.smallActionBtnSuccess, { marginLeft: 8 }]}
+                            onPress={async () => {
+                              // Prevent re-entrancy for the same form
+                              const key = String(form.savedAt || form.pdfPath || idx);
+                              if (exportingMap[key]) return;
+                              setExportingMap(m => ({ ...m, [key]: true }));
+                              try {
+                                // Build payload similar to opening handler
+                                let payload = null;
+                                const meta = form.meta || {};
+                                if (meta.formId) {
+                                  try {
+                                    const loaded = await formStorage.loadForm(meta.formId);
+                                    if (loaded && loaded.payload) payload = loaded.payload;
+                                  } catch (e) { console.warn('share: loadForm failed', e); }
+                                }
+                                if (!payload) {
+                                  if (meta && Array.isArray(meta.formData)) {
+                                    const m = { ...meta };
+                                    const rows = m.formData || [];
+                                    delete m.formData;
+                                    payload = { metadata: m, formData: rows };
+                                  } else if (meta.formData && Object.keys(meta.formData).length) {
+                                    payload = meta.formData;
+                                  } else if (meta.payload && Object.keys(meta.payload).length) {
+                                    payload = meta.payload;
+                                  } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
+                                    payload = meta;
+                                  }
+                                }
+                                if (!payload) payload = form;
+                                payload.pdfPath = form.pdfPath;
+                                payload.savedAt = form.savedAt;
+                                payload.title = payload.title || form.title || (form.pdfPath && form.pdfPath.split('/')?.pop());
+                                if (payload.meta) delete payload.meta;
+
+                                // call export helper which shares the PDF when available
+                                try {
+                                  await exportAsPDF({ title: payload.title, date: payload.savedAt, formData: payload, exportOptions: { filename: payload.title } });
+                                } catch (e) {
+                                  console.warn('share export failed', e);
+                                  Alert.alert('Share failed', String(e));
+                                }
+                              } finally {
+                                setExportingMap(m => ({ ...m, [key]: false }));
+                              }
+                            }}
+                          >
+                            <Text style={styles.smallActionBtnText}>{exportingMap[String(form.savedAt || form.pdfPath || idx)] ? 'Sharing...' : 'Share'}</Text>
+                          </TouchableOpacity>
+                        </View>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -868,6 +924,8 @@ const styles = StyleSheet.create({
   applyBtnText: { color: '#fff', fontWeight: '800' },
   smallActionBtn: { backgroundColor: '#185a9d', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
   smallActionBtnText: { color: '#fff', fontWeight: '700' },
+  smallActionBtnDanger: { backgroundColor: '#ff5e62', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
+  smallActionBtnSuccess: { backgroundColor: '#34D399', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
   smallActionBtnCompact: { backgroundColor: '#185a9d', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, minWidth: 96, alignItems: 'center' },
   lastDaysInput: { width: 54, backgroundColor: '#fff', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, borderWidth: 1, borderColor: '#e6eef2', textAlign: 'center' },
   filterBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1, borderColor: '#185a9d', backgroundColor: 'transparent' },

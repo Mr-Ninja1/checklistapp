@@ -611,8 +611,17 @@ export default function HomeScreen() {
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
+              <Text style ={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
+                You can now share forms directly to whats app from Tablet and Phone!
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
+                You can see how much storage space is left in your Dropbox account.
+              </Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
+                Changed app theme color to a new powerful look.
+              </Text>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center' }}>
-                The share button has been enabled on tablet — you can now share forms directly to WhatsApp. It's fast and easy.
+                You can now share saved forms directly and quickly without opening them.
               </Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>

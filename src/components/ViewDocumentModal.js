@@ -266,19 +266,16 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
 
           <Spinner visible={exporting} textContent={'Exporting...'} textStyle={{ color: '#fff' }} />
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#777' }]}
-              onPress={() => {
-                Alert.alert('Export on desktop', 'use the  desktop(computer app) for (export+sharing) it has been updated with some new interesting features and export is now fast.\n\nMr Abdu must verify this app for this feature to start working again kindly present the app to him!');
-              }}
-              // keep visual disabled style but allow showing the notice
-              disabled={false}
-            >
-                <Text style={styles.buttonText}>{exporting ? 'Exporting...' : 'Share'}</Text>
-            </TouchableOpacity>
-            {/* Debug buttons removed: Show formType and Show payload */}
-          </View>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={handleExportPress}
+                  disabled={exporting}
+                >
+                    <Text style={styles.buttonText}>{exporting ? 'Exporting...' : 'Share'}</Text>
+                </TouchableOpacity>
+                {/* Debug buttons removed: Show formType and Show payload */}
+              </View>
           <Modal visible={payloadDialogVisible} transparent animationType="fade">
             <View style={styles.payloadOverlay}>
               <View style={[styles.payloadBox, { height: '90%' }]}>
