@@ -1,121 +1,19 @@
-// Generate HTML preview for known form types
-ipcMain.handle('generate-form-html', async (event, payloadWrapper) => {
-  try {
-    const p = payloadWrapper && payloadWrapper.payload ? payloadWrapper.payload : payloadWrapper || {};
+/* Futuristic splash */
+#splash{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:99999;overflow:hidden;background:radial-gradient(closest-corner at 10% 20%, rgba(30,167,255,0.08), transparent 8%), radial-gradient(closest-corner at 90% 80%, rgba(111,92,255,0.06), transparent 10%), linear-gradient(180deg,#001021,#04122a)}
+#splash::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(30,167,255,0.02),rgba(111,92,255,0.02));mix-blend-mode:screen;pointer-events:none}
+#splashContent{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:28px}
+#logoContainer{margin-bottom:6px;position:relative}
+#splash img#logo{width:150px;height:120px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));box-shadow:0 12px 40px rgba(30,122,255,0.08), 0 2px 8px rgba(0,0,0,0.5);object-fit:contain;transform:translateZ(0);border:1px solid rgba(255,255,255,0.03)}
+#logoContainer::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:220px;height:220px;border-radius:50%;background:conic-gradient(from 90deg, rgba(30,167,255,0.06), rgba(111,92,255,0.06), rgba(30,167,255,0.02));filter:blur(28px);opacity:0.6;z-index:-1;animation:spinSlow 8s linear infinite}
+#bravo{font-size:44px;font-weight:900;color:linear-gradient(90deg,#e6fbff,#bfeeff);letter-spacing:6px;margin:0;text-shadow:0 6px 30px rgba(14,30,50,0.6);background:linear-gradient(90deg,#e6fbff,#bfeeff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#subtitle{font-size:14px;color:rgba(190,238,255,0.85);margin:0;letter-spacing:1px}
+#loadingMsg{font-size:15px;color:var(--muted);margin:0;letter-spacing:0.6px;min-height:20px;opacity:1}
 
-    const candidates = [];
-    const pushNorm = (v) => {
-      if (!v) return;
-      try { const s = String(v).replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); if (s) candidates.push(s); } catch (e) {}
-    };
-    pushNorm(p.title);
-    pushNorm(p.formType);
-    pushNorm(p.formTypeName);
-    pushNorm(p.name);
-    pushNorm(p.metadata && p.metadata.subject);
-    pushNorm(p.metadata && p.metadata.location);
+/* animated arc behind logo */
+.splash-arc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:260px;height:260px;border-radius:50%;pointer-events:none;z-index:-2;background:radial-gradient(circle at center, rgba(30,167,255,0.06), transparent 40%);filter:blur(18px)}
+@keyframes spinSlow{to{transform:translate(-50%,-50%) rotate(360deg)}}
 
-    const explicitMapping = {
-      'foh': 'generate_foh_frontofhouse_html.js',
-      'fohdailycleaningpresentational': 'generate_foh_frontofhouse_html.js',
-      'frontofhouse': 'generate_foh_frontofhouse_html.js',
-      'frontofhousecleaning': 'generate_foh_frontofhouse_html.js',
-      'thawingtemperature': 'generate_thawingtemperature_html.js',
-      'thawing': 'generate_thawingtemperature_html.js',
-      'thawingtemperaturelog': 'generate_thawingtemperature_html.js',
-      'thawingtemperaturepresentational': 'generate_thawingtemperature_html.js',
-      'productrejection': 'generate_productrejection_html.js',
-      'drygoodsreceiving': 'generate_drygoodsreceiving_html.js',
-      'toolboxtalkregister': 'generate_toolboxtalkregister_html.js',
-      'foodhandlersdailyshowering': 'generate_foodhandlers_daily_showering_html.js',
-      'foodhandlersdailyshower': 'generate_foodhandlers_daily_showering_html.js',
-      'foodhandlersdailyshoweringpresentational': 'generate_foodhandlers_daily_showering_html.js'
-    };
-
-    const rawTitle = (p.title || p.formType || p.name || '').toString().toLowerCase();
-    if (rawTitle.includes('kitchen') && (rawTitle.includes('sanitiz') || rawTitle.includes('clean'))) candidates.push('kitchendailycleaning');
-    if (rawTitle.includes('food contact') || rawTitle.includes('foodcontact')) candidates.push('kitchendailycleaning');
-    if (rawTitle.includes('food handlers') || rawTitle.includes('foodhandlers') || rawTitle.includes('handwashing') || rawTitle.includes('hand wash')) {
-      candidates.push('foodhandlers');
-      candidates.push('foodhandlersdailyhandwashing');
-    }
-    if (rawTitle.includes('ppe') || rawTitle.includes('personal') || rawTitle.includes('protect')) {
-      candidates.push('ppe');
-      candidates.push('personalprotectiveequipment');
-    }
-
-    const fs = require('fs');
-    const exportersDir = path.join(__dirname, 'src', 'exporters', 'html');
-    const files = fs.readdirSync(exportersDir).filter(f => f && f.toLowerCase().endsWith('.js'));
-
-    // 1. Check Payload Override
-    const overrideKey = (p.exporter || (p.metadata && p.metadata.exporter) || '').toString().trim();
-    if (overrideKey) {
-      let mapped = overrideKey;
-      const norm = mapped.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      if (!mapped.toLowerCase().endsWith('.js')) {
-        const found = files.find(f => f.toLowerCase().includes(norm) || f.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() === norm);
-        if (found) mapped = found;
-      }
-      if (files.includes(mapped)) {
-        const modPath = path.join(exportersDir, mapped);
-        delete require.cache[require.resolve(modPath)];
-        const gen = require(modPath);
-        const fn = gen && (gen.default || gen);
-        if (typeof fn === 'function') return { ok: true, html: fn(payloadWrapper) };
-      }
-    }
-
-    // 2. Check Explicit Mapping
-    for (const c of candidates) {
-      const mapped = explicitMapping[c];
-      if (mapped && files.includes(mapped)) {
-        const modPath = path.join(exportersDir, mapped);
-        delete require.cache[require.resolve(modPath)];
-        const gen = require(modPath);
-        const fn = gen && (gen.default || gen);
-        if (typeof fn === 'function') return { ok: true, html: fn(payloadWrapper) };
-      }
-    }
-
-    // 3. Scoring fallback
-    const longestCommonSubstring = (a, b) => {
-      if (!a || !b) return 0;
-      const m = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(0));
-      let longest = 0;
-      for (let i = 0; i < a.length; i++) {
-        for (let j = 0; j < b.length; j++) {
-          if (a[i] === b[j]) {
-            m[i + 1][j + 1] = m[i][j] + 1;
-            if (m[i + 1][j + 1] > longest) longest = m[i + 1][j + 1];
-          }
-        }
-      }
-      return longest;
-    };
-
-    let best = { score: 0, file: null };
-    for (const f of files) {
-      const base = f.replace(/^generate/i, '').replace(/html\.js$/i, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-      let score = 0;
-      for (const c of candidates) {
-        if (c === base) score += 10000;
-        else if (c.includes(base) || base.includes(c)) score += 100 + Math.max(base.length, c.length);
-        else score += longestCommonSubstring(base, c);
-      }
-      if (score > best.score) best = { score, file: f };
-    }
-
-    if (best.file) {
-      const modPath = path.join(exportersDir, best.file);
-      delete require.cache[require.resolve(modPath)];
-      const gen = require(modPath);
-      const fn = gen && (gen.default || gen);
-      if (typeof fn === 'function') return { ok: true, html: fn(payloadWrapper) };
-    }
-
-    return { ok: false, error: 'No generator found' };
-  } catch (e) {
-    return { ok: false, error: String(e) };
-  }
-});
+/* Spinner animation */
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.3);border-top:4px solid #fff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeInOut{0%,100%{opacity:0}50%{opacity:1}}

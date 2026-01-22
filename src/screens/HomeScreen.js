@@ -17,7 +17,7 @@ import LoadingOverlay from '../components/LoadingOverlay';
 const formCategories = {
   foh: {
     name: "FOH Records",
-    color: ["#43cea2", "#185a9d"],
+    color: ["#1EA7FF", "#04122a"],
     forms: [
       { id: 117, title: "Display Chiller Shelf-Life Inspection", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller", route: 'DisplayChillerShelfLifeInspectionChecklist' },
       { id: 120, title: "DISPLAY CHILLER TEMPERATURE LOG SHEET - Upright", status: "pending", priority: "high", dueTime: "Daily", location: "Display Chiller - Upright", route: 'DisplayChillerTemperatureLog_Upright' },
@@ -123,7 +123,7 @@ Object.keys(formCategories).forEach(catKey => {
 
 const getStatusColor = (status) => {
   switch (status) {
-    case 'completed': return { backgroundColor: '#43cea2', color: '#fff' };
+    case 'completed': return { backgroundColor: '#1EA7FF', color: '#fff' };
     case 'pending': return { backgroundColor: '#ffd200', color: '#333' };
     case 'overdue': return { backgroundColor: '#ff5e62', color: '#fff' };
     default: return { backgroundColor: '#eee', color: '#333' };
@@ -134,7 +134,7 @@ const getPriorityColor = (priority) => {
   switch (priority) {
     case 'critical': return { borderColor: '#ff5e62', color: '#ff5e62' };
     case 'high': return { borderColor: '#ffd200', color: '#ffd200' };
-    case 'medium': return { borderColor: '#43cea2', color: '#43cea2' };
+    case 'medium': return { borderColor: '#1EA7FF', color: '#1EA7FF' };
     case 'low': return { borderColor: '#aaa', color: '#aaa' };
     default: return { borderColor: '#eee', color: '#333' };
   }
@@ -241,10 +241,6 @@ export default function HomeScreen() {
 
   // Updates modal state — show once per app version (persist seen version)
   const [showUpdatesModal, setShowUpdatesModal] = useState(false);
-  const [abduVerificationRequired, setAbduVerificationRequired] = useState(false);
-  const [abduVerified, setAbduVerified] = useState(false);
-  const [abduModalVisible, setAbduModalVisible] = useState(false);
-  const abduSnoozeTimer = React.useRef(null);
   // Determine app version at runtime. Prefer the runtime manifest / expoConfig when available
   const runtimeVersionFromConstants = (Constants && (Constants.manifest && Constants.manifest.version)) || (Constants && Constants.expoConfig && Constants.expoConfig.version) || (Constants && Constants.manifest2 && Constants.manifest2.version);
   const currentAppVersion = runtimeVersionFromConstants || (appConfig && appConfig.expo && appConfig.expo.version) || (appConfig.version || '1.0.0');
@@ -256,17 +252,25 @@ export default function HomeScreen() {
     (Constants && Constants.expoConfig && Constants.expoConfig.updates && Constants.expoConfig.updates.updateId) ||
     null;
 
+  // Manual whats-new identifier.
+  // Increment or update this string whenever you publish a JS-only update that should show the "What's New" modal.
+  // This ensures JS-only deployments (which don't bump native version) can still trigger the modal.
+  const CURRENT_WHATS_NEW_ID = 'whats_new_2026-01-22_v1';
+
   React.useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const seenVersion = await AsyncStorage.getItem('@updates_modal_seen_version');
         const lastSeenUpdateId = await AsyncStorage.getItem('@updates_last_seen_id');
+        const lastSeenWhats = await AsyncStorage.getItem('@whats_new_seen_id');
 
         // Show modal if app version changed OR if an OTA update id changed
         let shouldShow = false;
         if (!seenVersion || seenVersion !== currentAppVersion) shouldShow = true;
         if (currentUpdateId && (!lastSeenUpdateId || lastSeenUpdateId !== currentUpdateId)) shouldShow = true;
+        // Also show if the developer-updated What's New id changed (useful for JS-only updates)
+        if (CURRENT_WHATS_NEW_ID && (!lastSeenWhats || lastSeenWhats !== CURRENT_WHATS_NEW_ID)) shouldShow = true;
 
         if (mounted) setShowUpdatesModal(Boolean(shouldShow));
       } catch (e) {
@@ -282,48 +286,12 @@ export default function HomeScreen() {
       if (typeof currentUpdateId === 'string' && currentUpdateId) {
         try { await AsyncStorage.setItem('@updates_last_seen_id', String(currentUpdateId)); } catch (e) {}
       }
+      // Persist that the user has seen the current What's New id
+      try { if (CURRENT_WHATS_NEW_ID) await AsyncStorage.setItem('@whats_new_seen_id', String(CURRENT_WHATS_NEW_ID)); } catch (e) {}
     } catch (e) {}
     setShowUpdatesModal(false);
-    try {
-      // mark that the post-update verification by Mr Abdu is required
-      await AsyncStorage.setItem('@abdu_verification_required', '1');
-      setAbduVerificationRequired(true);
-    } catch (e) {}
   };
-
-  // Load Abdu verification flags on mount
-  React.useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const v = await AsyncStorage.getItem('@abdu_verified');
-        const req = await AsyncStorage.getItem('@abdu_verification_required');
-        if (!mounted) return;
-        const verified = Boolean(v);
-        setAbduVerified(verified);
-        setAbduVerificationRequired(!!req && !verified);
-      } catch (e) {
-        // ignore
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  // sync modal visibility with requirement/verified state
-  React.useEffect(() => {
-    if (abduVerificationRequired && !abduVerified) {
-      setAbduModalVisible(true);
-    } else {
-      setAbduModalVisible(false);
-    }
-  }, [abduVerificationRequired, abduVerified]);
-
-  // cleanup snooze timer on unmount
-  React.useEffect(() => {
-    return () => {
-      try { if (abduSnoozeTimer.current) clearTimeout(abduSnoozeTimer.current); } catch (e) {}
-    };
-  }, []);
+  // (Abdu verification modal removed)
 
   // Flatten all forms for quick search
   const allForms = Object.keys(formCategories).reduce((acc, key) => {
@@ -547,6 +515,9 @@ export default function HomeScreen() {
   // start as `null` so we don't flash the banner while we check token on mount
   // banner will be shown only when dropboxConnected === false
   const [dropboxConnected, setDropboxConnected] = useState(null);
+  const [dropboxUser, setDropboxUser] = useState(null);
+  const [dropboxStorage, setDropboxStorage] = useState(null);
+  const [dropboxInfoLoading, setDropboxInfoLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -580,6 +551,54 @@ export default function HomeScreen() {
     return () => { mounted = false; if (timer) clearInterval(timer); try { if (typeof authUnsub === 'function') authUnsub(); } catch (e) {} };
   }, []);
 
+  // fetch dropbox user info and storage usage when signed in
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchInfo = async () => {
+      try {
+        setDropboxInfoLoading(true);
+        const ui = await drive.getUserInfo().catch(() => null);
+        if (mounted) setDropboxUser(ui || null);
+        // fetch space usage via Dropbox API if token present
+        try {
+          const token = await drive.getAccessToken().catch(() => null);
+          if (token) {
+            const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', {
+              method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
+            if (res && res.ok) {
+              const data = await res.json();
+              // allocation can be object with allocated bytes under allocation.allocated
+              let allocation = null;
+              try { allocation = (data && data.allocation && (data.allocation.allocated || data.allocation.allocated_bytes || data.allocation.allocated)) || null; } catch (e) { allocation = null; }
+              // fallback: some responses store allocation.used
+              const used = data && (data.used || data.allocation && data.allocation.used) ? (data.used || (data.allocation && data.allocation.used)) : null;
+              if (mounted) setDropboxStorage({ used: used || null, allocation: allocation || null, raw: data });
+            }
+          }
+        } catch (e) {
+          if (mounted) setDropboxStorage(null);
+        }
+      } catch (e) {
+        if (mounted) { setDropboxUser(null); setDropboxStorage(null); }
+      } finally {
+        if (mounted) setDropboxInfoLoading(false);
+      }
+    };
+    if (dropboxConnected) fetchInfo();
+    if (!dropboxConnected) { setDropboxUser(null); setDropboxStorage(null); }
+    return () => { mounted = false; };
+  }, [dropboxConnected]);
+
+  const formatBytes = (bytes) => {
+    if (bytes === null || typeof bytes === 'undefined') return '—';
+    const b = Number(bytes);
+    if (Number.isNaN(b)) return '—';
+    if (b === 0) return '0 B';
+    const sizes = ['B','KB','MB','GB','TB'];
+    const i = Math.floor(Math.log(b) / Math.log(1024));
+    return `${(b / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
+  };
+
 
   // Main UI
   return (
@@ -590,19 +609,12 @@ export default function HomeScreen() {
       <Modal visible={showUpdatesModal} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.updatesModalOverlay}>
           <View style={styles.updatesModal}>
-            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New — Update 19 (9 Jan 2026)</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
-              <View style={{ padding: 12, backgroundColor: '#f0f9ff', borderRadius: 10, marginBottom: 8 }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center' }}>We've released an update with bug fixes and improvements.</Text>
-              </View>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center' }}>
+                The share button has been enabled on tablet — you can now share forms directly to WhatsApp. It's fast and easy.
+              </Text>
             </View>
-            <View style={styles.updatesList}>
-              <Text style={styles.updateItem}>• Handwashing log: fixed an issue that prevented the form from opening.</Text>
-              <Text style={styles.updateItem}>• Showering log: improved signature capture. Please clear the form and re-sign to see the changes.</Text>
-              <Text style={styles.updateItem}>• Temperature logs: drafts are now preserved after submitting.</Text>
-              <Text style={styles.updateItem}>• General stability and UI improvements.</Text>
-            </View>
-            <Text style={{ marginTop: 8, marginBottom: 12 }}>try the updated forms and report any issues through whatsapp/call. your quick feedback will make a big difference.</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Okay, got it</Text>
@@ -611,55 +623,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-      {/* Persistent verification modal for Mr Abdu — appears until verified. Includes snooze and a secret remover dot. */}
-      <Modal visible={abduModalVisible} transparent animationType="fade" onRequestClose={() => {}}>
-        <View style={styles.updatesModalOverlay}>
-          <View style={styles.updatesModal}>
-            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>Verification required — Present to Mr Abdu</Text>
-            <ScrollView style={{ maxHeight: 320, marginBottom: 12 }}>
-              <Text style={{ marginBottom: 12 }}>We need a favour: please present this app to Mr Abdu so he can verify it. Since deployment we've implemented requested fixes and provided support, but the on-site manager has not confirmed the app's functionality to Mr Abdu. This reminder will continue until Mr Abdu confirms verification.</Text>
-              <Text style={{ marginBottom: 6, fontWeight: '700' }}>When you show the app to Mr Abdu, the developers will explain how to remove this reminder.</Text>
-            </ScrollView>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8 }}>
-              <TouchableOpacity style={[styles.updatesButtonSecondary, { maxWidth: 140 }]} onPress={() => {
-                // snooze for 25 seconds then show again (until verified)
-                setAbduModalVisible(false);
-                try { if (abduSnoozeTimer.current) clearTimeout(abduSnoozeTimer.current); } catch (e) {}
-                abduSnoozeTimer.current = setTimeout(() => {
-                  if (!abduVerified) setAbduModalVisible(true);
-                }, 10000);
-              }}>
-                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Remind me later</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 200 }]} onPress={async () => {
-                try {
-                  await AsyncStorage.setItem('@abdu_verified', '1');
-                  await AsyncStorage.removeItem('@abdu_verification_required');
-                } catch (e) {}
-                setAbduVerified(true);
-                setAbduVerificationRequired(false);
-                setAbduModalVisible(false);
-              }}>
-                <Text style={{ color: '#fff', fontWeight: '700' }}>I've presented to Mr Abdu — confirm</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* subtle secret red dot centered in the modal — pressing it will also mark verified (developers will instruct Mr Abdu) */}
-            <TouchableOpacity onPress={async () => {
-                try {
-                  await AsyncStorage.setItem('@abdu_verified', '1');
-                  await AsyncStorage.removeItem('@abdu_verification_required');
-                } catch (e) {}
-                try { if (abduSnoozeTimer.current) clearTimeout(abduSnoozeTimer.current); } catch (e) {}
-                setAbduVerified(true);
-                setAbduVerificationRequired(false);
-                setAbduModalVisible(false);
-              }} style={styles.secretDot} accessibilityLabel="verification-secret">
-              <View style={styles.secretDotInner} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Abdu verification modal removed */}
       {/* Seasonal overlay removed */}
       {/* Floating Search Button - draggable */}
       <Animated.View
@@ -724,16 +688,14 @@ export default function HomeScreen() {
         </View>
       </Modal>
       <Animated.View style={{ transform: [{ scale: headerPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }}>
-      <LinearGradient
-        colors={[theme.accent, theme.accent, theme.primary]}
-        style={{
-          width: '100%',
-          paddingBottom: isMobile ? 0 : 24,
-          borderBottomLeftRadius: 24,
-          borderBottomRightRadius: 24,
-          alignSelf: 'stretch',
-        }}
-      >
+      <View style={{
+        width: '100%',
+        paddingBottom: isMobile ? 0 : 24,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        alignSelf: 'stretch',
+        backgroundColor: theme.primary
+      }}>
         {/* Polished mobile app header */}
         {isMobile ? (
           <View style={{ padding: 0, margin: 0 }}>
@@ -748,19 +710,34 @@ export default function HomeScreen() {
                 />
                 {/* reachability icon removed from here — now shown on the right side of the time/date row */}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 22, fontWeight: '700', color: theme.primary, letterSpacing: 1, textAlign: 'left', marginBottom: 2 }}>Bravo!</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '700', color: theme.text, letterSpacing: 1, textAlign: 'left', marginBottom: 2 }}>Bravo!</Text>
                   <Text style={{ fontSize: 15, color: theme.accent, opacity: 0.95, textAlign: 'left', marginBottom: 0, fontWeight: '500' }}>Food Safety Inspections</Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 15, color: '#22c1c3', fontWeight: 'bold', marginRight: 6 }}>📍</Text>
-                <Text style={{ fontSize: 14, color: '#22c1c3', fontWeight: 'bold', marginRight: 8 }}>Ndola, Zambia</Text>
-                <Text style={{ fontSize: 13, color: '#185a9d', fontWeight: '500' }}>Bravo Brands Central</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                <Text style={{ fontSize: 13, color: '#185a9d', marginRight: 8 }}>5 Sites</Text>
-                <Text style={{ fontSize: 13, color: '#185a9d', marginRight: 8 }}>| 42 Staff</Text>
-                <Text style={{ fontSize: 13, color: '#43cea2', fontWeight: 'bold' }}>● Active</Text>
+                <Text style={{ fontSize: 16, color: theme.accent, fontWeight: '700', marginRight: 8 }}>📦</Text>
+                {dropboxConnected ? (
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, color: theme.text, fontWeight: '700' }}>{(dropboxUser && (dropboxUser.name && dropboxUser.name.display_name)) || dropboxUser && dropboxUser.email || 'Dropbox'}</Text>
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>{dropboxStorage ? `${formatBytes(dropboxStorage.used)} of ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
+                  </View>
+                ) : (
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, color: theme.text, fontWeight: '700' }}>Dropbox</Text>
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>Not signed in</Text>
+                  </View>
+                )}
+                <TouchableOpacity onPress={async () => {
+                  try {
+                    if (dropboxConnected) {
+                      await drive.revokeAccessToken().catch(() => null);
+                    } else {
+                      await drive.signInAsync().catch(() => null);
+                    }
+                  } catch (e) {}
+                }} style={{ paddingHorizontal: 8 }}>
+                  <Text style={{ color: theme.accent, fontWeight: '700' }}>{dropboxConnected ? 'Sign out' : 'Sign in'}</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -777,16 +754,31 @@ export default function HomeScreen() {
             </View>
               {/* reachability icon removed from here — now shown on the right side of the time/date row */}
             <View style={styles.headerCardAlt}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                <Text style={{ fontSize: 16, color: '#22c1c3', fontWeight: 'bold', marginRight: 6 }}>📍</Text>
-                <Text style={{ fontSize: 15, color: '#22c1c3', fontWeight: 'bold' }}>Ndola, Zambia</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ fontSize: 18, color: theme.accent, fontWeight: '700', marginRight: 8 }}>📦</Text>
+                {dropboxConnected ? (
+                  <View>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '700' }}>{(dropboxUser && (dropboxUser.name && dropboxUser.name.display_name)) || dropboxUser && dropboxUser.email || 'Dropbox'}</Text>
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>{dropboxStorage ? `${formatBytes(dropboxStorage.used)} of ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '700' }}>Dropbox</Text>
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>Not signed in</Text>
+                  </View>
+                )}
               </View>
-              <Text style={{ fontSize: 13, color: '#185a9d', marginBottom: 2 }}>Bravo Brands Central</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 13, color: '#185a9d', marginRight: 8 }}>5 Sites</Text>
-                <Text style={{ fontSize: 13, color: '#185a9d', marginRight: 8 }}>| 42 Staff</Text>
-                <Text style={{ fontSize: 13, color: '#43cea2', fontWeight: 'bold' }}>● Active</Text>
-              </View>
+              <TouchableOpacity onPress={async () => {
+                try {
+                  if (dropboxConnected) {
+                    await drive.revokeAccessToken().catch(() => null);
+                  } else {
+                    await drive.signInAsync().catch(() => null);
+                  }
+                } catch (e) {}
+              }} style={{ marginTop: 6 }}>
+                <Text style={{ color: theme.accent, fontWeight: '700' }}>{dropboxConnected ? 'Sign out' : 'Sign in'}</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -880,7 +872,7 @@ export default function HomeScreen() {
             <Text style={{ fontSize: isMobile ? 20 : 22 }}>{theme.mode === 'dark' ? '🌞' : '🌙'}</Text>
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
       </Animated.View>
 
@@ -1073,7 +1065,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 40,
     borderWidth: 2,
-    borderColor: 'rgba(67,206,162,0.9)',
+    borderColor: 'rgba(30,167,255,0.9)',
     width: 80,
     height: 80,
     alignItems: 'center',
@@ -1095,7 +1087,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 34,
     borderWidth: 2,
-    borderColor: 'rgba(67,206,162,0.9)',
+    borderColor: 'rgba(30,167,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#0a3a2f',
@@ -1234,7 +1226,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     elevation: 4,
     borderWidth: 1,
-    borderColor: 'rgba(67,206,162,0.12)'
+    borderColor: 'rgba(30,167,255,0.12)'
   },
   categoryTab: {
     flex: 1,
@@ -1244,7 +1236,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent'
   },
   categoryTabActive: {
-    backgroundColor: 'rgba(67,206,162,0.95)'
+    backgroundColor: 'rgba(30,167,255,0.95)'
   },
   categoryTabText: {
     fontSize: 18,

@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Image, Animated, Easing } from 'react-native';
 import { ActivityIndicator } from 'react-native';
 import Spinner from 'react-native-loading-spinner-overlay';
-import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SplashScreen({ navigation }) {
   const greetingOpacity = useRef(new Animated.Value(0)).current;
@@ -38,14 +37,20 @@ export default function SplashScreen({ navigation }) {
   // navigation will be triggered after all messages have been displayed once
 
   return (
-    <LinearGradient colors={["#22c1c3", "#185a9d"]} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: '#001021' }]}>
+      {/* cyan radial halo behind the logo */}
+      <View style={styles.haloCyan} pointerEvents="none" />
+      {/* violet subtle overlay */}
+      <View style={styles.haloViolet} pointerEvents="none" />
       <View style={styles.logoContainer}>
-        <Animated.Image source={require('../assets/logo.jpeg')} style={[styles.logo, { transform: [{ scale: logoScale }] }]} resizeMode="contain" />
+        <Animated.Image source={require('../assets/logo.jpeg')} style={[styles.logo, { transform: [{ scale: logoScale }] }]} resizeMode="cover" />
+        {/* white sheen overlay */}
+        <View style={styles.logoSheen} pointerEvents="none" />
       </View>
       <Animated.Text style={[styles.bravo, { opacity: greetingOpacity, transform: [{ scale: greetingScale }], fontSize: 44, letterSpacing: 6 }]}>Bravo!</Animated.Text>
       <WindowsSpinner size={44} dotSize={6} color="#ffffff" />
       <TipsSlideshow />
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -116,15 +121,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logo: {
-    width: 130,
-    height: 110,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 8,
+    width: 140,
+    height: 140,
+    borderRadius: 36,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    shadowColor: '#001822',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.28,
+    shadowRadius: 24,
+    elevation: 10,
   },
   spinner: {
     marginTop: 32,
@@ -190,5 +195,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: '84%',
     letterSpacing: 0.4,
+  },
+  haloCyan: {
+    position: 'absolute',
+    width: 360,
+    height: 360,
+    left: '50%',
+    marginLeft: -180,
+    top: 80,
+    borderRadius: 180,
+    backgroundColor: 'rgba(30,167,255,0.08)',
+    shadowColor: '#1EA7FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 40,
+    elevation: 12,
+  },
+  haloViolet: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    left: '50%',
+    marginLeft: -130,
+    top: 120,
+    borderRadius: 130,
+    backgroundColor: 'rgba(111,92,255,0.06)',
+    shadowColor: '#6F5CFF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 28,
+    elevation: 10,
+  },
+  logoSheen: {
+    position: 'absolute',
+    width: 80,
+    height: 30,
+    right: 18,
+    top: 18,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    transform: [{ rotate: '-20deg' }],
+    opacity: 0.95,
   },
 });
