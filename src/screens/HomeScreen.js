@@ -648,8 +648,8 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center' }}>
                 Updated the Desktop app too!.
               </Text>
-              <Text style={{ fontSize: 8, fontWeight: '700', color: '#ff0000', textAlign: 'center', marginTop: 8 }}>
-               !The history was not able to list all the many forms saved on the device because it could not handle displaying a large list at once but now that has been fixed the page will be displaying only 50 forms at once to see more click the load more button below the page .
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#ff0000', textAlign: 'center', marginTop: 8 }}>
+               !The history page was not able to list all the many forms saved on the device because it could not handle displaying a large list at once but now that has been fixed the page will be displaying only 50 forms at once to see more click the load more button below the page .
               </Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
