@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 
-function FormActionBarComponent({ onBack, onSaveDraft, onSubmit, showSavePdf = false, onSavePdf, isSaving = false }) {
+function FormActionBarComponent({ onBack, onClear, onSaveDraft, onSubmit, showSavePdf = false, onSavePdf, isSaving = false }) {
   // local guard for double clicks in case a form does not pass an isSaving prop
   const [localSaving, setLocalSaving] = useState(false);
 
@@ -21,8 +21,8 @@ function FormActionBarComponent({ onBack, onSaveDraft, onSubmit, showSavePdf = f
 
   return (
     <View style={styles.row}>
-      <TouchableOpacity onPress={() => { if (!busy && onBack) onBack(); }} style={[styles.button, styles.aux]} disabled={busy}>
-        <Text style={styles.buttonText}>Back</Text>
+      <TouchableOpacity onPress={() => { if (busy) return; if (onClear) return onClear(); if (onBack) return onBack(); }} style={[styles.button, onClear ? styles.clear : styles.aux]} disabled={busy}>
+        <Text style={styles.buttonText}>{onClear ? 'Clear' : 'Back'}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => wrap(onSaveDraft)} style={[styles.button, styles.draft]} disabled={busy || !onSaveDraft}>
@@ -51,6 +51,7 @@ const styles = StyleSheet.create({
   button: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, marginHorizontal: 6 },
   buttonText: { color: '#fff', fontWeight: '700' },
   aux: { backgroundColor: '#777' },
+  clear: { backgroundColor: '#EF4444' },
   draft: { backgroundColor: '#f0ad4e' },
   primary: { backgroundColor: '#185a9d' },
   secondary: { backgroundColor: '#0066cc' },

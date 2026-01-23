@@ -23,6 +23,25 @@ function generateHtmlForPayload(payloadWrapper, opts = {}) {
     }
   }
 
+  // If there's no exact match, try the fuzzy matcher automatically so
+  // payloads that don't set the EXPORT_KEY but contain matching keywords
+  // (title, template, metadata.subject, etc.) still resolve to a generator.
+  try {
+    const fallback = getGeneratorForPayload(payload, { allowFallback: true });
+    if (fallback && fallback.module && typeof fallback.module === 'function') {
+      const html = fallback.module(payloadWrapper, opts);
+      try {
+        const footerer = require('./htmlGenerators/footer');
+        return footerer.injectFooterIntoHtml(html, payloadWrapper);
+      } catch (e) {
+        return html;
+      }
+    }
+  } catch (e) {
+    // ignore fallback failures and continue to missing-generator message
+    console.warn('automatic fallback generation failed', e && e.message);
+  }
+
   // Allow a debug/dev fallback when requested (e.g. Debug HTML Export).
   if (opts && (opts.forceHtml || opts.allowFallback || opts.debugFallback)) {
     try {

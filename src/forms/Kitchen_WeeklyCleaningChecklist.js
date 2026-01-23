@@ -130,16 +130,7 @@ export default function KitchenWeeklyCleaningChecklist() {
     savedAt: Date.now(),
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, handleSaveDraft, handleSubmit, scheduleAutoSave } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
-    // reset form after submit
-    setFormData(initialCleaningState);
-    // clear saved draft so reopening the form starts fresh
-    try { removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
-    // reset metadata (keep companyName as default header)
-    setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', companyName: 'Bravo' });
-    // navigate back after submit
-    navigation.goBack();
-  }, waitForSave: true });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, handleSaveDraft, handleSubmit, scheduleAutoSave } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: true });
 
   const handleCellChange = (id, day, type, value) => {
     setFormData(prev => prev.map(item => {
@@ -199,18 +190,26 @@ export default function KitchenWeeklyCleaningChecklist() {
   const handleSubmitLocal = async () => {
     try {
       await handleSubmit();
-      // Defensive clearing in case clearOnSubmit didn't run
-      setFormData(initialCleaningState);
-      try { await removeDraft(DRAFT_KEY); } catch (e) {}
-      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', hseqSign: '', complexManagerSign: '', companyName: 'Bravo' });
     } catch (e) {
       console.warn('submit failed', e);
     }
   };
 
+  const handleClearDraft = () => {
+    Alert.alert('Confirm', 'Clear saved draft and reset the form?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: async () => {
+        try { await removeDraft(DRAFT_KEY); } catch (e) {}
+        setFormData(initialCleaningState);
+        setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', complexManager: '', hseqSign: '', complexManagerSign: '', companyName: 'Bravo' });
+      } }
+    ]);
+  };
+
   const actionButtons = (
     <View style={{ flexDirection: 'row', gap: 8 }}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.button, styles.backButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Back</Text></TouchableOpacity>
+      <TouchableOpacity onPress={handleClearDraft} style={[styles.button, { backgroundColor: '#EF4444' }]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Clear</Text></TouchableOpacity>
       <TouchableOpacity onPress={() => handleSaveDraft()} style={[styles.button, styles.draftButton]} disabled={isSaving || exporting}><Text style={styles.buttonText}>Save Draft</Text></TouchableOpacity>
       <TouchableOpacity onPress={() => handleSubmitLocal()} style={[styles.button, styles.submitButton]} disabled={isSaving}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
     </View>

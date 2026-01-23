@@ -260,6 +260,8 @@ const explicitOverrides = {
 	food_handlers_daily_handwashing_tracking_log_sheet: mapping.foodhandlers_handwashing,
 	food_handlers_daily_handwashing_tracking_log_sheet_am: mapping.foodhandlers_handwashing,
 	food_handlers_daily_handwashing_tracking_log_sheet_pm: mapping.foodhandlers_handwashing,
+	// Legacy/formType variant: DeepFreezerTemperatureLog
+	DeepFreezerTemperatureLog: mapping.deepfreezertemperature,
 	FoodHandlersDailyHandwashingTrackingLogSheet: mapping.foodhandlers_handwashing,
 	fruit_washing_log: mapping.fruit_washing_log,
 	ppeissuance: mapping.ppe_log,

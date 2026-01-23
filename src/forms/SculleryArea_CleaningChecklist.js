@@ -114,7 +114,7 @@ export default function SculleryAreaChecklist() {
   };
 
   // hook: use canonical save helper (fast submit)
-  const { handleSaveDraft: handleSaveDraftHook, handleSubmit: hookSubmit, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialCleaningState); setMetadata({ location: 'SCULLERY', week: '', month: '', year: '', hseqManager: '' }); }, waitForSave: false });
+  const { handleSaveDraft: handleSaveDraftHook, handleSubmit: hookSubmit, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
   const scheduleAutoSave = scheduleAutoSaveFromHook;
 
   useEffect(() => {
@@ -192,15 +192,23 @@ export default function SculleryAreaChecklist() {
   const handleSubmit = async () => {
     try {
       await hookSubmit();
-      try { await removeDraft(DRAFT_KEY); } catch (e) {}
-      // Ensure local state is cleared after submit (defensive)
-      setFormData(initialCleaningState);
-      setMetadata({ location: 'SCULLERY', week: '', month: '', year: '', issueDate: '', approvedBy: '', approvedBySign: '', hseqManager: '', hseqManagerSign: '' });
+      // Do not remove saved draft or clear inputs on submit; keep draft until user clears it.
       Alert.alert('Success', 'Checklist submitted');
     } catch (e) {
       console.warn('submit failed', e);
       Alert.alert('Error', 'Submission failed');
     }
+  };
+
+  const handleClearDraftLocal = () => {
+    Alert.alert('Confirm', 'Clear saved draft and reset the form?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: async () => {
+        try { await removeDraft(DRAFT_KEY); } catch (e) {}
+        setFormData(initialCleaningState);
+        setMetadata({ location: 'SCULLERY', week: '', month: '', year: '', issueDate: '', approvedBy: '', approvedBySign: '', hseqManager: '', hseqManagerSign: '' });
+      } }
+    ]);
   };
 
   const handleSaveDraftLocal = async () => {
@@ -357,6 +365,7 @@ export default function SculleryAreaChecklist() {
             </View>
           </View>
           <View style={styles.buttonContainer}>
+            <TouchableOpacity onPress={handleClearDraftLocal} style={[styles.button, { backgroundColor: '#EF4444' }]} disabled={isSaving}><Text style={styles.buttonText}>Clear</Text></TouchableOpacity>
             <TouchableOpacity onPress={handleSaveDraftLocal} style={[styles.button, styles.draftButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>

@@ -1,13 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, Animated, Easing } from 'react-native';
-import { ActivityIndicator } from 'react-native';
-import Spinner from 'react-native-loading-spinner-overlay';
 
 export default function SplashScreen({ navigation }) {
   const greetingOpacity = useRef(new Animated.Value(0)).current;
   const greetingScale = useRef(new Animated.Value(1)).current;
   const logoScale = useRef(new Animated.Value(1)).current;
   const today = new Date();
+  // Splash duration (ms) — the loading bar will animate for this duration
+  // Reduced to speed startup
+  const SPLASH_DURATION = 4000;
 
   useEffect(() => {
     // show greeting briefly then navigate to Home
@@ -29,9 +30,8 @@ export default function SplashScreen({ navigation }) {
 
     // no seasonal confetti on splash
 
-    // navigate to Home after a short delay so the splash is visible
-    const navTimer = setTimeout(() => { if (mounted) navigation.replace('Home', { showWhatsNew: true }); }, 9200);
-    return () => { mounted = false; clearTimeout(navTimer); };
+    // navigation will be triggered by the loading bar completion handler
+    return () => { mounted = false; };
   }, []);
 
   // navigation will be triggered after all messages have been displayed once
@@ -48,70 +48,29 @@ export default function SplashScreen({ navigation }) {
         <View style={styles.logoSheen} pointerEvents="none" />
       </View>
       <Animated.Text style={[styles.bravo, { opacity: greetingOpacity, transform: [{ scale: greetingScale }], fontSize: 44, letterSpacing: 6 }]}>Bravo!</Animated.Text>
-      <WindowsSpinner size={44} dotSize={6} color="#ffffff" />
-      <TipsSlideshow />
+      <LoadingBar width={220} height={10} color="#1EA7FF" duration={SPLASH_DURATION} onComplete={() => navigation.replace('Home', { showWhatsNew: true })} />
     </View>
   );
 }
-
-function WindowsSpinner({ size = 44, dotSize = 6, color = '#fff' }) {
-  const spin = useRef(new Animated.Value(0)).current;
+function LoadingBar({ width = 220, height = 8, color = '#1EA7FF', duration = 10000, onComplete } ) {
+  const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.loop(Animated.timing(spin, { toValue: 1, duration: 1000, easing: Easing.linear, useNativeDriver: true })).start();
-  }, [spin]);
+    const anim = Animated.timing(progress, { toValue: 1, duration: duration, easing: Easing.inOut(Easing.quad), useNativeDriver: false });
+    anim.start(({ finished }) => { if (finished && typeof onComplete === 'function') onComplete(); });
+    return () => anim.stop();
+  }, [progress, duration, onComplete]);
 
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const count = 8;
-  const radius = Math.max((size / 2) - dotSize, 8);
-  const dots = Array.from({ length: count });
-
+  const fillWidth = progress.interpolate({ inputRange: [0, 1], outputRange: [0, width] });
   return (
     <View style={{ marginTop: 12, marginBottom: 6 }}>
-      <Animated.View style={{ width: size, height: size, transform: [{ rotate }], alignSelf: 'center' }}>
-        {dots.map((_, i) => {
-          const angle = (i / count) * Math.PI * 2 - Math.PI / 2; // start at top
-          const x = Math.cos(angle) * radius + size / 2 - dotSize / 2;
-          const y = Math.sin(angle) * radius + size / 2 - dotSize / 2;
-          return (
-            <View key={i} style={{ position: 'absolute', left: x, top: y, width: dotSize, height: dotSize, borderRadius: dotSize / 2, backgroundColor: color, opacity: 0.95 }} />
-          );
-        })}
-      </Animated.View>
+      <View style={[styles.loadingBarTrack, { width, height, borderRadius: height / 2 }]}>
+        <Animated.View style={[styles.loadingBarFill, { width: fillWidth, height, backgroundColor: color, borderRadius: height / 2 }]} />
+      </View>
     </View>
   );
 }
 
-function TipsSlideshow({ tips, interval = 3000 }) {
-  const defaultTips = [
-    'Always save Draft after you type something',
-    'Ensure Dropbox is always connected',
-    'You can manually check for updates on the history page',
-  ];
-  const messages = tips && tips.length ? tips : defaultTips;
-  const [index, setIndex] = useState(0);
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(6)).current;
 
-  useEffect(() => {
-    const t = setInterval(() => setIndex(i => (i + 1) % messages.length), interval);
-    return () => clearInterval(t);
-  }, [messages.length, interval]);
-
-  useEffect(() => {
-    opacity.setValue(0);
-    translateY.setValue(6);
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 420, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 420, useNativeDriver: true }),
-    ]).start();
-  }, [index, opacity, translateY]);
-
-  return (
-    <Animated.View style={[styles.tipsContainer, { opacity, transform: [{ translateY }] }]}> 
-      <Text style={styles.tipsText}>{messages[index]}</Text>
-    </Animated.View>
-  );
-}
 
 const styles = StyleSheet.create({
   logoContainer: {
@@ -176,25 +135,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: '80%',
   },
-  tipsContainer: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
+  
+  loadingBarTrack: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    overflow: 'hidden',
+    alignSelf: 'center',
   },
-  tipsText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    maxWidth: '84%',
-    letterSpacing: 0.4,
+  loadingBarFill: {
+    shadowColor: '#1EA7FF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 6,
   },
   haloCyan: {
     position: 'absolute',

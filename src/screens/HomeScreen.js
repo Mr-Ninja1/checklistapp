@@ -557,26 +557,51 @@ export default function HomeScreen() {
     const fetchInfo = async () => {
       try {
         setDropboxInfoLoading(true);
-        const ui = await drive.getUserInfo().catch(() => null);
-        if (mounted) setDropboxUser(ui || null);
-        // fetch space usage via Dropbox API if token present
+        let ui = await drive.getUserInfo().catch(() => null);
+        // If no persisted userinfo exists, try fetching it from Dropbox API using token
         try {
           const token = await drive.getAccessToken().catch(() => null);
+          if (!ui && token) {
+            try {
+              const ures = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
+              if (ures && ures.ok) {
+                ui = await ures.json();
+                // We do not persist here (drive.signInAsync persists on sign-in), but state will show the info immediately
+              }
+            } catch (e) { /* ignore fetch user error */ }
+          }
+          if (mounted) setDropboxUser(ui || null);
+
+          // fetch space usage via Dropbox API if token present
           if (token) {
-            const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', {
-              method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
-            if (res && res.ok) {
-              const data = await res.json();
-              // allocation can be object with allocated bytes under allocation.allocated
-              let allocation = null;
-              try { allocation = (data && data.allocation && (data.allocation.allocated || data.allocation.allocated_bytes || data.allocation.allocated)) || null; } catch (e) { allocation = null; }
-              // fallback: some responses store allocation.used
-              const used = data && (data.used || data.allocation && data.allocation.used) ? (data.used || (data.allocation && data.allocation.used)) : null;
-              if (mounted) setDropboxStorage({ used: used || null, allocation: allocation || null, raw: data });
+            try {
+              const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
+              if (res && res.ok) {
+                const data = await res.json();
+                const used = (data && typeof data.used === 'number') ? data.used : null;
+                let allocation = null;
+                try {
+                  if (data && data.allocation) {
+                    // allocation shape varies: allocation.allocated (number) for individual
+                    if (typeof data.allocation.allocated === 'number') allocation = data.allocation.allocated;
+                    // some SDKs may nest under allocation.allocated.value
+                    else if (data.allocation.allocated && typeof data.allocation.allocated === 'object' && typeof data.allocation.allocated.value === 'number') allocation = data.allocation.allocated.value;
+                    // fallback: any numeric field inside allocation
+                    else {
+                      for (const k of Object.keys(data.allocation)) {
+                        if (typeof data.allocation[k] === 'number') { allocation = data.allocation[k]; break; }
+                      }
+                    }
+                  }
+                } catch (e) { allocation = null; }
+                if (mounted) setDropboxStorage({ used: used || null, allocation: allocation || null, raw: data });
+              }
+            } catch (e) {
+              if (mounted) setDropboxStorage(null);
             }
           }
         } catch (e) {
-          if (mounted) setDropboxStorage(null);
+          if (mounted) { setDropboxUser(null); setDropboxStorage(null); }
         }
       } catch (e) {
         if (mounted) { setDropboxUser(null); setDropboxStorage(null); }
@@ -612,16 +637,19 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
               <Text style ={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
-                You can now share forms directly to whats app from Tablet and Phone!
+                Added the clear button to all weekly forms.
               </Text>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
-                You can see how much storage space is left in your Dropbox account.
+                Updated the showering log  to maintain draft state when navigating away.
               </Text>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
-                Changed app theme color to a new powerful look.
+                Fixed the history page saved forms will now (the page can now handle as many forms as needed).
               </Text>
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center' }}>
-                You can now share saved forms directly and quickly without opening them.
+                Updated the Desktop app too!.
+              </Text>
+              <Text style={{ fontSize: 8, fontWeight: '700', color: '#ff0000', textAlign: 'center', marginTop: 8 }}>
+               !The history was not able to list all the many forms saved on the device because it could not handle displaying a large list at once but now that has been fixed the page will be displaying only 50 forms at once to see more click the load more button below the page .
               </Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
@@ -728,7 +756,7 @@ export default function HomeScreen() {
                 {dropboxConnected ? (
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, color: theme.text, fontWeight: '700' }}>{(dropboxUser && (dropboxUser.name && dropboxUser.name.display_name)) || dropboxUser && dropboxUser.email || 'Dropbox'}</Text>
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>{dropboxStorage ? `${formatBytes(dropboxStorage.used)} of ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>{dropboxStorage ? `Used ${formatBytes(dropboxStorage.used)} / ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
                   </View>
                 ) : (
                   <View style={{ flex: 1 }}>
@@ -768,7 +796,7 @@ export default function HomeScreen() {
                 {dropboxConnected ? (
                   <View>
                     <Text style={{ fontSize: 15, color: theme.text, fontWeight: '700' }}>{(dropboxUser && (dropboxUser.name && dropboxUser.name.display_name)) || dropboxUser && dropboxUser.email || 'Dropbox'}</Text>
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>{dropboxStorage ? `${formatBytes(dropboxStorage.used)} of ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>{dropboxStorage ? `Used ${formatBytes(dropboxStorage.used)} / ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
                   </View>
                 ) : (
                   <View>

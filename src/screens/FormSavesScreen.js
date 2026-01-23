@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, Platform, TextInput, Modal, ActivityIndicator, Image, useWindowDimensions, FlatList } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Updates from 'expo-updates';
@@ -138,7 +138,7 @@ export default function FormSavesScreen() {
     return 'unknown';
   };
 
-  const filteredForms = savedForms.filter(f => {
+  const filteredForms = React.useMemo(() => savedForms.filter(f => {
     const term = (searchTerm || '').toLowerCase().trim();
   // (no category filter) only month filter applies
     // month filter check
@@ -159,7 +159,14 @@ export default function FormSavesScreen() {
     // search across title, location, and stored meta payload text
     const hay = `${f.title || ''} ${f.location || ''} ${JSON.stringify(f.meta || {})}`.toLowerCase();
     return hay.indexOf(term) !== -1;
-  });
+  }), [savedForms, searchTerm, activeMonth, dateFilter]);
+
+  // Pagination: show a subset of filteredForms and let user load more
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(0);
+  useEffect(() => { setPage(0); }, [filteredForms]);
+  const displayedForms = React.useMemo(() => filteredForms.slice(0, (page + 1) * PAGE_SIZE), [filteredForms, page]);
+  const hasMore = displayedForms.length < filteredForms.length;
 
   // Group forms by savedAt date (localized) (DD/MM/YYYY)
   const groupedByDate = filteredForms.reduce((acc, form) => {
@@ -583,200 +590,136 @@ export default function FormSavesScreen() {
             </View>
           </Modal>
       </View>
-      {savedForms.length === 0 ? (
+      {filteredForms.length === 0 ? (
         <Text style={styles.placeholder}>{loadingHistory ? 'Loading history...' : 'No saved forms yet.'}</Text>
       ) : (
-        <ScrollView style={{ width: '100%', flex: 1 }} contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 24 }}>
-          {Platform.OS === 'web' || viewMode === 'date' ? (
-            // render grouped by date
-            Object.keys(groupedByDate).map(date => (
-              <View key={date} style={{ marginBottom: 24 }}>
-                <Text style={styles.dateHeading}>{date === 'Unknown Date' ? 'Unknown saved date' : date}</Text>
-                {groupedByDate[date].map((form, idx) => (
-                  <View key={form.savedAt || idx} style={styles.cardRow}>
-                    <TouchableOpacity
-                      style={styles.card}
-                      activeOpacity={0.8}
-                      onPress={async () => {
-                          if (opening) return; // prevent double-tap
-                          setOpening(true);
+        <FlatList
+          data={displayedForms}
+          keyExtractor={(item, idx) => String(item.savedAt || item.pdfPath || idx)}
+          initialNumToRender={20}
+          windowSize={11}
+          maxToRenderPerBatch={20}
+          removeClippedSubviews={true}
+          contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 24 }}
+          renderItem={({ item: form, index: idx }) => (
+            <View key={form.savedAt || idx} style={styles.cardRow}>
+              <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.8}
+                onPress={async () => {
+                  if (opening) return; // prevent double-tap
+                  setOpening(true);
+                  try {
+                    // Attempt multiple strategies to obtain the canonical saved payload
+                    let payload = null;
+                    const meta = form.meta || {};
+
+                    if (meta.formId) {
+                      try {
+                        const loaded = await formStorage.loadForm(meta.formId);
+                        if (loaded && loaded.payload) payload = loaded.payload;
+                      } catch (e) { console.warn('FormSavesScreen: loadForm failed for formId', meta.formId, e); }
+                    }
+
+                    if (!payload) {
+                      if (meta && Array.isArray(meta.formData)) {
+                        const m = { ...meta };
+                        const rows = m.formData || [];
+                        delete m.formData;
+                        payload = { metadata: m, formData: rows };
+                      } else if (meta.formData && Object.keys(meta.formData).length) {
+                        payload = meta.formData;
+                      } else if (meta.payload && Object.keys(meta.payload).length) {
+                        payload = meta.payload;
+                      } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
+                        payload = meta;
+                      }
+                    }
+
+                    if (!payload) payload = form;
+
+                    payload.pdfPath = form.pdfPath;
+                    payload.savedAt = form.savedAt;
+                    payload.title = payload.title || form.title || form.pdfPath?.split('/')?.pop();
+                    if (payload.meta) delete payload.meta;
+
+                    setSelectedForm(payload);
+                    setModalVisible(true);
+                    setOpening(false);
+                  } catch (e) {
+                    console.warn('failed loading saved payload', e);
+                    Alert.alert('Open failed', 'Unable to load saved form payload.');
+                    setOpening(false);
+                  }
+                }}
+              >
+                <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
+                <Text style={styles.cardMeta}>Location: {form.location || ''}</Text>
+                <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : 'Unknown'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity style={styles.smallActionBtnDanger} onPress={() => handleDelete(form, idx)}>
+                    <Text style={styles.smallActionBtnText}>Delete</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.smallActionBtnSuccess, { marginLeft: 8 }]}
+                    onPress={async () => {
+                      const key = String(form.savedAt || form.pdfPath || idx);
+                      if (exportingMap[key]) return;
+                      setExportingMap(m => ({ ...m, [key]: true }));
+                      try {
+                        let payload = null;
+                        const meta = form.meta || {};
+                        if (meta.formId) {
                           try {
-                            // Attempt multiple strategies to obtain the canonical saved payload
-                            let payload = null;
-                            const meta = form.meta || {};
-
-                            // 1) If meta.formId present, load stored payload
-                            if (meta.formId) {
-                              try {
-                                const loaded = await formStorage.loadForm(meta.formId);
-                                if (loaded && loaded.payload) payload = loaded.payload;
-                              } catch (e) {
-                                console.warn('FormSavesScreen: loadForm failed for formId', meta.formId, e);
-                              }
-                            }
-
-                            // 2) If not found, check meta.formData or meta.payload shape
-                            if (!payload) {
-                              if (meta && Array.isArray(meta.formData)) {
-                                const m = { ...meta };
-                                const rows = m.formData || [];
-                                delete m.formData;
-                                payload = { metadata: m, formData: rows };
-                              } else if (meta.formData && Object.keys(meta.formData).length) {
-                                payload = meta.formData;
-                              } else if (meta.payload && Object.keys(meta.payload).length) {
-                                payload = meta.payload;
-                              } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
-                                payload = meta;
-                              }
-                            }
-
-                            // 3) If still not found, fall back to history entry fields
-                            if (!payload) payload = form;
-
-                            // Ensure savedAt/pdfPath/title remain available for the modal
-                            payload.pdfPath = form.pdfPath;
-                            payload.savedAt = form.savedAt;
-                            payload.title = payload.title || form.title || form.pdfPath?.split('/')?.pop();
-                            if (payload.meta) delete payload.meta;
-
-                            setSelectedForm(payload);
-                            setModalVisible(true);
-                            setOpening(false);
-                          } catch (e) {
-                            console.warn('failed loading saved payload', e);
-                            Alert.alert('Open failed', 'Unable to load saved form payload.');
-                            setOpening(false);
-                          }
-                        }}
-                    >
-                      <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
-                      <Text style={styles.cardMeta}>Location: {form.location || ''}</Text>
-                      <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : 'Unknown'}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <TouchableOpacity style={styles.smallActionBtnDanger} onPress={() => handleDelete(form, idx, date)}>
-                            <Text style={styles.smallActionBtnText}>Delete</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.smallActionBtnSuccess, { marginLeft: 8 }]}
-                            onPress={async () => {
-                              // Prevent re-entrancy for the same form
-                              const key = String(form.savedAt || form.pdfPath || idx);
-                              if (exportingMap[key]) return;
-                              setExportingMap(m => ({ ...m, [key]: true }));
-                              try {
-                                // Build payload similar to opening handler
-                                let payload = null;
-                                const meta = form.meta || {};
-                                if (meta.formId) {
-                                  try {
-                                    const loaded = await formStorage.loadForm(meta.formId);
-                                    if (loaded && loaded.payload) payload = loaded.payload;
-                                  } catch (e) { console.warn('share: loadForm failed', e); }
-                                }
-                                if (!payload) {
-                                  if (meta && Array.isArray(meta.formData)) {
-                                    const m = { ...meta };
-                                    const rows = m.formData || [];
-                                    delete m.formData;
-                                    payload = { metadata: m, formData: rows };
-                                  } else if (meta.formData && Object.keys(meta.formData).length) {
-                                    payload = meta.formData;
-                                  } else if (meta.payload && Object.keys(meta.payload).length) {
-                                    payload = meta.payload;
-                                  } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
-                                    payload = meta;
-                                  }
-                                }
-                                if (!payload) payload = form;
-                                payload.pdfPath = form.pdfPath;
-                                payload.savedAt = form.savedAt;
-                                payload.title = payload.title || form.title || (form.pdfPath && form.pdfPath.split('/')?.pop());
-                                if (payload.meta) delete payload.meta;
-
-                                // call export helper which shares the PDF when available
-                                try {
-                                  await exportAsPDF({ title: payload.title, date: payload.savedAt, formData: payload, exportOptions: { filename: payload.title } });
-                                } catch (e) {
-                                  console.warn('share export failed', e);
-                                  Alert.alert('Share failed', String(e));
-                                }
-                              } finally {
-                                setExportingMap(m => ({ ...m, [key]: false }));
-                              }
-                            }}
-                          >
-                            <Text style={styles.smallActionBtnText}>{exportingMap[String(form.savedAt || form.pdfPath || idx)] ? 'Sharing...' : 'Share'}</Text>
-                          </TouchableOpacity>
-                        </View>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            ))
-          ) : (
-            // render grouped by category
-            Object.keys(groupedByCategory).map(cat => (
-              <View key={cat} style={{ marginBottom: 24 }}>
-                <Text style={styles.dateHeading}>{cat.toUpperCase()}</Text>
-                {groupedByCategory[cat].map((form, idx) => (
-                  <View key={form.savedAt || idx} style={styles.cardRow}>
-                    <TouchableOpacity
-                      style={styles.card}
-                      activeOpacity={0.8}
-                      onPress={async () => {
-                        if (opening) return; // prevent double-tap
-                        setOpening(true);
-                        try {
-                          let payload = null;
-                          const meta = form.meta || {};
-                          if (meta.formId) {
-                            try {
-                              const loaded = await formStorage.loadForm(meta.formId);
-                              if (loaded && loaded.payload) payload = loaded.payload;
-                            } catch (e) { console.warn('FormSavesScreen: loadForm failed for formId', meta.formId, e); }
-                          }
-                          if (!payload) {
-                            if (meta && Array.isArray(meta.formData)) {
-                              const m = { ...meta };
-                              const rows = m.formData || [];
-                              delete m.formData;
-                              payload = { metadata: m, formData: rows };
-                            } else if (meta.formData && Object.keys(meta.formData).length) {
-                              payload = meta.formData;
-                            } else if (meta.payload && Object.keys(meta.payload).length) {
-                              payload = meta.payload;
-                            } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
-                              payload = meta;
-                            }
-                          }
-                          if (!payload) payload = form;
-                          payload.pdfPath = form.pdfPath;
-                          payload.savedAt = form.savedAt;
-                          if (payload.meta) delete payload.meta;
-
-                          setSelectedForm(payload);
-                          setModalVisible(true);
-                          setOpening(false);
-                        } catch (e) {
-                          console.warn('failed loading saved payload', e);
-                          Alert.alert('Open failed', 'Unable to load saved form payload.');
-                          setOpening(false);
+                            const loaded = await formStorage.loadForm(meta.formId);
+                            if (loaded && loaded.payload) payload = loaded.payload;
+                          } catch (e) { console.warn('share: loadForm failed', e); }
                         }
-                      }}
-                    >
-                      <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
-                      <Text style={styles.cardMeta}>Date: {form.date || ''} | Location: {form.location || ''}</Text>
-                      <TouchableOpacity style={styles.deleteBtnSmall} onPress={() => handleDelete(form, idx)}>
-                        <Text style={styles.deleteBtnTextSmall}>Delete</Text>
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            ))
+                        if (!payload) {
+                          if (meta && Array.isArray(meta.formData)) {
+                            const m = { ...meta };
+                            const rows = m.formData || [];
+                            delete m.formData;
+                            payload = { metadata: m, formData: rows };
+                          } else if (meta.formData && Object.keys(meta.formData).length) {
+                            payload = meta.formData;
+                          } else if (meta.payload && Object.keys(meta.payload).length) {
+                            payload = meta.payload;
+                          } else if (Array.isArray(meta.handlers) && Array.isArray(meta.timeSlots)) {
+                            payload = meta;
+                          }
+                        }
+                        if (!payload) payload = form;
+                        payload.pdfPath = form.pdfPath;
+                        payload.savedAt = form.savedAt;
+                        payload.title = payload.title || form.title || (form.pdfPath && form.pdfPath.split('/')?.pop());
+                        if (payload.meta) delete payload.meta;
+
+                        try {
+                          await exportAsPDF({ title: payload.title, date: payload.savedAt, formData: payload, exportOptions: { filename: payload.title } });
+                        } catch (e) {
+                          console.warn('share export failed', e);
+                          Alert.alert('Share failed', String(e));
+                        }
+                      } finally {
+                        setExportingMap(m => ({ ...m, [key]: false }));
+                      }
+                    }}
+                  >
+                    <Text style={styles.smallActionBtnText}>{exportingMap[String(form.savedAt || form.pdfPath || idx)] ? 'Sharing...' : 'Share'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </View>
           )}
-        </ScrollView>
+          ListFooterComponent={() => hasMore ? (
+            <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+              <TouchableOpacity style={styles.loadMoreBtn} onPress={() => setPage(p => p + 1)}>
+                <Text style={styles.loadMoreText}>Load more ({filteredForms.length - displayedForms.length} remaining)</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        />
       )}
       <ViewDocumentModal
         visible={modalVisible}
@@ -922,6 +865,8 @@ const styles = StyleSheet.create({
   clearBtnText: { color: '#ff5e62', fontWeight: '700' },
   applyBtn: { backgroundColor: '#185a9d', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   applyBtnText: { color: '#fff', fontWeight: '800' },
+  loadMoreBtn: { backgroundColor: '#185a9d', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
+  loadMoreText: { color: '#fff', fontWeight: '700' },
   smallActionBtn: { backgroundColor: '#185a9d', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },
   smallActionBtnText: { color: '#fff', fontWeight: '700' },
   smallActionBtnDanger: { backgroundColor: '#ff5e62', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8 },

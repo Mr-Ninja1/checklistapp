@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Modal } from 'react-native';
+import { View, Text, ScrollView, TextInput, StyleSheet, Dimensions, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import { Asset } from 'expo-asset';
@@ -110,7 +110,7 @@ export default function FoodHandlersDailyShoweringForm() {
       next[rIdx][cIdx] = text;
       return next;
     });
-    scheduleAutoSave();
+    try { if (typeof scheduleAutoSave === 'function') scheduleAutoSave(); } catch (e) { }
   }, []);
 
   const openSignatureModal = useCallback((rIdx, cIdx) => {
@@ -132,11 +132,6 @@ export default function FoodHandlersDailyShoweringForm() {
   const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({
     buildPayload,
     draftId: 'FoodHandlersDailyShowering_draft',
-    clearOnSubmit: () => {
-      setLogEntries(initialLog);
-      setWeek('A');
-      setVerifiedBy('');
-    },
     waitForSave: false
   });
 
@@ -146,7 +141,11 @@ export default function FoodHandlersDailyShoweringForm() {
       try {
         const d = await getDraft('FoodHandlersDailyShowering_draft');
         if (d) {
-          if (d.logEntries) setLogEntries(d.logEntries);
+          // Merge persisted rows into the initial shape to avoid losing empty rows
+          if (Array.isArray(d.logEntries)) {
+            const merged = initialLog.map((row, idx) => (Array.isArray(d.logEntries[idx]) ? d.logEntries[idx] : row));
+            setLogEntries(merged);
+          }
           if (d.week) setWeek(d.week);
           if (d.verifiedBy) setVerifiedBy(d.verifiedBy);
           if (d.compiledBy) setCompiledBy(d.compiledBy);
@@ -245,7 +244,26 @@ export default function FoodHandlersDailyShoweringForm() {
             </View>
 
             <View style={styles.actionBarTop}>
-              <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} isSaving={isSaving} />
+              <FormActionBar
+                onClear={async () => {
+                  Alert.alert('Confirm', 'Clear saved draft and reset the form?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Clear', style: 'destructive', onPress: async () => {
+                      try { await removeDraft('FoodHandlersDailyShowering_draft'); } catch (e) { }
+                      setLogEntries(initialLog);
+                      setWeek('A');
+                      setVerifiedBy('');
+                    } }
+                  ]);
+                }}
+                onSaveDraft={async () => {
+                  try { await handleSaveDraft(); Alert.alert('Success', 'Draft saved'); } catch (e) { console.warn('save draft failed', e); Alert.alert('Error', 'Failed to save draft'); }
+                }}
+                onSubmit={async () => {
+                  try { await handleSubmit(); Alert.alert('Success', 'Checklist submitted'); } catch (e) { console.warn('submit failed', e); Alert.alert('Error', 'Submission failed'); }
+                }}
+                isSaving={isSaving}
+              />
             </View>
           </View>
         </ScrollView>

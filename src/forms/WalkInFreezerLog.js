@@ -159,10 +159,7 @@ export default function WalkInFreezerLog() {
     status,
   });
 
-  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
-    setFormData(initialLogState);
-    setMetadata(prev => ({ ...initialMetadata, issueDate: prev.issueDate }));
-  }, waitForSave: true });
+  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: true });
 
   const handleSaveDraft = async () => {
     setBusy(true);
@@ -175,10 +172,22 @@ export default function WalkInFreezerLog() {
     setBusy(true);
       try {
       await hookSubmit();
-      try { await formStorage.deleteForm(DRAFT_KEY); } catch (e) {}
+      // Do not automatically delete the draft on submit; keep it for user safety.
+      // If you want to remove the draft after submit, use the Clear button below.
       // success handled by NotificationModal from the hook
     } catch (e) { Alert.alert('Error', 'Submission failed'); }
     finally { setBusy(false); }
+  };
+
+  const handleClearDraft = async () => {
+    Alert.alert('Clear draft', 'Delete the saved draft and clear all inputs?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try { await formStorage.deleteForm(DRAFT_KEY); } catch (e) {}
+        try { setFormData(initialLogState); setMetadata(initialMetadata); } catch (e) {}
+        Alert.alert('Cleared', 'Draft and inputs cleared.');
+      } }
+    ]);
   };
 
   const renderRow = (item) => (
@@ -295,6 +304,7 @@ export default function WalkInFreezerLog() {
           </View>
 
           <View style={styles.buttonRow}>
+            <TouchableOpacity onPress={handleClearDraft} style={[styles.button, { backgroundColor: '#ef4444' }]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Clear</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Log</Text>}</TouchableOpacity>
           </View>

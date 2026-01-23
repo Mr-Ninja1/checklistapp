@@ -181,7 +181,8 @@ export default function WalkInChillerLog() {
   });
 
   // useFormSave must be called at top-level of component (not inside handlers)
-  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setMetadata(prev => ({ ...initialMetadata, docNo: prev.docNo, issueDate: prev.issueDate })); }, waitForSave: true });
+  // Do NOT clear draft on submit; keep draft persisted after submit.
+  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: true });
 
   const [editMode, setEditMode] = useState(false);
 
@@ -218,6 +219,17 @@ export default function WalkInChillerLog() {
       console.warn('submit failed', e);
       Alert.alert('Error', 'Submission failed');
     } finally { setBusy(false); }
+  };
+
+  const handleClearDraft = async () => {
+    Alert.alert('Clear draft', 'Delete the saved draft and clear all inputs?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try { await removeDraft(DRAFT_KEY); } catch (e) {}
+        try { setFormData(initialLogState); setMetadata(initialMetadata); } catch (e) {}
+        Alert.alert('Cleared', 'Draft and inputs cleared.');
+      } }
+    ]);
   };
 
   const renderRow = (item) => (
@@ -335,6 +347,7 @@ export default function WalkInChillerLog() {
           </View>
 
           <View style={styles.buttonRow}>
+            <TouchableOpacity onPress={handleClearDraft} style={[styles.button, { backgroundColor: '#ef4444' }]} disabled={busy}><Text style={styles.buttonText}>Clear</Text></TouchableOpacity>
             <TouchableOpacity onPress={handleSaveDraft} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Log</Text>}</TouchableOpacity>
           </View>

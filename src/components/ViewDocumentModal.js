@@ -145,36 +145,50 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
   const handleShowFormType = async () => {
     if (!form) return;
     const ft = form.formType || (form.payload && form.payload.formType) || form.template || form.title || '';
-    // determine mapped generator (if any)
+    // determine mapped generator (if any) and include fuzzy-matcher score
     let genLabel = '<none>';
+    let exactMatchKey = null;
+    let exactMatchScore = null;
+    let fallbackInfo = null;
     try {
       const exact = routeMapping && routeMapping[ft];
       if (exact) {
         const found = Object.keys(mapping).find(k => mapping[k] === exact);
-        genLabel = found || '<routeMapping generator (unknown key)>';
-      } else {
-        // Try normalized direct lookup
-        const k1 = String(ft).toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
-        const k2 = String(ft).toLowerCase().replace(/[^a-z0-9]/g, '');
-        const candidate = (mapping && (mapping[k1] || mapping[k2]));
-        if (candidate) {
-          const found = Object.keys(mapping).find(k => mapping[k] === candidate);
-          genLabel = found || '<mapping generator (unknown key)>';
-        } else {
-          // As a last resort for debugging, run the static fuzzy matcher
-          try {
-            const fallback = getGeneratorForPayload({ formType: ft, title: ft, name: ft }, { allowFallback: true });
-            if (fallback && fallback.matchedKey) genLabel = fallback.matchedKey + ` (score:${fallback.score})`;
-          } catch (e) {
-            // ignore
+        exactMatchKey = found || '<routeMapping generator (unknown key)>';
+        exactMatchScore = Infinity;
+        genLabel = exactMatchKey + ` (score: ${exactMatchScore})`;
+      }
+
+      // try normalized direct lookup as well
+      const k1 = String(ft).toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+      const k2 = String(ft).toLowerCase().replace(/[^a-z0-9]/g, '');
+      const candidate = (mapping && (mapping[k1] || mapping[k2]));
+      if (candidate && !exact) {
+        const found = Object.keys(mapping).find(k => mapping[k] === candidate);
+        genLabel = (found || '<mapping generator (unknown key)>') + ' (score: exact-normalized)';
+        exactMatchKey = found;
+        exactMatchScore = 'normalized';
+      }
+
+      // always attempt fuzzy fallback to report best-scoring candidate
+      try {
+        const fallback = getGeneratorForPayload({ formType: ft, title: ft, name: ft }, { allowFallback: true });
+        if (fallback && fallback.matchedKey) {
+          fallbackInfo = fallback;
+          if (!exactMatchKey) {
+            genLabel = `${fallback.matchedKey} (score: ${fallback.score})`;
+          } else {
+            genLabel = `${exactMatchKey} (score: ${exactMatchScore}) — fuzzy: ${fallback.matchedKey} (score: ${fallback.score})`;
           }
         }
+      } catch (e) {
+        // ignore
       }
     } catch (e) {
       genLabel = `<error: ${String(e)}>`;
     }
 
-    const message = `formType: ${String(ft || '<empty>')}\ngenerator: ${genLabel}`;
+    const message = `formType: ${String(ft || '<empty>')}\nresolved: ${String(genLabel)}`;
     const copyToClipboard = async (txt) => {
       try {
         const ok = await setClipboardString(String(txt || ''));
@@ -274,7 +288,12 @@ export default function ViewDocumentModal({ visible, form, onClose, onDownload }
                 >
                     <Text style={styles.buttonText}>{exporting ? 'Exporting...' : 'Share'}</Text>
                 </TouchableOpacity>
-                {/* Debug buttons removed: Show formType and Show payload */}
+                  <TouchableOpacity
+                    style={[styles.button, styles.debugButton]}
+                    onPress={handleShowFormType}
+                  >
+                    <Text style={styles.buttonText}>Show Type</Text>
+                  </TouchableOpacity>
               </View>
           <Modal visible={payloadDialogVisible} transparent animationType="fade">
             <View style={styles.payloadOverlay}>
@@ -362,6 +381,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginHorizontal: 4,
+  },
+  debugButton: {
+    backgroundColor: '#6b7280'
   },
   buttonText: {
     color: '#fff',

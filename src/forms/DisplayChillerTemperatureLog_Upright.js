@@ -72,8 +72,14 @@ export default function DisplayChillerTemperatureLog_Upright(props = {}) {
         const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_upright_draft`;
         const d = await getDraft(draftKey);
         if (d && mounted) {
-          if (d.rows) setRows(d.rows);
-          if (d.meta) setMeta(d.meta);
+          // Merge persisted rows into the initialRows shape so we never lose empty rows
+          if (Array.isArray(d.rows)) {
+            const mergedRows = initialRows.map((r, idx) => (Array.isArray(d.rows[idx]) || typeof d.rows[idx] === 'object' ? { ...r, ...d.rows[idx] } : r));
+            setRows(mergedRows);
+          }
+          if (d.meta && typeof d.meta === 'object') {
+            setMeta(prev => ({ ...prev, ...d.meta }));
+          }
         }
         if (mounted && (!d || !d.meta || !d.meta.issueDate)) {
           setMeta(prev => ({ ...prev, issueDate: getTodayDate() }));
@@ -141,6 +147,11 @@ export default function DisplayChillerTemperatureLog_Upright(props = {}) {
       } catch (e) {
         try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload }); } catch (err) { /* ignore */ }
       }
+      try {
+        // Ensure the draft remains intact after submit by explicitly saving current rows/meta
+        const draftKey = props.draftKey || `${BASE_DRAFT_KEY}_upright_draft`;
+        try { await setDraft(draftKey, { rows, meta }); } catch (e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
       try { Alert.alert('Success', 'Form submitted. Data and draft have been preserved.'); } catch (e) { /* ignore */ }
     } catch (e) {
       console.warn('submit error', e);
