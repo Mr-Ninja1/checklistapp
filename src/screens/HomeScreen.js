@@ -575,7 +575,7 @@ export default function HomeScreen() {
           if (!ui && token) {
             try {
               console.log('[Dropbox] Fetching user account from API...');
-              const ures = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
+              const ures = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
               console.log('[Dropbox] user account fetch response:', ures.status, ures.ok);
               if (ures && ures.ok) {
                 ui = await ures.json();
@@ -693,8 +693,9 @@ export default function HomeScreen() {
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
-              <Text style ={{ fontSize: 16, fontWeight: '700', color: '#bd1a1a', textAlign: 'center', marginBottom: 8 }}>
-               Ignore this Update the Developer is working on some new dropbox features so this is just a test .
+              <Text style ={{ fontSize: 16, fontWeight: '700', color: '#1a25bd', textAlign: 'center', marginBottom: 8 }}>
+              You can now see the amount of storage used in your Dropbox account and the the logged in user account  when connected!
+              look up on the blue top part of the home screen☝️☝️.
               </Text>
              
             </View>
