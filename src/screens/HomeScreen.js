@@ -624,6 +624,37 @@ export default function HomeScreen() {
     return `${(b / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
   };
 
+  const formatSpaceText = (storage) => {
+    if (!storage) return (dropboxInfoLoading ? 'Loading storage...' : 'Storage: not available');
+    const used = (typeof storage.used === 'number') ? storage.used : (storage.raw && storage.raw.used ? Number(storage.raw.used) : null);
+    const alloc = (typeof storage.allocation === 'number') ? storage.allocation : (storage.raw && storage.raw.allocation ? null : null);
+    // some responses nest allocation differently; try to extract common shapes
+    let allocationVal = null;
+    try {
+      if (storage.allocation && typeof storage.allocation === 'number') allocationVal = storage.allocation;
+      else if (storage.raw && storage.raw.allocation) {
+        const a = storage.raw.allocation;
+        if (typeof a.allocated === 'number') allocationVal = a.allocated;
+        else if (a.allocated && typeof a.allocated.value === 'number') allocationVal = a.allocated.value;
+        else {
+          for (const k of Object.keys(a || {})) {
+            if (typeof a[k] === 'number') { allocationVal = a[k]; break; }
+          }
+        }
+      }
+    } catch (e) { allocationVal = null; }
+
+    const total = allocationVal || alloc || null;
+    if (used == null && total == null) return 'Storage: not available';
+    if (used != null && total != null) {
+      const pct = Math.round((used / Math.max(1, total)) * 100);
+      return `Used ${formatBytes(used)} / ${formatBytes(total)} (${pct}%)`;
+    }
+    if (used != null) return `Used ${formatBytes(used)}`;
+    if (total != null) return `Total ${formatBytes(total)}`;
+    return 'Storage: not available';
+  };
+
 
   // Main UI
   return (
@@ -637,20 +668,9 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
               <Text style ={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
-                Added the clear button to all weekly forms.
+                updated the welfarefacilities form it will now maintain Draft .
               </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
-                Updated the showering log  to maintain draft state when navigating away.
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
-                Fixed the history page saved forms will now (the page can now handle as many forms as needed).
-              </Text>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center' }}>
-                Updated the Desktop app too!.
-              </Text>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#ff0000', textAlign: 'center', marginTop: 8 }}>
-               !The history page was not able to list all the many forms saved on the device because it could not handle displaying a large list at once but now that has been fixed the page will be displaying only 50 forms at once to see more click the load more button below the page .
-              </Text>
+             
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
@@ -755,8 +775,9 @@ export default function HomeScreen() {
                 <Text style={{ fontSize: 16, color: theme.accent, fontWeight: '700', marginRight: 8 }}>📦</Text>
                 {dropboxConnected ? (
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, color: theme.text, fontWeight: '700' }}>{(dropboxUser && (dropboxUser.name && dropboxUser.name.display_name)) || dropboxUser && dropboxUser.email || 'Dropbox'}</Text>
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>{dropboxStorage ? `Used ${formatBytes(dropboxStorage.used)} / ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
+                    <Text style={{ fontSize: 14, color: theme.text, fontWeight: '700' }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Dropbox (signed in)'}</Text>
+                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 12, color: theme.accent, marginTop: 2 }}>{dropboxUser.email}</Text> : null}
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>{formatSpaceText(dropboxStorage)}</Text>
                   </View>
                 ) : (
                   <View style={{ flex: 1 }}>
@@ -795,8 +816,9 @@ export default function HomeScreen() {
                 <Text style={{ fontSize: 18, color: theme.accent, fontWeight: '700', marginRight: 8 }}>📦</Text>
                 {dropboxConnected ? (
                   <View>
-                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '700' }}>{(dropboxUser && (dropboxUser.name && dropboxUser.name.display_name)) || dropboxUser && dropboxUser.email || 'Dropbox'}</Text>
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>{dropboxStorage ? `Used ${formatBytes(dropboxStorage.used)} / ${formatBytes(dropboxStorage.allocation)}` : (dropboxInfoLoading ? 'Loading storage...' : 'Storage: —')}</Text>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '700' }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Dropbox (signed in)'}</Text>
+                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 12, color: theme.accent, marginTop: 4 }}>{dropboxUser.email}</Text> : null}
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>{formatSpaceText(dropboxStorage)}</Text>
                   </View>
                 ) : (
                   <View>

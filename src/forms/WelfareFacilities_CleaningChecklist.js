@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import useFormSave from '../hooks/useFormSave';
-import { removeDraft } from '../utils/formDrafts';
+import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -94,14 +94,25 @@ export default function WelfareFacilitiesChecklist() {
   const [editMode, setEditMode] = useState(false);
 
   // Intentionally do NOT load drafts for this form to avoid repopulation
-  // after submit. Initialize metadata with current month/year.
+  // Load any existing draft on mount so drafts persist across reloads.
   useEffect(() => {
     let mounted = true;
-    if (mounted) {
-      const today = new Date();
-      const month = today.toLocaleString('default', { month: 'long' });
-      setMetadata(prev => ({ ...prev, month, year: currentYear, issueDate: today.toLocaleDateString() }));
-    }
+    (async () => {
+      try {
+        const d = await getDraft(DRAFT_KEY);
+        if (mounted && d) {
+          if (d.formData) setFormData(d.formData);
+          if (d.metadata) setMetadata(prev => ({ ...prev, ...d.metadata }));
+        }
+        if (mounted) {
+          const today = new Date();
+          const month = today.toLocaleString('default', { month: 'long' });
+          setMetadata(prev => ({ ...prev, month, year: currentYear, issueDate: prev.issueDate || today.toLocaleDateString() }));
+        }
+      } catch (e) {
+        console.warn('load draft', e);
+      }
+    })();
     return () => { mounted = false; };
   }, []);
 
@@ -166,37 +177,52 @@ export default function WelfareFacilitiesChecklist() {
   };
 
   // Use the hook's handleSaveDraft and handleSubmit. We'll still show alerts/indicators
+  // Submit while preserving any existing drafts. This mirrors the behavior
+  // used in ThawingTemperatureLog: save a history entry but do not remove
+  // the draft so users can continue from the saved draft after submitting.
   const handleSubmitLocal = async () => {
     setBusy(true);
     try {
-      await handleSubmit(() => {
-        // create a fresh cleared copy of the initial cleaning state so we don't
-        // accidentally reuse mutated references from earlier edits
-        const cleared = WELFARE_EQUIPMENT_LIST.filter(i => i.isItem).map((item, index) => {
-          const checks = WEEK_DAYS.reduce((acc, d) => { acc[d] = { checked: false, cleanedBy: '' }; return acc; }, {});
-          return { id: index, area: item.area, name: item.name, frequency: item.frequency, checks };
-        });
-        setFormData(cleared);
-        setMetadata({ location: '', week: '', month: new Date().toLocaleString('default', { month: 'long' }), year: currentYear, hseqManager: '', hseqManagerSign: '' });
-      });
-      // Aggressively delete any drafts that may exist: legacy key and
-      // the default stable draft used by the save hook (if any).
-      try { await formStorage.deleteForm(DRAFT_KEY); } catch (e) { /* ignore */ }
-      try { await formStorage.deleteForm('WelfareFacilities_CleaningChecklist_draft'); } catch (e) { /* ignore */ }
-      try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
-      try { await removeDraft('WelfareFacilities_CleaningChecklist_draft'); } catch (e) { /* ignore */ }
+      const payload = buildPayload('submitted');
+      const savedAt = Date.now();
+      await addFormHistory({ title: payload.title, date: payload.metadata && payload.metadata.issueDate ? payload.metadata.issueDate : payload.savedAt || new Date().toISOString(), savedAt, payload });
+      Alert.alert('Success', 'Form submitted. Your draft has been preserved.');
     } catch (e) {
+      console.warn('submit error', e);
       Alert.alert('Error', 'Submission failed');
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleSaveDraftLocal = async () => {
     setBusy(true);
     try {
       await handleSaveDraft();
+      // Also write to legacy draft location so this form's draft matches other forms
+      try { await setDraft(DRAFT_KEY, { formData, metadata }); } catch (e) { console.warn('legacy setDraft failed', e); }
     } catch (e) {
       Alert.alert('Error', 'Failed to save draft');
     } finally { setBusy(false); }
+  };
+
+  const handleClearDraftLocal = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await formStorage.deleteForm(DRAFT_KEY).catch(()=>{}); } catch (e) {}
+    try { await removeDraft(DRAFT_KEY).catch(()=>{}); } catch (e) {}
+    // reset UI state to pristine
+    const cleared = WELFARE_EQUIPMENT_LIST.filter(i => i.isItem).map((item, index) => {
+      const checks = WEEK_DAYS.reduce((acc, d) => { acc[d] = { checked: false, cleanedBy: '' }; return acc; }, {});
+      return { id: index, area: item.area, name: item.name, frequency: item.frequency, checks };
+    });
+    setFormData(cleared);
+    setMetadata({ location: '', week: '', month: new Date().toLocaleString('default', { month: 'long' }), year: currentYear, hseqManager: '', hseqManagerSign: '' });
   };
 
   // Widen day group and cleaned-by widths to accommodate names when printing on A4 landscape
@@ -355,7 +381,7 @@ export default function WelfareFacilitiesChecklist() {
           </ScrollView>
 
               <View style={styles.buttonContainer}>
-            <FormActionBar onBack={() => {}} onSaveDraft={() => handleSaveDraft()} onSubmit={handleSubmitLocal} showSavePdf={false} />
+            <FormActionBar onClear={handleClearDraftLocal} onSaveDraft={() => handleSaveDraftLocal()} onSubmit={handleSubmitLocal} showSavePdf={false} />
           </View>
           <LoadingOverlay visible={isSaving} />
           <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
@@ -408,5 +434,7 @@ const styles = StyleSheet.create({
   draftButton: { backgroundColor: '#FBBF24' },
   submitButton: { backgroundColor: '#4F46E5' },
   buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
+  clearButton: { width: 110, marginRight: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E53E3E' },
+  clearButtonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 14 },
   sectionHeaderText: { fontSize: 13, fontWeight: '800', color: '#111827' },
 });
