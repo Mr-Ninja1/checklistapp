@@ -798,18 +798,43 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 15, color: theme.accent, opacity: 0.95, textAlign: 'left', marginBottom: 0, fontWeight: '500' }}>Food Safety Inspections</Text>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 16, color: theme.accent, fontWeight: '700', marginRight: 8 }}>📦</Text>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                marginBottom: 6,
+                backgroundColor: dropboxConnected ? '#0066cc15' : '#ff6b6b15',
+                borderRadius: 14,
+                padding: 14,
+                borderLeftWidth: 4,
+                borderLeftColor: dropboxConnected ? '#0066ff' : '#999',
+                borderRadius: 12
+              }}>
+                <View style={{ 
+                  width: 50, 
+                  height: 50, 
+                  borderRadius: 12, 
+                  backgroundColor: dropboxConnected ? '#0066cc25' : '#99999925',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12
+                }}>
+                  <Text style={{ fontSize: 24 }}>☁️</Text>
+                </View>
                 {dropboxConnected ? (
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, color: theme.text, fontWeight: '700' }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Dropbox (signed in)'}</Text>
-                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 12, color: theme.accent, marginTop: 2 }}>{dropboxUser.email}</Text> : null}
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>{formatSpaceText(dropboxStorage)}</Text>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '800', letterSpacing: 0.5 }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Connected'}</Text>
+                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 11, color: theme.accent, marginTop: 3, opacity: 0.8 }}>{dropboxUser.email}</Text> : null}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                      <View style={{ flex: 1, height: 6, backgroundColor: theme.accent + '20', borderRadius: 3, marginRight: 8 }}>
+                        <View style={{ height: '100%', backgroundColor: '#0066ff', borderRadius: 3, width: `${Math.min(100, (dropboxStorage?.used || 0) / (dropboxStorage?.allocated || 1) * 100)}%` }} />
+                      </View>
+                      <Text style={{ fontSize: 12, color: theme.accent, fontWeight: '700', minWidth: 80, textAlign: 'right' }}>{formatSpaceText(dropboxStorage)}</Text>
+                    </View>
                   </View>
                 ) : (
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, color: theme.text, fontWeight: '700' }}>Dropbox</Text>
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 2 }}>Not signed in</Text>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '800', letterSpacing: 0.5 }}>Dropbox</Text>
+                    <Text style={{ fontSize: 12, color: theme.accent, marginTop: 3, opacity: 0.8 }}>⚠️ Not connected</Text>
                   </View>
                 )}
                 <TouchableOpacity onPress={async () => {
@@ -820,8 +845,14 @@ export default function HomeScreen() {
                       await drive.signInAsync().catch(() => null);
                     }
                   } catch (e) {}
-                }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ paddingHorizontal: 8 }}>
-                  <Text style={{ color: theme.accent, fontWeight: '700' }}>{dropboxConnected ? 'Sign out' : 'Sign in'}</Text>
+                }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ 
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  backgroundColor: dropboxConnected ? '#ff4444' : '#0066ff',
+                  borderRadius: 8,
+                  marginLeft: 8
+                }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{dropboxConnected ? 'Logout' : 'Login'}</Text>
                 </TouchableOpacity>
                 
               </View>
@@ -841,17 +872,32 @@ export default function HomeScreen() {
               {/* reachability icon removed from here — now shown on the right side of the time/date row */}
             <View style={styles.headerCardAlt}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ fontSize: 18, color: theme.accent, fontWeight: '700', marginRight: 8 }}>📦</Text>
+                <View style={{ 
+                  width: 48, 
+                  height: 48, 
+                  borderRadius: 12, 
+                  backgroundColor: dropboxConnected ? '#0066cc25' : '#99999925',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12
+                }}>
+                  <Text style={{ fontSize: 22 }}>☁️</Text>
+                </View>
                 {dropboxConnected ? (
-                  <View>
-                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '700' }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Dropbox (signed in)'}</Text>
-                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 12, color: theme.accent, marginTop: 4 }}>{dropboxUser.email}</Text> : null}
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>{formatSpaceText(dropboxStorage)}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, color: theme.text, fontWeight: '800', letterSpacing: 0.5 }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Connected'}</Text>
+                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 12, color: theme.accent, marginTop: 4, opacity: 0.8 }}>{dropboxUser.email}</Text> : null}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                      <View style={{ flex: 1, height: 6, backgroundColor: theme.accent + '20', borderRadius: 3, marginRight: 8 }}>
+                        <View style={{ height: '100%', backgroundColor: '#0066ff', borderRadius: 3, width: `${Math.min(100, (dropboxStorage?.used || 0) / (dropboxStorage?.allocated || 1) * 100)}%` }} />
+                      </View>
+                      <Text style={{ fontSize: 12, color: theme.accent, fontWeight: '700', minWidth: 80, textAlign: 'right' }}>{formatSpaceText(dropboxStorage)}</Text>
+                    </View>
                   </View>
                 ) : (
                   <View>
-                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '700' }}>Dropbox</Text>
-                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4 }}>Not signed in</Text>
+                    <Text style={{ fontSize: 16, color: theme.text, fontWeight: '800', letterSpacing: 0.5 }}>Dropbox</Text>
+                    <Text style={{ fontSize: 13, color: theme.accent, marginTop: 4, opacity: 0.8 }}>⚠️ Not connected</Text>
                   </View>
                 )}
               </View>
@@ -863,8 +909,15 @@ export default function HomeScreen() {
                     await drive.signInAsync().catch(() => null);
                   }
                 } catch (e) {}
-              }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ marginTop: 6 }}>
-                <Text style={{ color: theme.accent, fontWeight: '700' }}>{dropboxConnected ? 'Sign out' : 'Sign in'}</Text>
+              }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ 
+                marginTop: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                backgroundColor: dropboxConnected ? '#ff4444' : '#0066ff',
+                borderRadius: 8,
+                alignSelf: 'flex-start'
+              }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{dropboxConnected ? 'Logout' : 'Login'}</Text>
               </TouchableOpacity>
             </View>
           </View>
