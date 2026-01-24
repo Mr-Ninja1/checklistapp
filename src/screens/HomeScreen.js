@@ -519,6 +519,13 @@ export default function HomeScreen() {
   const [dropboxStorage, setDropboxStorage] = useState(null);
   const [dropboxInfoLoading, setDropboxInfoLoading] = useState(false);
   const [dropboxDebugVisible, setDropboxDebugVisible] = useState(false);
+  const [dropboxDebugLog, setDropboxDebugLog] = useState([]);
+
+  const addDebugLog = (msg) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const entry = `[${timestamp}] ${msg}`;
+    setDropboxDebugLog(prev => [...prev.slice(-99), entry]); // keep last 100 messages
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -686,8 +693,8 @@ export default function HomeScreen() {
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
-              <Text style ={{ fontSize: 16, fontWeight: '700', color: '#185a9d', textAlign: 'center', marginBottom: 8 }}>
-                updated the welfarefacilities form it will now maintain Draft .
+              <Text style ={{ fontSize: 16, fontWeight: '700', color: '#bd1a1a', textAlign: 'center', marginBottom: 8 }}>
+               Ignore this Update the Developer is working on some new dropbox features so this is just a test .
               </Text>
              
             </View>
@@ -959,43 +966,82 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>Dropbox Debug</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity onPress={() => {
-                console.log('[Dropbox Debug] Manual refresh triggered');
+                addDebugLog('=== Manual Refresh Started ===');
                 setDropboxInfoLoading(true);
                 const fetchInfo = async () => {
                   try {
+                    addDebugLog('1. Checking token...');
+                    let token = await drive.getAccessToken().catch(e => { addDebugLog(`ERROR getAccessToken: ${e.message}`); return null; });
+                    addDebugLog(`   Token: ${token ? '✓ Present' : '✗ Missing'}`);
+                    
+                    if (!token) {
+                      addDebugLog('✗ No token, cannot fetch');
+                      setDropboxInfoLoading(false);
+                      return;
+                    }
+
+                    addDebugLog('2. Fetching user info...');
                     let ui = await drive.getUserInfo().catch(() => null);
-                    const token = await drive.getAccessToken().catch(() => null);
-                    if (!ui && token) {
+                    addDebugLog(`   Stored user: ${ui ? '✓ Found' : '✗ Not in SecureStore'}`);
+                    
+                    if (!ui) {
+                      addDebugLog('3. Attempting API fetch for user account...');
                       try {
-                        const ures = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
-                        if (ures && ures.ok) {
+                        const ures = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { 
+                          method: 'POST', 
+                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                          body: '{}' 
+                        });
+                        addDebugLog(`   API response: ${ures.status} ${ures.statusText}`);
+                        if (ures.ok) {
                           ui = await ures.json();
+                          addDebugLog(`   ✓ User data: ${JSON.stringify(ui).substring(0, 100)}`);
+                        } else {
+                          const errText = await ures.text().catch(() => '');
+                          addDebugLog(`   ✗ API error: ${errText.substring(0, 150)}`);
                         }
-                      } catch (e) { }
+                      } catch (e) { 
+                        addDebugLog(`   ✗ API fetch error: ${e.message}`);
+                      }
                     }
                     setDropboxUser(ui || null);
-                    if (token) {
-                      try {
-                        const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}' });
-                        if (res && res.ok) {
-                          const data = await res.json();
-                          const used = (data && typeof data.used === 'number') ? data.used : null;
-                          let allocation = null;
-                          try {
-                            if (data && data.allocation) {
-                              if (typeof data.allocation.allocated === 'number') allocation = data.allocation.allocated;
-                              else if (data.allocation.allocated && typeof data.allocation.allocated === 'object' && typeof data.allocation.allocated.value === 'number') allocation = data.allocation.allocated.value;
-                              else {
-                                for (const k of Object.keys(data.allocation)) {
-                                  if (typeof data.allocation[k] === 'number') { allocation = data.allocation[k]; break; }
-                                }
+
+                    addDebugLog('4. Fetching storage usage...');
+                    try {
+                      const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', { 
+                        method: 'POST', 
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                        body: '{}' 
+                      });
+                      addDebugLog(`   API response: ${res.status} ${res.statusText}`);
+                      if (res.ok) {
+                        const data = await res.json();
+                        addDebugLog(`   ✓ Storage data: ${JSON.stringify(data).substring(0, 100)}`);
+                        const used = (data && typeof data.used === 'number') ? data.used : null;
+                        let allocation = null;
+                        try {
+                          if (data && data.allocation) {
+                            if (typeof data.allocation.allocated === 'number') allocation = data.allocation.allocated;
+                            else if (data.allocation.allocated && typeof data.allocation.allocated === 'object' && typeof data.allocation.allocated.value === 'number') allocation = data.allocation.allocated.value;
+                            else {
+                              for (const k of Object.keys(data.allocation)) {
+                                if (typeof data.allocation[k] === 'number') { allocation = data.allocation[k]; break; }
                               }
                             }
-                          } catch (e) { }
-                          setDropboxStorage({ used: used || null, allocation: allocation || null, raw: data });
-                        }
-                      } catch (e) { }
+                          }
+                        } catch (e) { }
+                        setDropboxStorage({ used: used || null, allocation: allocation || null, raw: data });
+                        addDebugLog(`   ✓ Parsed: used=${used}, allocation=${allocation}`);
+                      } else {
+                        const errText = await res.text().catch(() => '');
+                        addDebugLog(`   ✗ API error: ${errText.substring(0, 150)}`);
+                        setDropboxStorage(null);
+                      }
+                    } catch (e) {
+                      addDebugLog(`   ✗ API fetch error: ${e.message}`);
+                      setDropboxStorage(null);
                     }
+                    addDebugLog('=== Refresh Complete ===');
                   } finally {
                     setDropboxInfoLoading(false);
                   }
@@ -1004,14 +1050,53 @@ export default function HomeScreen() {
               }}>
                 <Text style={{ color: theme.accent, fontWeight: '700' }}>Refresh</Text>
               </TouchableOpacity>
+              <TouchableOpacity onPress={() => {
+                setDropboxDebugLog([]);
+                addDebugLog('Log cleared');
+              }}>
+                <Text style={{ color: theme.accent, fontWeight: '700' }}>Clear</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => setDropboxDebugVisible(false)}>
                 <Text style={{ color: theme.accent, fontWeight: '700' }}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
-          <ScrollView style={{ flex: 1, backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
-            <Text style={{ fontSize: 12, color: '#111', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{JSON.stringify({ dropboxUser, dropboxStorage }, null, 2)}</Text>
+          <View style={{ flexDirection: 'row', marginBottom: 12, gap: 8 }}>
+            <TouchableOpacity style={{ flex: 1, backgroundColor: '#185a9d', padding: 8, borderRadius: 6 }} onPress={async () => {
+              addDebugLog('Testing: drive.getAccessToken()...');
+              try {
+                const t = await drive.getAccessToken();
+                addDebugLog(`Result: ${t ? '✓ Token present (length: ' + t.length + ')' : '✗ null'}`);
+              } catch (e) {
+                addDebugLog(`Error: ${e.message}`);
+              }
+            }}>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>Test Token</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ flex: 1, backgroundColor: '#185a9d', padding: 8, borderRadius: 6 }} onPress={async () => {
+              addDebugLog('Testing: drive.getUserInfo()...');
+              try {
+                const ui = await drive.getUserInfo();
+                if (ui) addDebugLog(`Result: ✓ ${JSON.stringify(ui).substring(0, 80)}`);
+                else addDebugLog('Result: ✗ null (not in SecureStore)');
+              } catch (e) {
+                addDebugLog(`Error: ${e.message}`);
+              }
+            }}>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>Test UserInfo</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={{ flex: 1, backgroundColor: '#1a1a1a', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+            <Text style={{ fontSize: 11, color: '#0f0', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+              {dropboxDebugLog.length === 0 ? 'Press Refresh or test buttons to see logs...' : dropboxDebugLog.join('\n')}
+            </Text>
           </ScrollView>
+          <View style={{ backgroundColor: '#f5f5f5', padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#111', marginBottom: 6 }}>State:</Text>
+            <Text style={{ fontSize: 11, color: '#333', marginBottom: 4 }}>Connected: {dropboxConnected === null ? 'checking...' : dropboxConnected ? '✓ Yes' : '✗ No'}</Text>
+            <Text style={{ fontSize: 11, color: '#333', marginBottom: 4 }}>User: {dropboxUser ? (dropboxUser.name?.display_name || dropboxUser.email || 'stored') : '✗ null'}</Text>
+            <Text style={{ fontSize: 11, color: '#333' }}>Storage: {dropboxStorage ? `${formatBytes(dropboxStorage.used)} / ${formatBytes(dropboxStorage.allocation)}` : '✗ null'}</Text>
+          </View>
         </View>
       </Modal>
 
