@@ -7,7 +7,9 @@
   "version": "1.0.0",
   "scripts": {
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "ota:android": "cd src && eas update --branch preview --platform android",
+    "ota:ios": "cd src && eas update --branch preview --platform ios"
   },
   "dependencies": {
     "@react-native-community/netinfo": "^11.4.1",
