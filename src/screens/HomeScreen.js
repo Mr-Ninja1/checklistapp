@@ -518,6 +518,7 @@ export default function HomeScreen() {
   const [dropboxUser, setDropboxUser] = useState(null);
   const [dropboxStorage, setDropboxStorage] = useState(null);
   const [dropboxInfoLoading, setDropboxInfoLoading] = useState(false);
+  const [dropboxDebugVisible, setDropboxDebugVisible] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -793,9 +794,10 @@ export default function HomeScreen() {
                       await drive.signInAsync().catch(() => null);
                     }
                   } catch (e) {}
-                }} style={{ paddingHorizontal: 8 }}>
+                }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ paddingHorizontal: 8 }}>
                   <Text style={{ color: theme.accent, fontWeight: '700' }}>{dropboxConnected ? 'Sign out' : 'Sign in'}</Text>
                 </TouchableOpacity>
+                
               </View>
             </View>
           </View>
@@ -835,7 +837,7 @@ export default function HomeScreen() {
                     await drive.signInAsync().catch(() => null);
                   }
                 } catch (e) {}
-              }} style={{ marginTop: 6 }}>
+              }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ marginTop: 6 }}>
                 <Text style={{ color: theme.accent, fontWeight: '700' }}>{dropboxConnected ? 'Sign out' : 'Sign in'}</Text>
               </TouchableOpacity>
             </View>
@@ -932,6 +934,20 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <Modal visible={dropboxDebugVisible} animationType="slide" onRequestClose={() => setDropboxDebugVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: theme.background, padding: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: theme.text }}>Dropbox Debug</Text>
+            <TouchableOpacity onPress={() => setDropboxDebugVisible(false)}>
+              <Text style={{ color: theme.accent, fontWeight: '700' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={{ flex: 1, backgroundColor: '#fff', padding: 12, borderRadius: 8 }}>
+            <Text style={{ fontSize: 12, color: '#111', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{JSON.stringify({ dropboxUser, dropboxStorage }, null, 2)}</Text>
+          </ScrollView>
+        </View>
+      </Modal>
 
       </Animated.View>
 
