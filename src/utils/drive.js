@@ -335,8 +335,11 @@ export async function signInAsync(options = {}) {
   try { await SecureStore.deleteItemAsync('dropbox_code_verifier'); } catch (e) { /* ignore */ }
     // Fetch basic userinfo and persist it for UI
     try {
-      // Fetch Dropbox account info
-      const userRes = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' } });
+      // Fetch Dropbox account info (POST with no body)
+      const userRes = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { 
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' } 
+      });
       if (userRes.ok) {
         const ui = await userRes.json();
         await SecureStore.setItemAsync(USER_INFO_KEY, JSON.stringify(ui));
