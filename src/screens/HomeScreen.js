@@ -593,7 +593,7 @@ export default function HomeScreen() {
           if (token) {
             try {
               console.log('[Dropbox] Fetching space usage from API...');
-              const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', { headers: { Authorization: `Bearer ${token}` } });
+              const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
               console.log('[Dropbox] space usage fetch response:', res.status, res.ok);
               if (res && res.ok) {
                 const data = await res.json();
@@ -1009,6 +1009,7 @@ export default function HomeScreen() {
                     addDebugLog('4. Fetching storage usage...');
                     try {
                       const res = await fetch('https://api.dropboxapi.com/2/users/get_space_usage', { 
+                        method: 'POST',
                         headers: { Authorization: `Bearer ${token}` } 
                       });
                       addDebugLog(`   API response: ${res.status} ${res.statusText}`);

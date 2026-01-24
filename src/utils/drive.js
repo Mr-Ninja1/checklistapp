@@ -337,6 +337,7 @@ export async function signInAsync(options = {}) {
     try {
       // Fetch Dropbox account info
       const userRes = await fetch('https://api.dropboxapi.com/2/users/get_current_account', { 
+        method: 'POST',
         headers: { Authorization: `Bearer ${access_token}` } 
       });
       if (userRes.ok) {
