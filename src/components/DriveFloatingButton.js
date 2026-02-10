@@ -1,3 +1,74 @@
+    // State for custom N input
+    const [restoreNValue, setRestoreNValue] = useState('');
+  // Compute number of forms saved today
+  const todayCount = React.useMemo(() => {
+    try {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      return (remoteFiles || []).filter(e => {
+        const p = e.path_lower || e.path_display || '';
+        const name = e.name || '';
+        // Check for today's date folder or timestamp in filename
+        if (p.includes(todayStr)) return true;
+        const m = name.match(/[_-](\d{10,13})\.json$/);
+        if (m && m[1]) {
+          const ts = Number(m[1]);
+          const d = new Date(ts);
+          const y = d.getFullYear();
+          const m2 = String(d.getMonth() + 1).padStart(2, '0');
+          const d2 = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m2}-${d2}` === todayStr;
+        }
+        return false;
+      }).length;
+    } catch (e) { return 0; }
+  }, [remoteFiles]);
+
+  // Handler to restore last N forms
+  const handleRestoreLastN = async (n = 5) => {
+    if (!remoteFiles || !remoteFiles.length) {
+      Alert.alert('Restore', 'No remote forms found.');
+      return;
+    }
+    // Sort by modified time descending
+    const sorted = remoteFiles.slice().sort((a, b) => {
+      const getTs = (x) => {
+        const name = x.name || '';
+        const m = name.match(/[_-](\d{10,13})\.json$/);
+        if (m && m[1]) return Number(m[1]);
+        return 0;
+      };
+      return getTs(b) - getTs(a);
+    });
+    const toRestore = sorted.slice(0, n);
+    setRestoreModalOpen(true);
+    setRestoreMessage(`Restoring last ${n} forms...`);
+    setRestoreProgress({ index: 0, total: toRestore.length, entry: '' });
+    let imported = 0;
+    let failed = 0;
+    let preCount = 0;
+    try { const hist = await getFormHistory().catch(() => []); preCount = Array.isArray(hist) ? hist.length : 0; } catch (e) { preCount = 0; }
+    for (let i = 0; i < toRestore.length; i++) {
+      try {
+        setRestoreProgress({ index: i + 1, total: toRestore.length, entry: toRestore[i].name });
+        const payload = await drive.downloadFile(toRestore[i]).catch(() => null);
+        if (payload) {
+          const wrapped = (payload && payload.payload) ? payload : { payload, savedAt: (payload && payload.savedAt) ? payload.savedAt : Date.now() };
+          const formId = toRestore[i].id ? `drive_${toRestore[i].id}` : `drive_${Date.now()}_${i}`;
+          await formStorage.importForm(formId, wrapped).catch(() => null);
+          imported += 1;
+        } else {
+          failed += 1;
+        }
+      } catch (e) { failed += 1; }
+    }
+    setRestoreModalOpen(false);
+    Alert.alert('Restore complete', `Imported: ${imported}\nFailed: ${failed}`);
+    try { triggerRefreshInBackground(preCount, imported, 4000); } catch (e) { /* ignore */ }
+  };
 import React, { useEffect, useState, useRef } from 'react';
 import { View, TouchableOpacity, Image, StyleSheet, Modal, Text, TouchableWithoutFeedback, Alert, ActivityIndicator, ScrollView, FlatList } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
@@ -793,7 +864,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
                 </View>
               ) : (
                 <>
-                      {!signedIn ? (
+                  {!signedIn ? (
                     <>
                       <TouchableOpacity style={styles.actionBtnPrimary} onPress={handleSignIn}><Text style={styles.actionBtnText}>Sign in with Dropbox</Text></TouchableOpacity>
                       <Text style={{ marginTop: 12, color: '#444' }}>Sign in to enable Dropbox sync (push/pull) features.</Text>
@@ -801,12 +872,38 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
                   ) : (
                     <>
                       <TouchableOpacity style={styles.actionBtnSecondary} onPress={handleSignOut}><Text style={styles.actionBtnTextSecondary}>Sign out</Text></TouchableOpacity>
-
+                      <View style={{ marginTop: 10, marginBottom: 10 }}>
+                        <Text style={{ fontWeight: '700', color: '#185a9d', fontSize: 15 }}>Forms saved today: {todayCount}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                          <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => handleRestoreLastN(5)}>
+                            <Text style={styles.actionBtnTextOutline}>Restore last 5 forms</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => handleRestoreLastN(10)}>
+                            <Text style={styles.actionBtnTextOutline}>Restore last 10 forms</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={{ fontWeight: '700', marginRight: 8 }}>Restore last N:</Text>
+                          <TextInput
+                            style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, width: 60, marginRight: 8, backgroundColor: '#fff' }}
+                            keyboardType="numeric"
+                            placeholder="N"
+                            value={restoreNValue}
+                            onChangeText={setRestoreNValue}
+                          />
+                          <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => {
+                            const n = parseInt(restoreNValue, 10);
+                            if (!n || n <= 0) return Alert.alert('Invalid', 'Enter a number greater than 0');
+                            handleRestoreLastN(n);
+                          }}>
+                            <Text style={styles.actionBtnTextOutline}>Restore</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                       <View style={styles.actionRow}>
                         <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => { handleSyncNow(); }}><Text style={styles.actionBtnText}>Save to Dropbox</Text></TouchableOpacity>
                         <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => handleRestoreRecent()}><Text style={styles.actionBtnTextOutline}>Restore recent</Text></TouchableOpacity>
                       </View>
-
                       {remoteYears && remoteYears.length > 0 ? (
                         <View style={{ marginTop: 10 }}>
                           <Text style={{ fontWeight: '700', marginBottom: 8 }}>Restore by year</Text>
