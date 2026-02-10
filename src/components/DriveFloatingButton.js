@@ -191,6 +191,16 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
     // only run on mount / when openOnMount changes
   }, [openOnMount]);
 
+  // When modal is opened and user is signed in, refresh remote list automatically
+  useEffect(() => {
+    try {
+      if (modalOpen && signedIn) {
+        // refresh remote index so restore UI is populated
+        refreshRemoteList().catch(() => {});
+      }
+    } catch (e) {}
+  }, [modalOpen, signedIn]);
+
   // NOTE: remote scanning is intentionally not automatic on modal open.
   // Scanning can be expensive for large backups, so we only refresh when
   // the user explicitly requests a restore/preview action (see handlers).
@@ -681,8 +691,18 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
     }
   };
 
+  const handleToggleModal = async () => {
+    try {
+      const next = !modalOpen;
+      setModalOpen(next);
+      if (next && signedIn) {
+        try { await refreshRemoteList(); } catch (e) { /* ignore */ }
+      }
+    } catch (e) { /* ignore */ }
+  };
+
   const InlineButton = (
-    <TouchableOpacity style={[styles.button, inline ? styles.inlineButton : null]} onPress={() => setModalOpen(true)}>
+    <TouchableOpacity style={[styles.button, inline ? styles.inlineButton : null]} onPress={handleToggleModal}>
       <Image source={require('../assets/dropbox.png')} style={[styles.icon, inline ? styles.inlineIcon : null]} resizeMode="contain" />
     </TouchableOpacity>
   );
