@@ -1,5 +1,3 @@
-    // State for custom N input
-    const [restoreNValue, setRestoreNValue] = useState('');
   // Compute number of forms saved today
   const todayCount = React.useMemo(() => {
     try {
@@ -880,23 +878,6 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => handleRestoreLastN(10)}>
                             <Text style={styles.actionBtnTextOutline}>Restore last 10 forms</Text>
-                          </TouchableOpacity>
-                        </View>
-                        <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center' }}>
-                          <Text style={{ fontWeight: '700', marginRight: 8 }}>Restore last N:</Text>
-                          <TextInput
-                            style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, width: 60, marginRight: 8, backgroundColor: '#fff' }}
-                            keyboardType="numeric"
-                            placeholder="N"
-                            value={restoreNValue}
-                            onChangeText={setRestoreNValue}
-                          />
-                          <TouchableOpacity style={styles.actionBtnPrimaryOutline} onPress={() => {
-                            const n = parseInt(restoreNValue, 10);
-                            if (!n || n <= 0) return Alert.alert('Invalid', 'Enter a number greater than 0');
-                            handleRestoreLastN(n);
-                          }}>
-                            <Text style={styles.actionBtnTextOutline}>Restore</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
