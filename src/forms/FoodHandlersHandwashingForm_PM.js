@@ -7,7 +7,7 @@ import useExportFormAsPDF from '../utils/useExportFormAsPDF';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import useResponsive from '../utils/responsive';
-import { removeDraft } from '../utils/formDrafts';
+import { removeDraft, getDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
 import { useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -96,8 +96,29 @@ export default function FoodHandlersHandwashingForm_PM() {
     status,
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-    // reset form after successful submit
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), payload });
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft function
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(draftKey); } catch (e) { console.warn('removeDraft failed', e); }
     setHandlers(Array.from({ length: NUM_ROWS }, () => ({
       fullName: '',
       jobTitle: '',
@@ -107,8 +128,7 @@ export default function FoodHandlersHandwashingForm_PM() {
       supSign: '',
     })));
     setLogDetails({ date: getCurrentDate(), location: '', shift: 'PM', verifiedBy: '', complexManagerSign: '' });
-    try { removeDraft(draftKey); } catch (e) { /* ignore */ }
-  }});
+  };
 
   React.useEffect(() => {
     let mounted = true;
@@ -437,6 +457,9 @@ export default function FoodHandlersHandwashingForm_PM() {
           </TouchableOpacity>
           <TouchableOpacity onPress={handleSaveDraft} disabled={isSaving} style={[styles.auxButtonSaveDraft, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]}>
             <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Save Draft</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleClearDraft} disabled={isSaving} style={[styles.auxButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius, backgroundColor: '#e53e3e' }]}>
+            <Text style={[styles.auxButtonText, { fontSize: dyn.saveBtnFont }]}>Clear Draft</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.saveButton, { paddingVertical: dyn.saveBtnPV, paddingHorizontal: dyn.saveBtnPH, borderRadius: dyn.saveBtnRadius }]} onPress={handleSavePDF} disabled={isSaving} activeOpacity={0.85}>
             <Text style={[styles.saveButtonText, { fontSize: dyn.saveBtnFont }]}>Save as PDF</Text>

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, PanResponder } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, PanResponder, Alert } from 'react-native';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import useResponsive from '../utils/responsive';
@@ -241,8 +241,8 @@ export default function Kitchen_DailyCleaningForm() {
         savedAt: Date.now(),
       };
       await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload });
-      await removeDraft(draftKey);
-      alert('Submitted and saved to history');
+      // Preserve the draft on submit — record history but do not delete the draft
+      alert('Submitted and saved to history (draft preserved)');
       if (navigation && navigation.navigate) navigation.navigate('Home');
     } catch (e) {
       alert('Failed to submit');
@@ -263,11 +263,32 @@ export default function Kitchen_DailyCleaningForm() {
     }
   };
 
+  const handleClearDraft = () => {
+    Alert.alert('Clear draft', 'This will permanently delete the draft and clear all inputs. Continue?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: () => {
+        (async () => {
+          setBusy(true);
+          try { await removeDraft(draftKey); } catch (e) { }
+          setFormData(initialEquipmentState);
+          setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedSign: '', verifiedBy: '' });
+          setEditMode(false);
+          alert('Draft cleared');
+          if (navigation && navigation.navigate) navigation.navigate('Home');
+          setBusy(false);
+        })();
+      } }
+    ]);
+  };
+
   // Render action buttons outside pointer-events-blocking children so they're
   // tappable while viewing (editMode may be false). Keep handlers unchanged.
   const actionButtons = (
     <View style={{ paddingVertical: s(8) }}>
       <View style={{ flexDirection: 'row', gap: 8 }}>
+        <TouchableOpacity onPress={handleClearDraft} style={{ backgroundColor: '#c0392b', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: 8 }} disabled={busy}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Clear Draft</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleSaveDraft} style={{ backgroundColor: '#f0ad4e', paddingVertical: s(8), paddingHorizontal: s(12), borderRadius: 8, marginRight: 8 }} disabled={busy}>
           <Text style={{ color: '#fff', fontWeight: '700', fontSize: ms(11) }}>Save Draft</Text>
         </TouchableOpacity>

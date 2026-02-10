@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
@@ -106,7 +106,40 @@ const PersonalHygieneChecklist = () => {
         status,
     });
 
-    const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PersonalHygieneChecklist_draft', clearOnSubmit: () => { setData(initialHygieneData); setHseqSign(null); setSupervisorSign(null); } });
+    const { handleSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PersonalHygieneChecklist_draft', waitForSave: false });
+
+    // Custom handleSubmit that preserves draft after submission
+    const handleSubmit = async () => {
+        try {
+            const payload = buildPayload('submitted');
+            const { addFormHistory } = await import('../utils/formHistory');
+            await addFormHistory({ title: payload.title || 'Personal Hygiene Checklist', date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+            // Draft is NOT removed - it persists in storage
+            // State is NOT reset - UI remains populated with submitted data
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    // Clear draft and reset all state
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try {
+            const { removeDraft } = await import('../utils/formDrafts');
+            await removeDraft('PersonalHygieneChecklist_draft');
+        } catch (e) { console.warn('removeDraft failed', e); }
+        setData(initialHygieneData);
+        setHseqSign(null);
+        setSupervisorSign(null);
+        setEditMode(false);
+    };
 
     // hydrate draft on mount
     useEffect(() => {
@@ -327,8 +360,11 @@ const PersonalHygieneChecklist = () => {
                             <TouchableOpacity onPress={() => { if (isSaving) return; handleSaveDraft && handleSaveDraft(); }} style={{ backgroundColor: '#f0ad4e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6, marginRight: 8 }} disabled={isSaving}>
                                 <Text style={{ color: '#fff', fontWeight: '700' }}>Save Draft</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={async () => { if (isSaving) return; try { await handleSubmit(); const snapshot = buildPayload('submitted'); addFormHistory({ title: snapshot.title || 'Personal Hygiene Checklist', date: snapshot.metadata?.issueDate, savedAt: Date.now(), meta: { payload: snapshot } }).catch(e => console.warn('addFormHistory failed', e)); } catch (e) { console.warn('submit failed', e); } }} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={isSaving}>
+                            <TouchableOpacity onPress={async () => { if (isSaving) return; try { await handleSubmit(); Alert.alert('Success', 'Form submitted. Your draft has been preserved.'); } catch (e) { console.warn('submit failed', e); Alert.alert('Error', 'Submission failed'); } }} style={{ backgroundColor: '#185a9d', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={isSaving}>
                                 <Text style={{ color: '#fff', fontWeight: '700' }}>Submit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleClearDraft} style={{ backgroundColor: '#e53e3e', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 6 }} disabled={isSaving}>
+                                <Text style={{ color: '#fff', fontWeight: '700' }}>Clear Draft</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

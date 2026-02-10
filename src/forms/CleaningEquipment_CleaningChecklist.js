@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, Dimensions } from 'react-native';
 
 import useFormSave from '../hooks/useFormSave';
+import { addFormHistory } from '../utils/formHistory';
+import { removeDraft } from '../utils/formDrafts';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -146,18 +148,17 @@ export default function CleaningEquipmentChecklist() {
   };
 
   // centralized save hook — keeps behavior consistent with other forms
-  const { handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
-    setFormData(initialCleaningState);
-    setMetadata(prev => ({ ...initialMetadata, month: currentMonth, year: currentYear }));
-  }, waitForSave: true });
+  const { handleSaveDraft: hookSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
 
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await hookSubmit();
-      try { await formStorage.deleteForm(DRAFT_KEY); } catch (e) {}
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.date || payload.metadata?.issueDate, savedAt: Date.now(), payload });
+      Alert.alert('Saved', 'Checklist submitted. Your draft has been preserved.');
     } catch (e) {
       Alert.alert('Error', 'Submission failed');
+      throw e;
     } finally { setBusy(false); }
   };
 
@@ -168,6 +169,20 @@ export default function CleaningEquipmentChecklist() {
     } catch (e) {
       Alert.alert('Error', 'Failed to save draft');
     } finally { setBusy(false); }
+  };
+
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(initialCleaningState);
+    setMetadata(prev => ({ ...initialMetadata, month: currentMonth, year: currentYear }));
+    setEditMode(false);
   };
 
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40, CLEANED_BY: 100 }), []);
@@ -207,6 +222,7 @@ export default function CleaningEquipmentChecklist() {
   const actionButtons = (
     <View style={styles.buttonContainer}>
       <TouchableOpacity onPress={() => handleSaveDraft()} style={[styles.button, styles.draftButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+      <TouchableOpacity onPress={() => handleClearDraft()} style={[styles.button, styles.clearButton]} disabled={busy}><Text style={[styles.buttonText, { color: '#fff' }]}>Clear Draft</Text></TouchableOpacity>
       <TouchableOpacity onPress={() => handleSubmit()} style={[styles.button, styles.submitButton]} disabled={busy}>{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
     </View>
   );

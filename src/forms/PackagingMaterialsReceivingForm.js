@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getDraft } from '../utils/formDrafts';
-import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import { getDraft, removeDraft } from '../utils/formDrafts';
+import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import SignatureField from '../components/SignatureField';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
@@ -8,6 +8,7 @@ import FormActionBar from '../components/FormActionBar';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import ResponsiveTable from '../components/ResponsiveTable';
+import { addFormHistory } from '../utils/formHistory';
 
 const { width } = Dimensions.get('window');
 
@@ -68,7 +69,33 @@ const PackagingMaterialsReceivingForm = () => {
         status,
     });
 
-    const { autoSaveDraft, handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave(buildCanonicalPayload, { formType: 'PackagingMaterialsReceivingForm', draftId: 'PackagingMaterialsReceivingForm_draft', clearOnSubmit: () => setReceivingData(createInitialProductData(10)) });
+    const DRAFT_KEY = 'PackagingMaterialsReceivingForm_draft';
+    const { autoSaveDraft, handleSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave(buildCanonicalPayload, { formType: 'PackagingMaterialsReceivingForm', draftId: DRAFT_KEY, waitForSave: false });
+
+    // Custom handleSubmit that preserves draft
+    const handleSubmit = async () => {
+        try {
+            const payload = buildCanonicalPayload('submitted');
+            await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    // Clear draft function
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+        setReceivingData(createInitialProductData(10));
+        setEditMode(false);
+    };
 
     // hydrate draft on mount
     useEffect(() => {
@@ -270,7 +297,7 @@ const PackagingMaterialsReceivingForm = () => {
                         </View>
                     </View>
                     <View style={{ marginTop: 12 }}>
-                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={isSaving} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} onClear={handleClearDraft} showSavePdf={false} isSaving={isSaving} />
                     </View>
                     {/* Notification shown after submit (useFormSave sets message) */}
                     <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

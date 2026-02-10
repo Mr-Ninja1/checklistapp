@@ -159,8 +159,29 @@ export default function HotHoldingTemperatureLog() {
         setBusy(false); 
     };
 
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This will permanently delete the draft and clear all inputs. Continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        setBusy(true);
+        try {
+            try { await removeDraft(DRAFT_KEY); } catch (e) { }
+            setRows(initialRows);
+            setMeta(initialMeta);
+            setEditMode(false);
+            Alert.alert('Cleared', 'Draft cleared');
+        } finally { setBusy(false); }
+    };
+
     const actionButtons = (
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+            <TouchableOpacity style={[styles.btn, { backgroundColor: '#EF4444' }]} onPress={() => { if (busy) return; handleClearDraft(); }} disabled={busy}>
+                <Text style={styles.btnText}>{busy ? 'Working...' : 'Clear Draft'}</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={() => { if (busy) return; handleSaveDraft(); }} disabled={busy}>
                 <Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text>
             </TouchableOpacity>

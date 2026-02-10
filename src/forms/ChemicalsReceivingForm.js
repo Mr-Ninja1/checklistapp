@@ -7,6 +7,9 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
+import { removeDraft } from '../utils/formDrafts';
+import { addFormHistory } from '../utils/formHistory';
+import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -123,13 +126,35 @@ const ChemicalsReceivingForm = () => {
 
     // use shared hook for autosave/save/submit
     const draftId = 'ChemicalsReceiving_draft';
-    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload: buildCanonicalPayload, draftId, clearOnSubmit: () => {
-        setReceivingData(createInitialProductData(20));
-        setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
-        setVerifiedBySign('');
-        setHseqManagerSign('');
-        setIssueDate(defaultIssueDate);
-    }});
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit: hookHandleSubmit } = useFormSave(buildCanonicalPayload, { draftId, formType: 'ChemicalsReceiving', waitForSave: false });
+
+    const handleSubmit = async () => {
+        const payload = buildCanonicalPayload('submitted');
+        try { await addFormHistory(payload); } catch (e) { console.warn('addFormHistory failed', e); }
+        try {
+            await hookHandleSubmit();
+            setReceivingData(createInitialProductData(20));
+            setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+            setVerifiedBySign('');
+            setHseqManagerSign('');
+            setIssueDate(defaultIssueDate);
+            try { await removeDraft(draftId); } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('submit failed', e); }
+    };
+
+    const handleClearDraft = () => {
+        Alert.alert('Clear draft?', 'This will remove the saved draft and reset the form.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Clear', style: 'destructive', onPress: async () => {
+                try { await removeDraft(draftId); } catch (e) { /* ignore */ }
+                setReceivingData(createInitialProductData(20));
+                setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+                setVerifiedBySign('');
+                setHseqManagerSign('');
+                setIssueDate(defaultIssueDate);
+            } }
+        ]);
+    };
 
     // preload any existing draft into the form UI
     useEffect(() => {
@@ -287,7 +312,7 @@ const ChemicalsReceivingForm = () => {
                         </View>
                     </View>
 
-                    <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => {})} showSavePdf={false} />
+                    <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} onClear={handleClearDraft} showSavePdf={false} />
                     <LoadingOverlay visible={isSaving} message={isSaving ? 'Saving...' : ''} />
                     <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
 

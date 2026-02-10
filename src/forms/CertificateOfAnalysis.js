@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import SignatureField from '../components/SignatureField';
 import EditableFormContainer from '../components/EditableFormContainer';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -63,12 +65,39 @@ export default function CertificateOfAnalysis() {
     savedAt: new Date().toISOString(),
   });
 
-  const { isSaving, handleSaveDraft, handleSubmit, scheduleAutoSave } = useFormSave({ 
+  const { isSaving, handleSaveDraft, scheduleAutoSave, showNotification, notificationMessage, setShowNotification } = useFormSave({ 
     buildPayload, 
     draftId: 'CertificateOfAnalysis_draft', 
-    clearOnSubmit: () => setFormData(initialFormData), 
+    waitForSave: false, 
     formType: 'CertificateOfAnalysis' 
   });
+
+  // Custom handleSubmit that preserves draft after submission
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: 'Certificate of Analysis', date: payload.formData?.issueDate, savedAt: Date.now(), payload });
+      // Draft is NOT removed - it persists in storage
+      // State is NOT reset - UI remains populated with submitted data
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft and reset all state
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft('CertificateOfAnalysis_draft'); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(initialFormData);
+    setEditMode(false);
+  };
 
   const handleProductChange = (id, key, value) => {
     setFormData(prev => {
@@ -93,7 +122,7 @@ export default function CertificateOfAnalysis() {
     if (busy || isSaving) return;
     setBusy(true);
     try {
-      await handleSubmit(() => setFormData(initialFormData));
+      await handleSubmit();
       setSubmittedVisible(true);
     } catch (e) {
       Alert.alert('Submit failed', String(e));
@@ -104,7 +133,7 @@ export default function CertificateOfAnalysis() {
 
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft} actionButtons={(
-      <FormActionBar onSaveDraft={async ()=>{ await handleSaveDraft(true); }} onSubmit={handleSaveLocal} isSaving={busy || isSaving} />
+      <FormActionBar onClear={handleClearDraft} onSaveDraft={async ()=>{ await handleSaveDraft(true); }} onSubmit={handleSaveLocal} isSaving={busy || isSaving} />
     )}>
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <LoadingOverlay visible={busy || isSaving} message={(busy || isSaving) ? 'Saving...' : ''} />

@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import EditableFormContainer from '../components/EditableFormContainer';
 import NotificationModal from '../components/NotificationModal';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -322,12 +322,37 @@ export default function VisitorsLogBook() {
     };
   };
 
-  const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'VisitorsLogBook_draft', clearOnSubmit: () => {
+  const { handleSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'VisitorsLogBook_draft', waitForSave: false });
+
+  // Custom handleSubmit that preserves draft
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+      Alert.alert('Submitted', 'Form submitted and saved to history (draft preserved)');
+      setEditMode(false);
+    } catch (e) {
+      console.warn('submit failed', e);
+      Alert.alert('Error', 'Failed to submit form');
+      throw e;
+    }
+  };
+
+  // Clear draft function
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft('VisitorsLogBook_draft'); } catch (e) { console.warn('removeDraft failed', e); }
     setVisitorEntries(initialVisitorLog);
     setSite(''); setSection(''); setMonth(''); setYear(''); setSiteManager(''); setVerifiedManager('');
     setAuthorizedBySign(null);
     setHealthAnswers(initialHealthAnswers);
-  } });
+  };
 
   // hydrate draft on mount
   useEffect(() => {
@@ -393,6 +418,13 @@ export default function VisitorsLogBook() {
               disabled={!editMode || isSaving}
             >
               <Text style={{ fontWeight: '700', fontSize: 16 }}>{'Save Draft'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: '#e53e3e' }]}
+              onPress={editMode ? handleClearDraft : undefined}
+              disabled={!editMode || isSaving}
+            >
+              <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{'Clear Draft'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: '#3b82f6' }]}

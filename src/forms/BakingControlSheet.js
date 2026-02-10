@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -9,6 +9,8 @@ import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import SignatureField from '../components/SignatureField';
+import { removeDraft } from '../utils/formDrafts';
+import { addFormHistory } from '../utils/formHistory';
 
 const DRAFT_KEY = 'baking_control_sheet_draft';
 
@@ -51,13 +53,10 @@ export default function BakingControlSheet({ navigation }) {
     status,
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit: hookHandleSubmit } = useFormSave({
     buildPayload,
     draftId: DRAFT_KEY,
-    clearOnSubmit: () => {
-      setFormData(initialLogState);
-      setMetadata(initialMetadata);
-    },
+    waitForSave: false,
   });
 
   useEffect(() => {
@@ -97,6 +96,48 @@ export default function BakingControlSheet({ navigation }) {
       return newData;
     });
   }, [scheduleAutoSave]);
+
+  const handleSubmit = async () => {
+    const payload = buildPayload('submitted');
+    try {
+      // Non-destructive submit: record history but preserve the draft
+      await addFormHistory({
+        title: payload.title,
+        date: payload.metadata?.issueDate || payload.metadata?.date || Date.now(),
+        savedAt: Date.now(),
+        payload,
+      });
+      Alert.alert('Success', 'Form submitted successfully!');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to submit form');
+      console.warn('Submit failed', e);
+    }
+  };
+
+  const handleClearDraft = () => {
+    Alert.alert(
+      'Clear Draft',
+      'Are you sure you want to clear the draft? This cannot be undone.',
+      [
+        { text: 'Cancel', onPress: () => {} },
+        {
+          text: 'Clear',
+          onPress: async () => {
+            try {
+              await removeDraft(DRAFT_KEY);
+              setFormData(initialLogState);
+              setMetadata(initialMetadata);
+              setEditMode(false);
+              Alert.alert('Success', 'Draft cleared');
+            } catch (e) {
+              Alert.alert('Error', 'Failed to clear draft');
+              console.warn('Clear draft failed', e);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // Wider columns for A4 landscape friendliness
   const columnHeaders = useMemo(() => [
@@ -178,18 +219,6 @@ export default function BakingControlSheet({ navigation }) {
     return <Text style={styles.metaSmall}>{s}</Text>;
   };
 
-  // wrap submit to ensure notification shows reliably across platforms
-  const submitHandler = async () => {
-    try {
-      await handleSubmit();
-      // use the setShowNotification from hook to display confirmation
-      setTimeout(() => {
-        try { setShowNotification(true); } catch (e) { /* ignore */ }
-      }, 250);
-    } catch (e) {
-      console.warn('submitHandler failed', e);
-    }
-  };
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
       <View style={styles.container}>
@@ -246,10 +275,11 @@ export default function BakingControlSheet({ navigation }) {
           </View>
         </ScrollView>
 
-                        <FormActionBar
+        <FormActionBar
           onSaveDraft={handleSaveDraft}
-          onSubmit={submitHandler}
-          showSavePdf={false} // or true, depending on requirements
+          onSubmit={handleSubmit}
+          onClear={handleClearDraft}
+          showSavePdf={false}
         />
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

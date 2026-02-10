@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import useResponsive from '../utils/responsive';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
@@ -9,6 +9,8 @@ import useFormSave from '../hooks/useFormSave';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import EditableFormContainer from '../components/EditableFormContainer';
+import { addFormHistory } from '../utils/formHistory';
+import { removeDraft } from '../utils/formDrafts';
 
 
 const TIME_SLOTS = [
@@ -98,9 +100,34 @@ export default function Bakery_SanitizingLog() {
       status,
     };
   };
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: draftKey, clearOnSubmit: () => {
-    setFormData(makeInitial()); setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
-  } });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId: draftKey, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), payload });
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft function
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(draftKey); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(makeInitial());
+    setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+    setVerifiedBySign('');
+    setEditMode(false);
+  };
 
   const COL_WIDTHS = useMemo(() => ({
     EQUIP: Math.max(120, Math.round(vw * 0.22)),
@@ -115,17 +142,15 @@ export default function Bakery_SanitizingLog() {
   const handleInput = (id, field, v) => setFormData(prev => prev.map(r => r.id === id ? { ...r, [field]: v } : r));
   const handleMeta = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
-  // Use the canonical handleSubmit from useFormSave so saved payloads are full
-  // canonical payloads (including formType, layoutHints, assets, formData) and
-  // are persisted under a formId that SavedFormRenderer can load later.
+  // Use the canonical handleSubmit from our custom function
+  // Saved payloads are full canonical payloads (including formType, layoutHints, assets, formData)
   const handleSaveLocal = async () => {
     if (busy || isSaving) return;
     setBusy(true);
     try {
-      await handleSubmit(() => {
-        // clearOnSubmit provided to useFormSave will reset form state; navigate home
-        if (navigation && navigation.navigate) navigation.navigate('Home');
-      });
+      await handleSubmit();
+      // Navigate home after success
+      if (navigation && navigation.navigate) navigation.navigate('Home');
     } catch (e) {
       alert('Failed to submit');
     } finally {
@@ -149,7 +174,7 @@ export default function Bakery_SanitizingLog() {
         </View>
         <Text style={[styles.title, { fontSize: ms(16), flex: 1, textAlign: 'center' }]}>FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET - BAKERY</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSaveLocal} isSaving={busy || isSaving} />
+          <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSaveLocal} onClear={handleClearDraft} isSaving={busy || isSaving} />
         </View>
       </View>
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
@@ -8,8 +8,9 @@ import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 import ResponsiveTable from '../components/ResponsiveTable';
-import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { addFormHistory } from '../utils/formHistory';
 
 const { width } = Dimensions.get('window');
 
@@ -149,7 +150,34 @@ const DryGoodsReceivingForm = () => {
     };
 
     const getPayload = (status) => buildCanonicalPayload(status);
-    const { isSaving: saving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, autoSaveDraft, handleSaveDraft, handleSubmit } = useFormSave(getPayload, { formType: 'DryGoodsReceivingForm', draftId: 'DryGoodsReceivingForm_draft', clearOnSubmit: () => clearForm(), waitForSave: false });
+    const { isSaving: saving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, autoSaveDraft, handleSaveDraft, handleSubmit: hookHandleSubmit } = useFormSave(getPayload, { formType: 'DryGoodsReceivingForm', draftId: 'DryGoodsReceivingForm_draft', waitForSave: false });
+
+    const handleSubmit = async () => {
+        const payload = getPayload('submitted');
+        try {
+            await addFormHistory(payload);
+        } catch (e) {
+            console.warn('addFormHistory failed', e);
+        }
+        try {
+            await hookHandleSubmit();
+            // preserve previous clear-on-submit behaviour
+            clearForm();
+            try { await removeDraft('DryGoodsReceivingForm_draft'); } catch (e) { /* ignore */ }
+        } catch (e) {
+            console.warn('submit failed', e);
+        }
+    };
+
+    const handleClearDraft = () => {
+        Alert.alert('Clear draft?', 'This will remove the saved draft and reset the form.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Clear', style: 'destructive', onPress: async () => {
+                try { await removeDraft('DryGoodsReceivingForm_draft'); } catch (e) { /* ignore */ }
+                clearForm();
+            } }
+        ]);
+    };
 
     // hydrate draft on mount (if present)
     useEffect(() => {
@@ -330,7 +358,7 @@ const DryGoodsReceivingForm = () => {
                     {/* --- Action buttons --- */}
                         <View style={{ height: 18 }} />
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={saving} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} onClear={handleClearDraft} showSavePdf={false} isSaving={saving} />
                         </View>
                         <LoadingOverlay visible={saving} message={'Saving form...'} />
                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

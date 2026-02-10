@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useFormSave from '../hooks/useFormSave';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
+import { addFormHistory } from '../utils/formHistory';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import FormActionBar from '../components/FormActionBar';
@@ -78,10 +79,33 @@ export default function FoodSamplesCollectionLog() {
     savedAt: Date.now()
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId, waitForSave: false });
+
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload();
+      await addFormHistory({ title: payload.title, date: payload.issueDate || new Date().toISOString(), savedAt: Date.now(), payload });
+      Alert.alert('Saved', 'Form saved to history. Your draft has been preserved.');
+    } catch (e) {
+      console.warn('submit failed', e);
+      Alert.alert('Error', 'Failed to save form.');
+      throw e;
+    }
+  };
+
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(draftId); } catch (e) { console.warn('removeDraft failed', e); }
     setLogEntries(initialLog);
     setSite(''); setLocation(''); setSupervisorName(''); setSupervisorSign('');
-  } });
+    setEditMode(false);
+  };
 
   // hydrate draft on mount
   useEffect(() => {
@@ -243,6 +267,7 @@ export default function FoodSamplesCollectionLog() {
     onBack={() => {}}
     onSaveDraft={() => { if (!editMode || isSaving) return; handleSaveDraft(); }}
     onSubmit={() => { if (isSaving) return; handleSubmit(); }}
+    onClear={() => { if (!editMode || isSaving) return; handleClearDraft(); }}
     showSavePdf={false}
   />
 

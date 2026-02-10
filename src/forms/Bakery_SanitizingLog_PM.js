@@ -6,6 +6,8 @@ import NotificationModal from '../components/NotificationModal';
 import FormActionBar from '../components/FormActionBar';
 import SignatureField from '../components/SignatureField';
 import useFormSave from '../hooks/useFormSave';
+import { addFormHistory } from '../utils/formHistory';
+import { removeDraft } from '../utils/formDrafts';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -149,9 +151,7 @@ export default function Bakery_SanitizingLog_PM() {
       status,
     };
   };
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: draftKey, clearOnSubmit: () => {
-    setFormData(makeInitial()); setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
-  } });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId: draftKey, waitForSave: false });
 
   const COL_WIDTHS = useMemo(() => ({
     EQUIP: Math.max(120, Math.round(vw * 0.22)),
@@ -189,12 +189,13 @@ export default function Bakery_SanitizingLog_PM() {
     if (busy || isSaving) return;
     setBusy(true);
     try {
-      await handleSubmit(() => {
-        // clearOnSubmit provided to useFormSave will reset form state; navigate home
-        if (navigation && navigation.navigate) navigation.navigate('Home');
-      });
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.date || payload.metadata?.date || Date.now(), savedAt: Date.now(), payload });
+      Alert.alert('Saved', 'Checklist submitted. Your draft has been preserved.');
+      if (navigation && navigation.navigate) navigation.navigate('Home');
     } catch (e) {
       alert('Failed to submit');
+      console.warn('submit failed', e);
     } finally {
       setBusy(false);
     }
@@ -221,6 +222,19 @@ export default function Bakery_SanitizingLog_PM() {
     setTimeout(()=>{ if (navigation && navigation.navigate) navigation.navigate('Home'); setBusy(false); }, 150);
   };
 
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(draftKey); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(makeInitial()); setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '' });
+    setEditMode(false);
+  };
+
   return (
     <EditableFormContainer editMode={editMode} setEditMode={setEditMode} onSaveDraft={handleSaveDraft}>
       <ScrollView style={[styles.container, { padding: s(12) }]} contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
@@ -237,7 +251,7 @@ export default function Bakery_SanitizingLog_PM() {
               <Text style={styles.addRowText}>+ Add Row</Text>
             </TouchableOpacity>
           ) : null}
-          <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraftClicked} onSubmit={handleSaveLocal} isSaving={busy || isSaving} />
+          <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraftClicked} onSubmit={handleSaveLocal} onClear={handleClearDraft} isSaving={busy || isSaving} />
         </View>
       </View>
 

@@ -8,6 +8,7 @@ import NotificationModal from '../components/NotificationModal';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 
 const DRAFT_KEY = 'customer_satisfaction_questionnaire_draft';
 
@@ -128,12 +129,41 @@ export default function CustomerSatisfactionQuestionnaire() {
     status,
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => setState(initialState()) });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft function
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+    setState(initialState());
+  };
 
   const handleSubmitLocal = async () => {
     const anyRated = Array.isArray(state.sections) && state.sections.some(s => s.questions && s.questions.some(q => q.rating && String(q.rating).trim() !== ''));
     if (!anyRated) { Alert.alert('Empty', 'Please rate at least one question before submitting.'); return; }
-    await handleSubmit();
+    try {
+      await handleSubmit();
+      Alert.alert('Success', 'Form submitted. Your draft has been preserved.');
+    } catch (e) {
+      Alert.alert('Error', 'Submission failed');
+    }
   };
 
   // embed logo as base64 for deterministic rendering of saved presentational views
@@ -239,7 +269,7 @@ export default function CustomerSatisfactionQuestionnaire() {
           </View>
 
           <View style={styles.buttonRow}>
-            <FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} />
+            <FormActionBar onClear={handleClearDraft} onSaveDraft={handleSaveDraft} onSubmit={handleSubmitLocal} />
           </View>
 
           <LoadingOverlay visible={isSaving} />

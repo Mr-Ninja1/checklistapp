@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
+import { addFormHistory } from '../utils/formHistory';
+import { removeDraft } from '../utils/formDrafts';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -131,11 +133,31 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     status,
   });
 
-  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
+  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
+
+  const handleSubmit = async () => {
+    setBusy(true);
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.date || payload.metadata?.date || Date.now(), savedAt: Date.now(), payload });
+      Alert.alert('Saved', 'Checklist submitted. Your draft has been preserved.');
+    } catch (e) { console.warn('submit failed', e); throw e; } finally { setBusy(false); }
+  };
+
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
     setFormData(initialLogState);
     setVerification(initialVerification);
     setMetadata(initialMetadata);
-  }, waitForSave: true });
+    setEditMode(false);
+  };
 
   const handleEntryChange = useCallback((index, field, value) => {
     setFormData(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
@@ -187,16 +209,6 @@ export default function BOH_ShelfLifeInspectionChecklist() {
     return true;
   }, [formData, scheduleAutoSave]);
 
-  const handleSubmit = async () => {
-    setBusy(true);
-    try {
-      await hookSubmit();
-      // stable draft removal handled inside useFormSave.handleSubmit
-      // clearing of state handled by clearOnSubmit passed to the hook
-    } catch (e) { console.warn('submit failed', e); }
-    setBusy(false);
-  };
-
   // Render action buttons outside the pointer-events-blocking children so they
   // remain tappable when editMode is false.
   const actionButtons = (
@@ -205,6 +217,7 @@ export default function BOH_ShelfLifeInspectionChecklist() {
         <Text style={styles.btnText}>{((formData.length - initialLogState.length) >= MAX_EXTRA_ROWS) ? 'Max rows' : 'Add Row'}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraftAndReturn} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#e53e3e' }]} onPress={handleClearDraft} disabled={busy}><Text style={styles.btnText}>Clear Draft</Text></TouchableOpacity>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
     </View>
   );

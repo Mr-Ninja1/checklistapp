@@ -129,11 +129,26 @@ export default function FoodHandlersDailyShoweringForm() {
     assets: logoDataUri ? { logoDataUri } : {},
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({
     buildPayload,
     draftId: 'FoodHandlersDailyShowering_draft',
     waitForSave: false
   });
+
+  // Custom handleSubmit that preserves draft after submission
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload();
+      // Add form to history without removing the draft
+      const { addFormHistory } = await import('../utils/formHistory');
+      await addFormHistory({ title: payload.title, savedAt: Date.now(), payload });
+      // Note: Draft is NOT removed - it persists in storage
+      // Note: State is NOT reset - UI remains populated with submitted data
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
 
   // Load Draft Logic
   useEffect(() => {
@@ -246,13 +261,19 @@ export default function FoodHandlersDailyShoweringForm() {
             <View style={styles.actionBarTop}>
               <FormActionBar
                 onClear={async () => {
-                  Alert.alert('Confirm', 'Clear saved draft and reset the form?', [
+                  Alert.alert('Clear Draft', 'This will clear the draft and reset all your progress. Are you sure?', [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Clear', style: 'destructive', onPress: async () => {
-                      try { await removeDraft('FoodHandlersDailyShowering_draft'); } catch (e) { }
+                    { text: 'Yes, Clear', style: 'destructive', onPress: async () => {
+                      try { await removeDraft('FoodHandlersDailyShowering_draft'); } catch (e) { console.warn('removeDraft failed', e); }
                       setLogEntries(initialLog);
                       setWeek('A');
+                      setMonth(monthName);
+                      setYear(`${now.getFullYear()}`);
+                      setCompiledBy('Michael Zulu C.');
+                      setApprovedBy('Hassani Ali');
                       setVerifiedBy('');
+                      setLogoDataUri(null);
+                      setEditMode(false);
                     } }
                   ]);
                 }}

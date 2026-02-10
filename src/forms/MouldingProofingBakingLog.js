@@ -164,13 +164,10 @@ export default function MouldingProofingBakingLog(props = {}) {
 	const handleSubmit = async () => {
 		setBusy(true);
 		try {
-
-
-			// normalize footer signatures
+			// build canonical payload and record history, but do NOT clear the draft
 			const normHead = normalizeSig(headChefSign);
 			const normVerified = normalizeSig(verifiedBySign);
 			const normComplex = normalizeSig(complexManagerSign);
-			// Normalize bakeTemp values and build layout hints for saved payload
 			const normalizedRows = rows.map(r => {
 				const copy = { ...r };
 				if (copy.bakeTemp || copy.bakeTemp === 0) {
@@ -179,18 +176,10 @@ export default function MouldingProofingBakingLog(props = {}) {
 					else if (v.includes('°') || /\b°|c$|C$/.test(v)) { copy.bakeTemp = v; }
 					else { copy.bakeTemp = `${v} °C`; }
 				}
+				copy.mouldingSign = normalizeSig(copy.mouldingSign);
+				copy.proofSign = normalizeSig(copy.proofSign);
 				return copy;
 			});
-			// normalize any per-row signatures
-			normalizedRows.forEach(rr => {
-				rr.mouldingSign = normalizeSig(rr.mouldingSign);
-				rr.proofSign = normalizeSig(rr.proofSign);
-			});
-
-			const tableWidth = Object.values(dynamicWidths).reduce((s, v) => s + v, 0);
-			// Ensure correctiveAction is present in metadata (some presentational
-			// renderers read it from metadata.correctiveAction) and include a
-			// legacy 'corrective' key for older consumers.
 			const metadataWithCorrective = { ...meta, correctiveAction: meta.correctiveAction ?? '' };
 			const payload = {
 				formType: 'MouldingProofingBakingLog',
@@ -200,32 +189,25 @@ export default function MouldingProofingBakingLog(props = {}) {
 				metadata: metadataWithCorrective,
 				formData: normalizedRows,
 				correctiveAction: metadataWithCorrective.correctiveAction,
-				corrective: metadataWithCorrective.correctiveAction, // legacy alias
+				corrective: metadataWithCorrective.correctiveAction,
 				headChefSign: normHead,
 				verifiedBySign: normVerified,
 				complexManagerSign: normComplex,
 				assets: logoDataUri ? { logoDataUri } : {},
 				layoutHints: dynamicWidths,
-				_tableWidth: tableWidth,
+				_tableWidth: Object.values(dynamicWidths).reduce((s, v) => s + v, 0),
 				savedAt: Date.now()
 			};
-			const formId = `${payload.formType}_${Date.now()}`;
 			try {
-				await formStorage.saveForm(formId, payload);
+				await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), payload });
+				Alert.alert('Saved', 'Form submitted. Draft preserved.');
 			} catch (e) {
-				try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, meta: { metadata: meta, formData: rows } }); } catch (err) { /* ignore */ }
+				console.warn('submit failed', e);
+				Alert.alert('Error', 'Failed to submit form');
 			}
-			try { await removeDraft(DRAFT_KEY); } catch (e) {}
-			setRows(initialRows);
-			setMeta(initialMetadata);
-			setHeadChefSign('');
-			setVerifiedBySign('');
-			setComplexManagerSign('');
-			Alert.alert('Saved', 'Form saved');
-		} catch (e) {
-			Alert.alert('Error', 'Failed to save form');
+		} finally {
+			setBusy(false);
 		}
-		setBusy(false);
 	};
 
 	const handleSaveDraft = async () => {
@@ -241,8 +223,27 @@ export default function MouldingProofingBakingLog(props = {}) {
 		setBusy(false);
 	};
 
+	const handleClearDraft = async () => {
+		const ok = await new Promise(resolve => {
+			Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+				{ text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+				{ text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+			]);
+		});
+		if (!ok) return;
+		try { if (saveTimer.current) clearTimeout(saveTimer.current); } catch (e) {}
+		try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+		setRows(initialRows);
+		setMeta(initialMetadata);
+		setHeadChefSign('');
+		setVerifiedBySign('');
+		setComplexManagerSign('');
+		setLogoDataUri(null);
+		setEditMode(false);
+	};
+
 	const actionButtons = (
-		<FormActionBar onBack={() => props.navigation?.navigate?.('Home')} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={busy} />
+		<FormActionBar onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} onClear={handleClearDraft} showSavePdf={false} isSaving={busy} />
 	);
 
 	return (
@@ -308,30 +309,30 @@ export default function MouldingProofingBakingLog(props = {}) {
 						</View>
 
 						{rows.map((r, idx) => (
-							<View key={r.id} style={[styles.row, { width: tableWidth }]}>
-								<View style={[styles.cell, { width: dynamicWidths.num, alignItems: 'center', justifyContent: 'center' }]}>
-									<Text>{idx + 1}</Text>
-								</View>
+							<View key={r.id} style={[styles.row, { width: tableWidth }]}> 
+								<View style={[styles.cell, { width: dynamicWidths.num, alignItems: 'center', justifyContent: 'center' }]}> 
+									<Text>{idx + 1}</Text> 
+								</View> 
 								<TextInput style={[styles.cell, { width: dynamicWidths.food }]} value={r.product} onChangeText={t => setRowField(r.id, 'product', t)} editable={editMode} />
 								<TextInput style={[styles.cell, { width: dynamicWidths.mouldingTime }]} value={r.mouldingTime} onChangeText={t => setRowField(r.id, 'mouldingTime', t)} editable={editMode} />
-																<View
-																	style={[styles.cell, { width: dynamicWidths.mouldingSign, alignItems: 'center' }]}
-																	onStartShouldSetResponder={() => true}
-																	onResponderTerminationRequest={() => true}
-																>
-																		<SignatureField value={r.mouldingSign} onChange={v => setRowField(r.id, 'mouldingSign', v)} editable={true} width={Math.max(40, dynamicWidths.mouldingSign - 12)} height={36} />
-																</View>
+								<View
+									style={[styles.cell, { width: dynamicWidths.mouldingSign, alignItems: 'center' }]}
+									onStartShouldSetResponder={() => true}
+									onResponderTerminationRequest={() => true}
+								>
+									<SignatureField value={r.mouldingSign} onChange={v => setRowField(r.id, 'mouldingSign', v)} editable={true} width={Math.max(40, dynamicWidths.mouldingSign - 12)} height={36} />
+								</View>
 								<TextInput style={[styles.cell, { width: dynamicWidths.proofTimeIn }]} value={r.proofTimeIn} onChangeText={t => setRowField(r.id, 'proofTimeIn', t)} editable={editMode} />
 								<TextInput style={[styles.cell, { width: dynamicWidths.proofTimeOut }]} value={r.proofTimeOut} onChangeText={t => setRowField(r.id, 'proofTimeOut', t)} editable={editMode} />
-																<View
-																	style={[styles.cell, { width: dynamicWidths.proofSign, alignItems: 'center' }]}
-																	onStartShouldSetResponder={() => true}
-																	onResponderTerminationRequest={() => true}
-																>
-																		<SignatureField value={r.proofSign} onChange={v => setRowField(r.id, 'proofSign', v)} editable={true} width={Math.max(40, dynamicWidths.proofSign - 12)} height={36} />
-																</View>
+								<View
+									style={[styles.cell, { width: dynamicWidths.proofSign, alignItems: 'center' }]}
+									onStartShouldSetResponder={() => true}
+									onResponderTerminationRequest={() => true}
+								>
+									<SignatureField value={r.proofSign} onChange={v => setRowField(r.id, 'proofSign', v)} editable={true} width={Math.max(40, dynamicWidths.proofSign - 12)} height={36} />
+								</View>
 								<TextInput style={[styles.cell, { width: dynamicWidths.bakeTimeIn }]} value={r.bakeTimeIn} onChangeText={t => setRowField(r.id, 'bakeTimeIn', t)} editable={editMode} />
-								<View style={[styles.cell, { width: dynamicWidths.bakeTemp }]}> 
+								<View style={[styles.cell, { width: dynamicWidths.bakeTemp }]}>  
 									<TextInput
 										style={styles.innerTempInput}
 										value={(r.bakeTemp && String(r.bakeTemp).replace(/\s*°\s*[cC]?\.?$/i, '')) || ''}
@@ -341,7 +342,7 @@ export default function MouldingProofingBakingLog(props = {}) {
 								</View>
 								<TextInput style={[styles.cell, { width: dynamicWidths.bakeTimeOut }]} value={r.bakeTimeOut} onChangeText={t => setRowField(r.id, 'bakeTimeOut', t)} editable={editMode} />
 								<TextInput style={[styles.cell, { width: dynamicWidths.staff }]} value={r.staffName} onChangeText={t => setRowField(r.id, 'staffName', t)} editable={editMode} />
-								</View>
+							</View>
 						))}
 					</View>
 				</ScrollView>

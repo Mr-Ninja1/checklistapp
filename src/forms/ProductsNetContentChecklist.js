@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 import formStorage from '../utils/formStorage';
 import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -101,7 +102,35 @@ export default function ProductsNetContentChecklist() {
     status,
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setVerification({ supervisorSign: '', hseqManagerSign: '', complexManagerSign: '' }); } });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft after submission
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+      // Draft is NOT removed - it persists in storage
+      // State is NOT reset - UI remains populated with submitted data
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft and reset all state
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(initialLogState);
+    setVerification({ supervisorSign: '', hseqManagerSign: '', complexManagerSign: '' });
+    setEditMode(false);
+  };
 
   // edit mode: default read-only for smooth scrolling; toggle to edit to enable inputs
   const [editMode, setEditMode] = React.useState(false);
@@ -140,6 +169,7 @@ export default function ProductsNetContentChecklist() {
     <View style={styles.buttonRow}>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSaveDraftLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleSubmitLocal} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>{(busy || isSaving) ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#e53e3e', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]} onPress={handleClearDraft} disabled={busy || isSaving}><Text style={[styles.btnText, { fontSize: 16 }]}>Clear Draft</Text></TouchableOpacity>
     </View>
   );
 

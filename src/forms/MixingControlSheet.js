@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 // history registration is handled by the save hook via formStorage.saveForm
 import EditableFormContainer from '../components/EditableFormContainer';
 import { Asset } from 'expo-asset';
@@ -95,7 +97,35 @@ export default function MixingControlSheet() {
     status,
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => { setFormData(initialLogState); setVerification({ mixerManSign: '', complexManagerSign: '' }); } });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft after submission
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+      // Draft is NOT removed - it persists in storage
+      // State is NOT reset - UI remains populated with submitted data
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft and reset all state
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(initialLogState);
+    setVerification({ mixerManSign: '', complexManagerSign: '' });
+    setEditMode(false);
+  };
 
   const handleEntryChange = useCallback((index, field, value) => {
     setFormData(prev => {
@@ -239,6 +269,7 @@ export default function MixingControlSheet() {
           </ScrollView>
 
                         <FormActionBar
+          onClear={handleClearDraft}
           onSaveDraft={handleSaveDraftLocal}
           onSubmit={handleSubmitLocal}
           showSavePdf={false}

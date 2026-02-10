@@ -151,15 +151,17 @@ export default function FrontOfHouseChecklist() {
       const formId = `FOH_FrontOfHouseCleaning_${Date.now()}`;
       try {
         await formStorage.saveForm(formId, payload);
+        // also record history for browseable submissions
+        try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: payload.savedAt, payload }); } catch (err) { /* ignore */ }
       } catch (e) {
-        // fallback
-        try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
+        // fallback to history-only if storage fails
+        try { await addFormHistory({ title: payload.title, date: payload.date, savedAt: Date.now(), payload }); } catch (err) { /* ignore */ }
       }
 
-      await removeDraft(DRAFT_KEY);
-      Alert.alert('Success', 'Checklist Submitted successfully!');
-      setFormData(initialCleaningState);
-      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', hseqManagerSign: '' });
+      // Preserve draft on submit — do not removeDraft here.
+      Alert.alert('Success', 'Checklist Submitted successfully! (draft preserved)');
+      // keep UI populated so users can revisit the draft if needed
+      setEditMode(false);
     } catch (e) {
       Alert.alert('Error', 'Submission failed.');
     } finally {
@@ -177,6 +179,24 @@ export default function FrontOfHouseChecklist() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This will permanently delete the draft and clear all inputs. Continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      try { await removeDraft(DRAFT_KEY); } catch (e) { }
+      setFormData(initialCleaningState);
+      setMetadata({ location: '', week: '', month: '', year: '', hseqManager: '', hseqManagerSign: '' });
+      setEditMode(false);
+      Alert.alert('Cleared', 'Draft cleared');
+    } finally { setBusy(false); }
   };
 
   const COL_WIDTHS = useMemo(() => ({
@@ -234,6 +254,9 @@ export default function FrontOfHouseChecklist() {
 
   const actionButtons = (
     <View style={styles.buttonContainer}>
+      <TouchableOpacity onPress={() => { if (busy) return; handleClearDraft(); }} style={[styles.button, { backgroundColor: '#EF4444' }]} disabled={busy}>
+        {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Clear Draft</Text>}
+      </TouchableOpacity>
       <TouchableOpacity onPress={() => { if (busy) return; handleSaveDraft(); }} style={[styles.button, styles.draftButton]} disabled={busy}>
         {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Save Draft</Text>}
       </TouchableOpacity>

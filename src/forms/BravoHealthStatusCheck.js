@@ -9,6 +9,7 @@ import EditableFormContainer from '../components/EditableFormContainer';
 import ResponsiveTable from '../components/ResponsiveTable';
 import SignatureField from '../components/SignatureField';
 import { addFormHistory } from '../utils/formHistory';
+import { removeDraft } from '../utils/formDrafts';
 import formStorage from '../utils/formStorage';
 
 const { width, height: windowHeight } = Dimensions.get('window');
@@ -223,9 +224,31 @@ const HealthStatusCheck = () => {
         };
     };
 
-    const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: 'HealthStatusCheck_draft', clearOnSubmit: () => {
+    const { handleSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: 'HealthStatusCheck_draft', waitForSave: false });
+
+    const handleSubmit = async () => {
+        try {
+            const payload = buildPayload('submitted');
+            await addFormHistory({ title: payload.title, date: payload.date || payload.metadata?.issueDate, savedAt: Date.now(), payload });
+            return true;
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft('HealthStatusCheck_draft'); } catch (e) { console.warn('removeDraft failed', e); }
         setWeeklyData(createInitialWeeklyData(25)); setSite(''); setWeek(''); setMonth(''); setYear(''); setSupervisorSign(''); setComplexManagerSign(''); setHseqManagerSign('');
-    }, waitForSave: false });
+        setEditMode(false);
+    };
 
     // Clear local UI saving flags when the background save completes
     useEffect(() => {
@@ -409,6 +432,12 @@ const HealthStatusCheck = () => {
                             disabled={isSaving || localSaving}
                         >
                             <Text style={styles.stackBtnText}>{'Save Draft'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.stackBtn, { backgroundColor: '#e53e3e' }]} onPress={async () => {
+                            // Clear draft
+                            try { await handleClearDraft(); Alert.alert('Draft cleared'); } catch (e) { console.warn('clear draft failed', e); }
+                        }} disabled={isSaving || localSaving}>
+                            <Text style={[styles.stackBtnText, { color: '#fff' }]}>{'Clear Draft'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={[styles.stackBtn, { backgroundColor: '#3b82f6' }]} onPress={async () => {
                             // wrap handleSubmit with a client-side timeout so UI doesn't hang

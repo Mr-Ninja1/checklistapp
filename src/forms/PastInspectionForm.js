@@ -6,6 +6,8 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
@@ -199,7 +201,32 @@ export default function PastInspectionForm() {
     }, []);
 
     const draftId = DRAFT_KEY;
-    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => setState(initialState()) });
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId, waitForSave: false });
+
+    // Custom handleSubmit that preserves draft
+    const handleSubmit = async () => {
+        try {
+            const payload = buildPayload('submitted');
+            await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    // Clear draft function
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft(draftId); } catch (e) { console.warn('removeDraft failed', e); }
+        setState(initialState());
+        setEditMode(false);
+    };
 
     // preload draft if present
     useEffect(() => {
@@ -329,7 +356,7 @@ export default function PastInspectionForm() {
 
                     {/* Functional Buttons provided by FormActionBar */}
                     <View style={styles.buttonRow}>
-                        <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} onClear={editMode ? handleClearDraft : undefined} showSavePdf={false} />
                     </View>
 
                         <LoadingOverlay visible={isSaving} />

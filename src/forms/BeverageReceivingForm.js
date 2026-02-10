@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import formStorage from '../utils/formStorage';
+import { removeDraft } from '../utils/formDrafts';
+import { addFormHistory } from '../utils/formHistory';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
 import NotificationModal from '../components/NotificationModal';
@@ -73,13 +75,36 @@ const BeverageReceivingForm = () => {
             };
         };
 
-        const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-            setReceivingData(createInitialProductData(10));
-            setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
-            setVerifiedBySign('');
-            setHseqManagerSign('');
-            setIssueDate(defaultIssueDate);
-        }});
+        const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave, handleSaveDraft, handleSubmit: hookHandleSubmit } = useFormSave(buildPayload, { formType: 'BeverageReceivingForm', draftId, waitForSave: false });
+
+        const handleSubmit = async () => {
+            const payload = buildPayload('submitted');
+            try { await addFormHistory(payload); } catch (e) { console.warn('addFormHistory failed', e); }
+            try {
+                await hookHandleSubmit();
+                // preserve previous clear-on-submit behaviour
+                setReceivingData(createInitialProductData(10));
+                setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+                setVerifiedBySign('');
+                setHseqManagerSign('');
+                setIssueDate(defaultIssueDate);
+                try { await removeDraft(draftId); } catch (e) { /* ignore */ }
+            } catch (e) { console.warn('submit failed', e); }
+        };
+
+        const handleClearDraft = () => {
+            Alert.alert('Clear draft?', 'This will remove the saved draft and reset the form.', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Clear', style: 'destructive', onPress: async () => {
+                    try { await removeDraft(draftId); } catch (e) { /* ignore */ }
+                    setReceivingData(createInitialProductData(10));
+                    setDeliveryDetails({ dateOfDelivery: '', receivedBy: '', complexManager: '', timeOfDelivery: '', invoiceNo: '', driversName: '', vehicleRegNo: '', signature: '' });
+                    setVerifiedBySign('');
+                    setHseqManagerSign('');
+                    setIssueDate(defaultIssueDate);
+                } }
+            ]);
+        };
 
         // load any existing draft saved via formStorage
         React.useEffect(() => {
@@ -411,7 +436,7 @@ const BeverageReceivingForm = () => {
 
                                 {/* Action buttons - Save Draft & Submit */}
                                 <View style={{ height: 18 }} />
-                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} isSaving={isSaving} />
+                        <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} onClear={handleClearDraft} showSavePdf={false} isSaving={isSaving} />
                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />
                     </View>
                 </ScrollView>

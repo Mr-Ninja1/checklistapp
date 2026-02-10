@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Image, Alert } from 'react-native';
 import { getDraft, setDraft, removeDraft } from '../utils/formDrafts';
 import { addFormHistory } from '../utils/formHistory';
 import useFormSave from '../hooks/useFormSave';
@@ -118,10 +118,34 @@ export default function FruitWashingLog() {
     savedAt: Date.now(),
   });
 
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-    setFormData(initialLogState);
-    setMetadata(initialMetadata);
-  } });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit: hookHandleSubmit } = useFormSave(buildPayload, { draftId, formType: 'FruitWashingLog', waitForSave: false });
+
+  const handleSubmit = async () => {
+    const payload = buildPayload();
+    // mark as submitted in history
+    payload.status = 'submitted';
+    try { await addFormHistory(payload); } catch (e) { console.warn('addFormHistory failed', e); }
+    try {
+      await hookHandleSubmit();
+      // preserve previous clear-on-submit behaviour
+      setFormData(initialLogState);
+      setMetadata(initialMetadata);
+      try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.warn('submit failed', e);
+    }
+  };
+
+  const handleClearDraft = () => {
+    Alert.alert('Clear draft?', 'This will remove the saved draft and reset the form.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Clear', style: 'destructive', onPress: async () => {
+        try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
+        setFormData(initialLogState);
+        setMetadata(initialMetadata);
+      } }
+    ]);
+  };
 
   // Trigger the hook's debounced autosave when form data or metadata changes
   useEffect(() => {
@@ -141,7 +165,6 @@ export default function FruitWashingLog() {
   const submitAndRecord = async () => {
     try {
       await handleSubmit();
-      try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
     } catch (e) {
       console.warn('submit failed', e);
     }
@@ -296,6 +319,7 @@ export default function FruitWashingLog() {
   <View style={styles.buttonRow}>
   <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={saveDraftLocal} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
    <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={submitAndRecord} disabled={isSaving}><Text style={styles.btnText}>{isSaving ? 'Submitting...' : 'Submit Log'}</Text></TouchableOpacity>
+   <TouchableOpacity style={[styles.btn, { backgroundColor: '#ef4444' }]} onPress={handleClearDraft} disabled={isSaving}><Text style={styles.btnText}>Clear Draft</Text></TouchableOpacity>
   </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

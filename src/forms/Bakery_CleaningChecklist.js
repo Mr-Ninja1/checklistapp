@@ -13,21 +13,13 @@ import {
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
+import { addFormHistory } from '../utils/formHistory';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 
-// --- STUBBED ASYNC STORAGE AND API UTILITIES ---
-// NOTE: Since this environment cannot access native AsyncStorage, these functions
-// are stubs designed to simulate the asynchronous data handling expected in React Native.
-
 const DRAFT_KEY = 'bakery_cleaning_checklist_draft';
-
-const addFormHistory = async (data) => {
-    console.log("Form submitted to API:", data);
-    return new Promise(resolve => setTimeout(resolve, 300));
-};
 
 // --- DATA STRUCTURE ---
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -111,9 +103,32 @@ export default function BakeryCleaningChecklist() {
         _tableWidth: TABLE_WIDTH,
         savedAt: Date.now(),
     });
-    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId: DRAFT_KEY, formType: 'Bakery_CleaningChecklist', clearOnSubmit: () => {
-        setFormData(initialCleaningState); setMetadata({ location: '', week: '', month: issueMonth, year: issueYear }); setVerification({ hseqManager: '', complexManager: '' });
-    } });
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId: DRAFT_KEY, formType: 'Bakery_CleaningChecklist', waitForSave: false });
+
+    const handleSubmit = async () => {
+        try {
+            const payload = buildPayload();
+            await addFormHistory({ title: payload.title, date: payload.metadata?.month, savedAt: Date.now(), payload });
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+        setFormData(initialCleaningState);
+        setMetadata({ location: '', week: '', month: issueMonth, year: issueYear });
+        setVerification({ hseqManager: '', complexManager: '' });
+        setEditMode(false);
+    };
 
     // Load Draft Effect
     // NOTE: draft load handled by hook's save/load or external code; autosave triggered below in handlers
@@ -392,11 +407,11 @@ export default function BakeryCleaningChecklist() {
                     {/* Action Buttons */}
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
-                            onPress={handleBack}
-                            style={[styles.button, styles.backButton]}
+                            onPress={handleClearDraft}
+                            style={[styles.button, { backgroundColor: '#e53e3e' }]}
                             disabled={busy}
                         >
-                            <Text style={styles.buttonText}>Back</Text>
+                            <Text style={styles.buttonText}>Clear Draft</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             onPress={handleSaveDraftLocal}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet, useWindowDimensions, Alert } from 'react-native';
 import formStorage from '../utils/formStorage';
 import useFormSave from '../hooks/useFormSave';
 import LoadingOverlay from '../components/LoadingOverlay';
@@ -7,6 +7,8 @@ import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
+import { addFormHistory } from '../utils/formHistory';
+import { removeDraft } from '../utils/formDrafts';
 
 const DRAFT_KEY = 'bakery_underbar_shelf_life_draft';
 
@@ -158,11 +160,7 @@ export default function Bakery_UnderbarShelfLifeInspectionChecklist() {
     status,
   });
 
-  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, handleSubmit: hookSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
-    setFormData(initialLogState);
-    setVerification(initialVerification);
-    setMetadata(initialMetadata);
-  }, waitForSave: true });
+  const { scheduleAutoSave, handleSaveDraft: hookSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
 
   const handleSaveDraft = async () => {
     setBusy(true);
@@ -173,13 +171,31 @@ export default function Bakery_UnderbarShelfLifeInspectionChecklist() {
   const handleSubmit = async () => {
     setBusy(true);
     try {
-      await hookSubmit();
-    } catch (e) { console.warn('submit failed', e); }
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.date || payload.date || Date.now(), savedAt: Date.now(), payload });
+      Alert.alert('Saved', 'Checklist submitted. Your draft has been preserved.');
+    } catch (e) { console.warn('submit failed', e); Alert.alert('Error', 'Submission failed'); }
     setBusy(false);
+  };
+
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(initialLogState);
+    setVerification(initialVerification);
+    setMetadata(initialMetadata);
+    setEditMode(false);
   };
 
   const actionButtons = (
     <View style={styles.buttonRow}>
+      <TouchableOpacity style={[styles.btn, { backgroundColor: '#e53e3e' }]} onPress={handleClearDraft} disabled={busy}><Text style={styles.btnText}>Clear Draft</Text></TouchableOpacity>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#f6c342' }]} onPress={handleSaveDraft} disabled={busy}><Text style={styles.btnText}>{busy ? 'Saving...' : 'Save Draft'}</Text></TouchableOpacity>
       <TouchableOpacity style={[styles.btn, { backgroundColor: '#3b82f6' }]} onPress={handleSubmit} disabled={busy}><Text style={styles.btnText}>{busy ? 'Submitting...' : 'Submit Checklist'}</Text></TouchableOpacity>
     </View>
@@ -311,9 +327,6 @@ export default function Bakery_UnderbarShelfLifeInspectionChecklist() {
           <LoadingOverlay visible={isSaving || busy} />
           <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => {
             setShowNotification(false);
-            setFormData(initialLogState);
-            setVerification(initialVerification);
-            setMetadata(initialMetadata);
           }} />
         </ScrollView>
       </View>

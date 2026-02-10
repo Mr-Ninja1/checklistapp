@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Image } from 'react-native';
 import useResponsive from '../utils/responsive';
 import { addFormHistory } from '../utils/formHistory';
@@ -212,15 +212,31 @@ export default function FOH_DailyCleaningForm_AM() {
         try { await addFormHistory({ title: 'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM', date: metadata.date, savedAt: Date.now(), meta: { metadata, formData } }); } catch (err) { /* ignore */ }
       }
 
-      try { await removeDraft(draftKey); } catch (e) {}
-
-      setFormData(initialEquipmentState.map(i => ({ ...i, times: Object.keys(i.times).reduce((acc,k)=>({ ...acc, [k]: false }), {}) })));
-      setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '', verifiedBySign: '' });
-
-      alert('Submitted and saved to history');
+      // Preserve draft on submit — do not removeDraft here.
+      setEditMode(false);
+      Alert.alert('Submitted', 'Form submitted and saved to history (draft preserved)');
       navigation.navigate('Home');
     } catch (e) { alert('Failed to submit'); }
     finally { setBusy(false); }
+  };
+
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This will permanently delete the draft and clear all inputs. Continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    setBusy(true);
+    try {
+      try { await removeDraft(draftKey); } catch (e) {}
+      setFormData(initialEquipmentState.map(i => ({ ...i, times: Object.keys(i.times).reduce((acc,k)=>({ ...acc, [k]: false }), {}) })));
+      setMetadata({ date: sysDate, location: '', shift: sysShift, verifiedBy: '', verifiedBySign: '' });
+      setEditMode(false);
+      Alert.alert('Cleared', 'Draft cleared');
+      navigation.navigate('Home');
+    } finally { setBusy(false); }
   };
 
   const handleSaveDraft = async () => {
@@ -238,7 +254,7 @@ export default function FOH_DailyCleaningForm_AM() {
   const needsHorizontal = TOTAL_TABLE_WIDTH > availableWidth;
 
   const actionButtons = (
-    <FormActionBar onBack={handleBack} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} isSaving={busy} />
+    <FormActionBar onBack={handleBack} onClear={handleClearDraft} onSaveDraft={handleSaveDraft} onSubmit={handleSave} showSavePdf={false} isSaving={busy} />
   );
 
   return (

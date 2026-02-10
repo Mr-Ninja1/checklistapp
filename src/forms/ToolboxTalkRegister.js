@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
-import { StyleSheet, View, Text, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, Image, Alert } from 'react-native';
 import SignatureField from '../components/SignatureField';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -65,16 +67,40 @@ export default function ToolboxTalkRegister() {
   });
 
   const draftId = 'ToolboxTalkRegister_draft';
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-    // clear form
-    setAgenda(''); setPresenter(''); setIssues(['', '', '', '']);
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.date, savedAt: Date.now(), payload });
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft function
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(draftId); } catch (e) { console.warn('removeDraft failed', e); }
+    setAgenda('');
+    setPresenter('');
+    setIssues(['', '', '', '']);
     setCells(() => {
       const state = { left: {}, right: {} };
       for (let i = 1; i <= 10; i++) state.left[i] = { name: '', job: '', sign: '' };
       for (let i = 11; i <= 20; i++) state.right[i] = { name: '', job: '', sign: '' };
       return state;
     });
-  }});
+    setEditMode(false);
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -103,7 +129,14 @@ export default function ToolboxTalkRegister() {
   }, []);
 
   // Local wrapper for submit so we can pass a stable callback to the action bar
-  const handleSubmitLocal = async () => { await handleSubmit(); };
+  const handleSubmitLocal = async () => { 
+    try {
+      await handleSubmit();
+      Alert.alert('Success', 'Form submitted. Your draft has been preserved.');
+    } catch (e) {
+      Alert.alert('Error', 'Submission failed');
+    }
+  };
 
   // --- Component Rendering ---
   return (
@@ -245,7 +278,7 @@ export default function ToolboxTalkRegister() {
 
         {/* Action bar + overlays */}
         <View style={styles.buttonRow}>
-          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
+          <FormActionBar onClear={handleClearDraft} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? handleSubmitLocal : undefined} showSavePdf={false} />
         </View>
 
         <LoadingOverlay visible={isSaving} />

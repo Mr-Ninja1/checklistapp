@@ -83,15 +83,7 @@ export default function DryStorageChecklist() {
     };
   };
 
-  const { handleSaveDraft, handleSubmit: hookSubmit, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, clearOnSubmit: () => {
-    const cleared = DRY_STORAGE_LIST.filter(i => i.isItem).map((item, index) => {
-      const checks = WEEK_DAYS.reduce((acc, d) => { acc[d] = { checked: false, cleanedBy: '' }; return acc; }, {});
-      const slotsNeeded = isNaN(parseInt(item.frequency)) ? WEEK_DAYS.length : parseInt(item.frequency);
-      return { id: index, name: item.name, frequencyText: item.frequency + (isNaN(parseInt(item.frequency)) ? '' : ' (Per Week)'), frequencyValue: item.frequency, checks, slotsNeeded };
-    });
-    setFormData(cleared);
-    setMetadata(initialMetadata);
-  } });
+  const { handleSaveDraft, isSaving, scheduleAutoSave: scheduleAutoSaveFromHook } = useFormSave({ buildPayload, draftId: DRAFT_KEY, waitForSave: false });
   // keep legacy variable name for scheduleAutoSave use below
   const scheduleAutoSave = scheduleAutoSaveFromHook;
 
@@ -149,17 +141,16 @@ export default function DryStorageChecklist() {
 
   const handleMetadataChange = (k, v) => setMetadata(prev => ({ ...prev, [k]: v }));
 
-  // replace the old save/submit handlers with unify hook handlers
+  // Custom non-destructive submit: records history but preserves draft
   const handleSubmit = async () => {
     try {
-      await hookSubmit();
-      // show confirmation similar to previous behavior
-      Alert.alert('Success', 'Checklist submitted');
-      // remove local draft copy
-      try { await removeDraft(DRAFT_KEY); } catch (e) { /* ignore */ }
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.date || payload.metadata?.issueDate, savedAt: Date.now(), payload });
+      Alert.alert('Saved', 'Checklist submitted. Your draft has been preserved.');
     } catch (e) {
       console.warn('submit failed', e);
       Alert.alert('Error', 'Submission failed');
+      throw e;
     }
   };
 
@@ -171,6 +162,26 @@ export default function DryStorageChecklist() {
       console.warn('save draft failed', e);
       Alert.alert('Error', 'Failed to save draft');
     }
+  };
+
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+    // reset local state
+    const cleared = DRY_STORAGE_LIST.filter(i => i.isItem).map((item, index) => {
+      const checks = WEEK_DAYS.reduce((acc, d) => { acc[d] = { checked: false, cleanedBy: '' }; return acc; }, {});
+      const slotsNeeded = isNaN(parseInt(item.frequency)) ? WEEK_DAYS.length : parseInt(item.frequency);
+      return { id: index, name: item.name, frequencyText: item.frequency + (isNaN(parseInt(item.frequency)) ? '' : ' (Per Week)'), frequencyValue: item.frequency, checks, slotsNeeded };
+    });
+    setFormData(cleared);
+    setMetadata(initialMetadata);
+    setEditMode(false);
   };
 
   const COL_WIDTHS = useMemo(() => ({ AREA: 260, FREQUENCY: 150, DAY_GROUP_WIDTH: 140, CHECK: 40 }), []);
@@ -293,6 +304,7 @@ export default function DryStorageChecklist() {
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity onPress={handleSaveDraftLocal} style={[styles.button, styles.draftButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save Draft</Text>}</TouchableOpacity>
+            <TouchableOpacity onPress={handleClearDraft} style={[styles.button, styles.clearButton]} disabled={isSaving}><Text style={[styles.buttonText, { color: '#fff' }]}>Clear Draft</Text></TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={[styles.button, styles.submitButton]} disabled={isSaving}>{isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Checklist</Text>}</TouchableOpacity>
           </View>
           </View>
@@ -343,6 +355,7 @@ const styles = StyleSheet.create({
   buttonContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, paddingHorizontal: 8 },
   button: { width: 150, marginLeft: 16, paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 },
   draftButton: { backgroundColor: '#FBBF24' },
+  clearButton: { backgroundColor: '#e53e3e' },
   submitButton: { backgroundColor: '#4F46E5' },
   buttonText: { color: '#FFFFFF', fontWeight: '600', fontSize: 16 },
 });

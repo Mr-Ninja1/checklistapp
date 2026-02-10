@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { StyleSheet, View, Text, FlatList, SafeAreaView, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
+import { addFormHistory } from '../utils/formHistory';
 import FormActionBar from '../components/FormActionBar';
 import EditableFormContainer from '../components/EditableFormContainer';
 import SignatureField from '../components/SignatureField';
@@ -95,9 +96,34 @@ const EggsReceivingForm = () => {
     });
 
     const getPayload = (status) => buildCanonicalPayload(status);
-    const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave: _scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload: getPayload, draftId: 'EggsReceiving_draft', clearOnSubmit: () => clearForm() });
+    const DRAFT_KEY = 'EggsReceiving_draft';
+    const { isSaving, showNotification, notificationMessage, setShowNotification, setNotificationMessage, scheduleAutoSave: _scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload: getPayload, draftId: DRAFT_KEY, waitForSave: false });
     // attach scheduleAutoSave to local name used above
     scheduleAutoSave = _scheduleAutoSave;
+
+    // Custom handleSubmit that preserves draft
+    const handleSubmit = async () => {
+        try {
+            const payload = getPayload('submitted');
+            await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    // Clear draft function
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+        clearForm();
+    };
 
     // hydrate draft on mount
     useEffect(() => {
@@ -292,7 +318,7 @@ const EggsReceivingForm = () => {
                         {/* Form action buttons should appear below the form content so they are
                             reachable on mobile screens and do not interfere with the table layout. */}
                         <View style={{ marginTop: 12 }}>
-                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
+                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} onClear={handleClearDraft} showSavePdf={false} />
                         </View>
 
                         <View style={styles.verificationFooter}>

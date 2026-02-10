@@ -5,6 +5,8 @@ import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import useFormSave from '../hooks/useFormSave';
 import formStorage from '../utils/formStorage';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
@@ -94,7 +96,35 @@ export default function ProcessQualityOutOfControlReport() {
   });
 
   const draftId = DRAFT_KEY;
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setFormData(initialFormData); setFormData(prev => ({ ...prev, date: getToday() })); } });
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft after submission
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.date, savedAt: Date.now(), payload });
+      // Draft is NOT removed - it persists in storage
+      // State is NOT reset - UI remains populated with submitted data
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft and reset all state
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(DRAFT_KEY); } catch (e) { console.warn('removeDraft failed', e); }
+    setFormData(initialFormData);
+    setFormData(prev => ({ ...prev, date: getToday() }));
+    setEditMode(false);
+  };
 
   // Load draft (after hook available)
   useEffect(() => {
@@ -325,7 +355,7 @@ export default function ProcessQualityOutOfControlReport() {
   </ScrollView>
 
   <View style={{ marginTop: 12 }}>
-          <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
+        <FormActionBar onClear={handleClearDraft} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} showSavePdf={false} />
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

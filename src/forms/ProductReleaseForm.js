@@ -6,10 +6,12 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import ResponsiveTable from '../components/ResponsiveTable';
-import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, Alert } from 'react-native';
 import SignatureField from '../components/SignatureField';
 import SignatureThumb from '../components/SignatureThumb';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { addFormHistory } from '../utils/formHistory';
+import { removeDraft } from '../utils/formDrafts';
 
 const { width } = Dimensions.get('window');
 
@@ -128,7 +130,39 @@ const ProductReleaseForm = () => {
     });
 
     const draftId = 'ProductReleaseForm_draft';
-    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); setCompiledBy('Michael C. Zulu'); setApprovedBy('Hassani Ali'); setSiteName(''); setWeekStarting(''); setMonthValue(''); setYearValue(''); } });
+    const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId, waitForSave: false });
+
+    // Custom handleSubmit that preserves draft
+    const handleSubmit = async () => {
+        try {
+            const payload = buildPayload('submitted');
+            await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    // Clear draft function
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft(draftId); } catch (e) { console.warn('removeDraft failed', e); }
+        setProductData(createInitialProductData(10));
+        setIssueDate(defaultIssueDate);
+        setCompiledBy('Michael C. Zulu');
+        setApprovedBy('Hassani Ali');
+        setSiteName('');
+        setWeekStarting('');
+        setMonthValue(defaultMonthValue);
+        setYearValue(defaultYearValue);
+        setEditMode(false);
+    };
 
     // preload draft if present
     useEffect(() => {
@@ -251,7 +285,7 @@ const ProductReleaseForm = () => {
                         </View>
                         <View style={{ height: 18 }} />
                                         <View style={{ marginTop: 12 }}>
-                                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={() => handleSubmit(() => { setProductData(createInitialProductData(10)); setIssueDate(defaultIssueDate); setCompiledBy('Michael C. Zulu'); setApprovedBy('Hassani Ali'); setSiteName(''); setWeekStarting(''); setMonthValue(''); setYearValue(''); })} showSavePdf={false} />
+                                            <FormActionBar onBack={() => {}} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} onClear={handleClearDraft} showSavePdf={false} />
                                         </View>
                                         <LoadingOverlay visible={isSaving} />
                                         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

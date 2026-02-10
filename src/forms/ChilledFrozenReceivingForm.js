@@ -3,8 +3,8 @@ import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import useFormSave from '../hooks/useFormSave';
 import { addFormHistory, removeFormHistory } from '../utils/formHistory';
-import { getDraft } from '../utils/formDrafts';
-import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import { getDraft, removeDraft } from '../utils/formDrafts';
+import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, TextInput, Image, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FormActionBar from '../components/FormActionBar';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -97,8 +97,29 @@ const ChilledFrozenReceivingForm = () => {
         })();
         return () => { mounted = false; };
     }, []);
-    const { isSaving: saving, showNotification: hookShowNotification, notificationMessage: hookNotificationMessage, setShowNotification: setHookShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave(buildCanonicalPayload, { formType: 'ChilledFrozenReceiving', draftId: DRAFT_ID, clearOnSubmit: () => {
-        // reset local form state on submit
+    const { isSaving: saving, showNotification: hookShowNotification, notificationMessage: hookNotificationMessage, setShowNotification: setHookShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave(buildCanonicalPayload, { formType: 'ChilledFrozenReceiving', draftId: DRAFT_ID, waitForSave: false });
+
+    // Custom handleSubmit that preserves draft
+    const handleSubmit = async () => {
+        try {
+            const payload = buildCanonicalPayload('submitted');
+            await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    // Clear draft function
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft(DRAFT_ID); } catch (e) { console.warn('removeDraft failed', e); }
         setReceivingData(createInitialProductData(10));
         setIssueDate(defaultIssueDate);
         setDeliveryDetails({
@@ -113,7 +134,8 @@ const ChilledFrozenReceivingForm = () => {
         });
         setVerifiedBySign('');
         setHseqManagerSign('');
-    } });
+        setEditMode(false);
+    };
     const [receivingData, setReceivingData] = useState(createInitialProductData(10));
 
     const [editMode, setEditMode] = useState(false);
@@ -334,6 +356,7 @@ const ChilledFrozenReceivingForm = () => {
                         <FormActionBar
                             onSaveDraft={handleSaveDraft}
                             onSubmit={handleSubmit}
+                            onClear={handleClearDraft}
                             isSaving={saving}
                         />
                     </View>

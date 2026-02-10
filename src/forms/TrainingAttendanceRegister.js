@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TextInput, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TextInput, Image, Alert } from 'react-native';
 import useFormSave from '../hooks/useFormSave';
 import FormActionBar from '../components/FormActionBar';
 import LoadingOverlay from '../components/LoadingOverlay';
 import NotificationModal from '../components/NotificationModal';
 import EditableFormContainer from '../components/EditableFormContainer';
 import formStorage from '../utils/formStorage';
-import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system';
-import SignatureField from '../components/SignatureField';
+import { addFormHistory } from '../utils/formHistory';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 
 export default function TrainingAttendanceRegister() {
   // Use app logo from assets if available
@@ -89,9 +88,33 @@ export default function TrainingAttendanceRegister() {
   });
 
   const draftId = 'TrainingAttendanceRegister_draft';
-  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft, handleSubmit } = useFormSave({ buildPayload, draftId, clearOnSubmit: () => {
-    // clear form when submit completes
-  setSubject(''); setPresenter(''); setDateVal(defaultDate);
+  const { isSaving, showNotification, notificationMessage, setShowNotification, scheduleAutoSave, handleSaveDraft } = useFormSave({ buildPayload, draftId, waitForSave: false });
+
+  // Custom handleSubmit that preserves draft
+  const handleSubmit = async () => {
+    try {
+      const payload = buildPayload('submitted');
+      await addFormHistory({ title: payload.title, date: payload.metadata?.date, savedAt: Date.now(), payload });
+      // Draft is NOT removed - persists in storage
+    } catch (e) {
+      console.warn('submit failed', e);
+      throw e;
+    }
+  };
+
+  // Clear draft function
+  const handleClearDraft = async () => {
+    const ok = await new Promise(resolve => {
+      Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try { await removeDraft(draftId); } catch (e) { console.warn('removeDraft failed', e); }
+    setSubject('');
+    setPresenter('');
+    setDateVal(defaultDate);
     setTopics(['', '', '', '']);
     setCells(() => {
       const state = { left: {}, right: {} };
@@ -99,7 +122,8 @@ export default function TrainingAttendanceRegister() {
       for (let i = 10; i <= 18; i++) state.right[i] = { name: '', nrc: '', job: '', sign: '' };
       return state;
     });
-  }});
+    setEditMode(false);
+  };
 
   // preload draft if present
   useEffect(() => {
@@ -277,7 +301,7 @@ export default function TrainingAttendanceRegister() {
         {/* Action bar + overlays */}
         <View style={{ height: 18 }} />
         <View style={{ marginTop: 8, paddingHorizontal: 8 }}>
-          <FormActionBar onBack={() => {}} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? async () => { try { await handleSubmit(); } catch (e) { /* ignore */ } } : undefined} showSavePdf={false} />
+          <FormActionBar onClear={handleClearDraft} onSaveDraft={editMode ? handleSaveDraft : undefined} onSubmit={editMode ? async () => { try { await handleSubmit(); Alert.alert('Success', 'Form submitted. Your draft has been preserved.'); } catch (e) { Alert.alert('Error', 'Submission failed'); } } : undefined} showSavePdf={false} />
         </View>
         <LoadingOverlay visible={isSaving} />
         <NotificationModal visible={showNotification} message={notificationMessage} onClose={() => setShowNotification(false)} />

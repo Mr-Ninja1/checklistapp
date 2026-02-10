@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getDraft } from '../utils/formDrafts';
+import { getDraft, removeDraft } from '../utils/formDrafts';
 import { StyleSheet, View, Text, FlatList, Dimensions, ScrollView, Image, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EditableFormContainer from '../components/EditableFormContainer';
@@ -183,7 +183,34 @@ const PPEIssuanceForm = () => {
         });
 
     // wire save hook
-    const { handleSaveDraft, handleSubmit, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PPEIssuance_draft', clearOnSubmit: () => { setData(initialPPEData); } });
+    const { handleSaveDraft, isSaving, showNotification, notificationMessage, setShowNotification } = useFormSave({ buildPayload, draftId: 'PPEIssuance_draft', waitForSave: false });
+
+    // Custom handleSubmit that preserves draft after submission
+    const handleSubmit = async () => {
+        try {
+            const payload = buildPayload('submitted');
+            await addFormHistory({ title: payload.title, date: payload.metadata?.issueDate, savedAt: Date.now(), payload });
+            // Draft is NOT removed - it persists in storage
+            // State is NOT reset - UI remains populated with submitted data
+        } catch (e) {
+            console.warn('submit failed', e);
+            throw e;
+        }
+    };
+
+    // Clear draft and reset all state
+    const handleClearDraft = async () => {
+        const ok = await new Promise(resolve => {
+            Alert.alert('Clear draft', 'This action will clear the draft and all your progress. Are you sure you want to continue?', [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Yes, Clear', style: 'destructive', onPress: () => resolve(true) },
+            ]);
+        });
+        if (!ok) return;
+        try { await removeDraft('PPEIssuance_draft'); } catch (e) { console.warn('removeDraft failed', e); }
+        setData(initialPPEData);
+        setEditMode(false);
+    };
 
     // hydrate draft on mount
     useEffect(() => {
@@ -288,6 +315,14 @@ const PPEIssuanceForm = () => {
                                             disabled={isSaving}
                                         >
                                             <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>{isSaving ? 'Submitting...' : 'Submit Checklist'}</Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={[styles.btn, { backgroundColor: '#e53e3e', paddingVertical: 14, paddingHorizontal: 20, borderRadius: 10 }]}
+                                            onPress={handleClearDraft}
+                                            disabled={isSaving}
+                                        >
+                                            <Text style={{ fontWeight: '700', fontSize: 16, color: '#fff' }}>Clear Draft</Text>
                                         </TouchableOpacity>
                                     </View>
 
