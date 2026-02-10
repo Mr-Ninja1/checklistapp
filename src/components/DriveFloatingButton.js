@@ -774,15 +774,15 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
                 </TouchableOpacity>
               </View>
               <Text style={{ marginBottom: 4, color: '#444', fontSize: 15, fontWeight: '700' }}>Connected: {signedIn ? 'Yes' : 'No'}</Text>
-              {signedIn && userInfo && userInfo.email ? (
+              {signedIn && typeof userInfo?.email === 'string' ? (
                 <Text style={{ marginBottom: 8, color: '#666', fontSize: 13 }}>{userInfo.email}</Text>
               ) : null}
-              {userInfo ? (
+              {signedIn && (derivedDisplayName || derivedProfileUrl) ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  {userInfo.picture ? <Image source={{ uri: userInfo.picture }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 8 }} /> : null}
+                  {typeof derivedProfileUrl === 'string' ? <Image source={{ uri: derivedProfileUrl }} style={{ width: 36, height: 36, borderRadius: 18, marginRight: 8 }} /> : null}
                   <View>
-                    <Text style={{ fontWeight: '700' }}>{userInfo.name || userInfo.email}</Text>
-                    <Text style={{ color: '#666' }}>{userInfo.email}</Text>
+                    {derivedDisplayName ? <Text style={{ fontWeight: '700' }}>{derivedDisplayName}</Text> : null}
+                    {typeof userInfo?.email === 'string' ? <Text style={{ color: '#666' }}>{userInfo.email}</Text> : null}
                   </View>
                 </View>
               ) : null}
