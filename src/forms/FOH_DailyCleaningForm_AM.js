@@ -220,7 +220,8 @@ export default function FOH_DailyCleaningForm_AM() {
     finally { setBusy(false); }
   };
 
-  const handleClearDraft = async () => {
+  const 
+  handleClearDraft = async () => {
     const ok = await new Promise(resolve => {
       Alert.alert('Clear draft', 'This will permanently delete the draft and clear all inputs. Continue?', [
         { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },

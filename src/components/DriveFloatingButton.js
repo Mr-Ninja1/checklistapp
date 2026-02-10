@@ -213,13 +213,13 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
       } catch (e) { /* ignore */ }
   stopLoading();
       Alert.alert('Signed in', `Dropbox is now connected${ui && ui.email ? ' (' + (ui.email || '') + ')' : ''}.`);
-      // refresh remote list when signed in
+      // refresh remote list when signed in (defensive: use resolved folderId/masterPath)
       try {
         let list = null;
-        const useFolder = (f && f.id) ? f.id : null;
+        const useFolder = folderId || null;
         if (useFolder) list = await drive.listFilesInFolder(useFolder, "name contains 'checklistapp_'");
         else list = await drive.listFilesAsync("name contains 'checklistapp_'");
-        setRemoteFiles(list.files || []);
+        setRemoteFiles((list && list.files) ? list.files : (list && list.entries) ? list.entries : []);
       } catch (e) { /* ignore */ }
       // After sign-in, attempt to drain the upload queue immediately
       try { processQueue().catch(() => {}); } catch (e) { /* ignore */ }
