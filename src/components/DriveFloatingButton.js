@@ -17,6 +17,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
   const [selectedYears, setSelectedYears] = useState([]);
   const [folderId, setFolderId] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
+  const [renderError, setRenderError] = useState(null);
   // Restore/download progress modal state (separate from the Dropbox modal)
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
   const [restoreProgress, setRestoreProgress] = useState({ index: 0, total: 0, entry: '' });
@@ -183,11 +184,32 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
     return () => { mounted = false; };
   }, []);
 
+  // derive display-friendly name and profile URL from various provider shapes
+  const derivedDisplayName = React.useMemo(() => {
+    try {
+      if (!userInfo) return null;
+      if (typeof userInfo === 'string') return userInfo;
+      if (typeof userInfo.name === 'string' && userInfo.name) return userInfo.name;
+      if (userInfo.name && typeof userInfo.name === 'object') {
+        return userInfo.name.display_name || userInfo.name.familiar_name || userInfo.name.given_name || null;
+      }
+      // fallback to email or id
+      return userInfo.email || userInfo.account_id || null;
+    } catch (e) { return null; }
+  }, [userInfo]);
+
+  const derivedProfileUrl = React.useMemo(() => {
+    try {
+      if (!userInfo) return null;
+      return userInfo.profile_photo_url || userInfo.picture || (userInfo.image && userInfo.image.url) || null;
+    } catch (e) { return null; }
+  }, [userInfo]);
+
   // If parent requests the modal to open on mount (e.g. via navigation param), open it.
   useEffect(() => {
     try {
       if (openOnMount) setModalOpen(true);
-    } catch (e) {}
+    } catch (e) { console.warn('DriveFloatingButton: openOnMount error', e); setRenderError(String(e)); }
     // only run on mount / when openOnMount changes
   }, [openOnMount]);
 
@@ -200,6 +222,33 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
       }
     } catch (e) {}
   }, [modalOpen, signedIn]);
+
+  // Local class-based ErrorBoundary to catch render errors inside modal
+  class LocalErrorBoundary extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(err) {
+      return { hasError: true, error: err };
+    }
+    componentDidCatch(err, info) {
+      console.warn('DriveFloatingButton render error', err, info);
+      try { if (typeof setRenderError === 'function') setRenderError(String(err)); } catch (e) {}
+    }
+    render() {
+      if (this.state.hasError) {
+        return (
+          <View style={{ padding: 12 }}>
+            <Text style={{ color: '#b91c1c', fontWeight: '800', marginBottom: 8 }}>An error occurred loading Dropbox UI</Text>
+            <Text style={{ color: '#333', marginBottom: 8 }}>{String(this.state.error || '')}</Text>
+            <TouchableOpacity style={styles.actionBtnPrimary} onPress={() => { try { setModalOpen(false); } catch (e) {} }}><Text style={styles.actionBtnText}>Close</Text></TouchableOpacity>
+          </View>
+        );
+      }
+      return this.props.children;
+    }
+  }
 
   // NOTE: remote scanning is intentionally not automatic on modal open.
   // Scanning can be expensive for large backups, so we only refresh when
@@ -714,6 +763,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
           <View style={styles.modalOverlay} />
         </TouchableWithoutFeedback>
         <View style={styles.modalContainer} pointerEvents="box-none">
+          <LocalErrorBoundary>
           <View style={styles.modalCard}>
             <Text style={{ fontWeight: '800', fontSize: 16, marginBottom: 10 }}>Dropbox</Text>
             <ScrollView>
@@ -789,6 +839,7 @@ export default function DriveFloatingButton({ onSyncComplete, inline = false, op
             </ScrollView>
             <TouchableOpacity style={styles.closeBtn} onPress={() => setModalOpen(false)}><Text style={{ color: '#185a9d', fontWeight: '700' }}>Close</Text></TouchableOpacity>
           </View>
+          </LocalErrorBoundary>
         </View>
       </Modal>
 
