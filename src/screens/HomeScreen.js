@@ -2,7 +2,7 @@ import warnOnce from '../utils/warnOnce';
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../utils/ThemeContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder, KeyboardAvoidingView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Image, Platform, Dimensions, useWindowDimensions, StyleSheet, Modal, FlatList, Animated, PanResponder, KeyboardAvoidingView, Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 let UpdatesModule = null;
@@ -200,6 +200,67 @@ export default function HomeScreen() {
       });
     } catch (e) {}
   }, []);
+
+  // gentle floating motion for the Bravo AI icon
+  const aiFloat = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(aiFloat, { toValue: -6, duration: 1400, useNativeDriver: true }),
+        Animated.timing(aiFloat, { toValue: 0, duration: 1400, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [aiFloat]);
+
+  // pulsing glow for the Bravo AI CTA button
+  const aiCtaPulse = React.useRef(new Animated.Value(0)).current;
+  const aiCtaScale = aiCtaPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(aiCtaPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(aiCtaPulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [aiCtaPulse]);
+
+  // futuristic glow ring around the Bravo AI icon
+  const aiGlow = React.useRef(new Animated.Value(0)).current;
+  const aiGlowScale = aiGlow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] });
+  const aiGlowOpacity = aiGlow.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.9] });
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(aiGlow, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        Animated.timing(aiGlow, { toValue: 0, duration: 1400, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [aiGlow]);
+
+  // drag position and pan responder for the Bravo AI icon
+  const aiPan = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const aiPanResponder = React.useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        try {
+          const curX = (typeof aiPan.x._value === 'number') ? aiPan.x._value : (aiPan.x.__getValue ? aiPan.x.__getValue() : 0);
+          const curY = (typeof aiPan.y._value === 'number') ? aiPan.y._value : (aiPan.y.__getValue ? aiPan.y.__getValue() : 0);
+          aiPan.setOffset({ x: curX, y: curY });
+          aiPan.setValue({ x: 0, y: 0 });
+        } catch (e) {}
+      },
+      onPanResponderMove: (_, gesture) => {
+        try { aiPan.setValue({ x: gesture.dx, y: gesture.dy }); } catch (e) {}
+      },
+      onPanResponderRelease: (_, gesture) => {
+        try { aiPan.flattenOffset(); } catch (e) {}
+        if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
+          setAiInfoVisible(true);
+        }
+      },
+    })
+  ).current;
 
   // Filter forms by category and search; exclude cards that don't link to a form
   function getFilteredForms(category) {
@@ -520,6 +581,10 @@ export default function HomeScreen() {
   const [dropboxInfoLoading, setDropboxInfoLoading] = useState(false);
   const [dropboxDebugVisible, setDropboxDebugVisible] = useState(false);
   const [dropboxDebugLog, setDropboxDebugLog] = useState([]);
+  const [dropboxAlmostFullDismissed, setDropboxAlmostFullDismissed] = useState(false);
+  const [staffInfoVisible, setStaffInfoVisible] = useState(false);
+  const [footerCreditVisible, setFooterCreditVisible] = useState(false);
+  const [aiInfoVisible, setAiInfoVisible] = useState(false);
 
   const addDebugLog = (msg) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -650,14 +715,35 @@ export default function HomeScreen() {
     return `${(b / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`;
   };
 
-  const formatSpaceText = (storage) => {
-    if (!storage) return (dropboxInfoLoading ? 'Loading storage...' : 'Storage: not available');
-    const used = (typeof storage.used === 'number') ? storage.used : (storage.raw && storage.raw.used ? Number(storage.raw.used) : null);
-    const alloc = (typeof storage.allocation === 'number') ? storage.allocation : (storage.raw && storage.raw.allocation ? null : null);
-    // some responses nest allocation differently; try to extract common shapes
+  const getDropboxUsagePct = (storage) => {
+    if (!storage) return null;
+    const used = (typeof storage.used === 'number') ? storage.used : (storage.raw && typeof storage.raw.used === 'number' ? Number(storage.raw.used) : null);
     let allocationVal = null;
     try {
-      if (storage.allocation && typeof storage.allocation === 'number') allocationVal = storage.allocation;
+      if (typeof storage.allocation === 'number') {
+        allocationVal = storage.allocation;
+      } else if (storage.raw && storage.raw.allocation) {
+        const a = storage.raw.allocation;
+        if (typeof a.allocated === 'number') allocationVal = a.allocated;
+        else if (a.allocated && typeof a.allocated === 'object' && typeof a.allocated.value === 'number') allocationVal = a.allocated.value;
+        else {
+          for (const k of Object.keys(a || {})) {
+            if (typeof a[k] === 'number') { allocationVal = a[k]; break; }
+          }
+        }
+      }
+    } catch (e) { allocationVal = null; }
+
+    if (used == null || allocationVal == null || allocationVal <= 0) return null;
+    return (used / allocationVal) * 100;
+  };
+
+  const formatSpaceText = (storage) => {
+    if (!storage) return (dropboxInfoLoading ? 'Loading storage...' : 'Storage: not available');
+    const used = (typeof storage.used === 'number') ? storage.used : (storage.raw && typeof storage.raw.used === 'number' ? Number(storage.raw.used) : null);
+    let allocationVal = null;
+    try {
+      if (typeof storage.allocation === 'number') allocationVal = storage.allocation;
       else if (storage.raw && storage.raw.allocation) {
         const a = storage.raw.allocation;
         if (typeof a.allocated === 'number') allocationVal = a.allocated;
@@ -670,7 +756,7 @@ export default function HomeScreen() {
       }
     } catch (e) { allocationVal = null; }
 
-    const total = allocationVal || alloc || null;
+    const total = allocationVal || null;
     if (used == null && total == null) return 'Storage: not available';
     if (used != null && total != null) {
       const pct = Math.round((used / Math.max(1, total)) * 100);
@@ -681,21 +767,48 @@ export default function HomeScreen() {
     return 'Storage: not available';
   };
 
+  const dropboxUsagePct = getDropboxUsagePct(dropboxStorage);
+  const dropboxAlmostFull = dropboxConnected && dropboxUsagePct !== null && dropboxUsagePct >= 85 && !dropboxAlmostFullDismissed;
+
 
   // Main UI
   return (
     // ensure the root fills the viewport on web by setting a minHeight based on window height
     <View style={{ flex: 1, backgroundColor: theme.background, width: '100%', minHeight: height }}>
       <LoadingOverlay visible={loadingCard} message={loadingMsg} />
-      {/* Updates modal: one-time, with snooze */}
+      {/* Floating Bravo AI teaser icon (draggable) */}
+      <Animated.View
+        style={[styles.aiFab, { transform: [{ translateX: aiPan.x }, { translateY: aiPan.y }] }]}
+        {...aiPanResponder.panHandlers}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.aiGlowRing,
+            {
+              opacity: aiGlowOpacity,
+              transform: [{ scale: aiGlowScale }],
+            },
+          ]}
+        />
+        <Animated.View style={[styles.aiFabInner, { transform: [{ translateY: aiFloat }] }]}> 
+          <Image
+            source={require('../assets/Ai.png')}
+            style={styles.aiFabIcon}
+            resizeMode="contain"
+          />
+        </Animated.View>
+      </Animated.View>
+      {/* Updates modal: one-time, with sssuesnooze */}
       <Modal visible={showUpdatesModal} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.updatesModalOverlay}>
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
               <Text style ={{ fontSize: 16, fontWeight: '700', color: '#1a25bd', textAlign: 'center', marginBottom: 8 }}>
-              You can now see the amount of storage used in your Dropbox account and the the logged in user account  when connected!
-              look up on the blue top part of the home screen☝️☝️.
+             -Fixed the missing data on some forms
+             -Added Bravo Ai feature teaser (coming soon to assist with form building, issue resolution, and daily tasks)
+             -new look new power!
               </Text>
              
             </View>
@@ -707,27 +820,94 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+      {/* Bravo AI teaser modal */}
+      <Modal
+        visible={aiInfoVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAiInfoVisible(false)}
+      >
+        <View style={styles.updatesModalOverlay}>
+          <View style={styles.updatesModal}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800' }}>Bravo AI (coming soon)</Text>
+              <TouchableOpacity onPress={() => setAiInfoVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#999' }}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 14, color: '#333', marginBottom: 18 }}>
+              Bravo AI will help this app build new forms on its own, fix common issues automatically, and assist your staff step-by-step with daily tasks and checklists.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <Animated.View style={{ marginRight: 8, transform: [{ scale: aiCtaScale }] }}>
+                <TouchableOpacity
+                  style={[styles.updatesButtonSecondary, styles.aiCtaButton]}
+                  onPress={async () => {
+                    try {
+                      const msg = encodeURIComponent('Hi Bravo team, we want Bravo AI enabled for our account as soon as it is ready.');
+                      await Linking.openURL(`https://wa.me/260768834035?text=${msg}`);
+                    } catch (e) {
+                      Alert.alert('Unable to open WhatsApp', 'Please try again or contact us directly.');
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#007AFF', fontWeight: '700' }}>We want this feature now</Text>
+                </TouchableOpacity>
+              </Animated.View>
+              <TouchableOpacity
+                style={styles.updatesButtonPrimary}
+                onPress={() => setAiInfoVisible(false)}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Dropbox almost-full storage warning modal */}
+      <Modal visible={dropboxAlmostFull} transparent animationType="fade" onRequestClose={() => setDropboxAlmostFullDismissed(true)}>
+        <View style={styles.updatesModalOverlay}>
+          <View style={styles.updatesModal}>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>Dropbox storage almost full</Text>
+            <Text style={{ fontSize: 14, color: '#333', marginBottom: 12 }}>
+              {`Your Dropbox storage is almost full${dropboxUsagePct !== null ? ` (${Math.round(dropboxUsagePct)}% used)` : ''}. If it runs out of space, new checklist backups may stop uploading from this device.`}
+            </Text>
+            <Text style={{ fontSize: 13, color: '#555', marginBottom: 16 }}>
+              To keep your food safety records safe, please free up space or upgrade your Dropbox plan.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={[styles.updatesButtonSecondary, { marginRight: 8 }]}
+                onPress={() => {
+                  setDropboxAlmostFullDismissed(true);
+                  try {
+                    Alert.alert(
+                      'Backups at risk',
+                      'If Dropbox runs out of space, new checklist backups may stop uploading. This could mean recent inspections are lost if the device is damaged, lost, or reset. Please free up Dropbox space as soon as you can.'
+                    );
+                  } catch (e) {}
+                }}
+              >
+                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Ignore for now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.updatesButtonPrimary}
+                onPress={() => {
+                  setDropboxAlmostFullDismissed(true);
+                  try {
+                    Linking.openURL('https://www.dropbox.com/account/plan');
+                  } catch (e) {}
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Get more Dropbox space</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {/* Abdu verification modal removed */}
       {/* Seasonal overlay removed */}
-      {/* Floating Search Button - draggable */}
-      <Animated.View
-        {...searchPan.panHandlers}
-        style={[styles.searchBtn, searchPos.getLayout(), { width: searchSize, height: searchSize, borderRadius: searchSize / 2 }]}
-      >
-        <TouchableOpacity onPress={() => { setSearchModalVisible(true); setSearchQuery(''); }} activeOpacity={0.9} hitSlop={{ top: 18, left: 18, right: 18, bottom: 18 }} delayLongPress={220}>
-          <Text style={[styles.searchBtnText, { fontSize: isMobile ? 24 : 30 }]}>🔍</Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Floating History Button - draggable */}
-      <Animated.View
-        {...historyPan.panHandlers}
-        style={[styles.historyBtn, historyPos.getLayout(), { width: historySize, height: historySize, borderRadius: historySize / 2 }]}
-      >
-        <TouchableOpacity onPress={() => navigation.navigate('FormSaves')} activeOpacity={0.85} hitSlop={{ top: 18, left: 18, right: 18, bottom: 18 }} delayLongPress={220}>
-          <Text style={[styles.historyBtnText, { fontSize: isMobile ? 36 : 44 }]}>📂</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* Bottom navigation will host search & history actions instead of floating buttons */}
 
       {/* Search modal */}
       <Modal visible={searchModalVisible} animationType="fade" transparent onRequestClose={() => setSearchModalVisible(false)}>
@@ -774,7 +954,7 @@ export default function HomeScreen() {
       <Animated.View style={{ transform: [{ scale: headerPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }}>
       <View style={{
         width: '100%',
-        paddingBottom: isMobile ? 0 : 24,
+        paddingBottom: isMobile ? 4 : 18,
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
         alignSelf: 'stretch',
@@ -799,34 +979,34 @@ export default function HomeScreen() {
                 </View>
               </View>
               <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center', 
-                marginBottom: 6,
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: 4,
                 backgroundColor: dropboxConnected ? '#0066cc15' : '#ff6b6b15',
-                borderRadius: 14,
-                padding: 14,
+                borderRadius: 12,
+                paddingVertical: 8,
+                paddingHorizontal: 10,
                 borderLeftWidth: 4,
                 borderLeftColor: dropboxConnected ? '#0066ff' : '#999',
-                borderRadius: 12
               }}>
                 <View style={{ 
-                  width: 50, 
-                  height: 50, 
-                  borderRadius: 12, 
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
                   backgroundColor: dropboxConnected ? '#0066cc25' : '#99999925',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 12
                 }}>
-                  <Text style={{ fontSize: 24 }}>☁️</Text>
+                  <Text style={{ fontSize: 20 }}>☁️</Text>
                 </View>
                 {dropboxConnected ? (
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '800', letterSpacing: 0.5 }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Connected'}</Text>
-                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 11, color: theme.accent, marginTop: 3, opacity: 0.8 }}>{dropboxUser.email}</Text> : null}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                    <Text style={{ fontSize: 14, color: theme.text, fontWeight: '800', letterSpacing: 0.4 }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Connected'}</Text>
+                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 10, color: theme.accent, marginTop: 2, opacity: 0.8 }} numberOfLines={1}>{dropboxUser.email}</Text> : null}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                       <View style={{ flex: 1, height: 6, backgroundColor: theme.accent + '20', borderRadius: 3, marginRight: 8 }}>
-                        <View style={{ height: '100%', backgroundColor: '#0066ff', borderRadius: 3, width: `${Math.min(100, (dropboxStorage?.used || 0) / (dropboxStorage?.allocated || 1) * 100)}%` }} />
+                        <View style={{ height: '100%', backgroundColor: '#0066ff', borderRadius: 3, width: `${Math.min(100, dropboxUsagePct || 0)}%` }} />
                       </View>
                       <Text style={{ fontSize: 12, color: theme.accent, fontWeight: '700', minWidth: 80, textAlign: 'right' }}>{formatSpaceText(dropboxStorage)}</Text>
                     </View>
@@ -846,13 +1026,13 @@ export default function HomeScreen() {
                     }
                   } catch (e) {}
                 }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ 
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
                   backgroundColor: dropboxConnected ? '#ff4444' : '#0066ff',
                   borderRadius: 8,
-                  marginLeft: 8
+                  marginLeft: 6
                 }}>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{dropboxConnected ? 'Logout' : 'Login'}</Text>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 11 }}>{dropboxConnected ? 'Logout' : 'Login'}</Text>
                 </TouchableOpacity>
                 
               </View>
@@ -873,23 +1053,23 @@ export default function HomeScreen() {
             <View style={styles.headerCardAlt}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                 <View style={{ 
-                  width: 48, 
-                  height: 48, 
-                  borderRadius: 12, 
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
                   backgroundColor: dropboxConnected ? '#0066cc25' : '#99999925',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 12
                 }}>
-                  <Text style={{ fontSize: 22 }}>☁️</Text>
+                  <Text style={{ fontSize: 20 }}>☁️</Text>
                 </View>
                 {dropboxConnected ? (
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, color: theme.text, fontWeight: '800', letterSpacing: 0.5 }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Connected'}</Text>
-                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 12, color: theme.accent, marginTop: 4, opacity: 0.8 }}>{dropboxUser.email}</Text> : null}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                    <Text style={{ fontSize: 15, color: theme.text, fontWeight: '800', letterSpacing: 0.4 }}>{(dropboxUser && dropboxUser.name && dropboxUser.name.display_name) || (dropboxUser && dropboxUser.email) || 'Connected'}</Text>
+                    {dropboxUser && dropboxUser.email ? <Text style={{ fontSize: 11, color: theme.accent, marginTop: 3, opacity: 0.8 }} numberOfLines={1}>{dropboxUser.email}</Text> : null}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                       <View style={{ flex: 1, height: 6, backgroundColor: theme.accent + '20', borderRadius: 3, marginRight: 8 }}>
-                        <View style={{ height: '100%', backgroundColor: '#0066ff', borderRadius: 3, width: `${Math.min(100, (dropboxStorage?.used || 0) / (dropboxStorage?.allocated || 1) * 100)}%` }} />
+                        <View style={{ height: '100%', backgroundColor: '#0066ff', borderRadius: 3, width: `${Math.min(100, dropboxUsagePct || 0)}%` }} />
                       </View>
                       <Text style={{ fontSize: 12, color: theme.accent, fontWeight: '700', minWidth: 80, textAlign: 'right' }}>{formatSpaceText(dropboxStorage)}</Text>
                     </View>
@@ -910,14 +1090,14 @@ export default function HomeScreen() {
                   }
                 } catch (e) {}
               }} onLongPress={() => setDropboxDebugVisible(true)} delayLongPress={800} style={{ 
-                marginTop: 8,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
+                marginTop: 6,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
                 backgroundColor: dropboxConnected ? '#ff4444' : '#0066ff',
                 borderRadius: 8,
                 alignSelf: 'flex-start'
               }}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{dropboxConnected ? 'Logout' : 'Login'}</Text>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 11 }}>{dropboxConnected ? 'Logout' : 'Login'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1199,6 +1379,18 @@ export default function HomeScreen() {
           contentContainerStyle={[styles.formListContent, { paddingBottom: 120, flexGrow: 1, backgroundColor: 'transparent' }]}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}
+          onScroll={e => {
+            if (footerCreditVisible) return;
+            try {
+              const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent || {};
+              if (!contentOffset || !layoutMeasurement || !contentSize) return;
+              const visibleBottom = contentOffset.y + layoutMeasurement.height;
+              if (visibleBottom >= contentSize.height - 32) {
+                setFooterCreditVisible(true);
+              }
+            } catch (err) {}
+          }}
+          scrollEventThrottle={16}
         >
           {getFilteredForms(activeCategory).map((form, idx) => (
           <View key={`form-card-${form.id}-${idx}-${form.title}` }>
@@ -1252,34 +1444,101 @@ export default function HomeScreen() {
 
       {/* Floating Action Button removed, replaced by top right button */}
 
-      {/* Footer */}
+      {/* Footer with WhatsApp-style bottom navigation */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Built by RAJAB CULTURE  & STEPHANIE DIGITAL SOLUTIONS ZAMBIA  Bravo brands@ {new Date().getFullYear()}</Text>
+        <View style={styles.footerNavRow}>
+          <TouchableOpacity
+            style={styles.footerNavItem}
+            onPress={() => { setSearchModalVisible(true); setSearchQuery(''); }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.footerNavIcon, { fontSize: isMobile ? 22 : 26 }]}>🔎</Text>
+            <Text style={[styles.footerNavLabel, { fontSize: isMobile ? 11 : 12 }]}>Search forms</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.footerNavItem}
+            onPress={() => setStaffInfoVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.footerNavIcon, { fontSize: isMobile ? 22 : 26 }]}>👥</Text>
+            <Text style={[styles.footerNavLabel, { fontSize: isMobile ? 11 : 12 }]}>Staff</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.footerNavItem}
+            onPress={() => { try { navigation.navigate('FormSaves'); } catch (e) {} }}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.footerNavIcon, { fontSize: isMobile ? 22 : 26 }]}>📁</Text>
+            <Text style={[styles.footerNavLabel, { fontSize: isMobile ? 11 : 12 }]}>Saved forms</Text>
+          </TouchableOpacity>
+        </View>
+        {footerCreditVisible ? (
+          <Text style={styles.footerText}>Built by RAJAB CULTURE  & STEPHANIE DIGITAL SOLUTIONS ZAMBIA  Bravo brands@ {new Date().getFullYear()}</Text>
+        ) : null}
       </View>
 
-      {/* Dropbox disconnected sticky banner (bottom-center).
-          Show only when we explicitly know the user is NOT connected (dropboxConnected === false).
-          Position slightly above footer and under the floating history button using responsive bottom offset. */}
-      {dropboxConnected === false ? (
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => {
-            try { navigation.navigate('FormSaves', { openDriveModal: true }); } catch (e) {}
-          }}
+      {/* Dropbox almost-full sticky banner (bottom-center). */}
+      {dropboxAlmostFull ? (
+        <View
           style={[
             styles.dropboxBanner,
             {
-              // position the banner above the footer and roughly under the history button
-              bottom: isMobile ? 120 : 160,
+              bottom: isMobile ? 140 : 180,
               left: isMobile ? 18 : 20,
               right: isMobile ? 18 : 20,
-              backgroundColor: '#c62828', // red background
-            }
+              backgroundColor: '#ffb74d',
+              borderColor: '#ff9800',
+            },
           ]}
         >
-          <Text style={[styles.dropboxBannerText, { color: '#fff' }]}>Dropbox not connected — tap to connect</Text>
-        </TouchableOpacity>
+          <Text style={[styles.dropboxBannerText, { color: '#4e2a00' }]}>
+            {`Dropbox storage is almost full${dropboxUsagePct !== null ? ` (${Math.round(dropboxUsagePct)}% used)` : ''} — please free up space to keep backups running.`}
+          </Text>
+        </View>
       ) : null}
+
+      {/* Staff feature info modal with WhatsApp request */}
+      <Modal
+        visible={staffInfoVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStaffInfoVisible(false)}
+      >
+        <View style={styles.updatesModalOverlay}>
+          <View style={styles.updatesModal}>
+            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>Staff & shifts (coming soon)</Text>
+            <Text style={{ fontSize: 14, color: '#333', marginBottom: 10 }}>
+              This future feature will let you manage staff logins, shifts, and see exactly who completed each checklist and when.
+            </Text>
+            <Text style={{ fontSize: 13, color: '#555', marginBottom: 18 }}>
+              If you are interested in this kind of feature, you can request it and we will get in touch to discuss how it should work for your team.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={[styles.updatesButtonSecondary, { marginRight: 8 }]}
+                onPress={() => setStaffInfoVisible(false)}
+              >
+                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.updatesButtonPrimary}
+                onPress={() => {
+                  setStaffInfoVisible(false);
+                  try {
+                    const phone = '260768834035';
+                    const message = encodeURIComponent('Hi, I am interested in the staff/login/shifts and form audit feature for the Bravo Checklist app.');
+                    const url = `https://wa.me/${phone}?text=${message}`;
+                    Linking.openURL(url).catch(() => {});
+                  } catch (e) {}
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Request via WhatsApp</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -1415,52 +1674,50 @@ const styles = StyleSheet.create({
   suggestionMeta: { color: '#666', fontSize: 12, marginTop: 4 },
   closeSearchBtn: { marginTop: 8, alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#185a9d', borderRadius: 8 },
   footer: {
-    alignItems: 'center',
-    padding: 12,
-    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingTop: 6,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#ffffff',
   },
   footerText: {
     color: '#888',
-    fontSize: 14,
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  footerNavRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  footerNavItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerNavIcon: {
+    fontSize: 22,
+    marginBottom: 2,
+  },
+  footerNavLabel: {
+    fontSize: 11,
+    color: '#333',
+    fontWeight: '600',
   },
   dropboxBanner: {
     position: 'absolute',
     left: 20,
-    right: 20,
-    bottom: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff3cd',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#ffd966',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 8,
+      // legacy floating history styles (no longer used)
   },
   dropboxBannerText: {
-    color: '#856404',
-    fontWeight: '700',
-    fontSize: 14,
+      fontSize: 28,
+      color: '#185a9d',
+      fontWeight: 'bold',
   },
   statusBadge: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 6,
-    minWidth: 72,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  statusBadgeText: {
-    fontSize: 12,
-    fontWeight: '700'
-  },
-  priorityBadge: {
+      // legacy floating search styles (no longer used)
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -1574,8 +1831,46 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#185a9d'
-  }
-  ,
+  },
+  aiCtaButton: {
+    shadowColor: '#00B0FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  aiFab: {
+    position: 'absolute',
+    zIndex: 110,
+    right: 18,
+    top: 460,
+    width: 80,
+    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiFabInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiFabIcon: {
+    width: 64,
+    height: 64,
+  },
+  aiGlowRing: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0, 191, 255, 0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(129, 212, 250, 0.9)',
+    shadowColor: '#00E5FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.85,
+    shadowRadius: 20,
+    elevation: 18,
+  },
   secretDot: {
     position: 'absolute',
     left: '50%',

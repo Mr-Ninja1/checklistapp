@@ -30,37 +30,59 @@ module.exports = function generate(payloadWrapper) {
   const metadata = p.metadata || {};
   const rows = Array.isArray(p.formData) ? p.formData : [];
 
-  const DEFAULT_COLS = {
-    PROD_DATE: 120, PROD_NAME: 180, BATCH_NO: 100, INGREDIENTS: 220, INGREDIENTS_WEIGHT: 160, MIXING_TIME: 120, MIXING_TEMP: 120, DOUGH_DIVIDING: 160, PRODUCT_QUANTITY: 120, MIXER_MAN_SIGN: 140, SUP_SIGN: 140
-  };
-  const WIDTHS = (p.layoutHints && p.layoutHints.WIDTHS) || DEFAULT_COLS;
-  const total = Object.values(WIDTHS).reduce((s,v)=>s+(Number(v)||0),0) || 1;
+  // Column definitions aligned with MixingControlSheet form + presentational
+  const BASE_HEADERS = [
+    { key: 'prodDate', label: 'PROD DATE', width: 120 },
+    { key: 'prodName', label: 'PROD NAME', width: 180 },
+    { key: 'batchNo', label: 'BATCH NO.', width: 100 },
+    { key: 'ingredients', label: 'INGREDIENTS', width: 220 },
+    { key: 'ingredientsWeight', label: 'INGREDIENTS WEIGHT (kgs)', width: 160 },
+    { key: 'mixingTime', label: 'MIXING TIME', width: 120 },
+    { key: 'mixingTemp', label: 'MIXING TEMP', width: 120 },
+    { key: 'doughDividingScaling', label: 'DOUGH DIVIDING/SCALING (kgs)', width: 160 },
+    { key: 'productQuantity', label: 'PRODUCT QUANTITY', width: 120 },
+    { key: 'mixerManSign', label: 'MIXER MAN SIGN', width: 140 },
+    { key: 'supSign', label: 'SUP SIGN', width: 140 },
+  ];
+
+  // If layoutHints are present, prefer those widths so the
+  // PDF export respects any live column width tweaks.
+  const headers = BASE_HEADERS.map(h => {
+    const hint = p.layoutHints && typeof p.layoutHints[h.key] === 'number' ? p.layoutHints[h.key] : null;
+    return { ...h, width: hint || h.width };
+  });
+
+  const total = headers.reduce((s, h) => s + (Number(h.width) || 0), 0) || 1;
   const colPercent = (w) => ((w / total) * 100).toFixed(4) + '%';
 
-  // logo
   let logo = (p.assets && (p.assets.logoDataUri || p.assets.logo)) ? (p.assets.logoDataUri || p.assets.logo) : (p.logo || p.logoDataUri || metadata.logoUrl || metadata.companyLogo || metadata.logo || null);
-  // Remove Node fs/path logo fallbacks for mobile; expect `assets.logoDataUri` to be provided by caller.
 
   const sigHtml = (v,w=120,h=60) => { const uri = resolveSignatureUri(v); if (uri) return `<img src="${uri}" style="max-width:${w}px;max-height:${h}px;display:block;object-fit:contain"/>`; return `<div style="min-height:${h}px;display:flex;align-items:center;justify-content:center;color:#6b7280">${escapeHtml(v||'')}</div>` };
 
-  const rowsHtml = rows.map(r=>`<div class="row">${Object.keys(WIDTHS).map(k=>{
-    const key = k.toLowerCase();
-    if (k.toUpperCase().includes('SIGN')) return `<div class="cell" style="width:${colPercent(WIDTHS[k])}">${sigHtml(r[key]||r[k]||'')}</div>`;
-    return `<div class="cell" style="width:${colPercent(WIDTHS[k])}">${escapeHtml(r[key]||r[k]||'')}</div>`;
-  }).join('')}</div>`).join('\n');
+  const rowsHtml = rows.map(row => `
+    <div class="row">
+      ${headers.map(h => {
+        const widthStyle = `width:${colPercent(h.width)};min-width:${colPercent(h.width)};flex-shrink:0;`;
+        const val = row && Object.prototype.hasOwnProperty.call(row, h.key) ? row[h.key] : '';
+        const isSign = h.key.toLowerCase().includes('sign');
+        return `<div class="cell" style="${widthStyle}">${isSign ? sigHtml(val || '') : escapeHtml(val || '')}</div>`;
+      }).join('')}
+    </div>`).join('\n');
 
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
+    *{box-sizing:border-box}
     body{font-family:Inter,Arial,sans-serif;padding:12px;margin:0;color:#111827;background:#fff}
     .card{max-width:1100px;margin:0 auto}
     .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
     .logo{width:48px;height:48px;object-fit:contain}
     .subject{text-align:center;font-weight:800;margin-bottom:8px}
-    .table{border:1px solid #333;border-radius:4px;overflow:hidden}
-    .tableHeader{display:flex;background:#f3f5f7;border-bottom:1px solid #333}
-    .headerCell{padding:8px;border-right:1px solid #333;font-weight:700;text-align:center}
-    .row{display:flex;border-bottom:1px solid #333}
-    .cell{padding:6px;border-right:1px solid #333;display:flex;align-items:center;justify-content:center}
+    .table{border:1px solid #333;border-radius:4px;overflow:hidden;width:100%}
+    .tableHeader{display:flex;background:#f3f5f7;border-bottom:1px solid #333;width:100%}
+    .headerCell{padding:8px;border-right:1px solid #333;font-weight:700;text-align:center;font-size:10px;display:flex;align-items:center;justify-content:center}
+    .headerCell:last-child, .cell:last-child{border-right:none}
+    .row{display:flex;border-bottom:1px solid #333;width:100%}
+    .cell{padding:6px;border-right:1px solid #333;display:flex;align-items:center;justify-content:center;word-break:break-word;font-size:10px;min-height:40px}
     .cell img{max-height:60px;object-fit:contain}
   </style>
 </head><body>
@@ -69,7 +91,7 @@ module.exports = function generate(payloadWrapper) {
     <div class="subject">SUBJECT: MIXING CONTROL SHEET</div>
     <div class="table">
       <div class="tableHeader">
-        ${Object.keys(WIDTHS).map(k=>`<div class="headerCell" style="width:${colPercent(WIDTHS[k])}">${escapeHtml(k.replace(/_/g,' '))}</div>`).join('')}
+        ${headers.map(h=>`<div class="headerCell" style="width:${colPercent(h.width)};min-width:${colPercent(h.width)};flex-shrink:0;">${escapeHtml(h.label)}</div>`).join('')}
       </div>
       ${rowsHtml}
     </div>
