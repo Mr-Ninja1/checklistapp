@@ -805,12 +805,15 @@ export default function HomeScreen() {
           <View style={styles.updatesModal}>
             <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>What's New</Text>
             <View style={{ marginBottom: 12 }}>
-              <Text style ={{ fontSize: 16, fontWeight: '700', color: '#1a25bd', textAlign: 'center', marginBottom: 8 }}>
-             -Fixed the missing data on some forms
-             -Added Bravo Ai feature teaser (coming soon to assist with form building, issue resolution, and daily tasks)
-             -new look new power!
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a25bd', marginBottom: 4 }}>
+                Today&apos;s updates:
               </Text>
-             
+              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Fixed missing data on some exported forms.</Text>
+              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• New Dropbox header shows who is logged in and how much storage is used, with an early warning when space is almost full.</Text>
+              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• New bottom bar for quick access to Search, Staff, and Saved forms.</Text>
+              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Staff feature teaser with WhatsApp request button for managing staff and logins.</Text>
+              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Bravo AI teaser with floating icon and a coming-soon assistant that will help build forms, fix issues, and support daily tasks.</Text>
+              <Text style={{ fontSize: 13, color: '#333' }}>• Refreshed look and smoother splash experience when opening the app.</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
