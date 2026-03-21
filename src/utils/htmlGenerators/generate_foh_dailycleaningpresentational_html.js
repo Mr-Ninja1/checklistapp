@@ -25,38 +25,49 @@ module.exports = function generate(payloadWrapper) {
   const metadata = p.metadata || {};
   const formData = Array.isArray(p.formData) ? p.formData : [];
   
-  // FIXED MAPPINGS: Matching FOH_DailyCleaningForm_AM.js metadata keys
-  const verifiedBy = metadata.verifiedBy || '';
-  const verifiedSigSource = resolveSignatureUri(metadata.verifiedBySignature);
+  // FIXED MAPPINGS: Matching FOH_DailyCleaningForm_AM/PM metadata keys
+  const verifiedBy = metadata.verifiedBy || metadata.verified_by || '';
+  const verifiedSigSource = resolveSignatureUri(metadata.verifiedBySign || metadata.verifiedBySignature || metadata.verified_by_sign);
   
-  const managerName = metadata.complexManager || '';
-  const managerSigSource = resolveSignatureUri(metadata.complexManagerSignature);
+  const managerName = metadata.complexManager || metadata.manager || '';
+  const managerSigSource = resolveSignatureUri(metadata.complexManagerSign || metadata.complexManagerSignature || metadata.managerSign);
 
   const timeSlots = p.timeSlots || ['06:00','07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00'];
   const logoDataUri = p.assets && p.assets.logoDataUri ? p.assets.logoDataUri : null;
 
   const sigHtml = (src, w, h) => `<img src="${src}" style="max-width:${w}px; max-height:${h}px; width:auto; height:auto; display:block; margin:0 auto; mix-blend-mode: multiply;" />`;
 
-  const defaultWidths = { EQUIP: 18, TIME_SLOTS: 42, STAFF_NAME: 12, SIGNATURE: 10, SUP_NAME: 10, SUP_SIGN: 8 };
+  // Column proportions roughly matching the editable form (EQUIPMENT, PPM, TIME INTERVAL, STAFF NAME, STAFF SIGN, SUP NAME, SUP SIGN)
+  const defaultWidths = {
+    EQUIP: 20,
+    PPM: 7,
+    TIME_SLOTS: 36,
+    STAFF_NAME: 11,
+    SIGNATURE: 11,
+    SUP_NAME: 7.5,
+    SUP_SIGN: 7.5,
+  };
   const colPercent = (val) => `${val}%`;
 
   const rowsHtml = formData.map(row => {
-    const equip = row.equipment || '';
-    const checks = Array.isArray(row.checks) ? row.checks : [];
+    const equip = row.name || row.equipment || '';
+    const ppm = row.ppm != null ? String(row.ppm) : '';
+    const times = row.times && typeof row.times === 'object' ? row.times : {};
     const staffName = row.staffName || '';
-    const staffSig = resolveSignatureUri(row.staffSignature);
-    const supName = row.supervisorName || '';
-    const supSig = resolveSignatureUri(row.supervisorSignature);
+    const staffSig = resolveSignatureUri(row.staffSignature || row.staffSign);
+    const supName = row.SUPName || row.slipName || row.supName || row.supervisorName || '';
+    const supSig = resolveSignatureUri(row.supSign || row.supervisorSignature);
 
     const checkCells = timeSlots.map((ts, idx) => {
-      const val = checks[idx];
-      const display = val === 'tick' || val === true ? '✓' : (val === 'cross' || val === false ? '✗' : '');
+      const val = times[ts];
+      const display = val ? '✓' : '';
       return `<div class="timeCell">${escapeHtml(display)}</div>`;
     }).join('');
 
     return `
       <div class="row">
         <div class="cell left" style="width:${colPercent(defaultWidths.EQUIP)}">${escapeHtml(equip)}</div>
+        <div class="cell" style="width:${colPercent(defaultWidths.PPM)}">${escapeHtml(ppm)}</div>
         <div style="display: flex; flex-direction: row; width:${colPercent(defaultWidths.TIME_SLOTS)};">
           ${checkCells}
         </div>
@@ -88,34 +99,27 @@ module.exports = function generate(payloadWrapper) {
       .cell.left { justify-content: flex-start; padding-left: 8px; }
       .cell:last-child { border-right: none; }
       .timeCell { flex: 1; border-right: 1px solid #374151; display: flex; align-items: center; justify-content: center; min-width: 0; font-size: 9px; }
-      .timeCell:last-child { border-right: none; }
-      .signatures { margin-top: 30px; display: flex; justify-content: space-between; gap: 40px; }
-      .signBlock { flex: 1; border: 1px solid #9CA3AF; padding: 10px; border-radius: 4px; }
-      .signLabel { font-weight: bold; border-bottom: 1px solid #E5E7EB; margin-bottom: 8px; padding-bottom: 4px; font-size: 11px; }
-      .signName { margin-bottom: 5px; font-weight: 600; }
-      .signImage { min-height: 80px; display: flex; align-items: center; justify-content: center; }
-        .sigBox { min-width: 140px; min-height: 60px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #e6eef6; background: #fff; padding: 6px; border-radius: 4px; }
-        .sigPlaceholder { color: #9CA3AF; font-size: 12px; }
+      .timeCell:last-child { border-right: 1px solid #374151; }
     </style>
   </head>
   <body>
     <div class="header">
       ${logoDataUri ? `<img src="${logoDataUri}" class="logo">` : '<div></div>'}
       <div class="title-section">
-        <h1 class="title">FOH Daily Cleaning Form</h1>
-        <div style="font-size: 12px; font-weight: 600;">Shift: ${escapeHtml(metadata.shift || 'AM')}</div>
+        <h1 class="title">FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — ${escapeHtml((metadata.shift || 'AM').toUpperCase())}</h1>
       </div>
       <div style="text-align: right;">
         <div class="meta-item"><strong>Date:</strong> ${escapeHtml(metadata.date || '')}</div>
-        <div class="meta-item"><strong>Site:</strong> ${escapeHtml(metadata.site || '')}</div>
+        <div class="meta-item"><strong>Location:</strong> ${escapeHtml(metadata.location || metadata.site || '')}</div>
       </div>
     </div>
 
     <div class="table">
       <div class="row header-row">
         <div class="cell" style="width:${colPercent(defaultWidths.EQUIP)}">EQUIPMENT</div>
+        <div class="cell" style="width:${colPercent(defaultWidths.PPM)}">SANITIZER (PPM)</div>
         <div style="display: flex; flex-direction: column; width:${colPercent(defaultWidths.TIME_SLOTS)}; border-right: 1px solid #374151;">
-          <div style="border-bottom: 1px solid #374151; padding: 2px;">TIME</div>
+          <div style="border-bottom: 1px solid #374151; padding: 2px;">TIME INTERVAL</div>
           <div style="display: flex; flex-direction: row; width: 100%;">
             ${timeSlots.map(t => `<div class="timeCell">${escapeHtml(String(t).replace(/(AM|PM)/,'').trim())}</div>`).join('')}
           </div>
@@ -126,20 +130,6 @@ module.exports = function generate(payloadWrapper) {
         <div class="cell" style="width:${colPercent(defaultWidths.SUP_SIGN)}">SUP SIGN</div>
       </div>
       ${rowsHtml}
-    </div>
-
-    <div class="signatures">
-      <div class="signBlock">
-        <div class="signLabel">Verified By (Supervisor)</div>
-        <div class="signName">${escapeHtml(verifiedBy)}</div>
-        <div class="signImage">${verifiedSigSource ? sigHtml(verifiedSigSource, 160, 80) : '<div style="color:#9CA3AF">(no signature)</div>'}</div>
-          <div class="sigBox">${verifiedSigSource ? sigHtml(verifiedSigSource, 160, 80) : '<div class="sigPlaceholder">(no signature)</div>'}</div>
-      </div>
-      <div class="signBlock">
-        <div class="signLabel">Complex Manager</div>
-        <div class="signName">${escapeHtml(managerName)}</div>
-          <div class="sigBox">${managerSigSource ? sigHtml(managerSigSource, 160, 80) : '<div class="sigPlaceholder">(no signature)</div>'}</div>
-      </div>
     </div>
   </body>
   </html>`;

@@ -268,6 +268,12 @@ const explicitOverrides = {
 	underbar_chiller_temperature: mapping.underbarchiller_temperature,
 	customer_satisfaction_questionnaire: mapping.customersatisfaction,
 	foh_daily_cleaning: mapping.foh_dailycleaningpresentational,
+	// Ensure FOH Daily Cleaning AM/PM exports use the FOH daily generator
+	FOH_DailyCleaning_AM: mapping.foh_dailycleaningpresentational,
+	FOH_DailyCleaning_PM: mapping.foh_dailycleaningpresentational,
+	'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — AM': mapping.foh_dailycleaningpresentational,
+	'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH — PM': mapping.foh_dailycleaningpresentational,
+	'FOOD CONTACT SURFACE CLEANING AND SANITIZING LOG SHEET FOH- PM': mapping.foh_dailycleaningpresentational,
 	foh_front_of_house_cleaning: mapping.foh_frontofhouse,
 	food_handlers: mapping.foodhandlers_log,
 };

@@ -316,7 +316,7 @@ export default function HomeScreen() {
   // Manual whats-new identifier.
   // Increment or update this string whenever you publish a JS-only update that should show the "What's New" modal.
   // This ensures JS-only deployments (which don't bump native version) can still trigger the modal.
-  const CURRENT_WHATS_NEW_ID = 'whats_new_2026-01-22_v1';
+  const CURRENT_WHATS_NEW_ID = 'whats_new_2026-03-21_foh_exports_v1';
 
   React.useEffect(() => {
     let mounted = true;
@@ -808,12 +808,8 @@ export default function HomeScreen() {
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a25bd', marginBottom: 4 }}>
                 Today&apos;s updates:
               </Text>
-              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Fixed missing data on some exported forms.</Text>
-              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• New Dropbox header shows who is logged in and how much storage is used, with an early warning when space is almost full.</Text>
-              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• New bottom bar for quick access to Search, Staff, and Saved forms.</Text>
-              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Staff feature teaser with WhatsApp request button for managing staff and logins.</Text>
-              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Bravo AI teaser with floating icon and a coming-soon assistant that will help build forms, fix issues, and support daily tasks.</Text>
-              <Text style={{ fontSize: 13, color: '#333' }}>• Refreshed look and smoother splash experience when opening the app.</Text>
+              <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• FOH Daily Cleaning exports now show SUP NAME and supervisor signatures correctly.</Text>
+
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
@@ -1383,13 +1379,13 @@ export default function HomeScreen() {
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled={true}
           onScroll={e => {
-            if (footerCreditVisible) return;
             try {
               const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent || {};
               if (!contentOffset || !layoutMeasurement || !contentSize) return;
               const visibleBottom = contentOffset.y + layoutMeasurement.height;
-              if (visibleBottom >= contentSize.height - 32) {
-                setFooterCreditVisible(true);
+              const atBottom = visibleBottom >= contentSize.height - 32;
+              if (atBottom !== footerCreditVisible) {
+                setFooterCreditVisible(atBottom);
               }
             } catch (err) {}
           }}
