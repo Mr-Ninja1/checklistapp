@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Linking, P
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Updates from 'expo-updates';
+import { LinearGradient } from 'expo-linear-gradient';
 import ViewDocumentModal from '../components/ViewDocumentModal';
 import DriveFloatingButton from '../components/DriveFloatingButton';
 import { useExportFormAsPDF } from '../utils/useExportFormAsPDF';
@@ -18,6 +19,7 @@ export default function FormSavesScreen() {
   const route = useRoute();
   const { width, height } = useWindowDimensions();
   const watermarkSize = Math.round(Math.min(640, Math.max(200, width * 0.55)));
+  const isCompact = width < 700;
   const [savedForms, setSavedForms] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -26,6 +28,7 @@ export default function FormSavesScreen() {
   const [exportingMap, setExportingMap] = useState({});
   const { exportAsPDF } = useExportFormAsPDF();
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
   const [viewMode, setViewMode] = useState('date');
   const [activeMonth, setActiveMonth] = useState('all');
   const [dateFilter, setDateFilter] = useState({ from: null, to: null });
@@ -167,6 +170,9 @@ export default function FormSavesScreen() {
   useEffect(() => { setPage(0); }, [filteredForms]);
   const displayedForms = React.useMemo(() => filteredForms.slice(0, (page + 1) * PAGE_SIZE), [filteredForms, page]);
   const hasMore = displayedForms.length < filteredForms.length;
+  const latestSavedAt = savedForms.length ? savedForms[0].savedAt : null;
+  const latestSavedLabel = latestSavedAt ? new Date(latestSavedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No recent saves';
+  const latestSavedShortLabel = latestSavedAt ? new Date(latestSavedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'None';
 
   // Group forms by savedAt date (localized) (DD/MM/YYYY)
   const groupedByDate = filteredForms.reduce((acc, form) => {
@@ -287,28 +293,63 @@ export default function FormSavesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }] }>
       <Image source={require('../assets/logo.jpeg')} pointerEvents="none" style={{ position: 'absolute', alignSelf: 'center', top: 24, width: watermarkSize, height: watermarkSize, opacity: 0.18, resizeMode: 'contain', zIndex: 0 }} />
-      <Text style={[styles.title, { color: theme.primary }]}>Saved Forms (History)</Text>
-      <View style={{ width: '100%', paddingHorizontal: 24 }}>
-        {/* Search and grouping controls */}
-        <View style={styles.controlsWrap}>
-          <TextInput
-            placeholder="Search saved forms (title, location, contents...)"
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            style={styles.searchInput}
-            placeholderTextColor="#6b7280"
-          />
-          {/* Manual refresh and manual update check placed below the search input for immediate visibility */}
-          <View style={{ marginTop: 8, marginBottom: 8, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
-            <TouchableOpacity style={styles.smallActionBtnCompact} onPress={() => loadHistory()}>
-              <Text style={styles.smallActionBtnText}>{loadingHistory ? 'Refreshing...' : 'Refresh'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.smallActionBtnCompact, { marginLeft: 8 }]} onPress={() => manualCheckForUpdate()}>
-              <Text style={styles.smallActionBtnText}>{checkingUpdate ? 'Checking...' : 'Check for update'}</Text>
-            </TouchableOpacity>
+      <View style={styles.heroShell}>
+        <LinearGradient
+          colors={['rgba(24,90,157,0.96)', 'rgba(14,30,64,0.96)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroBadgeRow}>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>Saved Forms</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {!isCompact ? <Text style={styles.heroBadgeSubtle}>History + export center</Text> : null}
+              <TouchableOpacity style={styles.heroActionBtn} onPress={() => manualCheckForUpdate()} activeOpacity={0.85}>
+                <Text style={styles.heroActionBtnText}>{checkingUpdate ? 'Checking update...' : 'Check update'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          {/* Year -> Months modal: shows months available for the selected year */}
-          <Modal visible={yearModalVisible} animationType="slide" transparent>
+          <Text style={[styles.heroTitle, { fontSize: isCompact ? 20 : 26, lineHeight: isCompact ? 24 : 32 }]}>Review, export, and manage every saved form in one place.</Text>
+          <Text style={[styles.heroSubtitle, { fontSize: isCompact ? 12 : 14, lineHeight: isCompact ? 17 : 20 }]}>A cleaner history view for audit-ready records, fast search, and quick sharing.</Text>
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatPill}>
+              <Text style={[styles.heroStatValue, { fontSize: isCompact ? 15 : 18 }]}>{savedForms.length}</Text>
+              <Text style={styles.heroStatLabel}>Saved</Text>
+            </View>
+            <View style={styles.heroStatPill}>
+              <Text style={[styles.heroStatValue, { fontSize: isCompact ? 15 : 18 }]}>{filteredForms.length}</Text>
+              <Text style={styles.heroStatLabel}>Visible</Text>
+            </View>
+            {!isCompact ? (
+              <View style={styles.heroStatPill}>
+                <Text style={[styles.heroStatValue, { fontSize: 14, lineHeight: 18 }]}>{latestSavedLabel}</Text>
+                <Text style={styles.heroStatLabel}>Latest save</Text>
+              </View>
+            ) : (
+              <View style={styles.heroStatPill}>
+                <Text style={[styles.heroStatValue, { fontSize: 15 }]}>{latestSavedShortLabel}</Text>
+                <Text style={styles.heroStatLabel}>Latest</Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
+      </View>
+      <View style={{ width: '100%', paddingHorizontal: isCompact ? 16 : 24 }}>
+        <View style={styles.searchCompactRow}>
+          <TouchableOpacity style={styles.searchCompactCard} onPress={() => setSearchModalVisible(true)} activeOpacity={0.86}>
+            <View style={styles.searchCompactIconWrap}>
+              <Text style={styles.searchCompactIcon}>🔍</Text>
+            </View>
+            <View style={styles.searchCompactCopy}>
+              <Text style={styles.searchCompactTitle}>Search & filters</Text>
+              <Text style={styles.searchCompactHint}>{activeFilterLabel !== 'All months' || activeMonth !== 'all' || dateFilter.from || dateFilter.to ? 'Filters active' : 'Collapsed until needed'}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+        {/* Year -> Months modal: shows months available for the selected year */}
+        <Modal visible={yearModalVisible} animationType="slide" transparent>
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
               <View style={{ width: '90%', maxHeight: '70%', backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
                 <Text style={{ fontWeight: '800', fontSize: 18, marginBottom: 8 }}>Months in {modalYear}</Text>
@@ -340,70 +381,7 @@ export default function FormSavesScreen() {
               </View>
             </View>
           </Modal>
-          {activeMonth !== 'all' ? (
-            <Text style={{ marginTop: 6, color: '#374151' }}>Scoped to: {activeMonth === 'unknown' ? 'Unknown' : `${monthNames[Math.max(0, Number(activeMonth.split('-')[1]) - 1)]} ${activeMonth.split('-')[0]}`} — clear to search all months</Text>
-          ) : null}
-          <View style={styles.controlsRow}>
-            {/* month chips (primary filter) with friendly labels */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.categoryScroll, { marginLeft: 8 }]} contentContainerStyle={{ alignItems: 'center' }}>
-              {/* All months chip removed (now available via toolbar filter buttons) */}
-              {/* Quick actions: Set to today and Last N days */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
-                <TouchableOpacity style={[styles.filterBtn, activeFilterLabel === 'Today' ? styles.filterBtnActive : null]} onPress={() => {
-                  const now = new Date();
-                  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-                  setDateFilter({ from: startOfDay, to: startOfDay });
-                  setActiveMonth('all');
-                  setActiveFilterLabel('Today');
-                }}>
-                  <Text style={activeFilterLabel === 'Today' ? styles.filterBtnTextActive : styles.filterBtnText}>Today</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.filterBtn, activeFilterLabel === 'All months' ? styles.filterBtnActive : null, { marginLeft: 8 }]} onPress={() => {
-                  setDateFilter({ from: null, to: null });
-                  setActiveMonth('all');
-                  setActiveFilterLabel('All months');
-                }}>
-                  <Text style={activeFilterLabel === 'All months' ? styles.filterBtnTextActive : styles.filterBtnText}>All months</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.filterBtn, { marginLeft: 8 }]} onPress={() => setLastDaysModalVisible(true)}>
-                  <Text style={styles.filterBtnText}>Last N days</Text>
-                </TouchableOpacity>
-              </View>
-              {/* years are shown in the separate scrollable row below (no inline year chips here) */}
-              {/* Date range chip next to months */}
-              <TouchableOpacity
-                style={[styles.dateRangeBtn, { marginLeft: 8 }]}
-                onPress={() => {
-                    const from = dateFilter.from || null;
-                    const to = dateFilter.to || null;
-                    setTempFrom(from);
-                    setTempTo(to);
-                    if (from) {
-                      const d = new Date(from);
-                      setViewFromYear(d.getFullYear()); setViewFromMonth(d.getMonth());
-                    } else { const now = new Date(); setViewFromYear(now.getFullYear()); setViewFromMonth(now.getMonth()); }
-                    if (to) {
-                      const d2 = new Date(to);
-                      setViewToYear(d2.getFullYear()); setViewToMonth(d2.getMonth());
-                    } else { const now2 = new Date(); setViewToYear(now2.getFullYear()); setViewToMonth(now2.getMonth()); }
-                    setDatePickerVisible(true);
-                }}
-              >
-                <Text style={styles.dateRangeBtnText}>{dateFilter.from || dateFilter.to ? (
-                  `${dateFilter.from ? new Date(dateFilter.from).toLocaleDateString() : 'Any'} → ${dateFilter.to ? new Date(dateFilter.to).toLocaleDateString() : 'Any'}`
-                ) : 'Date range'}</Text>
-              </TouchableOpacity>
-              {/* Drive button inline (appears after date range) */}
-              <DriveFloatingButton inline openOnMount={Boolean(route && route.params && route.params.openDriveModal)} onSyncComplete={async () => {
-                try {
-                  const history = await getFormHistory();
-                  setSavedForms((history || []).slice().reverse());
-                } catch (e) { /* ignore */ }
-              }} />
-            </ScrollView>
-          </View>
-          </View>
-          {/* Years container: separate horizontal scroll placed below the top filter controls */}
+        {/* Years container: separate horizontal scroll placed below the top filter controls */}
           <View style={{ width: '100%', paddingTop: 8, paddingBottom: 6 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ alignItems: 'center', paddingLeft: 8, paddingRight: 16 }}>
               {yearList && yearList.length ? yearList.map(y => {
@@ -418,6 +396,97 @@ export default function FormSavesScreen() {
               )}
             </ScrollView>
           </View>
+        <Modal visible={searchModalVisible} animationType="fade" transparent onRequestClose={() => setSearchModalVisible(false)}>
+          <View style={styles.searchModalOverlay}>
+            <View style={styles.searchModalCard}>
+              <View style={styles.searchModalHeader}>
+                <View>
+                  <Text style={styles.searchModalTitle}>Find a record</Text>
+                  <Text style={styles.searchModalSubtitle}>Search and filter saved forms without taking up page space.</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSearchModalVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.searchModalClose}>×</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.searchModalSection}>
+                <Text style={styles.searchModalSectionLabel}>Search</Text>
+                <TextInput
+                  placeholder="Search saved forms (title, location, contents...)"
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  style={styles.searchInput}
+                  placeholderTextColor="#6b7280"
+                />
+              </View>
+
+              <View style={styles.searchModalSection}>
+                <Text style={styles.searchModalSectionLabel}>Quick actions</Text>
+                <View style={styles.searchModalActionRow}>
+                  <TouchableOpacity style={styles.smallActionBtnCompact} onPress={() => loadHistory()}>
+                    <Text style={styles.smallActionBtnText}>{loadingHistory ? 'Refreshing...' : 'Refresh'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.smallActionBtnCompact, { marginLeft: 8 }]} onPress={() => { setSearchModalVisible(false); setDatePickerVisible(true); }}>
+                    <Text style={styles.smallActionBtnText}>Date range</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.smallActionBtnCompact, { marginLeft: 8 }]} onPress={() => setLastDaysModalVisible(true)}>
+                    <Text style={styles.smallActionBtnText}>Last N days</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.searchModalSection}>
+                <Text style={styles.searchModalSectionLabel}>Filters</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'center', paddingBottom: 2 }}>
+                  <TouchableOpacity style={[styles.filterBtn, activeFilterLabel === 'Today' ? styles.filterBtnActive : null]} onPress={() => {
+                    const now = new Date();
+                    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                    setDateFilter({ from: startOfDay, to: startOfDay });
+                    setActiveMonth('all');
+                    setActiveFilterLabel('Today');
+                  }}>
+                    <Text style={activeFilterLabel === 'Today' ? styles.filterBtnTextActive : styles.filterBtnText}>Today</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.filterBtn, activeFilterLabel === 'All months' ? styles.filterBtnActive : null, { marginLeft: 8 }]} onPress={() => {
+                    setDateFilter({ from: null, to: null });
+                    setActiveMonth('all');
+                    setActiveFilterLabel('All months');
+                  }}>
+                    <Text style={activeFilterLabel === 'All months' ? styles.filterBtnTextActive : styles.filterBtnText}>All months</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.dateRangeBtn, { marginLeft: 8 }]} onPress={() => {
+                    const from = dateFilter.from || null;
+                    const to = dateFilter.to || null;
+                    setTempFrom(from);
+                    setTempTo(to);
+                    if (from) {
+                      const d = new Date(from);
+                      setViewFromYear(d.getFullYear()); setViewFromMonth(d.getMonth());
+                    } else { const now = new Date(); setViewFromYear(now.getFullYear()); setViewFromMonth(now.getMonth()); }
+                    if (to) {
+                      const d2 = new Date(to);
+                      setViewToYear(d2.getFullYear()); setViewToMonth(d2.getMonth());
+                    } else { const now2 = new Date(); setViewToYear(now2.getFullYear()); setViewToMonth(now2.getMonth()); }
+                    setDatePickerVisible(true);
+                    setSearchModalVisible(false);
+                  }}>
+                    <Text style={styles.dateRangeBtnText}>{dateFilter.from || dateFilter.to ? `${dateFilter.from ? new Date(dateFilter.from).toLocaleDateString() : 'Any'} → ${dateFilter.to ? new Date(dateFilter.to).toLocaleDateString() : 'Any'}` : 'Date range'}</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+
+              <View style={styles.searchModalSection}>
+                <Text style={styles.searchModalSectionLabel}>Sync</Text>
+                <DriveFloatingButton inline openOnMount={Boolean(route && route.params && route.params.openDriveModal)} onSyncComplete={async () => {
+                  try {
+                    const history = await getFormHistory();
+                    setSavedForms((history || []).slice().reverse());
+                  } catch (e) { /* ignore */ }
+                }} />
+              </View>
+            </View>
+          </View>
+        </Modal>
           {/* Date picker modal */}
           <Modal visible={datePickerVisible} animationType="slide" transparent>
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
@@ -429,117 +498,144 @@ export default function FormSavesScreen() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                       <View style={styles.pickerColumn}>
-                    <Text style={styles.pickerHeader}>From</Text>
-                    <TextInput placeholder="yyyy-mm-dd" value={formatYMD(tempFrom)} onChangeText={t => setTempFrom(parseYMD(t))} style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, marginTop: 6 }} />
+                        <Text style={styles.pickerHeader}>From</Text>
+                        <TextInput
+                          placeholder="yyyy-mm-dd"
+                          value={formatYMD(tempFrom)}
+                          onChangeText={t => setTempFrom(parseYMD(t))}
+                          style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, marginTop: 6 }}
+                        />
 
-                    {/* month selector */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                      {monthNames.map((mn, idx) => (
-                        <TouchableOpacity key={mn} onPress={() => { const y = viewFromYear; const d = new Date(y, idx, tempFrom ? new Date(tempFrom).getDate() : 1); setTempFrom(d.getTime()); setViewFromMonth(idx); setViewFromYear(y); }} style={[styles.categoryBtn, viewFromMonth === idx ? styles.categoryBtnActive : null, { marginRight: 8 }]}>
-                          <Text style={viewFromMonth === idx ? styles.categoryBtnTextActive : styles.categoryBtnText}>{mn}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                          {monthNames.map((mn, idx) => (
+                            <TouchableOpacity
+                              key={mn}
+                              onPress={() => {
+                                const y = viewFromYear;
+                                const d = new Date(y, idx, tempFrom ? new Date(tempFrom).getDate() : 1);
+                                setTempFrom(d.getTime());
+                                setViewFromMonth(idx);
+                                setViewFromYear(y);
+                              }}
+                              style={[styles.categoryBtn, viewFromMonth === idx ? styles.categoryBtnActive : null, { marginRight: 8 }]}
+                            >
+                              <Text style={viewFromMonth === idx ? styles.categoryBtnTextActive : styles.categoryBtnText}>{mn}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
 
-                    {/* year controls */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewFromYear(y => y - 1); setTempFrom(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() - 1); return cd.getTime(); }); }}><Text>-</Text></TouchableOpacity>
-                      <Text style={{ paddingHorizontal: 12 }}>{viewFromYear}</Text>
-                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewFromYear(y => y + 1); setTempFrom(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() + 1); return cd.getTime(); }); }}><Text>+</Text></TouchableOpacity>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                          <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewFromYear(y => y - 1); setTempFrom(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() - 1); return cd.getTime(); }); }}><Text>-</Text></TouchableOpacity>
+                          <Text style={{ paddingHorizontal: 12 }}>{viewFromYear}</Text>
+                          <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewFromYear(y => y + 1); setTempFrom(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() + 1); return cd.getTime(); }); }}><Text>+</Text></TouchableOpacity>
+                        </View>
 
-                    {/* day grid for From */}
-                    <View style={{ marginTop: 8 }}>
-                      <Text style={{ marginBottom: 6 }}>{monthNames[viewFromMonth]} {viewFromYear}</Text>
-                      <View style={{ flexDirection: 'row' }}>
-                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <Text key={d} style={{ flex: 1, textAlign: 'center', fontWeight: '700' }}>{d}</Text>)}
-                      </View>
-                      <View>
-                        {(() => {
-                          const rows = [];
-                          const first = firstDayOfMonth(viewFromYear, viewFromMonth);
-                          const total = daysInMonth(viewFromYear, viewFromMonth);
-                          let cur = 1 - first;
-                          for (let r = 0; r < 6; r++) {
-                            const cols = [];
-                            for (let c = 0; c < 7; c++, cur++) {
-                                      if (cur < 1 || cur > total) {
-                                        cols.push(<View key={`${r}-${c}`} style={{ flex: 1, padding: 4 }} />);
-                                      } else {
-                                        const ts = new Date(viewFromYear, viewFromMonth, cur).getTime();
-                                        const active = tempFrom && Math.floor(tempFrom / 86400000) === Math.floor(ts / 86400000);
-                                        cols.push(
-                                          <TouchableOpacity key={`${r}-${c}`} onPress={() => setTempFrom(ts)} style={{ flex: 1, padding: 4 }}>
-                                            <View style={{ backgroundColor: active ? '#185a9d' : '#f3f4f6', borderRadius: 6, paddingVertical: 6 }}>
-                                              <Text style={{ textAlign: 'center', color: active ? '#fff' : '#111', fontSize: 13 }}>{cur}</Text>
-                                            </View>
-                                          </TouchableOpacity>
-                                        );
-                                      }
-                            }
-                            rows.push(<View key={`row-${r}`} style={{ flexDirection: 'row', marginBottom: 6 }}>{cols}</View>);
-                          }
-                          return rows;
-                        })()}
-                      </View>
-                    </View>
-            </View>
-            <View style={styles.divider} />
-
-            {/* To picker column */}
-            <View style={styles.pickerColumn}>
-                    <Text style={styles.pickerHeader}>To</Text>
-                    <TextInput placeholder="yyyy-mm-dd" value={formatYMD(tempTo)} onChangeText={t => setTempTo(parseYMD(t))} style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, marginTop: 6 }} />
-
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                      {monthNames.map((mn, idx) => (
-                        <TouchableOpacity key={mn} onPress={() => { const y = viewToYear; const d = new Date(y, idx, tempTo ? new Date(tempTo).getDate() : 1); setTempTo(d.getTime()); setViewToMonth(idx); setViewToYear(y); }} style={[styles.categoryBtn, viewToMonth === idx ? styles.categoryBtnActive : null, { marginRight: 8 }]}>
-                          <Text style={viewToMonth === idx ? styles.categoryBtnTextActive : styles.categoryBtnText}>{mn}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewToYear(y => y - 1); setTempTo(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() - 1); return cd.getTime(); }); }}><Text>-</Text></TouchableOpacity>
-                      <Text style={{ paddingHorizontal: 12 }}>{viewToYear}</Text>
-                      <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewToYear(y => y + 1); setTempTo(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() + 1); return cd.getTime(); }); }}><Text>+</Text></TouchableOpacity>
-                    </View>
-
-                    <View style={{ marginTop: 8 }}>
-                      <Text style={{ marginBottom: 6 }}>{monthNames[viewToMonth]} {viewToYear}</Text>
-                      <View style={{ flexDirection: 'row' }}>
-                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <Text key={d} style={{ flex: 1, textAlign: 'center', fontWeight: '700' }}>{d}</Text>)}
-                      </View>
-                      <View>
-                        {(() => {
-                          const rows = [];
-                          const first = firstDayOfMonth(viewToYear, viewToMonth);
-                          const total = daysInMonth(viewToYear, viewToMonth);
-                          let cur = 1 - first;
-                          for (let r = 0; r < 6; r++) {
-                            const cols = [];
-                            for (let c = 0; c < 7; c++, cur++) {
-                              if (cur < 1 || cur > total) {
-                                cols.push(<View key={`${r}-${c}`} style={{ flex: 1, padding: 4 }} />);
-                              } else {
-                                const ts = new Date(viewToYear, viewToMonth, cur).getTime();
-                                const active = tempTo && Math.floor(tempTo / 86400000) === Math.floor(ts / 86400000);
-                                cols.push(
-                                  <TouchableOpacity key={`${r}-${c}`} onPress={() => setTempTo(ts)} style={{ flex: 1, padding: 4 }}>
-                                    <View style={{ backgroundColor: active ? '#185a9d' : '#f3f4f6', borderRadius: 6, paddingVertical: 6 }}>
-                                      <Text style={{ textAlign: 'center', color: active ? '#fff' : '#111', fontSize: 13 }}>{cur}</Text>
-                                    </View>
-                                  </TouchableOpacity>
-                                );
+                        <View style={{ marginTop: 8 }}>
+                          <Text style={{ marginBottom: 6 }}>{monthNames[viewFromMonth]} {viewFromYear}</Text>
+                          <View style={{ flexDirection: 'row' }}>
+                            {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <Text key={d} style={{ flex: 1, textAlign: 'center', fontWeight: '700' }}>{d}</Text>)}
+                          </View>
+                          <View>
+                            {(() => {
+                              const rows = [];
+                              const first = firstDayOfMonth(viewFromYear, viewFromMonth);
+                              const total = daysInMonth(viewFromYear, viewFromMonth);
+                              let cur = 1 - first;
+                              for (let r = 0; r < 6; r++) {
+                                const cols = [];
+                                for (let c = 0; c < 7; c++, cur++) {
+                                  if (cur < 1 || cur > total) {
+                                    cols.push(<View key={`${r}-${c}`} style={{ flex: 1, padding: 4 }} />);
+                                  } else {
+                                    const ts = new Date(viewFromYear, viewFromMonth, cur).getTime();
+                                    const active = tempFrom && Math.floor(tempFrom / 86400000) === Math.floor(ts / 86400000);
+                                    cols.push(
+                                      <TouchableOpacity key={`${r}-${c}`} onPress={() => setTempFrom(ts)} style={{ flex: 1, padding: 4 }}>
+                                        <View style={{ backgroundColor: active ? '#185a9d' : '#f3f4f6', borderRadius: 6, paddingVertical: 6 }}>
+                                          <Text style={{ textAlign: 'center', color: active ? '#fff' : '#111', fontSize: 13 }}>{cur}</Text>
+                                        </View>
+                                      </TouchableOpacity>
+                                    );
+                                  }
+                                }
+                                rows.push(<View key={`row-${r}`} style={{ flexDirection: 'row', marginBottom: 6 }}>{cols}</View>);
                               }
-                            }
-                            rows.push(<View key={`row-to-${r}`} style={{ flexDirection: 'row', marginBottom: 6 }}>{cols}</View>);
-                          }
-                          return rows;
-                        })()}
+                              return rows;
+                            })()}
+                          </View>
+                        </View>
                       </View>
-                    </View>
-                  </View>
+
+                      <View style={styles.divider} />
+
+                      <View style={styles.pickerColumn}>
+                        <Text style={styles.pickerHeader}>To</Text>
+                        <TextInput
+                          placeholder="yyyy-mm-dd"
+                          value={formatYMD(tempTo)}
+                          onChangeText={t => setTempTo(parseYMD(t))}
+                          style={{ borderWidth: 1, borderColor: '#e6eef2', padding: 8, borderRadius: 8, marginTop: 6 }}
+                        />
+
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                          {monthNames.map((mn, idx) => (
+                            <TouchableOpacity
+                              key={mn}
+                              onPress={() => {
+                                const y = viewToYear;
+                                const d = new Date(y, idx, tempTo ? new Date(tempTo).getDate() : 1);
+                                setTempTo(d.getTime());
+                                setViewToMonth(idx);
+                                setViewToYear(y);
+                              }}
+                              style={[styles.categoryBtn, viewToMonth === idx ? styles.categoryBtnActive : null, { marginRight: 8 }]}
+                            >
+                              <Text style={viewToMonth === idx ? styles.categoryBtnTextActive : styles.categoryBtnText}>{mn}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                          <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewToYear(y => y - 1); setTempTo(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() - 1); return cd.getTime(); }); }}><Text>-</Text></TouchableOpacity>
+                          <Text style={{ paddingHorizontal: 12 }}>{viewToYear}</Text>
+                          <TouchableOpacity style={styles.smallBtn} onPress={() => { setViewToYear(y => y + 1); setTempTo(d => { const cur = d || Date.now(); const cd = new Date(cur); cd.setFullYear(cd.getFullYear() + 1); return cd.getTime(); }); }}><Text>+</Text></TouchableOpacity>
+                        </View>
+
+                        <View style={{ marginTop: 8 }}>
+                          <Text style={{ marginBottom: 6 }}>{monthNames[viewToMonth]} {viewToYear}</Text>
+                          <View style={{ flexDirection: 'row' }}>
+                            {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <Text key={d} style={{ flex: 1, textAlign: 'center', fontWeight: '700' }}>{d}</Text>)}
+                          </View>
+                          <View>
+                            {(() => {
+                              const rows = [];
+                              const first = firstDayOfMonth(viewToYear, viewToMonth);
+                              const total = daysInMonth(viewToYear, viewToMonth);
+                              let cur = 1 - first;
+                              for (let r = 0; r < 6; r++) {
+                                const cols = [];
+                                for (let c = 0; c < 7; c++, cur++) {
+                                  if (cur < 1 || cur > total) {
+                                    cols.push(<View key={`${r}-${c}`} style={{ flex: 1, padding: 4 }} />);
+                                  } else {
+                                    const ts = new Date(viewToYear, viewToMonth, cur).getTime();
+                                    const active = tempTo && Math.floor(tempTo / 86400000) === Math.floor(ts / 86400000);
+                                    cols.push(
+                                      <TouchableOpacity key={`${r}-${c}`} onPress={() => setTempTo(ts)} style={{ flex: 1, padding: 4 }}>
+                                        <View style={{ backgroundColor: active ? '#185a9d' : '#f3f4f6', borderRadius: 6, paddingVertical: 6 }}>
+                                          <Text style={{ textAlign: 'center', color: active ? '#fff' : '#111', fontSize: 13 }}>{cur}</Text>
+                                        </View>
+                                      </TouchableOpacity>
+                                    );
+                                  }
+                                }
+                                rows.push(<View key={`row-to-${r}`} style={{ flexDirection: 'row', marginBottom: 6 }}>{cols}</View>);
+                              }
+                              return rows;
+                            })()}
+                          </View>
+                        </View>
+                      </View>
                     </View>
                   </ScrollView>
 
@@ -600,7 +696,7 @@ export default function FormSavesScreen() {
           windowSize={11}
           maxToRenderPerBatch={20}
           removeClippedSubviews={true}
-          contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: 24 }}
+          contentContainerStyle={{ paddingBottom: 40, paddingHorizontal: isCompact ? 16 : 24 }}
           renderItem={({ item: form, index: idx }) => (
             <View key={form.savedAt || idx} style={styles.cardRow}>
               <TouchableOpacity
@@ -653,9 +749,17 @@ export default function FormSavesScreen() {
                   }
                 }}
               >
+                <View style={styles.cardTopRow}>
+                  <View style={styles.cardAccent} />
+                  <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>{form.title || 'Saved Form'}</Text>
                 <Text style={styles.cardMeta}>Location: {form.location || ''}</Text>
                 <Text style={styles.cardMeta}>Saved: {form.savedAt ? new Date(form.savedAt).toLocaleString() : 'Unknown'}</Text>
+                  </View>
+                  <View style={styles.cardChip}>
+                    <Text style={styles.cardChipText}>History</Text>
+                  </View>
+                </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <TouchableOpacity style={styles.smallActionBtnDanger} onPress={() => handleDelete(form, idx)}>
                     <Text style={styles.smallActionBtnText}>Delete</Text>
@@ -779,13 +883,137 @@ const styles = StyleSheet.create({
   deleteBtnTextSmall: { color: '#fff', fontWeight: '700', fontSize: 14 },
   container: {
     flex: 1,
-    backgroundColor: '#f7f7f7',
+    backgroundColor: '#f4f7fb',
+  },
+  heroShell: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  heroCard: {
+    borderRadius: 24,
+    padding: 14,
+    shadowColor: '#0b2440',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  heroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  heroBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  heroBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    letterSpacing: 1,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  heroBadgeSubtle: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  heroActionBtn: {
+    backgroundColor: '#ffffff',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  heroActionBtnText: {
+    color: '#185a9d',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  heroTitle: {
+    color: '#fff',
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  heroStatPill: {
+    flex: 1,
+    minWidth: 84,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  heroStatValue: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  heroStatLabel: {
+    color: 'rgba(255,255,255,0.74)',
+    fontSize: 11,
+    marginTop: 2,
+    fontWeight: '600',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#185a9d',
     marginBottom: 16,
+  },
+  emptyStateCard: {
+    marginHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 18,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5edf4',
+    shadowColor: '#0b2440',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#142238',
+    marginBottom: 4,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#5b677b',
+    lineHeight: 20,
   },
   placeholder: {
     fontSize: 16,
@@ -805,44 +1033,204 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: 18,
     padding: 18,
-    paddingRight: 48, // leave room for inline delete button (slightly inset)
+    paddingRight: 48,
     marginBottom: 18,
-    shadowColor: '#185a9d',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e5edf4',
+    shadowColor: '#0b2440',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
     flex: 1,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  cardAccent: {
+    width: 4,
+    borderRadius: 999,
+    backgroundColor: '#185a9d',
+    marginRight: 12,
+    alignSelf: 'stretch',
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#185a9d',
+    fontWeight: '800',
+    color: '#142238',
     marginBottom: 6,
   },
   cardMeta: {
     fontSize: 14,
-    color: '#444',
-    marginBottom: 2,
+    color: '#516075',
+    marginBottom: 3,
+  },
+  cardChip: {
+    backgroundColor: 'rgba(24,90,157,0.10)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginLeft: 8,
+  },
+  cardChipText: {
+    color: '#185a9d',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   controlsWrap: {
-    marginBottom: 14,
+    marginBottom: 10,
+  },
+  searchCompactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  searchCompactCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#dce7f2',
+    shadowColor: '#0b2440',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  searchCompactIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#185a9d',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  searchCompactIcon: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  searchCompactCopy: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  searchCompactTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#142238',
+    marginBottom: 2,
+  },
+  searchCompactHint: {
+    fontSize: 12,
+    color: '#516075',
+  },
+  searchModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11,36,64,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 18,
+  },
+  searchModalCard: {
+    width: '100%',
+    maxWidth: 760,
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#dce7f2',
+    shadowColor: '#0b2440',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  searchModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  searchModalTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#142238',
+    marginBottom: 4,
+  },
+  searchModalSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#5b677b',
+    maxWidth: 520,
+  },
+  searchModalClose: {
+    fontSize: 24,
+    lineHeight: 24,
+    fontWeight: '700',
+    color: '#7b8798',
+    paddingLeft: 12,
+  },
+  searchModalSection: {
+    backgroundColor: '#f8fbff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e3edf7',
+    padding: 12,
+    marginBottom: 10,
+  },
+  searchModalSectionLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#627084',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  searchModalActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  controlsCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 20,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#e5edf4',
+    shadowColor: '#0b2440',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  controlsTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#627084',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 8,
   },
   searchInput: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 10,
+    backgroundColor: '#f8fbff',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e6eef2',
+    borderColor: '#dce7f2',
     fontSize: 15,
     color: '#111827',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
   },
   controlsRow: { flexDirection: 'row', marginTop: 10, alignItems: 'center' },
   groupToggles: { flexDirection: 'row', alignItems: 'center' },

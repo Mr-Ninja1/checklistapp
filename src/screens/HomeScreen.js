@@ -201,67 +201,6 @@ export default function HomeScreen() {
     } catch (e) {}
   }, []);
 
-  // gentle floating motion for the Bravo AI icon
-  const aiFloat = React.useRef(new Animated.Value(0)).current;
-  React.useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(aiFloat, { toValue: -6, duration: 1400, useNativeDriver: true }),
-        Animated.timing(aiFloat, { toValue: 0, duration: 1400, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [aiFloat]);
-
-  // pulsing glow for the Bravo AI CTA button
-  const aiCtaPulse = React.useRef(new Animated.Value(0)).current;
-  const aiCtaScale = aiCtaPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
-  React.useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(aiCtaPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(aiCtaPulse, { toValue: 0, duration: 900, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [aiCtaPulse]);
-
-  // futuristic glow ring around the Bravo AI icon
-  const aiGlow = React.useRef(new Animated.Value(0)).current;
-  const aiGlowScale = aiGlow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] });
-  const aiGlowOpacity = aiGlow.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.9] });
-  React.useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(aiGlow, { toValue: 1, duration: 1400, useNativeDriver: true }),
-        Animated.timing(aiGlow, { toValue: 0, duration: 1400, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [aiGlow]);
-
-  // drag position and pan responder for the Bravo AI icon
-  const aiPan = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const aiPanResponder = React.useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        try {
-          const curX = (typeof aiPan.x._value === 'number') ? aiPan.x._value : (aiPan.x.__getValue ? aiPan.x.__getValue() : 0);
-          const curY = (typeof aiPan.y._value === 'number') ? aiPan.y._value : (aiPan.y.__getValue ? aiPan.y.__getValue() : 0);
-          aiPan.setOffset({ x: curX, y: curY });
-          aiPan.setValue({ x: 0, y: 0 });
-        } catch (e) {}
-      },
-      onPanResponderMove: (_, gesture) => {
-        try { aiPan.setValue({ x: gesture.dx, y: gesture.dy }); } catch (e) {}
-      },
-      onPanResponderRelease: (_, gesture) => {
-        try { aiPan.flattenOffset(); } catch (e) {}
-        if (Math.abs(gesture.dx) < 6 && Math.abs(gesture.dy) < 6) {
-          setAiInfoVisible(true);
-        }
-      },
-    })
-  ).current;
-
   // Filter forms by category and search; exclude cards that don't link to a form
   function getFilteredForms(category) {
     const forms = formCategories[category].forms
@@ -582,9 +521,8 @@ export default function HomeScreen() {
   const [dropboxDebugVisible, setDropboxDebugVisible] = useState(false);
   const [dropboxDebugLog, setDropboxDebugLog] = useState([]);
   const [dropboxAlmostFullDismissed, setDropboxAlmostFullDismissed] = useState(false);
-  const [staffInfoVisible, setStaffInfoVisible] = useState(false);
   const [footerCreditVisible, setFooterCreditVisible] = useState(false);
-  const [aiInfoVisible, setAiInfoVisible] = useState(false);
+  const [isoproInfoVisible, setIsoproInfoVisible] = useState(false);
 
   const addDebugLog = (msg) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -776,29 +714,6 @@ export default function HomeScreen() {
     // ensure the root fills the viewport on web by setting a minHeight based on window height
     <View style={{ flex: 1, backgroundColor: theme.background, width: '100%', minHeight: height }}>
       <LoadingOverlay visible={loadingCard} message={loadingMsg} />
-      {/* Floating Bravo AI teaser icon (draggable) */}
-      <Animated.View
-        style={[styles.aiFab, { transform: [{ translateX: aiPan.x }, { translateY: aiPan.y }] }]}
-        {...aiPanResponder.panHandlers}
-      >
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.aiGlowRing,
-            {
-              opacity: aiGlowOpacity,
-              transform: [{ scale: aiGlowScale }],
-            },
-          ]}
-        />
-        <Animated.View style={[styles.aiFabInner, { transform: [{ translateY: aiFloat }] }]}> 
-          <Image
-            source={require('../assets/Ai.png')}
-            style={styles.aiFabIcon}
-            resizeMode="contain"
-          />
-        </Animated.View>
-      </Animated.View>
       {/* Updates modal: one-time, with sssuesnooze */}
       <Modal visible={showUpdatesModal} transparent animationType="fade" onRequestClose={() => {}}>
         <View style={styles.updatesModalOverlay}>
@@ -814,50 +729,6 @@ export default function HomeScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
               <TouchableOpacity style={[styles.updatesButtonPrimary, { maxWidth: 260 }]} onPress={handleUpdatesSeen}>
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Okay, got it</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-      {/* Bravo AI teaser modal */}
-      <Modal
-        visible={aiInfoVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAiInfoVisible(false)}
-      >
-        <View style={styles.updatesModalOverlay}>
-          <View style={styles.updatesModal}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={{ fontSize: 18, fontWeight: '800' }}>Bravo AI (coming soon)</Text>
-              <TouchableOpacity onPress={() => setAiInfoVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#999' }}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={{ fontSize: 14, color: '#333', marginBottom: 18 }}>
-              Bravo AI will help this app build new forms on its own, fix common issues automatically, and assist your staff step-by-step with daily tasks and checklists.
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <Animated.View style={{ marginRight: 8, transform: [{ scale: aiCtaScale }] }}>
-                <TouchableOpacity
-                  style={[styles.updatesButtonSecondary, styles.aiCtaButton]}
-                  onPress={async () => {
-                    try {
-                      const msg = encodeURIComponent('Hi Bravo team, we want Bravo AI enabled for our account as soon as it is ready.');
-                      await Linking.openURL(`https://wa.me/260768834035?text=${msg}`);
-                    } catch (e) {
-                      Alert.alert('Unable to open WhatsApp', 'Please try again or contact us directly.');
-                    }
-                  }}
-                >
-                  <Text style={{ color: '#007AFF', fontWeight: '700' }}>We want this feature now</Text>
-                </TouchableOpacity>
-              </Animated.View>
-              <TouchableOpacity
-                style={styles.updatesButtonPrimary}
-                onPress={() => setAiInfoVisible(false)}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -899,6 +770,45 @@ export default function HomeScreen() {
                 }}
               >
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Get more Dropbox space</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={isoproInfoVisible} transparent animationType="fade" onRequestClose={() => setIsoproInfoVisible(false)}>
+        <View style={styles.updatesModalOverlay}>
+          <View style={styles.updatesModal}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#142238' }}>Add New Checklist Forms</Text>
+              <TouchableOpacity onPress={() => setIsoproInfoVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#999' }}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 14, color: '#333', marginBottom: 8 }}>
+              If you need features like adding new forms, editing checklists, removing items, managing staff, capturing photo evidence, and handling compliance in a more flexible way, you can try ISOPRO.
+            </Text>
+            <Text style={{ fontSize: 13, color: '#d32f2f', marginBottom: 18 }}>
+              ISOPRO is a new auditing platform for brands and organisations that want more control, including unlimited storage and more flexible audit workflows. This is only an optional advertisement for a new system. It is not mandatory to shift. ISOPRO is a paid platform, not a free add-on, and additional charges may apply.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={[styles.updatesButtonSecondary, { marginRight: 8 }]}
+                onPress={() => setIsoproInfoVisible(false)}
+              >
+                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.updatesButtonPrimary}
+                onPress={async () => {
+                  try {
+                    setIsoproInfoVisible(false);
+                    await Linking.openURL('https://isopro.me/');
+                  } catch (e) {
+                    Alert.alert('Unable to open ISOPRO', 'Please try again later.');
+                  }
+                }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>See the new platform</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1338,8 +1248,6 @@ export default function HomeScreen() {
 
       {/* Dev Dropbox test access removed — button intentionally hidden in Home screen */}
 
-
-
       {/* Category Tabs - now static, directly below header */}
       <View style={{
         flexDirection: 'row',
@@ -1456,11 +1364,11 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.footerNavItem}
-            onPress={() => setStaffInfoVisible(true)}
+            onPress={() => setIsoproInfoVisible(true)}
             activeOpacity={0.8}
           >
-            <Text style={[styles.footerNavIcon, { fontSize: isMobile ? 22 : 26 }]}>👥</Text>
-            <Text style={[styles.footerNavLabel, { fontSize: isMobile ? 11 : 12 }]}>Staff</Text>
+            <Text style={[styles.footerNavIcon, { fontSize: isMobile ? 22 : 26 }]}>➕</Text>
+            <Text style={[styles.footerNavLabel, { fontSize: isMobile ? 11 : 12 }]}>Add new checklist forms</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.footerNavItem}
@@ -1495,48 +1403,6 @@ export default function HomeScreen() {
           </Text>
         </View>
       ) : null}
-
-      {/* Staff feature info modal with WhatsApp request */}
-      <Modal
-        visible={staffInfoVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setStaffInfoVisible(false)}
-      >
-        <View style={styles.updatesModalOverlay}>
-          <View style={styles.updatesModal}>
-            <Text style={{ fontSize: 18, fontWeight: '800', marginBottom: 8 }}>Staff & shifts (coming soon)</Text>
-            <Text style={{ fontSize: 14, color: '#333', marginBottom: 10 }}>
-              This future feature will let you manage staff logins, shifts, and see exactly who completed each checklist and when.
-            </Text>
-            <Text style={{ fontSize: 13, color: '#555', marginBottom: 18 }}>
-              If you are interested in this kind of feature, you can request it and we will get in touch to discuss how it should work for your team.
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <TouchableOpacity
-                style={[styles.updatesButtonSecondary, { marginRight: 8 }]}
-                onPress={() => setStaffInfoVisible(false)}
-              >
-                <Text style={{ color: '#185a9d', fontWeight: '700' }}>Close</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.updatesButtonPrimary}
-                onPress={() => {
-                  setStaffInfoVisible(false);
-                  try {
-                    const phone = '260768834035';
-                    const message = encodeURIComponent('Hi, I am interested in the staff/login/shifts and form audit feature for the Bravo Checklist app.');
-                    const url = `https://wa.me/${phone}?text=${message}`;
-                    Linking.openURL(url).catch(() => {});
-                  } catch (e) {}
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Request via WhatsApp</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
     </View>
   );
@@ -1830,45 +1696,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#185a9d'
-  },
-  aiCtaButton: {
-    shadowColor: '#00B0FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  aiFab: {
-    position: 'absolute',
-    zIndex: 110,
-    right: 18,
-    top: 460,
-    width: 80,
-    height: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aiFabInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aiFabIcon: {
-    width: 64,
-    height: 64,
-  },
-  aiGlowRing: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0, 191, 255, 0.35)',
-    borderWidth: 1,
-    borderColor: 'rgba(129, 212, 250, 0.9)',
-    shadowColor: '#00E5FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.85,
-    shadowRadius: 20,
-    elevation: 18,
   },
   secretDot: {
     position: 'absolute',
